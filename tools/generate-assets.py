@@ -152,6 +152,16 @@ def gen_osd():
         write(f'security/{name}.svg', fluent(icon, '#ffffff', 16))
 
 
+# ---------------------------------------------------------- privacy tray ---
+def gen_privacy():
+    # Windows 11 shows a plain foreground glyph in the tray while an app uses the
+    # microphone / camera / location (white in dark mode; appearance.js tints it for light).
+    # 20px designs cropped to their 16px glyph box: same visual weight as the Wi-Fi/volume glyphs.
+    for name, icon in {'mic': 'mic_20_regular', 'camera': 'video_20_regular',
+                       'location': 'location_20_regular'}.items():
+        write(f'privacy/{name}.svg', fluent(icon, '#ffffff', 16).replace('viewBox="0 0 20 20"', 'viewBox="2 2 16 16"'))
+
+
 # --------------------------------------------------------------- consent ---
 def gen_consent():
     write('consent/close.svg', fluent('dismiss_16_regular', '#ffffff', 16))
@@ -352,7 +362,7 @@ def gen_explorer():
 
 
 STEPS = {'osd': gen_osd, 'explorer': gen_explorer, 'menu': gen_menu, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,
-         'folders': gen_folders, 'hello': gen_hello, 'logos': gen_logos, 'wallpapers': gen_wallpapers}
+         'privacy': gen_privacy, 'folders': gen_folders, 'hello': gen_hello, 'logos': gen_logos, 'wallpapers': gen_wallpapers}
 
 
 def main():

@@ -10,6 +10,7 @@ import {watchExternalPower} from './powerSource.js';
 import {BaseIcon} from 'resource:///org/gnome/shell/ui/iconGrid.js';
 import {installTaskbarStyle} from './taskbarStyle.js';
 import {installOsdStyle} from './osdStyle.js';
+import {installPrivacyIcons} from './privacyIcons.js';
 import {SecurityScreen} from './securityScreen.js';
 import {Appearance} from './appearance.js';
 import Gio from 'gi://Gio';
@@ -46,6 +47,7 @@ export default class WindowsTrayTypography extends Extension {
         this._stopCalendar=installCalendarPanel();
         this._stopMedia=installMediaPanel();
         this._stopOsd=installOsdStyle(this._injections,fenestraAsset,this._appearance);
+        try{this._stopPrivacy=installPrivacyIcons(fenestraAsset,this._appearance);}catch(e){logError(e,'Fenestra privacy icons');}
         try{this._security=new SecurityScreen(this.getSettings('org.gnome.shell.extensions.fenestra-tray'),fenestraAsset);}catch(e){logError(e,'Fenestra security screen');}
         this._power(Main.panel.statusArea.quickSettings?._system);
         this._timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,60,()=>{
@@ -101,6 +103,7 @@ export default class WindowsTrayTypography extends Extension {
     }
     disable() {
         this._security?.destroy();this._security=null;
+        this._stopPrivacy?.();this._stopPrivacy=null;
         this._stopOsd?.();this._stopOsd=null;
         this._stopShot?.();this._stopShot=null;
         this._stopPreview?.();this._stopPreview=null;
