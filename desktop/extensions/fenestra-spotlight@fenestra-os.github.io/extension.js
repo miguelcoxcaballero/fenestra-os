@@ -38,7 +38,7 @@ export default class WindowsSpotlight extends Extension {
         }
         this._refresh();
         this._unwatch=watchBackground(()=>{this._readImage();this._refresh();});
-        this._injections.overrideMethod(Main.screenShield,'_resetLockScreen',original=>function(...args){
+        if (Main.screenShield) this._injections.overrideMethod(Main.screenShield,'_resetLockScreen',original=>function(...args){
             const result=original.apply(this,args);
             ext._readImage();ext._refresh();return result;
         });

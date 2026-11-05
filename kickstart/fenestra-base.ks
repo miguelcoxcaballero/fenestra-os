@@ -21,6 +21,8 @@ bootloader --timeout=1
 %packages
 @^workstation-product-environment
 nautilus-python
+# ArcMenu (Start) needs the GMenu typelib.
+gnome-menus
 python3-gobject
 python3-pillow
 python3-fonttools

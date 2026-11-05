@@ -1,0 +1,43 @@
+/* Fenestra installer look: deep blue setup colours, Fenestra logo, no Fedora logo. */
+@define-color fenestra #0b2a63;
+
+.logo-sidebar {
+    background-image: url('/usr/share/anaconda/pixmaps/fenestra/sidebar-bg.png');
+    background-color: @fenestra;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.logo {
+    background-image: url('/usr/share/anaconda/pixmaps/fenestra/sidebar-logo.png');
+    background-position: 50% 24px;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+.product-logo {
+    background-image: none;
+    background-color: transparent;
+}
+
+AnacondaSpokeWindow #nav-box {
+    background-color: @fenestra;
+    background-image: url('/usr/share/anaconda/pixmaps/fenestra/topbar-bg.png');
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: white;
+}
+
+AnacondaSpokeWindow #nav-box button {
+    box-shadow: none;
+}
+
+/* Fluent-style accent for primary buttons. */
+button.suggested-action, .suggested-action {
+    background-image: none;
+    background-color: #0067c0;
+    border-color: #005ba9;
+    color: white;
+    border-radius: 4px;
+}
+button.suggested-action:hover { background-color: #1975c5; }
