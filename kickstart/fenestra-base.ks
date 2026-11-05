@@ -12,7 +12,10 @@ network --bootproto=dhcp --activate --hostname=fenestra
 rootpw --lock
 selinux --enforcing
 firewall --enabled --service=mdns
-firstboot --disable
+# Must stay enabled: "--disable" makes Anaconda write post_install_tools_disabled=1
+# to /etc/sysconfig/anaconda, and Fedora's GDM then never starts the initial-setup
+# session, so the OOBE never appears (straight to the login screen, no users).
+firstboot --enable
 xconfig --startxonboot
 bootloader --timeout=1
 
