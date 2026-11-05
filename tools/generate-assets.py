@@ -265,7 +265,21 @@ def gen_menu():
         write(f'menu-icons/win11-menu-{name}.svg', fluent(icon, '#9fc8dc', 16))
 
 
-STEPS = {'menu': gen_menu, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,
+EXPLORER = {'add': ('add_circle_20_regular', '#9fc8dc'), 'more': ('more_horizontal_20_regular', '#ffffff'),
+            'refresh': ('arrow_clockwise_20_regular', '#ffffff'), 'up': ('arrow_up_20_regular', '#ffffff'),
+            'view': ('grid_20_regular', '#ffffff')}
+
+
+def gen_explorer():
+    # Files (Explorer layer) command bar / navigation icons, Fluent UI System Icons (MIT).
+    for name, (icon, fill) in EXPLORER.items():
+        write(f'menu-icons/win11-explorer-{name}.svg', fluent(icon, fill, 16))
+    # Plain "x" for tab/dialog close buttons: the Win11 icon theme resolves
+    # window-close-symbolic to its red titlebar circle in some sizes.
+    write('menu-icons/window-close-symbolic.svg', fluent('dismiss_16_regular', '#ffffff', 16))
+
+
+STEPS = {'menu': gen_menu, 'explorer': gen_explorer, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,
          'folders': gen_folders, 'hello': gen_hello, 'logos': gen_logos, 'wallpapers': gen_wallpapers}
 
 

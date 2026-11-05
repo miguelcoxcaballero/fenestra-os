@@ -120,7 +120,7 @@
                           <object class="GtkButton">
                             <property name="action-name">win.new-tab</property>
                             <property name="icon-name">list-add-symbolic</property>
-                            <property name="tooltip-text">Nueva pestaña (Ctrl+T)</property>
+                            <property name="tooltip-text" translatable="yes">New tab (Ctrl+T)</property>
                             <style>
                               <class name="flat" />
                               <class name="win11-new-tab" />
@@ -159,7 +159,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.new-folder</property>
-                        <property name="tooltip-text">Nueva carpeta</property>
+                        <property name="tooltip-text" translatable="yes">New</property>
                         <property name="child">
                           <object class="GtkBox">
                             <property name="spacing">8</property>
@@ -170,7 +170,7 @@
                             </child>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Nuevo</property>
+                                <property name="label" translatable="yes">New</property>
                               </object>
                             </child>
                           </object>
@@ -180,7 +180,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.cut</property>
-                        <property name="tooltip-text">Cortar</property>
+                        <property name="tooltip-text" translatable="yes">Cut (Ctrl+X)</property>
                         <property name="icon-name">win11-menu-cut</property>
                         <style>
                           <class name="flat" />
@@ -190,7 +190,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.copy</property>
-                        <property name="tooltip-text">Copiar</property>
+                        <property name="tooltip-text" translatable="yes">Copy (Ctrl+C)</property>
                         <property name="icon-name">win11-menu-copy</property>
                         <style>
                           <class name="flat" />
@@ -200,7 +200,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.paste</property>
-                        <property name="tooltip-text">Pegar</property>
+                        <property name="tooltip-text" translatable="yes">Paste (Ctrl+V)</property>
                         <property name="icon-name">win11-menu-paste</property>
                         <style>
                           <class name="flat" />
@@ -210,7 +210,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.rename</property>
-                        <property name="tooltip-text">Cambiar nombre</property>
+                        <property name="tooltip-text" translatable="yes">Rename (F2)</property>
                         <property name="icon-name">win11-menu-rename</property>
                         <style>
                           <class name="flat" />
@@ -220,7 +220,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.move-to-trash</property>
-                        <property name="tooltip-text">Mover a la papelera</property>
+                        <property name="tooltip-text" translatable="yes">Delete (Del)</property>
                         <property name="icon-name">win11-menu-delete</property>
                         <style>
                           <class name="flat" />
@@ -235,7 +235,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.current-directory-properties</property>
-                        <property name="tooltip-text">Propiedades</property>
+                        <property name="tooltip-text" translatable="yes">Properties (Alt+Enter)</property>
                         <property name="icon-name">win11-menu-page</property>
                         <style>
                           <class name="flat" />

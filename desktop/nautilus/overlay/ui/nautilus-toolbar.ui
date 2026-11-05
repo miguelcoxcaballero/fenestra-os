@@ -82,7 +82,7 @@
                         </child>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Buscar en esta carpeta</property>
+                            <property name="label" translatable="yes">Search</property>
                           </object>
                         </child>
                       </object>
@@ -126,14 +126,14 @@
         <child type="start">
           <object class="GtkButton">
             <property name="action-name">slot.up</property>
-            <property name="tooltip-text">Subir (Alt+↑)</property>
+            <property name="tooltip-text" translatable="yes">Up (Alt+Up Arrow)</property>
             <property name="icon-name">win11-explorer-up</property>
           </object>
         </child>
         <child type="start">
           <object class="GtkButton">
             <property name="action-name">slot.reload</property>
-            <property name="tooltip-text">Actualizar (F5)</property>
+            <property name="tooltip-text" translatable="yes">Refresh (F5)</property>
             <property name="icon-name">win11-explorer-refresh</property>
           </object>
         </child>

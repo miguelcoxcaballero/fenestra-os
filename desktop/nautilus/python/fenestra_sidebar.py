@@ -13,9 +13,42 @@ def tr(text):
     return _L.get(_LANG, {}).get(text, text)
 
 GALLERY = Path(GLib.get_user_data_dir())/'fenestra-explorer'/'Gallery'
+PLACES_STAMP = Path(GLib.get_user_config_dir())/'fenestra-explorer'/'places-v1'
+
+
+def ensure_places():
+    """Once per user: Explorer-style quick access (Gallery, Desktop, Downloads,
+    Documents, Pictures, Music, Videos) as GTK bookmarks, which is what the
+    Files sidebar shows. Later user changes are kept."""
+    if PLACES_STAMP.exists():
+        return
+    try:
+        U = GLib.UserDirectory
+        GALLERY.mkdir(parents=True, exist_ok=True)
+        pictures = GLib.get_user_special_dir(U.DIRECTORY_PICTURES)
+        link = GALLERY / Path(pictures or 'Pictures').name
+        if pictures and not link.exists() and not link.is_symlink():
+            link.symlink_to(pictures)
+        wanted = [GALLERY.as_uri()]
+        for kind in (U.DIRECTORY_DESKTOP, U.DIRECTORY_DOWNLOAD, U.DIRECTORY_DOCUMENTS,
+                     U.DIRECTORY_PICTURES, U.DIRECTORY_MUSIC, U.DIRECTORY_VIDEOS):
+            path = GLib.get_user_special_dir(kind)
+            if path and path != str(Path.home()) and os.path.isdir(path):
+                wanted.append(Path(path).as_uri())
+        bookmarks = Path(GLib.get_user_config_dir())/'gtk-3.0'/'bookmarks'
+        lines = bookmarks.read_text().splitlines() if bookmarks.exists() else []
+        have = {line.split(' ', 1)[0] for line in lines if line.strip()}
+        lines += [uri for uri in wanted if uri not in have]
+        bookmarks.parent.mkdir(parents=True, exist_ok=True)
+        bookmarks.write_text('\n'.join(lines) + '\n')
+        PLACES_STAMP.parent.mkdir(parents=True, exist_ok=True)
+        PLACES_STAMP.touch()
+    except OSError as e:
+        print(f'fenestra-explorer: could not set up quick access: {e}')
 
 class FenestraSidebar:
     def __init__(self,window,walk):
+        ensure_places()
         self.window=window;self.walk=walk;self.lists=set()
         self.home=Path.home()
         U=GLib.UserDirectory

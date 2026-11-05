@@ -76,7 +76,7 @@
             </child>
             <child>
               <object class="GtkLabel">
-                <property name="label">Ver</property>
+                <property name="label" translatable="yes">View</property>
               </object>
             </child>
           </object>
