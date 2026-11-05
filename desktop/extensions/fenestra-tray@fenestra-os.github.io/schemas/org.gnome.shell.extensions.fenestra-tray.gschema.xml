@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="fenestra">
+  <schema id="org.gnome.shell.extensions.fenestra-tray" path="/org/gnome/shell/extensions/fenestra-tray/">
+    <key name="security-screen" type="as">
+      <default><![CDATA[['<Control><Alt>Delete', '<Control><Alt>KP_Delete']]]></default>
+      <summary>Open the Ctrl+Alt+Del security screen</summary>
+      <description>Compositor-owned shortcut for the Windows-style security screen (Lock, Switch user, Sign out, Change a password, Task Manager). GNOME's own Ctrl+Alt+Delete logout binding (org.gnome.settings-daemon.plugins.media-keys logout) must be cleared for this to take effect.</description>
+    </key>
+  </schema>
+</schemalist>

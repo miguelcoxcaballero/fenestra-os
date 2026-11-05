@@ -323,3 +323,40 @@ window.win11-explorer {font-family:"Segoe UI"; font-size:13px; font-weight:400;}
 .win11-explorer .win11-commandbar splitbutton:hover {background:#303030;}
 .win11-explorer .win11-commandbar > button,.win11-explorer .win11-commandbar > menubutton > button {background:transparent; box-shadow:none; border-color:transparent;}
 .win11-explorer .win11-commandbar > button:hover,.win11-explorer .win11-commandbar > menubutton > button:hover {background:#303030;}
+
+/* ---- Fenestra: File Explorer pixel pass (measured against Windows 11 25H2, 100% scale) ---- */
+window.win11-explorer, window.win11-explorer label { font-family: "Segoe UI Variable Text", "Segoe UI", "Selawik", sans-serif; font-size: 12px; }
+.win11-explorer .win11-tabs label { font-size: 12px; font-weight: 600; }
+.win11-explorer .win11-navigation { min-height: 46px; padding: 0 8px 0 8px; border-bottom: 1px solid #2b2b2b; }
+.win11-explorer .win11-navigation > button,
+.win11-explorer .win11-navigation .history-controls button { min-width: 40px; min-height: 32px; padding: 0; margin: 0 4px 0 0; border-radius: 4px; }
+.win11-explorer .win11-navigation button image { -gtk-icon-size: 16px; }
+.win11-explorer .win11-navigation .win11-search { min-width: 260px; min-height: 30px; padding: 0 12px; margin-left: 8px; border-radius: 4px; background: #2b2b2b; border: 0; color: #c5c5c5; }
+.win11-explorer .win11-navigation .win11-search label { font-size: 13px; color: #c5c5c5; }
+.win11-explorer .win11-commandbar { min-height: 46px; padding: 0 8px; border-bottom: 1px solid #2b2b2b; }
+.win11-explorer .win11-commandbar button.win11-cmd-icon,
+.win11-explorer .win11-commandbar menubutton > button { min-width: 40px; min-height: 32px; padding: 0; margin: 0 4px; border-radius: 4px; }
+.win11-explorer .win11-commandbar button.win11-cmd-text { min-height: 32px; padding: 0 9px; margin: 0 2px; border-radius: 4px; }
+.win11-explorer .win11-commandbar image { -gtk-icon-size: 16px; }
+.win11-explorer .win11-commandbar image.win11-cmd-chevron { -gtk-icon-size: 8px; margin-left: -2px; opacity: .8; }
+.win11-explorer .win11-commandbar .win11-cmd-label { font-size: 12px; }
+.win11-explorer .win11-commandbar separator.win11-cmd-separator { min-width: 1px; margin: 8px 8px; background: #3a3a3a; }
+.win11-explorer placessidebar row, .win11-explorer .navigation-sidebar row { min-height: 32px; padding: 0 8px 0 17px; margin: 0 2px 0 4px; border-radius: 4px; }
+.win11-explorer placessidebar row label, .win11-explorer .navigation-sidebar row label { font-size: 12px; }
+.win11-explorer placessidebar row image, .win11-explorer .navigation-sidebar row image { -gtk-icon-size: 16px; min-width: 16px; margin-right: 6px; }
+.win11-explorer placessidebar row:selected, .win11-explorer .navigation-sidebar row:selected { background: rgba(255,255,255,0.08); }
+.win11-explorer columnview row label, .win11-explorer gridview label { font-size: 12px; }
+/* View: one dropdown like Windows (hide the split arrow part) */
+.win11-explorer splitbutton.win11-cmd-split > menubutton, .win11-explorer splitbutton.win11-cmd-split > separator { min-width: 0; padding: 0; margin: 0; opacity: 0; }
+.win11-explorer splitbutton.win11-cmd-split > button { min-height: 32px; padding: 0 9px; border-radius: 4px; }
+.win11-explorer menubutton.win11-cmd-text > button { min-height: 32px; padding: 0 9px; border-radius: 4px; }
+.win11-explorer .navigation-sidebar row > box, .win11-explorer placessidebar row > box { border-spacing: 0; }
+.win11-explorer .navigation-sidebar separator.fenestra-sidebar-sep { margin: 8px 10px; min-height: 1px; background: #3a3a3a; }
+.win11-explorer .navigation-sidebar image.fenestra-pin { opacity: .7; margin-right: 0; }
+.win11-explorer label.win11-status { min-height: 24px; padding: 0 14px; font-size: 12px; color: #ffffff; background: #191919; }
+.win11-explorer .win11-commandbar separator.win11-cmd-separator { margin: 8px 0; }
+.win11-explorer .win11-navigation { padding-bottom: 3px; }
+.win11-explorer .navigation-sidebar row image, .win11-explorer placessidebar row image { margin-right: 0; }
+.win11-explorer .navigation-sidebar row, .win11-explorer placessidebar row { padding-right: 2px; }
+.win11-explorer pathbar button, .win11-explorer .path-bar button { font-weight: 400; }
+.win11-explorer .path-bar-box button.image-button, .win11-explorer pathbar > button.image-button { opacity: 0; min-width: 0; padding: 0; }

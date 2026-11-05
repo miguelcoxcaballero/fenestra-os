@@ -266,3 +266,87 @@ StEntry:focus { border-color: #647c64; box-shadow: inset 0 -2px #647c64; }
 .windows-shot-toast .message-body { font-family: "Segoe UI"; font-size: 14px; color: #ffffff; }
 .windows-shot-toast .message-source-title { font-family: "Segoe UI"; font-size: 12px; font-weight: 400; }
 .windows-shot-toast .notification-button { border-radius: 4px; min-height: 32px; font-family: "Segoe UI"; font-size: 14px; font-weight: 400; background-color: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+
+/* ---- Windows 11 volume / brightness flyout (osdStyle.js) ---- */
+.fenestra-osd {
+    min-width: 192px; height: 48px;
+    padding: 0 16px;
+    spacing: 12px;
+    background-color: rgba(32, 32, 32, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.26);
+    color: #ffffff;
+    font-family: "Segoe UI Variable", "Selawik", sans-serif;
+}
+.fenestra-osd.fenestra-osd-level { width: 192px; }
+.fenestra-osd-icon { icon-size: 16px; color: #ffffff; }
+.fenestra-osd-slider { min-width: 20px; height: 20px; }
+.fenestra-osd-value { font-size: 14px; font-weight: 400; min-width: 24px; text-align: right; }
+.fenestra-osd-text .fenestra-osd-value { text-align: left; min-width: 0; }
+/* Non-level OSDs (caps lock, display switch, ...) keep GNOME's window, Windows-styled. */
+.osd-window {
+    background-color: rgba(32, 32, 32, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.26);
+    padding: 12px 16px;
+    margin-bottom: 72px;
+    spacing: 12px;
+    font-family: "Segoe UI Variable", "Selawik", sans-serif;
+    font-size: 14px;
+}
+.osd-window StIcon { icon-size: 16px; }
+.osd-window .level { height: 4px; -barlevel-height: 4px; -barlevel-active-background-color: #4cc2ff;
+    -barlevel-background-color: rgba(255, 255, 255, 0.54); }
+
+/* ---- Ctrl+Alt+Del security screen (securityScreen.js) ---- */
+.fenestra-cad {
+    background-color: #000000;
+    color: #ffffff;
+    font-family: "Segoe UI Variable", "Selawik", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+}
+.fenestra-cad-item {
+    padding: 0 10px 0 9px;
+    border-radius: 0;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 400;
+    background-color: transparent;
+}
+.fenestra-cad-item:hover { background-color: rgba(255, 255, 255, 0.06); }
+.fenestra-cad-item:active { background-color: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.79); }
+.fenestra-cad-focus { border: 2px solid #ffffff; border-radius: 0; background-color: transparent; }
+.fenestra-cad-cancel {
+    background-color: #333333;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 400;
+    padding: 0;
+}
+.fenestra-cad-cancel:hover { background-color: #3b3b3b; }
+.fenestra-cad-cancel:active { background-color: #2b2b2b; color: rgba(255, 255, 255, 0.79); }
+.fenestra-cad-corner { border-radius: 4px; padding: 0; background-color: transparent; }
+.fenestra-cad-corner StIcon { icon-size: 16px; color: #ffffff; }
+.fenestra-cad-corner:hover, .fenestra-cad-corner:checked { background-color: rgba(255, 255, 255, 0.06); }
+.fenestra-cad-menu {
+    background-color: #2c2c2c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.36);
+    padding: 4px;
+    min-width: 200px;
+    font-size: 14px;
+}
+.fenestra-cad-menu-item { border-radius: 4px; padding: 0 12px; min-height: 36px; color: #ffffff; background-color: transparent; }
+.fenestra-cad-menu-item StBoxLayout { spacing: 12px; }
+.fenestra-cad-menu-item StIcon { icon-size: 16px; }
+.fenestra-cad-menu-item:hover, .fenestra-cad-menu-item:focus { background-color: rgba(255, 255, 255, 0.06); }
+.fenestra-cad-menu-header { padding: 8px 12px 10px 12px; spacing: 12px; }
+.fenestra-cad-menu-header StIcon { icon-size: 16px; }
+.fenestra-cad-menu-title { font-size: 14px; font-weight: 600; }
+.fenestra-cad-menu-sub { font-size: 12px; color: rgba(255, 255, 255, 0.79); }
+.fenestra-cad-menu-label { padding-right: 16px; }

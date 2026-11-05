@@ -9,6 +9,8 @@ import {installTrayLayout} from './trayLayout.js';
 import {watchExternalPower} from './powerSource.js';
 import {BaseIcon} from 'resource:///org/gnome/shell/ui/iconGrid.js';
 import {installTaskbarStyle} from './taskbarStyle.js';
+import {installOsdStyle} from './osdStyle.js';
+import {SecurityScreen} from './securityScreen.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -40,6 +42,8 @@ export default class WindowsTrayTypography extends Extension {
         this._stopQuickPanel=installQuickPanel();
         this._stopCalendar=installCalendarPanel();
         this._stopMedia=installMediaPanel();
+        this._stopOsd=installOsdStyle(this._injections,fenestraAsset);
+        try{this._security=new SecurityScreen(this.getSettings('org.gnome.shell.extensions.fenestra-tray'),fenestraAsset);}catch(e){logError(e,'Fenestra security screen');}
         this._power(Main.panel.statusArea.quickSettings?._system);
         this._timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,15,()=>{
             this._date(Main.panel.statusArea.dateMenu);
@@ -93,6 +97,8 @@ export default class WindowsTrayTypography extends Extension {
         indicator._percentageLabel.set_style('font-family: "Fenestra Taskbar Text"; font-size: 12px; font-weight: 400; min-width: 36px; text-align: right;');
     }
     disable() {
+        this._security?.destroy();this._security=null;
+        this._stopOsd?.();this._stopOsd=null;
         this._stopShot?.();this._stopShot=null;
         this._stopPreview?.();this._stopPreview=null;
         this._stopOverview?.();this._stopOverview=null;

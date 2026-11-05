@@ -72,11 +72,20 @@
             <child>
               <object class="GtkImage">
                 <property name="icon-name">win11-explorer-view</property>
+                <property name="pixel-size">16</property>
               </object>
             </child>
             <child>
               <object class="GtkLabel">
-                <property name="label">Ver</property>
+                <property name="label">View</property>
+                <style><class name="win11-cmd-label" /></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">win11-explorer-chevron-down</property>
+                <property name="pixel-size">8</property>
+                <style><class name="win11-cmd-chevron" /></style>
               </object>
             </child>
           </object>

@@ -84,7 +84,22 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
             self._attach(win)
         return GLib.SOURCE_REMOVE
 
+    def _relabel(self, window):
+        for widget in walk(window):
+            if isinstance(widget, Gtk.Label) and widget.has_css_class('win11-cmd-label') and not getattr(widget, '_fenestra_tr', False):
+                widget._fenestra_tr = True
+                widget.set_label(tr(widget.get_label()))
+            elif isinstance(widget, Gtk.Widget) and widget.get_tooltip_text() and not getattr(widget, '_fenestra_tip', False):
+                widget._fenestra_tip = True
+                widget.set_tooltip_text(tr(widget.get_tooltip_text()))
+
+    def _search_label(self, window, title):
+        for widget in walk(window):
+            if isinstance(widget, Gtk.Label) and widget.has_css_class('win11-search-label'):
+                widget.set_label(tr('Search %s') % title if title else tr('Search'))
+
     def _attach(self, window):
+        self._relabel(window)
         if window.find_property("active-slot") and not getattr(window,"_windows_views",None):
             window._windows_views = FenestraViews(window)
         for widget in walk(window):
@@ -141,7 +156,13 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
             if not path:
                 name = {'trash':'user-trash', 'recent':'document-open-recent', 'starred':'starred',
                         'network':'network-workgroup', 'computer':'computer'}.get(location.get_uri_scheme(), 'folder-remote')
-        page.set_icon(Gio.ThemedIcon.new(name))
+        page.set_icon(Gio.ThemedIcon.new('hwin' if name == 'folder-home' else name))
+        window = slot.get_root()
+        if window:
+            title = tr('Home') if location and location.get_path() == os.path.expanduser('~') else page.get_title()
+            if location and location.get_path() == os.path.expanduser('~'):
+                page.set_title(tr('Home'))
+            GLib.idle_add(lambda: (self._search_label(window, title), GLib.SOURCE_REMOVE)[1])
         if location and location.get_uri_scheme()=='computer' and page.get_title()!=tr('This PC'):page.set_title(tr('This PC'))
 
     def _menus(self):

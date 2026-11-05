@@ -6,7 +6,7 @@ from fenestra_sidebar import FenestraSidebar, GALLERY
 
 from fenestra_sidebar import _L, tr
 _L.setdefault('es', {}).update({'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
-    'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar'})
+    'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar', 'Compact view': 'Vista compacta', 'View': 'Ver', '1 item': '1 elemento', '%d items': '%d elementos'})
 VIEWS = [(k, tr(v)) for k, v in [('extra-large','Extra large icons'),('large','Large icons'),('medium','Medium icons'),('small','Small icons'),('list','List'),('details','Details'),('tiles','Tiles'),('content','Content')]]
 
 def walk(w):
@@ -17,6 +17,17 @@ def walk(w):
         c=c.get_next_sibling()
 
 def kind(w):return GObject.type_name(w.__gtype__)
+
+def _count_items(location):
+    try:
+        en=location.enumerate_children('standard::name,standard::is-hidden',Gio.FileQueryInfoFlags.NONE,None)
+        n=0
+        for info in en:
+            if not info.get_is_hidden(): n+=1
+        return n
+    except GLib.Error:
+        return None
+
 
 class FenestraViews:
     def __init__(self, window):
@@ -80,6 +91,13 @@ class FenestraViews:
         self.window.add_css_class('win11-compact') if self.compact else self.window.remove_css_class('win11-compact')
         self.select(self.mode)
 
+    def _status(self,slot):
+        label=next((w for w in walk(self.window) if isinstance(w,Gtk.Label) and w.has_css_class('win11-status')),None)
+        if not label: return
+        loc=slot.get_property('location') if slot else None
+        n=_count_items(loc) if loc and loc.get_path() else None
+        label.set_label('' if n is None else (tr('1 item') if n==1 else tr('%d items') % n))
+
     def refresh(self):
         self.pending=0
         if not self.window:return False
@@ -98,6 +116,7 @@ class FenestraViews:
             slot._windows_views_signals=True
             slot.connect('notify::loading',self.queue)
             slot.connect('notify::location',self.queue)
+        self._status(slot)
         for w in walk(self.window):
             if isinstance(w,Gtk.PopoverMenu):
                 model=w.get_menu_model()
@@ -110,22 +129,33 @@ class FenestraViews:
                         views=Gio.Menu()
                         for key,name in VIEWS:
                             item=Gio.MenuItem.new(name,None);item.set_action_and_target_value('win.windows-view',GLib.Variant('s',key));views.append_item(item)
-                        views.append('Espacio entre elementos','win.windows-row-spacing')
-                        model.remove(0);model.insert_section(0,'Vista',views)
+                        views.append(tr('Compact view'),'win.windows-row-spacing')
+                        model.remove(0);model.insert_section(0,tr('View'),views)
                         commandbar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
                         if commandbar and not getattr(self.window,'_windows_sort_menu',None):
                             sortmodel=model.get_item_link(1,'section')
                             if sortmodel:
                                 sortbutton=Gtk.MenuButton(menu_model=sortmodel)
+                                sortbutton.add_css_class('win11-cmd-text');sortbutton.add_css_class('flat')
                                 contents=Gtk.Box(spacing=8)
-                                image=Gtk.Image.new_from_icon_name('win11-menu-sort');image.set_pixel_size(16)
-                                contents.append(image);contents.append(Gtk.Label(label=tr('Sort')))
+                                image=Gtk.Image.new_from_icon_name('win11-explorer-sort');image.set_pixel_size(16)
+                                lab=Gtk.Label(label=tr('Sort'));lab.add_css_class('win11-cmd-label')
+                                chev=Gtk.Image.new_from_icon_name('win11-explorer-chevron-down');chev.set_pixel_size(8);chev.add_css_class('win11-cmd-chevron')
+                                contents.append(image);contents.append(lab);contents.append(chev)
                                 sortbutton.set_child(contents)
                                 control=next((a for a in walk(commandbar) if kind(a)=='NautilusViewControls'),None)
                                 if control:commandbar.insert_child_after(sortbutton,control.get_prev_sibling())
                                 else:commandbar.append(sortbutton)
                                 self.window._windows_sort_menu=sortbutton
 
+            if kind(w)=='AdwSplitButton' and not getattr(w,'_fenestra_dropdown',False):
+                w._fenestra_dropdown=True
+                if not self.window.lookup_action('fenestra-view-menu'):
+                    act=Gio.SimpleAction.new('fenestra-view-menu',None)
+                    act.connect('activate',lambda *_a,b=w:b.popup())
+                    self.window.add_action(act)
+                w.set_action_name('win.fenestra-view-menu')
+                w.add_css_class('win11-cmd-split')
             if isinstance(w,Gtk.ColumnView) and w.is_ancestor(slot):
                 columns=w.get_columns()
                 for index in range(columns.get_n_items()):

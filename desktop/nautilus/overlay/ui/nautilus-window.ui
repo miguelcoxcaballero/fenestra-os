@@ -155,11 +155,11 @@
                     <style>
                       <class name="win11-commandbar" />
                     </style>
-                    <property name="spacing">4</property>
+                    <property name="spacing">0</property>
                     <child>
                       <object class="GtkButton">
                         <property name="action-name">view.new-folder</property>
-                        <property name="tooltip-text">Nueva carpeta</property>
+                        <property name="tooltip-text">New folder</property>
                         <property name="child">
                           <object class="GtkBox">
                             <property name="spacing">8</property>
@@ -170,76 +170,80 @@
                             </child>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Nuevo</property>
+                                <property name="label">New</property>
+                                <style><class name="win11-cmd-label" /></style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">win11-explorer-chevron-down</property>
+                                <property name="pixel-size">8</property>
+                                <style><class name="win11-cmd-chevron" /></style>
                               </object>
                             </child>
                           </object>
                         </property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkButton">
-                        <property name="action-name">view.cut</property>
-                        <property name="tooltip-text">Cortar</property>
-                        <property name="icon-name">win11-menu-cut</property>
-                        <style>
-                          <class name="flat" />
-                        </style>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkButton">
-                        <property name="action-name">view.copy</property>
-                        <property name="tooltip-text">Copiar</property>
-                        <property name="icon-name">win11-menu-copy</property>
-                        <style>
-                          <class name="flat" />
-                        </style>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkButton">
-                        <property name="action-name">view.paste</property>
-                        <property name="tooltip-text">Pegar</property>
-                        <property name="icon-name">win11-menu-paste</property>
-                        <style>
-                          <class name="flat" />
-                        </style>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkButton">
-                        <property name="action-name">view.rename</property>
-                        <property name="tooltip-text">Cambiar nombre</property>
-                        <property name="icon-name">win11-menu-rename</property>
-                        <style>
-                          <class name="flat" />
-                        </style>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkButton">
-                        <property name="action-name">view.move-to-trash</property>
-                        <property name="tooltip-text">Mover a la papelera</property>
-                        <property name="icon-name">win11-menu-delete</property>
-                        <style>
-                          <class name="flat" />
-                        </style>
+                        <style><class name="flat" /><class name="win11-cmd-text" /></style>
                       </object>
                     </child>
                     <child>
                       <object class="GtkSeparator">
                         <property name="orientation">vertical</property>
+                        <style><class name="win11-cmd-separator" /></style>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton">
-                        <property name="action-name">view.current-directory-properties</property>
-                        <property name="tooltip-text">Propiedades</property>
-                        <property name="icon-name">win11-menu-page</property>
-                        <style>
-                          <class name="flat" />
-                        </style>
+                        <property name="action-name">view.cut</property>
+                        <property name="tooltip-text">Cut</property>
+                        <property name="icon-name">win11-menu-cut</property>
+                        <style><class name="flat" /><class name="win11-cmd-icon" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="action-name">view.copy</property>
+                        <property name="tooltip-text">Copy</property>
+                        <property name="icon-name">win11-menu-copy</property>
+                        <style><class name="flat" /><class name="win11-cmd-icon" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="action-name">view.paste</property>
+                        <property name="tooltip-text">Paste</property>
+                        <property name="icon-name">win11-menu-paste</property>
+                        <style><class name="flat" /><class name="win11-cmd-icon" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="action-name">view.rename</property>
+                        <property name="tooltip-text">Rename</property>
+                        <property name="icon-name">win11-menu-rename</property>
+                        <style><class name="flat" /><class name="win11-cmd-icon" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="action-name">view.open-with-other-application</property>
+                        <property name="tooltip-text">Share</property>
+                        <property name="icon-name">win11-explorer-share</property>
+                        <style><class name="flat" /><class name="win11-cmd-icon" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="action-name">view.move-to-trash</property>
+                        <property name="tooltip-text">Delete</property>
+                        <property name="icon-name">win11-menu-delete</property>
+                        <style><class name="flat" /><class name="win11-cmd-icon" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="orientation">vertical</property>
+                        <style><class name="win11-cmd-separator" /></style>
                       </object>
                     </child>
                     <child>
@@ -248,19 +252,89 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuButton">
-                        <property name="tooltip-text" translatable="yes">Main Menu</property>
-                        <property name="icon_name">win11-explorer-more</property>
-                        <property name="menu-model">app_menu</property>
+                      <object class="GtkButton">
+                        <property name="action-name">slot.search-visible</property>
+                        <property name="tooltip-text">Filter</property>
+                        <property name="child">
+                          <object class="GtkBox">
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">win11-explorer-filter</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Filter</property>
+                                <style><class name="win11-cmd-label" /></style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">win11-explorer-chevron-down</property>
+                                <property name="pixel-size">8</property>
+                                <style><class name="win11-cmd-chevron" /></style>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                        <style><class name="flat" /><class name="win11-cmd-text" /></style>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="orientation">vertical</property>
+                        <style><class name="win11-cmd-separator" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuButton">
+                        <property name="tooltip-text">See more</property>
+                        <property name="icon_name">win11-explorer-more</property>
+                        <property name="menu-model">app_menu</property>
+                        <style><class name="flat" /><class name="win11-cmd-icon" /></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox"><property name="hexpand">True</property></object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="action-name">view.current-directory-properties</property>
+                        <property name="tooltip-text">Details</property>
+                        <property name="child">
+                          <object class="GtkBox">
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">win11-explorer-details</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Details</property>
+                                <style><class name="win11-cmd-label" /></style>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                        <style><class name="flat" /><class name="win11-cmd-text" /></style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child type="bottom">
+                  <object class="GtkLabel">
+                    <property name="xalign">0</property>
+                    <style><class name="win11-status" /></style>
                   </object>
                 </child>
                 <property name="content">
                   <object class="AdwOverlaySplitView" id="split_view">
                     <property name="enable-show-gesture">False</property>
                     <property name="enable-hide-gesture">False</property>
-                    <property name="max-sidebar-width">240</property>
+                    <property name="max-sidebar-width">157</property>
+                    <property name="min-sidebar-width">157</property>
                     <property name="sidebar-width-unit">px</property>
                     <property name="sidebar-width-fraction">0.2</property>
                     <property name="sidebar">

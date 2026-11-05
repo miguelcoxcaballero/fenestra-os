@@ -64,7 +64,7 @@
                 <child>
                   <object class="GtkToggleButton" id="search_button">
                     <property name="tooltip_text" translatable="yes">Search Current Folder</property>
-                    <property name="halign">center</property>
+                    <property name="halign">fill</property>
                     <property name="valign">center</property>
                     <property name="action_name">slot.search-visible</property>
                     <binding name="active">
@@ -76,13 +76,18 @@
                       <object class="GtkBox">
                         <property name="spacing">8</property>
                         <child>
-                          <object class="GtkImage">
-                            <property name="icon-name">edit-find-symbolic</property>
+                          <object class="GtkLabel">
+                            <property name="label">Search</property>
+                            <property name="hexpand">True</property>
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">end</property>
+                            <style><class name="win11-search-label" /></style>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkLabel">
-                            <property name="label">Buscar en esta carpeta</property>
+                          <object class="GtkImage">
+                            <property name="icon-name">win11-explorer-search</property>
+                            <property name="pixel-size">12</property>
                           </object>
                         </child>
                       </object>

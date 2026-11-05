@@ -23,6 +23,7 @@ run() {
         -device VGA,xres=$W,yres=$H,vgamem_mb=64 -display none \
         -device qemu-xhci -device usb-tablet -device usb-kbd \
         -netdev user,id=n0 -device e1000e,netdev=n0 \
+        -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0 \
         -qmp "unix:$QMP,server,nowait" "$@"
 }
 case "${1:-}" in
@@ -37,6 +38,7 @@ case "${1:-}" in
   key) shift; qmp key "$@" ;;
   type) shift; qmp type "$*" ;;
   click) qmp click "$2" "$3" $W $H ;;
+  link) qmp link "$2" ;;
   stop) qmp quit ;;
   *) sed -n 2,3p "$0"; exit 1 ;;
 esac

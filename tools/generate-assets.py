@@ -116,6 +116,39 @@ def gen_power():
         write(f'power/{key}.svg', fluent(icon, '#eeeeee', 16))
 
 
+# ------------------------------------------------- OSD + security screen ---
+def speaker_svg(waves=0, muted=False, color='#ffffff'):
+    """Speaker glyph with 0-3 sound waves or a mute cross (own drawing, 16px)."""
+    s = [f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" '
+         f'stroke="{color}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">',
+         '<path d="M2.5 5.75h2.25L7.75 3v10L4.75 10.25H2.5a.75.75 0 0 1-.75-.75v-3a.75.75 0 0 1 .75-.75z"/>']
+    if muted:
+        s.append('<path d="M10.25 6.25l3.5 3.5M13.75 6.25l-3.5 3.5"/>')
+    for i in range(waves):
+        r = 2.25 + 2.1 * i
+        a = math.radians(48 - 4 * i)
+        x, dy = 7.75 + r * math.cos(a), r * math.sin(a)
+        s.append(f'<path d="M{x:.2f} {8 - dy:.2f}A{r:.2f} {r:.2f} 0 0 1 {x:.2f} {8 + dy:.2f}"/>')
+    s.append('</svg>')
+    return '\n'.join(s)
+
+
+def gen_osd():
+    # Volume/brightness flyout glyphs (16px, white for the dark acrylic flyout).
+    for waves in range(4):
+        write(f'osd/speaker-{waves}.svg', speaker_svg(waves))
+    write('osd/speaker-mute.svg', speaker_svg(0, muted=True))
+    for name, icon in {'brightness': 'brightness_high_16_regular', 'mic': 'mic_16_regular',
+                       'mic-off': 'mic_off_16_regular', 'keyboard': 'keyboard_16_regular'}.items():
+        write(f'osd/{name}.svg', fluent(icon, '#ffffff', 16))
+    # Ctrl+Alt+Del security screen: bottom-right buttons and their menus (Fluent UI System Icons, MIT).
+    for name, icon in {'network-offline': 'globe_prohibited_16_regular', 'network-wired': 'globe_16_regular',
+                       'network-wifi': 'wifi_1_20_regular', 'accessibility': 'accessibility_16_regular',
+                       'power': 'power_20_regular', 'sleep': 'weather_moon_16_regular',
+                       'restart': 'arrow_clockwise_16_regular', 'check': 'checkmark_16_regular'}.items():
+        write(f'security/{name}.svg', fluent(icon, '#ffffff', 16))
+
+
 # --------------------------------------------------------------- consent ---
 def gen_consent():
     write('consent/close.svg', fluent('dismiss_16_regular', '#ffffff', 16))
@@ -265,7 +298,21 @@ def gen_menu():
         write(f'menu-icons/win11-menu-{name}.svg', fluent(icon, '#9fc8dc', 16))
 
 
-STEPS = {'menu': gen_menu, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,
+EXPLORER = {'add': 'add_circle_16_regular', 'more': 'more_horizontal_16_regular', 'refresh': 'arrow_clockwise_16_regular',
+            'up': 'arrow_up_16_regular', 'back': 'arrow_left_16_regular', 'forward': 'arrow_right_16_regular',
+            'view': 'apps_list_20_regular', 'sort': 'arrow_sort_16_regular', 'filter': 'filter_16_regular',
+            'details': 'panel_right_16_regular', 'share': 'share_16_regular', 'home': 'home_16_regular',
+            'chevron-down': 'chevron_down_12_regular', 'chevron-right': 'chevron_right_12_regular',
+            'search': 'search_16_regular', 'pin': 'pin_12_regular'}
+
+
+def gen_explorer():
+    # File Explorer chrome (Fluent UI System Icons, MIT): white glyphs for the dark command/address bars.
+    for name, icon in EXPLORER.items():
+        write(f'menu-icons/win11-explorer-{name}.svg', fluent(icon, '#ffffff', 16))
+
+
+STEPS = {'osd': gen_osd, 'explorer': gen_explorer, 'menu': gen_menu, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,
          'folders': gen_folders, 'hello': gen_hello, 'logos': gen_logos, 'wallpapers': gen_wallpapers}
 
 

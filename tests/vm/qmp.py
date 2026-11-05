@@ -17,8 +17,8 @@ def connect(path):
     return s, f
 
 
-def cmd(f, name, **args):
-    f.write(json.dumps({'execute': name, 'arguments': args} if args else {'execute': name}) + '\n')
+def cmd(f, _cmd, **args):
+    f.write(json.dumps({'execute': _cmd, 'arguments': args} if args else {'execute': _cmd}) + '\n')
     f.flush()
     while True:
         r = json.loads(f.readline())
@@ -29,7 +29,8 @@ def cmd(f, name, **args):
 
 
 KEYMAP = {' ': 'spc', '\n': 'ret', '.': 'dot', ',': 'comma', '-': 'minus', '/': 'slash', '@': ('shift', '2'),
-          '_': ('shift', 'minus'), '!': ('shift', '1'), ':': ('shift', 'semicolon'), ';': 'semicolon'}
+          '_': ('shift', 'minus'), '!': ('shift', '1'), ':': ('shift', 'semicolon'), ';': 'semicolon', '\\': 'backslash',
+          '"': ('shift', 'apostrophe'), "'": 'apostrophe', '=': 'equal', '(': ('shift', '9'), ')': ('shift', '0'), '[': 'bracket_left', ']': 'bracket_right', '{': ('shift', 'bracket_left'), '}': ('shift', 'bracket_right'), '$': ('shift', '4'), '|': ('shift', 'backslash'), '+': ('shift', 'equal'), '<': ('shift', 'comma'), '>': ('shift', 'dot'), '?': ('shift', 'slash'), '#': ('shift', '3'), '&': ('shift', '7'), '%': ('shift', '5')}
 
 
 def keyseq(f, keys):
@@ -70,6 +71,8 @@ def main():
             for down in (True, False):
                 cmd(f, 'input-send-event', events=[{'type': 'btn', 'data': {'down': down, 'button': 'left'}}])
                 time.sleep(0.08)
+    elif op == 'link':
+        cmd(f, 'set_link', name='n0', up=sys.argv[3] == 'on')
     elif op == 'quit':
         cmd(f, 'quit')
     sock.close()

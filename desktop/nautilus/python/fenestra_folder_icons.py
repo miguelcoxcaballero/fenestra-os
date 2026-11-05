@@ -6,7 +6,9 @@ import gi
 gi.require_version('Nautilus', '4.1')
 from gi.repository import GObject, Nautilus
 
-sys.path.insert(0, '/usr/share/fenestra/lib')
+for _lib in ('/usr/share/fenestra/lib', os.path.expanduser('~/.local/share/fenestra/lib')):
+    if os.path.isdir(_lib):
+        sys.path.insert(0, _lib)
 from folder_icons import FolderIcons  # noqa: E402
 
 _icons = FolderIcons()
