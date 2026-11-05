@@ -11,6 +11,7 @@ import {BaseIcon} from 'resource:///org/gnome/shell/ui/iconGrid.js';
 import {installTaskbarStyle} from './taskbarStyle.js';
 import {installOsdStyle} from './osdStyle.js';
 import {SecurityScreen} from './securityScreen.js';
+import {Appearance} from './appearance.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -24,7 +25,9 @@ const fenestraAsset=rel=>{for(const base of [GLib.build_filenamev([GLib.get_user
 export default class WindowsTrayTypography extends Extension {
     enable() {
         this._injections=new InjectionManager();this._dates=new Map();this._powers=new Map();
-        this._stopTaskbar=installTaskbarStyle(this._injections);
+        // Light/dark mode + accent colour for the whole desktop (appearance.js).
+        try{this._appearance=new Appearance(this.path);this._appearance.connect(()=>this._power(Main.panel.statusArea.quickSettings?._system));}catch(e){logError(e,'Fenestra appearance');}
+        this._stopTaskbar=installTaskbarStyle(this._injections,this._appearance);
         this._injections.overrideMethod(BaseIcon.prototype,'animateZoomOut',()=>function(){});
         this._injections.overrideMethod(BaseIcon.prototype,'animateZoomOutAtPos',()=>function(){});
         this._upower=UPower.Client.new();
@@ -42,7 +45,7 @@ export default class WindowsTrayTypography extends Extension {
         this._stopQuickPanel=installQuickPanel();
         this._stopCalendar=installCalendarPanel();
         this._stopMedia=installMediaPanel();
-        this._stopOsd=installOsdStyle(this._injections,fenestraAsset);
+        this._stopOsd=installOsdStyle(this._injections,fenestraAsset,this._appearance);
         try{this._security=new SecurityScreen(this.getSettings('org.gnome.shell.extensions.fenestra-tray'),fenestraAsset);}catch(e){logError(e,'Fenestra security screen');}
         this._power(Main.panel.statusArea.quickSettings?._system);
         this._timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,15,()=>{
@@ -89,7 +92,7 @@ export default class WindowsTrayTypography extends Extension {
         const saver=Main.panel.statusArea.quickSettings?._powerProfiles?.quickSettingsItems?.[0]?._proxy?.ActiveProfile==='power-saver';
         const active=proxy.State===UPower.DeviceState.CHARGING||proxy.State===UPower.DeviceState.FULLY_CHARGED||proxy.Percentage>=98;
         const state=charging?(active?'charging':'plugged'):proxy.Percentage<=10?'low':saver?'saver':'normal';
-        indicator._indicator.gicon=new Gio.FileIcon({file:Gio.File.new_for_path(fenestraAsset(`battery/${state}-${charging?1:0}-${level}.svg`))});
+        indicator._indicator.gicon=new Gio.FileIcon({file:Gio.File.new_for_path(this._appearance?.tint(fenestraAsset(`battery/${state}-${charging?1:0}-${level}.svg`))??fenestraAsset(`battery/${state}-${charging?1:0}-${level}.svg`))});
         const footer=indicator._systemItem.powerToggle;
         if(footer._icon){footer._icon.gicon=indicator._indicator.gicon;footer._icon.set_style('-st-icon-style: regular; icon-size:20px;');}
         if(footer._title)footer._title.set_style('font-family: "Segoe UI"; font-size:12px; font-weight:400;');
@@ -112,6 +115,7 @@ export default class WindowsTrayTypography extends Extension {
         if(this._acId)this._upower.disconnect(this._acId);
         this._acId=0;this._upower=null;
         if(this._timer)GLib.source_remove(this._timer);this._timer=0;
+        this._appearance?.destroy();this._appearance=null;
         this._injections?.clear();
         for(const [menu,state] of this._dates){
             menu._clock.disconnect(state.id);menu.disconnect(state.destroy);

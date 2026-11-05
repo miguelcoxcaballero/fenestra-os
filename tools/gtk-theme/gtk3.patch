@@ -1,0 +1,100 @@
+--- a/gtk.css
++++ b/gtk.css
+@@ -863,7 +863,7 @@
+ window.background > box.vertical > toolbar.primary-toolbar > toolitem > .linked > button:not(.toggle):not(.raised):not(.flat), window.background > box.vertical > toolbar.primary-toolbar > toolitem button.flat.scale, window.background > box.vertical > toolbar.primary-toolbar > toolitem > .linked > button.image-button.raised, window.csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > .linked > button,
+ window.csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > box.horizontal > button,
+ window.solid-csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > .linked > button,
+-window.solid-csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > box.horizontal > button, .nautilus-window headerbar revealer > button, filechooser #pathbarbox > stack > box > button, headerbar button.titlebutton:not(.suggested-action):not(.destructive-action), button.close, button.circular {
++window.solid-csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > box.horizontal > button, .nautilus-window headerbar revealer > button, filechooser #pathbarbox > stack > box > button, button.close, button.circular {
+   border-radius: 9999px;
+ }
+ 
+@@ -871,7 +871,7 @@
+ window.background > box.vertical > toolbar.primary-toolbar > toolitem > .linked > button:not(:hover):not(:focus):not(:active):not(:checked):not(.toggle):not(.raised):not(.flat), window.background > box.vertical > toolbar.primary-toolbar > toolitem button.flat.scale:not(:hover):not(:focus):not(:active):not(:checked), window.background > box.vertical > toolbar.primary-toolbar > toolitem > .linked > button.image-button.raised:not(:hover):not(:focus):not(:active):not(:checked), window.csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > .linked > button:not(:hover):not(:focus):not(:active):not(:checked),
+ window.csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > box.horizontal > button:not(:hover):not(:focus):not(:active):not(:checked),
+ window.solid-csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > .linked > button:not(:hover):not(:focus):not(:active):not(:checked),
+-window.solid-csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > box.horizontal > button:not(:hover):not(:focus):not(:active):not(:checked), .nautilus-window headerbar revealer > button:not(:hover):not(:focus):not(:active):not(:checked), filechooser #pathbarbox > stack > box > button:not(:hover):not(:focus):not(:active):not(:checked), headerbar button.titlebutton:not(:hover):not(:focus):not(:active):not(:checked):not(.suggested-action):not(.destructive-action), button.close:not(:hover):not(:focus):not(:active):not(:checked), button.circular:not(:hover):not(:focus):not(:active):not(:checked) {
++window.solid-csd > box.vertical > box.vertical > toolbar.horizontal > toolitem > box.horizontal > button:not(:hover):not(:focus):not(:active):not(:checked), .nautilus-window headerbar revealer > button:not(:hover):not(:focus):not(:active):not(:checked), filechooser #pathbarbox > stack > box > button:not(:hover):not(:focus):not(:active):not(:checked), button.close:not(:hover):not(:focus):not(:active):not(:checked), button.circular:not(:hover):not(:focus):not(:active):not(:checked) {
+   border-color: rgba(255, 255, 255, 0.12);
+ }
+ 
+@@ -1424,11 +1424,11 @@
+ }
+ 
+ headerbar button.titlebutton:not(.suggested-action):not(.destructive-action) {
+-  min-height: 26px;
+-  min-width: 26px;
++  min-height: 44px;
++  min-width: 44px;
+   padding: 0;
+-  margin-left: 3px;
+-  margin-right: 3px;
++  margin: 0 -3px;
++  border-radius: 0;
+ }
+ 
+ .titlebar {
+@@ -1720,6 +1720,30 @@
+   border-radius: 0;
+ }
+ 
++.tiled headerbar > box.right button.titlebutton.close, .tiled-top headerbar > box.right button.titlebutton.close, .tiled-right headerbar > box.right button.titlebutton.close, .tiled-bottom headerbar > box.right button.titlebutton.close, .tiled-left headerbar > box.right button.titlebutton.close, .maximized headerbar > box.right button.titlebutton.close, .fullscreen headerbar > box.right button.titlebutton.close {
++  border-top-right-radius: 0;
++}
++
++.tiled headerbar > box.left button.titlebutton.close, .tiled-top headerbar > box.left button.titlebutton.close, .tiled-right headerbar > box.left button.titlebutton.close, .tiled-bottom headerbar > box.left button.titlebutton.close, .tiled-left headerbar > box.left button.titlebutton.close, .maximized headerbar > box.left button.titlebutton.close, .fullscreen headerbar > box.left button.titlebutton.close {
++  border-top-left-radius: 0;
++}
++
++headerbar > box.right {
++  margin-right: -3px;
++}
++
++headerbar > box.right button.titlebutton.close {
++  border-top-right-radius: 8px;
++}
++
++headerbar > box.left {
++  margin-left: -3px;
++}
++
++headerbar > box.left button.titlebutton.close {
++  border-top-left-radius: 8px;
++}
++
+ headerbar button.titlebutton:not(.suggested-action):not(.destructive-action).close:hover, headerbar button.titlebutton:not(.suggested-action):not(.destructive-action).close:backdrop:hover {
+   background-color: #E57373;
+   color: white;
+@@ -1733,11 +1757,15 @@
+ headerbar.default-decoration {
+   background-color: #202020;
+   border-radius: 8px 8px 0 0;
+-  min-height: 22px;
+-  padding: 6px;
++  min-height: 32px;
++  padding: 0 3px;
+   box-shadow: none;
+ }
+ 
++.csd headerbar.default-decoration {
++  padding: 0 6px;
++}
++
+ headerbar.default-decoration:backdrop {
+   background-color: #2C2C2C;
+ }
+@@ -1748,10 +1776,10 @@
+ }
+ 
+ headerbar.default-decoration button.titlebutton:not(.suggested-action):not(.destructive-action) {
+-  min-height: 22px;
+-  min-width: 22px;
+-  margin: 0 3px;
+-  padding: 0;
++  min-height: 32px;
++  min-width: 32px;
++  margin: -3px;
++  padding: 0 6px;
+ }
+ 
+ .solid-csd headerbar:dir(rtl), .solid-csd headerbar:dir(ltr) {

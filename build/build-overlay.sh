@@ -26,6 +26,9 @@ cp -a "$D/extensions/." "$OUT/usr/share/gnome-shell/extensions/"
 for s in "$OUT"/usr/share/gnome-shell/extensions/*/schemas; do
     [ -d "$s" ] && glib-compile-schemas "$s"
 done
+# org.fenestra.desktop (accent colour) is read by Fenestra Settings and GTK apps too.
+install -Dm644 "$D/extensions/fenestra-tray@fenestra-os.github.io/schemas/org.fenestra.desktop.gschema.xml" \
+    "$OUT/usr/share/glib-2.0/schemas/org.fenestra.desktop.gschema.xml"
 
 log "Fenestra assets, libraries and helpers"
 install -d "$OUT/usr/share/fenestra/assets" "$OUT/usr/share/fenestra/lib" "$OUT/usr/libexec/fenestra"
@@ -62,7 +65,7 @@ install -Dm644 "$D/fontconfig/60-fenestra.conf" "$OUT/etc/fonts/conf.d/60-fenest
 
 log "GTK theme"
 install -d "$OUT/usr/share/themes"
-cp -a "$D/themes/Fenestra-Dark" "$OUT/usr/share/themes/"
+cp -a "$D/themes/Fenestra-Dark" "$D/themes/Fenestra-Light" "$OUT/usr/share/themes/"
 
 log "Icon theme (Win11 by yeyushengfan258 + Fenestra aliases)"
 if [ ! -d "$CACHE/Win11-icon-theme/.git" ]; then

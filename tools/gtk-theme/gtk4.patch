@@ -1,0 +1,71 @@
+--- a/gtk.css
++++ b/gtk.css
+@@ -959,11 +959,11 @@
+   font-weight: bold;
+ }
+ 
+-menubutton.circular > button, filechooser #pathbarbox > stack > box > button, headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action), button.close, button.circular {
++menubutton.circular > button, filechooser #pathbarbox > stack > box > button, button.close, button.circular {
+   border-radius: 9999px;
+ }
+ 
+-menubutton.circular > button label, filechooser #pathbarbox > stack > box > button label, headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action) label, button.close label, button.circular label {
++menubutton.circular > button label, filechooser #pathbarbox > stack > box > button label, button.close label, button.circular label {
+   padding: 0;
+ }
+ 
+@@ -2215,15 +2215,15 @@
+ }
+ 
+ headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action) {
+-  min-height: 26px;
+-  min-width: 26px;
++  min-height: 44px;
++  min-width: 44px;
+   padding: 0;
+-  margin-left: 3px;
+-  margin-right: 3px;
++  margin: 0;
++  border-radius: 0;
+ }
+ 
+ headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action) > image {
+-  border-radius: 100%;
++  border-radius: 0;
+ }
+ 
+ headerbar {
+@@ -2405,16 +2405,18 @@
+ }
+ 
+ headerbar windowcontrols {
+-  border-spacing: 6px;
+-  margin: 3px 0;
++  border-spacing: 0;
++  margin: -6px 0;
+ }
+ 
+ headerbar windowcontrols:not(.empty).start:dir(ltr), headerbar windowcontrols:not(.empty).end:dir(rtl) {
+   margin-right: 6px;
++  margin-left: -6px;
+ }
+ 
+ headerbar windowcontrols:not(.empty).start:dir(rtl), headerbar windowcontrols:not(.empty).end:dir(ltr) {
+   margin-left: 6px;
++  margin-right: -6px;
+ }
+ 
+ headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action), headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action):hover, headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action):active {
+@@ -2471,9 +2473,9 @@
+ headerbar.default-decoration windowcontrols > button:not(.suggested-action):not(.destructive-action),
+ headerbar.default-decoration windowcontrols > menubutton {
+   padding: 0;
+-  min-height: 22px;
+-  min-width: 22px;
+-  margin: 0 3px;
++  min-height: 32px;
++  min-width: 32px;
++  margin: 0;
+ }
+ 
+ window.devel headerbar.titlebar {

@@ -4,6 +4,7 @@ import St from 'gi://St';
 import Shell from 'gi://Shell';
 import GLib from 'gi://GLib';
 import * as Constants from '../constants.js';
+import {pick} from '../fenestraTheme.js';
 
 const label = (text, style = '') => new St.Label({text, y_align: Clutter.ActorAlign.CENTER, style: 'font-family: Segoe UI; font-weight: normal; ' + style});
 const button = (text, action) => {
@@ -74,7 +75,7 @@ function buildHome(layout) {
     layout._hideNavigationButtons();
     layout.applicationsBox.style='padding: 0px 0px 18px; spacing: 0px;';
     layout.applicationsScrollBox.vscrollbar_policy=St.PolicyType.EXTERNAL;
-    layout.searchEntry.style='margin: 0px; padding: 0px 14px; spacing: 11px; font-size: 13px; height: 32px; min-height: 0px; border-radius: 16px; background-color: rgba(28,28,28,0.75); border: 1px solid rgba(255,255,255,0.06);';
+    layout.searchEntry.style=`margin: 0px; padding: 0px 14px; spacing: 11px; font-size: 13px; height: 32px; min-height: 0px; border-radius: 16px; background-color: ${pick('rgba(28,28,28,0.75)', 'rgba(255,255,255,0.85)')}; border: 1px solid ${pick('rgba(255,255,255,0.06)', 'rgba(0,0,0,0.08)')};`;
     layout.searchEntry.x_expand=true;
     if(layout.searchEntry.primary_icon)layout.searchEntry.primary_icon.style='padding-right: 5px;';
     layout.searchEntry.hint_text='Search for apps, settings, and documents';
@@ -90,7 +91,7 @@ function buildHome(layout) {
     });
     add(heading('Recent',button('Show all  ›',()=>{layout._hideNavigationButtons();layout.backButton.show();layout._loadRecentFiles();layout.displayRecentFiles();}),28,12));
     const recents=add(new St.Widget({layout_manager:new Clutter.GridLayout(),x_expand:true,style:'margin: 9px 24px 8px 50px;'}));
-    const empty=label('Your recent files will appear here.','font-size: 12px; color: #bcbcbc; padding: 12px 0px;');
+    const empty=label('Your recent files will appear here.',`font-size: 12px; color: ${pick('#bcbcbc', '#5f5f5f')}; padding: 12px 0px;`);
     recents.layout_manager.attach(empty,0,0,3,1);
     layout._loadRecentFiles();
     const uris=layout.recentFilesManager.getRecentFiles().slice(0,18);
@@ -109,7 +110,7 @@ function buildHome(layout) {
             const days=Math.max(0,Math.floor((Date.now()/1000-modified)/86400));
             const time=new Date(modified*1000).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
             const age=days===0?`Today at ${time}`:days===1?`Yesterday at ${time}`:`${days} days ago`;
-            text.add_child(name);text.add_child(label(age,'font-size: 12px; font-weight: normal; color: #c8c8c8;'));row.add_child(text);b.set_child(row);b.x_align=Clutter.ActorAlign.START;
+            text.add_child(name);text.add_child(label(age,`font-size: 12px; font-weight: normal; color: ${pick('#c8c8c8', '#5f5f5f')};`));row.add_child(text);b.set_child(row);b.x_align=Clutter.ActorAlign.START;
             b.connect('clicked',()=>{Gio.AppInfo.launch_default_for_uri_async(uri,global.create_app_launch_context(0,-1),null,null);layout.arcMenu.close();});
             recents.layout_manager.attach(b,i%3,Math.floor(i/3),1,1);
         });
@@ -134,11 +135,11 @@ function buildHome(layout) {
     const cards=add(new St.Widget({layout_manager:new Clutter.GridLayout(),x_expand:true,style:'margin: 5px 59px 0px 45px; min-height: 320px;'}));
     buckets.filter(g=>g.apps.length).forEach((group,i)=>{
         const column=new St.BoxLayout({vertical:true,style:'width: 154px; margin: 0px 14px 18px 15px; spacing: 11px;'});
-        const b=new St.Button({can_focus:true,style_class:'button',style:'width: 154px; height: 154px; min-height: 154px; padding: 0px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); background-color: rgba(255,255,255,0.04);'});
+        const b=new St.Button({can_focus:true,style_class:'button',style:`width: 154px; height: 154px; min-height: 154px; padding: 0px; border-radius: 8px; border: 1px solid ${pick('rgba(255,255,255,0.05)', 'rgba(0,0,0,0.05)')}; background-color: ${pick('rgba(255,255,255,0.04)', 'rgba(255,255,255,0.6)')};`});
         const icons=new St.Widget({layout_manager:new Clutter.GridLayout()});
         group.apps.slice(0,4).forEach((app,n)=>{const icon=app.create_icon_texture(32);icon.set_style?.('margin: 26px 18px 18px 18px;');icons.layout_manager.attach(icon,n%2,Math.floor(n/2),1,1);});
         b.set_child(icons);b.connect('clicked',()=>{layout.setGridLayout(Constants.DisplayType.LIST,5);layout.displayCategoryAppList(group.apps,Constants.CategoryType.ALL_PROGRAMS);});
-        column.add_child(b);const name=label(group.name,'font-size: 12px; color: #ffffff;');name.clutter_text.ellipsize=3;name.x_align=Clutter.ActorAlign.CENTER;column.add_child(name);
+        column.add_child(b);const name=label(group.name,`font-size: 12px; color: ${pick('#ffffff', '#1a1a1a')};`);name.clutter_text.ellipsize=3;name.x_align=Clutter.ActorAlign.CENTER;column.add_child(name);
         cards.layout_manager.attach(column,i%4,Math.floor(i/4),1,1);
     });
 }

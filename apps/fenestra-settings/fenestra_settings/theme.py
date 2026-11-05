@@ -23,6 +23,51 @@ ACCENTS = {
 }
 ACCENT_ORDER = list(ACCENTS)
 
+# Fenestra custom accent (org.fenestra.desktop, shipped with fenestra-tray), the
+# same key the shell, taskbar and GTK themes follow. '' = GNOME accent-color.
+FENESTRA = "org.fenestra.desktop"
+# Windows 11 "Accent color" grid (Settings > Personalization > Colors).
+WINDOWS_ACCENTS = [
+    "#FFB900", "#FF8C00", "#F7630C", "#CA5010", "#DA3B01", "#EF6950", "#D13438", "#FF4343",
+    "#E74856", "#E81123", "#EA005E", "#C30052", "#E3008C", "#BF0077", "#C239B3", "#9A0089",
+    "#0078D4", "#0063B1", "#8E8CD8", "#6B69D6", "#8764B8", "#744DA9", "#B146C2", "#881798",
+    "#0099BC", "#2D7D9A", "#00B7C3", "#038387", "#00B294", "#018574", "#00CC6A", "#10893E",
+    "#7A7574", "#5D5A58", "#68768A", "#515C6B", "#567C73", "#486860", "#498205", "#107C10",
+    "#767676", "#4C4A48", "#69797E", "#4A5459", "#647C64", "#525E54", "#847545", "#7E735F",
+]
+
+
+def _lum(h):
+    c = [v / 255 for v in _hex_to_rgb(h)]
+    c = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
+def _contrast(a, b):
+    x, y = sorted((_lum(a), _lum(b)), reverse=True)
+    return (x + 0.05) / (y + 0.05)
+
+
+def custom_variants(base):
+    """(light-mode accent, dark-mode accent) for a custom hex; mirrors fenestra-tray appearance.js."""
+    import colorsys
+    r, g, b = (v / 255 for v in _hex_to_rgb(base))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    to_hex = lambda l_: "#%02x%02x%02x" % tuple(round(v * 255) for v in colorsys.hls_to_rgb(h, l_, s))
+    lt = l - 0.08
+    while lt > 0.05 and _contrast(to_hex(lt), "#ffffff") < 4.5:
+        lt -= 0.01
+    dark = base.lower()
+    while _contrast(dark, "#202020") < 3:
+        dr, dg, db = _hex_to_rgb(dark)
+        dark = "#%02x%02x%02x" % tuple(round(v + (255 - v) * 0.1) for v in (dr, dg, db))
+    return to_hex(lt), dark
+
+
+def on_accent(h):
+    """Windows: black glyphs on light accents, white on dark ones."""
+    return "#000000" if _lum(h) > 0.25 else "#ffffff"
+
 DARK = {
     "bg": "#202020",
     "bg-grad-a": "#1c2027",
@@ -130,6 +175,7 @@ class ThemeManager:
         theme.add_search_path(os.path.join(util.data_dir(), "icons"))
         util.gconnect(IFACE, "color-scheme", self.apply)
         util.gconnect(IFACE, "accent-color", self.apply)
+        util.gconnect(FENESTRA, "accent-color-custom", self.apply)
         self.apply()
 
     @staticmethod
@@ -150,8 +196,17 @@ class ThemeManager:
         a = util.gget(IFACE, "accent-color", "blue")
         return a if a in ACCENTS else "blue"
 
+    @property
+    def accent_custom(self) -> str:
+        c = "" if util.DEMO else (util.gget(FENESTRA, "accent-color-custom", "") or "")
+        return c.upper() if len(c) == 7 and c.startswith("#") else ""
+
     def accent_hex(self, name=None, dark=None) -> str:
-        light_hex, dark_hex = ACCENTS.get(name or self.accent_name, ACCENTS["blue"])
+        name = name or self.accent_custom or self.accent_name
+        if name.startswith("#"):
+            light_hex, dark_hex = custom_variants(name)
+        else:
+            light_hex, dark_hex = ACCENTS.get(name, ACCENTS["blue"])
         d = self.dark if dark is None else dark
         return dark_hex if d else light_hex
 
@@ -164,7 +219,7 @@ class ThemeManager:
         pal["accent-hover"] = f"rgba({r},{g},{b},0.9)"
         pal["accent-press"] = f"rgba({r},{g},{b},0.8)"
         pal["accent-soft"] = f"rgba({r},{g},{b},0.18)"
-        pal["accent-fg"] = "#000000" if dark else "#ffffff"
+        pal["accent-fg"] = on_accent(acc)
         pal["accent-text"] = acc
         css = ":root {\n" + "".join(f"  --{k}: {v};\n" for k, v in pal.items()) + "}\n"
         # Gradients do not resolve var() reliably, so emit literal colors.

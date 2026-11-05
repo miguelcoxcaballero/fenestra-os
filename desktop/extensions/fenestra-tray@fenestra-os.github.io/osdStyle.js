@@ -60,9 +60,10 @@ class Flyout {
     }
 
     _gicon(rel) {
-        if (!this._gicons.has(rel))
-            this._gicons.set(rel, new Gio.FileIcon({file: Gio.File.new_for_path(this._asset(rel))}));
-        return this._gicons.get(rel);
+        const path = this.appearance?.tint(this._asset(rel)) ?? this._asset(rel);
+        if (!this._gicons.has(path))
+            this._gicons.set(path, new Gio.FileIcon({file: Gio.File.new_for_path(path)}));
+        return this._gicons.get(path);
     }
 
     _paint(area) {
@@ -70,20 +71,24 @@ class Flyout {
         const [w, h] = area.get_surface_size();
         const r = 9, x0 = r, x1 = w - r, cy = h / 2, tx = x0 + (x1 - x0) * this._fraction;
         const accent = rgba(this.accent);
+        const light = this.appearance && !this.appearance.palette.dark;
         cr.setLineCap(1); // ROUND
         cr.setLineWidth(4);
-        cr.setSourceRGBA(1, 1, 1, 0.54);
+        if (light) cr.setSourceRGBA(0, 0, 0, 0.45);
+        else cr.setSourceRGBA(1, 1, 1, 0.54);
         cr.moveTo(x0, cy); cr.lineTo(x1, cy); cr.stroke();
         if (this._fraction > 0) {
             cr.setSourceRGBA(...accent);
             cr.moveTo(x0, cy); cr.lineTo(tx, cy); cr.stroke();
         }
-        // Thumb: dark disc with a hairline ring and an accent centre.
+        // Thumb: dark (light mode: white) disc with a hairline ring and an accent centre.
         cr.arc(tx, cy, r, 0, 2 * Math.PI);
-        cr.setSourceRGBA(0.27, 0.27, 0.27, 1);
+        if (light) cr.setSourceRGBA(1, 1, 1, 1);
+        else cr.setSourceRGBA(0.27, 0.27, 0.27, 1);
         cr.fillPreserve();
         cr.setLineWidth(1);
-        cr.setSourceRGBA(1, 1, 1, 0.09);
+        if (light) cr.setSourceRGBA(0, 0, 0, 0.08);
+        else cr.setSourceRGBA(1, 1, 1, 0.09);
         cr.stroke();
         cr.arc(tx, cy, 5, 0, 2 * Math.PI);
         cr.setSourceRGBA(...accent);
@@ -158,17 +163,20 @@ class Flyout {
     }
 }
 
-export function installOsdStyle(injections, asset) {
+export function installOsdStyle(injections, asset, appearance = null) {
     const iface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
     const flyouts = [];
-    const accent = () => ACCENTS[iface.get_string('accent-color')] ?? ACCENTS.blue;
+    // Windows: the slider fill is the accent tint of the current mode (appearance.js).
+    const accent = () => appearance?.palette?.text ?? ACCENTS[iface.get_string('accent-color')] ?? ACCENTS.blue;
     let color = accent();
-    const accentId = iface.connect('changed::accent-color', () => {
+    const refresh = () => {
         color = accent();
         for (const f of flyouts) if (f) { f.accent = color; f._slider.queue_repaint(); }
-    });
+    };
+    const accentId = iface.connect('changed::accent-color', refresh);
+    const listener = appearance?.connect(refresh);
     const flyout = i => {
-        if (!flyouts[i]) { flyouts[i] = new Flyout(i, asset); flyouts[i].accent = color; }
+        if (!flyouts[i]) { flyouts[i] = new Flyout(i, asset); flyouts[i].accent = color; flyouts[i].appearance = appearance; }
         return flyouts[i];
     };
     const sync = () => {
@@ -203,6 +211,7 @@ export function installOsdStyle(injections, asset) {
     return () => {
         Main.layoutManager.disconnect(monitorsId);
         iface.disconnect(accentId);
+        if (listener) appearance.disconnect(listener);
         for (const f of flyouts) f?.destroy();
         flyouts.length = 0;
     };

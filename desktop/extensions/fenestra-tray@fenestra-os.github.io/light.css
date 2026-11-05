@@ -1,0 +1,252 @@
+/* Windows 11 light mode for the Fenestra shell surfaces.
+   Active when appearance.js puts 'fenestra-light' on Main.uiGroup
+   (org.gnome.desktop.interface color-scheme != 'prefer-dark').
+   Palette: cards #f9f9f9/#ffffff, strokes rgba(0,0,0,.06-.10) (#e5e5e5),
+   text #1a1a1a, secondary #5f5f5f. Accent colours live in the generated
+   accent stylesheet, not here. The Ctrl+Alt+Del screen stays dark (as on Windows). */
+
+/* ---- shared acrylic surfaces ------------------------------------------- */
+#uiGroup.fenestra-light .popup-menu-content,
+#uiGroup.fenestra-light .candidate-popup-content,
+#uiGroup.fenestra-light .quick-settings,
+#uiGroup.fenestra-light .datemenu-popover,
+#uiGroup.fenestra-light .modal-dialog,
+#uiGroup.fenestra-light .run-dialog,
+#uiGroup.fenestra-light .clipboard-dialog,
+#uiGroup.fenestra-light .switcher-list,
+#uiGroup.fenestra-light .workspace-switcher,
+#uiGroup.fenestra-light .notification-banner {
+    background-color: rgba(249, 249, 249, 0.85) !important;
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #1a1a1a;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+}
+#uiGroup.fenestra-light .popup-menu-item,
+#uiGroup.fenestra-light .popup-menu-item StLabel { color: #1a1a1a; }
+#uiGroup.fenestra-light .popup-menu-item:hover,
+#uiGroup.fenestra-light .popup-menu-item:focus,
+#uiGroup.fenestra-light .popup-menu-item.selected { background-color: rgba(0, 0, 0, 0.04); color: #1a1a1a; }
+#uiGroup.fenestra-light .popup-menu-item:insensitive { color: rgba(0, 0, 0, 0.36); }
+#uiGroup.fenestra-light .popup-separator-menu-item .popup-separator-menu-item-separator { background-color: rgba(0, 0, 0, 0.08); }
+#uiGroup.fenestra-light .popup-sub-menu { background-color: rgba(0, 0, 0, 0.03); }
+#uiGroup.fenestra-light .popup-menu-ornament,
+#uiGroup.fenestra-light .popup-menu-arrow { color: #5f5f5f; }
+#uiGroup.fenestra-light .button,
+#uiGroup.fenestra-light .modal-dialog-button,
+#uiGroup.fenestra-light .icon-button {
+    background-color: rgba(255, 255, 255, 0.7); color: #1a1a1a;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+#uiGroup.fenestra-light .button:hover,
+#uiGroup.fenestra-light .modal-dialog-button:hover,
+#uiGroup.fenestra-light .icon-button:hover { background-color: rgba(249, 249, 249, 0.5); }
+#uiGroup.fenestra-light .modal-dialog .modal-dialog-button-box { background-color: #f3f3f3; border-color: rgba(0, 0, 0, 0.06); }
+#uiGroup.fenestra-light StEntry {
+    background-color: rgba(255, 255, 255, 0.7); color: #1a1a1a;
+    border-color: rgba(0, 0, 0, 0.08); selection-background-color: rgba(0, 95, 184, 0.3); selected-color: #1a1a1a;
+}
+#uiGroup.fenestra-light StEntry StLabel.hint-text { color: #5f5f5f; }
+#uiGroup.fenestra-light .toggle-switch { border-color: rgba(0, 0, 0, 0.6); }
+#uiGroup.fenestra-light .toggle-switch:hover { background-color: rgba(0, 0, 0, 0.04); }
+#uiGroup.fenestra-light .toggle-switch .handle { background-color: rgba(0, 0, 0, 0.62); }
+#uiGroup.fenestra-light .check-box StIcon { border-color: rgba(0, 0, 0, 0.45); background-color: rgba(255, 255, 255, 0.7); }
+#uiGroup.fenestra-light .slider { -barlevel-background-color: rgba(0, 0, 0, 0.45); }
+
+/* ---- taskbar ------------------------------------------------------------- */
+#uiGroup.fenestra-light #panel,
+#uiGroup.fenestra-light #panel .panel-button,
+#uiGroup.fenestra-light #panel .panel-button StLabel,
+#uiGroup.fenestra-light #panel .panel-button StIcon,
+#uiGroup.fenestra-light #panel .clock-display .clock,
+#uiGroup.fenestra-light #panel .system-status-icon,
+#uiGroup.fenestra-light #panel .panel-button .clock { color: #1a1a1a !important; }
+#uiGroup.fenestra-light #panel .panel-button.panel-button.panel-button:hover,
+#uiGroup.fenestra-light #panel .panel-button.panel-button.panel-button:focus,
+#uiGroup.fenestra-light #panel .panel-button.panel-button.panel-button:active,
+#uiGroup.fenestra-light #panel .panel-button.panel-button.panel-button:checked,
+#uiGroup.fenestra-light #panel .arcmenu-panel-menu:hover,
+#uiGroup.fenestra-light #panel .arcmenu-panel-menu:active,
+#uiGroup.fenestra-light #panel .arcmenu-panel-menu:checked {
+    background-color: rgba(255, 255, 255, 0.70) !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
+}
+#uiGroup.fenestra-light #dashtopanelScrollview .overview-tile.focused .dtp-dots-container,
+#uiGroup.fenestra-light #dashtopanelScrollview .overview-tile:hover .dtp-container {
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+#uiGroup.fenestra-light .dash-label,
+#uiGroup.fenestra-light .arcmenu-tooltip,
+#uiGroup.fenestra-light #ArcMenu_Tooltip {
+    color: #1a1a1a !important;
+    background-color: rgba(249, 249, 249, 0.98) !important;
+    border: 1px solid rgba(0, 0, 0, 0.10) !important;
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.14) !important;
+}
+#uiGroup.fenestra-light .tile-preview,
+#uiGroup.fenestra-light .tile-preview.snap-assistant {
+    background-color: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+/* Dash to Panel window previews */
+#uiGroup.fenestra-light .preview-container,
+#uiGroup.fenestra-light .preview-menu { color: #1a1a1a; }
+#uiGroup.fenestra-light .preview-header-box StLabel { color: #1a1a1a; }
+
+/* ---- quick settings --------------------------------------------------- */
+#uiGroup.fenestra-light .windows-quick-panel .quick-settings { background-color: rgba(243, 243, 243, 0.88) !important; }
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle,
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle-menu-button {
+    background-color: rgba(255, 255, 255, 0.70); color: #1a1a1a; border-color: rgba(0, 0, 0, 0.06);
+}
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle:hover,
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle-menu-button:hover { background-color: rgba(249, 249, 249, 0.50); }
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle StIcon,
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle StLabel,
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle-menu-button StIcon,
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-caption,
+#uiGroup.fenestra-light .windows-quick-panel .quick-slider StIcon,
+#uiGroup.fenestra-light .windows-quick-panel .icon-button { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-quick-panel .quick-slider .icon-button,
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-footer .icon-button,
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-footer .quick-toggle { background-color: transparent; border-color: transparent; }
+#uiGroup.fenestra-light .windows-quick-panel .quick-slider .icon-button:hover,
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-footer .icon-button:hover,
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-footer .quick-toggle:hover { background-color: rgba(0, 0, 0, 0.04); }
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-footer {
+    background-color: rgba(238, 238, 238, 0.85); border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-footer StLabel,
+#uiGroup.fenestra-light .windows-quick-panel .windows-quick-footer StIcon { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-quick-panel .quick-toggle-menu {
+    background-color: rgba(249, 249, 249, 0.92); border-color: rgba(0, 0, 0, 0.08); color: #1a1a1a;
+}
+#uiGroup.fenestra-light .quick-toggle-menu .header .title,
+#uiGroup.fenestra-light .quick-toggle-menu .header .subtitle { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-quick-stack .windows-media-card {
+    background-color: rgba(249, 249, 249, 0.85) !important; border-color: rgba(0, 0, 0, 0.08); color: #1a1a1a;
+}
+#uiGroup.fenestra-light .windows-media-button { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-media-button:hover { background-color: rgba(0, 0, 0, 0.04); }
+#uiGroup.fenestra-light .windows-media-artist,
+#uiGroup.fenestra-light .windows-media-app { color: #5f5f5f; }
+
+/* ---- notifications + calendar ----------------------------------------- */
+#uiGroup.fenestra-light .windows-calendar-menu .windows-notification-card,
+#uiGroup.fenestra-light .windows-calendar-menu .windows-calendar-card {
+    background-color: rgba(243, 243, 243, 0.94) !important; border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #1a1a1a; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+}
+#uiGroup.fenestra-light .windows-calendar-card { background-color: rgba(249, 249, 249, 0.94) !important; }
+#uiGroup.fenestra-light .windows-calendar-header,
+#uiGroup.fenestra-light .windows-calendar-card:collapsed .windows-calendar-header {
+    background-color: rgba(243, 243, 243, 1); border-bottom: 1px solid rgba(0, 0, 0, 0.06); color: #1a1a1a;
+}
+#uiGroup.fenestra-light .windows-focus-footer { border-top: 1px solid rgba(0, 0, 0, 0.06); color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-notification-title,
+#uiGroup.fenestra-light .windows-notification-heading StLabel,
+#uiGroup.fenestra-light .windows-calendar-time,
+#uiGroup.fenestra-light .windows-calendar-date,
+#uiGroup.fenestra-light .windows-focus-duration,
+#uiGroup.fenestra-light .windows-calendar-card .calendar-month-label,
+#uiGroup.fenestra-light .windows-calendar-card .calendar-day-heading,
+#uiGroup.fenestra-light .windows-calendar-card .calendar-day,
+#uiGroup.fenestra-light .windows-notification-card .message-title,
+#uiGroup.fenestra-light .windows-notification-card .message-source-title,
+#uiGroup.fenestra-light .windows-notification-card .message-group-title { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-calendar-card .calendar-day.calendar-other-month { color: #8a8a8a; }
+#uiGroup.fenestra-light .windows-calendar-card .calendar-day:hover,
+#uiGroup.fenestra-light .windows-calendar-card .pager-button:hover { background-color: rgba(0, 0, 0, 0.04); color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-calendar-card .pager-button { color: #5f5f5f; }
+#uiGroup.fenestra-light .windows-notification-card .message-list-placeholder,
+#uiGroup.fenestra-light .windows-notification-card .message-body,
+#uiGroup.fenestra-light .windows-notification-card .event-time,
+#uiGroup.fenestra-light .windows-notification-card .message-expand-button,
+#uiGroup.fenestra-light .windows-notification-card .message-close-button { color: #5f5f5f; }
+#uiGroup.fenestra-light .windows-notification-card .message {
+    background-color: rgba(255, 255, 255, 0.85) !important; color: #1a1a1a; border: 1px solid rgba(0, 0, 0, 0.06);
+}
+#uiGroup.fenestra-light .windows-notification-card .message:hover { background-color: rgba(249, 249, 249, 0.70) !important; }
+#uiGroup.fenestra-light .windows-notification-card .message-expand-button:hover,
+#uiGroup.fenestra-light .windows-notification-card .message-close-button:hover,
+#uiGroup.fenestra-light .windows-notification-card .message-collapse-button:hover { background-color: rgba(0, 0, 0, 0.04); color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-notification-card .message-collapse-button { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-panel-icon-button,
+#uiGroup.fenestra-light .windows-panel-small-button,
+#uiGroup.fenestra-light .windows-focus-button,
+#uiGroup.fenestra-light .windows-calendar-menu .windows-clear-all,
+#uiGroup.fenestra-light .windows-notification-card .notification-button {
+    color: #1a1a1a; background-color: rgba(255, 255, 255, 0.70); border: 1px solid rgba(0, 0, 0, 0.06);
+}
+#uiGroup.fenestra-light .windows-panel-icon-button:hover,
+#uiGroup.fenestra-light .windows-panel-small-button:hover,
+#uiGroup.fenestra-light .windows-focus-button:hover,
+#uiGroup.fenestra-light .windows-calendar-menu .windows-clear-all:hover,
+#uiGroup.fenestra-light .windows-notification-card .notification-button:hover { background-color: rgba(249, 249, 249, 0.50); }
+#uiGroup.fenestra-light .windows-panel-icon-button:focus { border: 1px solid #1a1a1a; }
+
+/* Notification banners (message tray) */
+#uiGroup.fenestra-light .notification-banner .message,
+#uiGroup.fenestra-light .notification-banner .notification { background-color: transparent; color: #1a1a1a; }
+#uiGroup.fenestra-light .message .message-title,
+#uiGroup.fenestra-light .message .message-source-title { color: #1a1a1a; }
+#uiGroup.fenestra-light .message .message-body,
+#uiGroup.fenestra-light .message .event-time { color: #5f5f5f; }
+#uiGroup.fenestra-light .notification-banner .notification-button {
+    background-color: rgba(255, 255, 255, 0.70); color: #1a1a1a; border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Snipping Tool toast */
+#uiGroup.fenestra-light .windows-shot-toast .windows-shot-preview { background-color: rgba(0, 0, 0, 0.04); }
+#uiGroup.fenestra-light .windows-shot-toast .message-body { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-shot-toast .notification-button {
+    background-color: rgba(255, 255, 255, 0.70); color: #1a1a1a; border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ---- volume / brightness flyout and other OSDs ------------------------ */
+#uiGroup.fenestra-light .fenestra-osd {
+    background-color: rgba(249, 249, 249, 0.92);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+    color: #1a1a1a;
+}
+#uiGroup.fenestra-light .fenestra-osd-icon { color: #1a1a1a; }
+#uiGroup.fenestra-light .osd-window {
+    background-color: rgba(249, 249, 249, 0.92) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+    color: #1a1a1a;
+}
+#uiGroup.fenestra-light .osd-window StIcon,
+#uiGroup.fenestra-light .osd-window StLabel { color: #1a1a1a; }
+#uiGroup.fenestra-light .osd-window .level { -barlevel-background-color: rgba(0, 0, 0, 0.45); }
+
+/* ---- Alt+Tab / workspace switcher -------------------------------------- */
+#uiGroup.fenestra-light .switcher-list .item-box { color: #1a1a1a; }
+#uiGroup.fenestra-light .switcher-list .item-box:selected { background-color: rgba(0, 0, 0, 0.06); }
+#uiGroup.fenestra-light .switcher-list .item-box:outlined { border-color: rgba(0, 0, 0, 0.3); }
+
+/* Start / Search / ArcMenu menus: the acrylic effect paints the surface
+   (windowsAcrylic.js maps it to the light range); keep the CSS layer clear. */
+#uiGroup.fenestra-light .arcmenu-menu .popup-menu-content { background-color: rgba(0, 0, 0, 0) !important; }
+
+/* User Account Control (fenestra-consent): Windows 11 light dialog. */
+#uiGroup.fenestra-light .windows-consent-dialog { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-consent-dialog .modal-dialog {
+    background-color: #ffffff !important; border: 1px solid rgba(0, 0, 0, 0.10); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+}
+#uiGroup.fenestra-light .windows-consent-dialog .windows-consent-heading { background-color: #f3f3f3; }
+#uiGroup.fenestra-light .windows-consent-body { background-color: #ffffff; }
+#uiGroup.fenestra-light .windows-consent-dialog .windows-consent-buttons { background-color: #f3f3f3; border-top: 1px solid rgba(0, 0, 0, 0.06); }
+#uiGroup.fenestra-light .windows-consent-dialog .modal-dialog-button {
+    background-color: #fbfbfb; border: 1px solid rgba(0, 0, 0, 0.10); color: #1a1a1a;
+}
+#uiGroup.fenestra-light .windows-consent-dialog .modal-dialog-button:hover { background-color: #f6f6f6; }
+#uiGroup.fenestra-light .windows-consent-action-id { color: #5f5f5f; }
+#uiGroup.fenestra-light .windows-consent-close StIcon { color: #1a1a1a; }
+#uiGroup.fenestra-light .windows-consent-close:hover StIcon { color: #ffffff; }
+
+/* The calendar flyout is two floating cards: its popover draws nothing. */
+#uiGroup.fenestra-light .windows-calendar-menu .datemenu-popover {
+    background-color: transparent !important; border: 0 !important; box-shadow: none !important;
+}

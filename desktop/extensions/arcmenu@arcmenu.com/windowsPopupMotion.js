@@ -2,6 +2,7 @@ import Clutter from 'gi://Clutter';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import {WindowsAcrylicEffect} from './windowsAcrylic.js';
+import {acrylicMap} from './fenestraTheme.js';
 
 /*
  * Windows 11 Start/Search motion + acrylic.
@@ -67,6 +68,8 @@ export function installWindowsPopupMotion(actor) {
 
     actor.open = function (animate, onComplete) {
         ensureBlur();
+        // Light mode: high base luminance (Windows light acrylic), dark: low.
+        surfaceOf(this)?.get_effect('windows-acrylic-luminosity')?.setMap(...acrylicMap());
         // The background blur/luminosity must read the real screen: no
         // offscreen redirect (BoxPointer forces one for fades we don't use).
         this.offscreen_redirect = 0;

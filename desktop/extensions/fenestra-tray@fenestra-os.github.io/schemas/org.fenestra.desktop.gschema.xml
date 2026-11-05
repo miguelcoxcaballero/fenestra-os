@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="fenestra">
+  <schema id="org.fenestra.desktop" path="/org/fenestra/desktop/">
+    <key name="accent-color-custom" type="s">
+      <default>''</default>
+      <summary>Custom accent colour</summary>
+      <description>Windows-style accent colour as '#rrggbb' (the colour shown on dark-mode fills; light mode uses a derived darker shade). Empty: follow org.gnome.desktop.interface accent-color.</description>
+    </key>
+    <key name="accent-from-wallpaper" type="b">
+      <default>false</default>
+      <summary>Pick the accent colour from the wallpaper</summary>
+      <description>Like Windows' "Automatic" accent: derive the accent from the dominant colour of the current wallpaper.</description>
+    </key>
+  </schema>
+</schemalist>

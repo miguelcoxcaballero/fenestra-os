@@ -83,3 +83,43 @@
 .arcmenu-menu .windows-search-layout .win-preview-action-content { spacing:12px; }
 .arcmenu-menu .windows-search-layout .win-preview-action-label { font-size:14px; }
 .arcmenu-menu .windows-search-layout .win-search-empty { color:#c8c8c8; font-size:13px; padding:12px 0; }
+
+/* Windows 11 light mode (fenestra-tray puts .fenestra-light on #uiGroup; accent rules are generated there). */
+#uiGroup.fenestra-light .windows-search-layout { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout #ArcMenuSearchEntry { background-color:rgba(255,255,255,0.85); border:1px solid rgba(0,0,0,0.06) !important; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout #ArcMenuSearchEntry:focus { border-color:rgba(0,0,0,0.06) !important; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-settings:hover { background-color:rgba(0,0,0,0.056); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-row:hover, #uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-row:focus { background-color:rgba(0,0,0,0.042); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-recent-icon { background-color:rgba(255,255,255,0.7); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-recent-name { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-recent-type { color:#5f5f5f; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-age { color:#5f5f5f; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-back { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-back:hover, #uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-more:hover, #uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-icon-button:hover { background-color:rgba(0,0,0,0.056); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-more { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-icon-button { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-filter { border:1px solid rgba(0,0,0,0.06) !important; background-color:rgba(255,255,255,0.7); color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-filter:hover { background-color:rgba(0,0,0,0.06); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-results-heading { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-results-more { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-result:hover { background-color:rgba(0,0,0,0.035); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-result:selected, #uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-result:focus { background-color:rgba(0,0,0,0.052); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-result-icon { background-color:rgba(255,255,255,0.7); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-result-name { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-result-sub { color:#5f5f5f; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview { background-color:rgba(255,255,255,0.7); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-title { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-type { color:#5f5f5f; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-card { background-color:rgba(255,255,255,0.7); border:1px solid rgba(0,0,0,0.06); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-button { background-color:rgba(255,255,255,0.7); color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-button:hover { background-color:rgba(0,0,0,0.06); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-details { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-detail-key { color:#5f5f5f; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-detail-value { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-options { background-color:rgba(255,255,255,0.7); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-hero-name { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-hero-type { color:#5f5f5f; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-separator { background-color:rgba(0,0,0,0.056); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-action { color:#1a1a1a; }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-preview-action:hover { background-color:rgba(0,0,0,0.042); }
+#uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-empty { color:#5f5f5f; }

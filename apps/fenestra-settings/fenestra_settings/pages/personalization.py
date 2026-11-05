@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 
-from gi.repository import Gio, GLib, Gtk, Pango
+from gi.repository import Gdk, Gio, GLib, Gtk, Pango
 
 from .. import theme, util
 from ..i18n import N_, _
@@ -269,32 +269,41 @@ class ColorsPage(Page):
         g.add(exp)
         wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         wrap.add_css_class("plain")
-        wrap.append(label(_("Fenestra colors"), "body-strong"))
+        wrap.append(label(_("Windows colors"), "body-strong"))
         grid = Gtk.FlowBox()
         grid.set_selection_mode(Gtk.SelectionMode.NONE)
-        grid.set_max_children_per_line(9)
-        grid.set_min_children_per_line(5)
+        grid.set_max_children_per_line(8)
+        grid.set_min_children_per_line(8)
         grid.set_column_spacing(4)
         grid.set_row_spacing(4)
         grid.set_halign(Gtk.Align.START)
         self.swatches = []
         tm = theme.get()
-        for name in theme.ACCENT_ORDER:
+        current = tm.accent_custom or tm.accent_hex(tm.accent_name, dark=False).upper()
+        for hexc in theme.WINDOWS_ACCENTS:
             b = Gtk.Button()
             b.add_css_class("color-swatch-btn")
             sw = Gtk.Box()
             sw.add_css_class("color-swatch")
             prov = Gtk.CssProvider()
-            prov.load_from_string(f"box {{ background-color: {tm.accent_hex(name)}; }}")
+            prov.load_from_string(f"box {{ background-color: {hexc}; }}")
             sw.get_style_context().add_provider(prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 5)
             b.set_child(sw)
-            b.set_tooltip_text(_(ACCENT_LABELS.get(name, name)))
-            if name == tm.accent_name:
+            b.set_tooltip_text(hexc)
+            if hexc == current:
                 b.add_css_class("selected")
-            b.connect("clicked", lambda _b, n=name: self._pick(n))
+            b.connect("clicked", lambda _b, h=hexc: self._pick(h))
             grid.append(b)
-            self.swatches.append((b, name))
+            self.swatches.append((b, hexc))
         wrap.append(grid)
+        # Custom colors: Windows' "View colors" picker.
+        custom = Gtk.ColorDialogButton.new(Gtk.ColorDialog(title=_("Pick a custom accent color"), with_alpha=False))
+        rgba = Gdk.RGBA()
+        rgba.parse(tm.accent_custom or "#0078D4")
+        custom.set_rgba(rgba)
+        custom.connect("notify::rgba", lambda w, _p: self._pick("#%02X%02X%02X" % tuple(
+            round(v * 255) for v in (w.get_rgba().red, w.get_rgba().green, w.get_rgba().blue))))
+        wrap.append(SettingRow(_("Custom colors"), None, None, control=custom, key="accent-custom"))
         exp.add(wrap)
         g2 = self.group(_("Related settings"))
         g2.add(SettingRow(_("Contrast themes"), _("Color themes for low vision, light sensitivity"),
@@ -302,10 +311,24 @@ class ColorsPage(Page):
         g2.add(SettingRow(_("Themes"), None, "fs-paint-brush-symbolic", chevron=True,
                           on_click=lambda: self.go("themes")))
 
-    def _pick(self, name):
-        util.gset(IFACE, "accent-color", name)
-        for b, n in self.swatches:
-            (b.add_css_class if n == name else b.remove_css_class)("selected")
+    def _pick(self, hexc):
+        """Windows accent: exact hex in org.fenestra.desktop (shell, taskbar, GTK) and the
+        nearest GNOME accent-color for libadwaita apps."""
+        util.gset(theme.FENESTRA, "accent-color-custom", hexc)
+        util.gset(IFACE, "accent-color", _nearest_gnome_accent(hexc))
+        for b, h in self.swatches:
+            (b.add_css_class if h == hexc else b.remove_css_class)("selected")
+
+
+def _nearest_gnome_accent(hexc):
+    import colorsys
+    r, g, b = (int(hexc[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    if s < 0.18:
+        return "slate"
+    hues = {"red": 0, "orange": 25, "yellow": 48, "green": 120, "teal": 178, "blue": 210, "purple": 270, "pink": 320}
+    deg = h * 360
+    return min(hues, key=lambda k: min(abs(deg - hues[k]), 360 - abs(deg - hues[k])))
 
 
 def _list_themes(sub):

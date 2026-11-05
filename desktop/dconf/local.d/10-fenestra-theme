@@ -24,6 +24,12 @@ picture-uri='file:///usr/share/backgrounds/fenestra/fenestra-bloom-dark.jpg'
 [org/gnome/desktop/wm/preferences]
 button-layout='appmenu:minimize,maximize,close'
 
+# Accent colour (Settings > Personalization > Colors). '' follows GNOME's
+# accent-color enum; fenestra-tray applies it to the shell, GTK and taskbar.
+[org/fenestra/desktop]
+accent-color-custom='#647C64'
+accent-from-wallpaper=false
+
 [org/gnome/shell/extensions/arcmenu]
 menu-button-icon='/usr/share/fenestra/assets/branding/start-button.svg'
 

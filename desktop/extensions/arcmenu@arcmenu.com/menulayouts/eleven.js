@@ -1,5 +1,6 @@
 import {createWindowsPower} from './windowsPower.js';
 import {populateHome} from './windowsStartHome.js';
+import {pick, onSchemeChanged} from '../fenestraTheme.js';
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Shell from 'gi://Shell';
@@ -84,7 +85,12 @@ export class Layout extends BaseMenuLayout {
         });
         topBox.add_child(this.searchEntry);
         // Windows 11: darker acrylic header band holding the search pill.
-        topBox.style = 'background-color: rgba(0,0,0,0.21); border-bottom: 1px solid rgba(0,0,0,0.2); padding: 8px 32px 15px;';
+        const headerStyle = () => `background-color: ${pick('rgba(0,0,0,0.21)', 'rgba(0,0,0,0.03)')}; border-bottom: 1px solid ${pick('rgba(0,0,0,0.2)', 'rgba(0,0,0,0.06)')}; padding: 8px 32px 15px;`;
+        topBox.style = headerStyle();
+        onSchemeChanged(this, () => {
+            topBox.style = headerStyle(); this.updateStyle(); this._homeDirty = true;
+            if (!this.arcMenu.isOpen) this.setDefaultMenuView();
+        });
         topBox.x_expand = true;
         this.insert_child_at_index(topBox, 0);
 
@@ -125,7 +131,7 @@ export class Layout extends BaseMenuLayout {
         });
         this.actionsBox.style = 'spacing: 10px;';
         // Windows 11 footer band: same tint as the header, 64 px tall.
-        this.actionsContainerBox.style = 'background-color: rgba(0,0,0,0.25); border-top: 1px solid rgba(0,0,0,0.2); padding: 0px 52px 0px 48px; min-height: 64px;';
+        this.actionsContainerBox.style = `background-color: ${pick('rgba(0,0,0,0.25)', 'rgba(0,0,0,0.04)')}; border-top: 1px solid ${pick('rgba(0,0,0,0.2)', 'rgba(0,0,0,0.06)')}; padding: 0px 52px 0px 48px; min-height: 64px;`;
         this.actionsContainerBox.add_child(this.actionsBox);
 
         this.shortcutsBox = new St.BoxLayout({
@@ -272,8 +278,8 @@ export class Layout extends BaseMenuLayout {
 
         const borderRadiusStyle = `border-radius: 0px 0px ${borderRadius}px ${borderRadius}px;`;
         // Windows 11 footer band: same tint as the header, 64 px tall.
-        const style = `margin: 0px; spacing: 0px; background-color: rgba(0,0,0,0.21); padding: 0px 55px 6px 56px;
-                       min-height: 58px; border-color: rgba(0,0,0,0.2); border-top-width: 1px;`;
+        const style = `margin: 0px; spacing: 0px; background-color: ${pick('rgba(0,0,0,0.21)', 'rgba(0,0,0,0.03)')}; padding: 0px 55px 6px 56px;
+                       min-height: 58px; border-color: ${pick('rgba(0,0,0,0.2)', 'rgba(0,0,0,0.06)')}; border-top-width: 1px;`;
 
         this.actionsContainerBox.style = style + borderRadiusStyle;
         this.arcMenu.box.style = 'padding-bottom: 0px; padding-left: 0px; padding-right: 0px; font-family: Segoe UI; font-size: 14px;';
