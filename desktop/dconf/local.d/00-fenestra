@@ -382,7 +382,7 @@ maximize=@as []
 unmaximize=@as []
 
 [org/gnome/desktop/wm/preferences]
-button-layout='icon:minimize,maximize,close'
+button-layout='appmenu:minimize,maximize,close'
 num-workspaces=1
 titlebar-font='Segoe UI Variable 10'
 

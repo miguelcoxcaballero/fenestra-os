@@ -15,6 +15,7 @@ import {SecurityScreen} from './securityScreen.js';
 import {Appearance} from './appearance.js';
 import {installWeatherWidget} from './weatherWidget.js';
 import {installTaskbarSearch} from './taskbarSearch.js';
+import {syncCaptionButtons} from './captionSync.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -28,6 +29,8 @@ const fenestraAsset=rel=>{for(const base of [GLib.build_filenamev([GLib.get_user
 export default class WindowsTrayTypography extends Extension {
     enable() {
         this._injections=new InjectionManager();this._dates=new Map();this._powers=new Map();
+        // Windows 11 caption buttons for GTK/Flatpak apps (per-user copy of the system CSS).
+        try{syncCaptionButtons();}catch(e){logError(e,'Fenestra caption buttons');}
         // Light/dark mode + accent colour for the whole desktop (appearance.js).
         try{this._appearance=new Appearance(this.path);this._appearance.connect(()=>this._power(Main.panel.statusArea.quickSettings?._system));}catch(e){logError(e,'Fenestra appearance');}
         this._stopTaskbar=installTaskbarStyle(this._injections,this._appearance);

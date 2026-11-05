@@ -101,6 +101,22 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | Python dependencies of the apps | All in Fedora Workstation (PyGObject, GTK 4, Gst, Rsvg, cairo, Gdm typelib) |
 | CI lint (py_compile, ksvalidator, no Microsoft assets) | OK locally |
 
+### Caption buttons (minimize, maximize, close)
+
+Tested in the headless GNOME Shell (with Xwayland) by opening one app of each kind and measuring the title bar:
+
+| App kind | Example | Result |
+|---|---|---|
+| GTK 4 / libadwaita | Text Editor, Calculator | Three buttons, 46 px wide, full title-bar height, flush with the corner, white 10 px glyphs, 6 % hover, red close with rounded corner |
+| Fenestra apps | Settings | Same |
+| GTK 3 | gedit | Same (GtkHeaderBar's 6 px spacing cancelled) |
+| X11 apps (mutter frames) | xterm | Same glyphs and spacing, 12 px regular title. Spotify uses this path. |
+| Qt 6 | PyQt6 window | Through XWayland (`QT_QPA_PLATFORM=xcb;wayland`) the mutter frame gives the same buttons; Qt's own Wayland decoration would draw round Adwaita buttons |
+| Firefox | Firefox 145 | Fenestra glyphs, but Firefox spaces the buttons 37 px apart instead of 46 |
+| Files (Explorer layer) | Nautilus | Correct buttons, but in narrow windows the close button is pushed past the right edge by the tab strip's minimum width (`.tab-title { min-width: 1024px }`); fine at 1400 px |
+
+Flatpak apps get the same CSS (per-user copy plus a system `flatpak override` for `xdg-config/gtk-*`); not tested.
+
 ## Installer branding (legal notes)
 
 Fenestra is a Fedora *remix*: it may say "based on Fedora" but must not use the Fedora logos.

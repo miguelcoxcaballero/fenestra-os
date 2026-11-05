@@ -64,6 +64,18 @@ cp "$D/dconf/gdm.d/"* "$OUT/etc/dconf/db/gdm.d/"
 install -Dm644 "$D/fontconfig/60-fenestra.conf" "$OUT/etc/fonts/conf.d/60-fenestra.conf"
 
 log "GTK theme"
+# Windows 11 caption buttons for every GTK 3/4 window (imported by the user CSS).
+install -Dm644 "$D/gtk/caption-buttons-gtk4.css" "$OUT/usr/share/fenestra/gtk-4.0/caption-buttons.css"
+install -Dm644 "$D/gtk/caption-buttons-gtk3.css" "$OUT/usr/share/fenestra/gtk-3.0/caption-buttons.css"
+for v in 3 4; do
+    # Per-user copy (Flatpak apps cannot read /usr/share/fenestra); fenestra-tray refreshes it at login.
+    install -Dm644 "$D/gtk/caption-buttons-gtk$v.css" "$OUT/etc/skel/.config/gtk-$v.0/fenestra-caption-buttons.css"
+    # Fallback for every account and session: three caption buttons on the right.
+    install -Dm644 "$D/gtk/settings-gtk$v.ini" "$OUT/etc/gtk-$v.0/settings.ini"
+done
+# Qt apps: XWayland first, so mutter draws Windows 11 caption buttons for them
+# (Qt's own Wayland decorations cannot be themed). Wayland stays as fallback.
+install -Dm644 "$D/gtk/60-fenestra-qt.conf" "$OUT/usr/lib/environment.d/60-fenestra-qt.conf"
 install -d "$OUT/usr/share/themes"
 cp -a "$D/themes/Fenestra-Dark" "$D/themes/Fenestra-Light" "$OUT/usr/share/themes/"
 

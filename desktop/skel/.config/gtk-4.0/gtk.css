@@ -1,6 +1,7 @@
 /* Windows UI start */
 @import url("/usr/share/themes/Fenestra-Dark/gtk-4.0/gtk-auto.css");
 @import url("fenestra-accent.css");
+@import url("fenestra-caption-buttons.css");
 /* Windows UI end */
 
 /* Nautilus sidebar: keep custom colored icons vivid */
@@ -62,21 +63,8 @@ placessidebar row image {
 
 
 /* Windows Explorer and caption controls */
-/* Windows 11 caption controls. GTK owns all minimize/maximize/restore actions. */
-windowcontrols { border-spacing: 0; margin: 0; }
-windowcontrols > button,
-headerbar button.titlebutton {
- min-width: 46px; min-height: 32px; padding: 0; margin: 0;
- border: none; border-radius: 0; background-image: none; background-color: transparent; box-shadow: none;
-}
-windowcontrols > button > image,
-headerbar button.titlebutton > image { min-width: 16px; min-height: 16px; -gtk-icon-size: 16px; padding: 0; margin: 0; }
-windowcontrols > button:not(.close):hover,
-headerbar button.titlebutton:not(.close):hover { background-color: rgba(255,255,255,0.08); }
-windowcontrols > button.close:hover,
-headerbar button.titlebutton.close:hover { background-color: #c42b1c; color: white; }
-windowcontrols > button.close:active,
-headerbar button.titlebutton.close:active { background-color: #b3261e; color: white; }
+/* Caption buttons: fenestra-caption-buttons.css (imported above), a copy of
+   /usr/share/fenestra/gtk-4.0/caption-buttons.css kept current by fenestra-tray at login. */
 /* Native GTK menus retain keyboard navigation and accessible labels. */
 popover.menu > contents { background: rgba(44,44,44,0.96); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; padding: 4px; }
 popover.menu modelbutton { min-height: 30px; padding: 2px 10px; margin: 1px 0; border-radius: 4px; }
@@ -95,47 +83,6 @@ menu separator { min-height: 1px; margin: 4px 0; background-color: rgba(255,255,
 .desktopmenu .windows-menu-action image { margin: 0; }
 
 
-
-/* Original Windows caption glyphs, fixed Windows proportions */
-windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { min-width:46px; min-height:32px; padding:0; margin:0; border:0; border-radius:0; box-shadow:none; background-color:transparent; background-repeat:no-repeat; background-position:center; background-size:10px 10px; }
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity:1; }
-windowcontrols > button.minimize, headerbar button.titlebutton.minimize, .titlebar button.titlebutton.minimize { background-image:none; }
-windowcontrols > button.maximize, headerbar button.titlebutton.maximize, .titlebar button.titlebutton.maximize { background-image:none; }
-windowcontrols > button.close, headerbar button.titlebutton.close, .titlebar button.titlebutton.close { background-image:none; }
-window.maximized windowcontrols > button.maximize, window.maximized headerbar button.titlebutton.maximize, .maximized .titlebar button.titlebutton.maximize { background-image:none; }
-windowcontrols > button:hover, headerbar button.titlebutton:hover, .titlebar button.titlebutton:hover { background-color:rgba(255,255,255,0.08); }
-windowcontrols > button.close:hover, headerbar button.titlebutton.close:hover, .titlebar button.titlebutton.close:hover { background-color:#c42b1c; }
-windowcontrols > button.close:active, headerbar button.titlebutton.close:active, .titlebar button.titlebutton.close:active { background-color:#a51c28; }
-
-/* Caption hover must not inherit circular button styling from Fluent/libadwaita. */
-window windowcontrols > button.titlebutton,
-window windowcontrols > button.close,
-window windowcontrols > button.minimize,
-window windowcontrols > button.maximize,
-window headerbar button.titlebutton,
-window .titlebar button.titlebutton,
-window windowcontrols > button:hover,
-window windowcontrols > button:active,
-window headerbar button.titlebutton:hover,
-window headerbar button.titlebutton:active,
-window .titlebar button.titlebutton:hover,
-window .titlebar button.titlebutton:active {
- border-radius: 0; box-shadow: none; border: 0;
-}
-window windowcontrols > button.close:hover,
-window headerbar button.titlebutton.close:hover,
-window .titlebar button.titlebutton.close:hover { background-color: #c42b1c; }
-window windowcontrols > button.close:active,
-window headerbar button.titlebutton.close:active,
-window .titlebar button.titlebutton.close:active { background-color: #a51c28; }
-
-/* One native symbolic glyph per control, including Chromium/Electron. */
-windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { background-image: none; }
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity: 1; min-width: 16px; min-height: 16px; -gtk-icon-size: 16px; }
-
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image {
- background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; margin: 0;
-}
 
 /* Chromium measures the header padding before scaling caption buttons. */
 window.background.csd headerbar.header-bar.titlebar {
@@ -520,15 +467,12 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
   .win11-explorer .fenestra-accent-button:hover { background: shade(@fenestra_accent_dark, 0.92); }
 }
 @media (prefers-color-scheme: light) {
-  windowcontrols > button:not(.close):hover,
-headerbar button.titlebutton:not(.close):hover { background-color: rgba(0,0,0,0.048); }
   popover.menu > contents { background: rgba(249,249,249,0.96); border: 1px solid rgba(0,0,0,0.06); }
   popover.menu modelbutton:hover { background: rgba(0,0,0,0.039); }
   popover.menu separator { background-color: rgba(0,0,0,0.042); }
   menu { background-color: rgba(249,249,249,0.96); color: #1a1a1a; border: 1px solid rgba(0,0,0,0.06); }
   menu menuitem:hover { background-color: rgba(0,0,0,0.039); }
   menu separator { background-color: rgba(0,0,0,0.042); }
-  windowcontrols > button:hover, headerbar button.titlebutton:hover, .titlebar button.titlebutton:hover { background-color: rgba(0,0,0,0.048); }
   window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton,
 window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton > image { color: #1a1a1a; }
   window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.minimize:hover,

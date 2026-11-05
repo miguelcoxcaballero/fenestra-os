@@ -98,6 +98,7 @@ More comparisons are in `apps/*/screenshots/compare-*.png`.
 | **Notifications and calendar** | Two independent cards: notification centre with Clear all and Do not disturb, calendar with Focus timer; Windows toast banners |
 | **Ctrl+Alt+Del** | Security screen with Lock, Switch user, Sign out, Change a password, Task Manager and power menu |
 | **File Explorer** | Files (Nautilus) with Explorer Home (Quick access, Recent/Favorites/Shared), Gallery, This PC with drive bars, sidebar with pins, command bar (New, Sort, View, Filter, Details), per-folder views, Windows context menus, **New ▸** templates |
+| **Window buttons** | Minimize, maximize/restore and close on every window, Windows 11 metrics and glyphs: GTK 3/4 and libadwaita apps, X11 apps (also Spotify), Qt apps (via XWayland), Flatpak apps |
 | **Desktop** | Desktop icons with the same right-click menu and folder icons |
 | **Lock and sign-in** | Windows lock-screen clock, Spotlight-style backgrounds, single-account sign-in screen, Fenestra Hello (face/fingerprint) |
 | **Consent prompts** | Administrator prompts styled like User Account Control (password always required) |

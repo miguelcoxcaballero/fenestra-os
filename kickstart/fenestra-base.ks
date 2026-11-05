@@ -135,6 +135,11 @@ fi
 # System defaults.
 grep -q "system-db:local" /etc/dconf/profile/user 2>/dev/null || printf 'user-db:user\nsystem-db:local\nsystem-db:site\nsystem-db:distro\n' > /etc/dconf/profile/user
 dconf update
+# Flatpak apps: let them read the user's GTK CSS (Windows 11 caption buttons,
+# menus); icon themes and fonts from the host are already visible to them.
+if command -v flatpak >/dev/null; then
+    flatpak override --system --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro || true
+fi
 glib-compile-schemas /usr/share/glib-2.0/schemas
 fc-cache -f
 for t in /usr/share/icons/*/; do [ -f "$t/index.theme" ] && gtk-update-icon-cache -qf "$t" || true; done
