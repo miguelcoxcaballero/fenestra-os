@@ -1,0 +1,16 @@
+{
+  "uuid": "fenestra-spotlight@fenestra-os.github.io",
+  "name": "Fenestra Spotlight",
+  "description": "Lock/login screen backgrounds, status and face-unlock animation in the Windows 11 style.",
+  "shell-version": [
+    "49",
+    "50"
+  ],
+  "session-modes": [
+    "gdm",
+    "user",
+    "unlock-dialog"
+  ],
+  "version": 1,
+  "url": "https://github.com/miguelcoxcaballero/fenestra-os"
+}

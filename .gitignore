@@ -1,0 +1,8 @@
+build/out/
+__pycache__/
+*.pyc
+*.iso
+*.qcow2
+tests/vm/shots/*.ppm
+tests/vm/shots/
+docs/INVENTORY.md

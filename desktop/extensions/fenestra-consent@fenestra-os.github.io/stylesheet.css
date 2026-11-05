@@ -1,0 +1,55 @@
+/* Dialog.Dialog is a full-monitor wrapper; only its inner .modal-dialog
+   is the visible card. Never give the wrapper an opaque background. */
+.windows-consent-dialog {
+ padding:0; margin:0; border:0; background-color:transparent;
+ box-shadow:none; color:#f5f5f5; font-family:"Segoe UI Variable";
+}
+.windows-consent-dialog .modal-dialog {
+ width:456px; padding:0; spacing:0; border-radius:8px;
+ border:1px solid rgba(255,255,255,0.15);
+ background-color:#2b2b2b !important;
+ box-shadow:0 12px 36px rgba(0,0,0,0.4);
+}
+.windows-consent-dialog .windows-consent-content {
+ padding:0; margin:0; spacing:0; max-width:456px;
+}
+.windows-consent-dialog .windows-consent-heading {
+ background-color:#333333; border-radius:8px 8px 0 0; padding:0; spacing:0;
+}
+.windows-consent-titlebar { height:32px; spacing:0; padding:0 0 0 24px; }
+.windows-consent-caption { font-size:12px; font-weight:400; padding-top:9px; }
+.windows-consent-close { width:46px; height:32px; margin:0; padding:0; border-radius:0 7px 0 0; background-color:transparent; }
+.windows-consent-close:hover { background-color:#c42b1c; }
+.windows-consent-question { font-size:19px; font-weight:400; padding:16px 24px 22px; text-align:left; }
+.windows-consent-body { background-color:#2b2b2b; padding:20px 24px; spacing:16px; }
+.windows-consent-app { spacing:16px; }
+.windows-consent-action { font-size:14px; font-weight:400; min-height:60px; }
+.windows-consent-details { font-size:12px; font-weight:400; color:#b9d1ba; padding:0; background-color:transparent; }
+.windows-consent-details:hover { text-decoration:underline; }
+.windows-consent-action-id { font-size:12px; font-weight:400; color:#c5c5c5; }
+.windows-consent-dialog .windows-consent-buttons {
+ padding:20px 24px; margin:0; spacing:8px; background-color:#202020; border-radius:0 0 8px 8px;
+}
+.windows-consent-dialog .modal-dialog-button {
+ min-height:30px; padding:0 12px; margin:0; border-radius:3px;
+ border:1px solid #505050; background-color:#383838; color:white; font-size:13px; font-weight:400;
+}
+.windows-consent-dialog .modal-dialog-button:hover { background-color:#454545; }
+.windows-consent-dialog .modal-dialog-button:focus {
+ background-color:#647c64; border-color:white; box-shadow:inset 0 0 0 1px #202020;
+}
+/* Compact the real native authentication controls, preserving every field,
+   error, prompt, and action. The Avatar supports icon-size through its API. */
+.windows-consent-dialog .message-dialog-content { spacing:10px; }
+.windows-consent-dialog .windows-consent-native-user { padding:0 24px; margin:0; spacing:4px; }
+.windows-consent-dialog .windows-consent-native-user .user-icon { icon-size:32px; }
+.windows-consent-dialog .polkit-dialog-user-label,
+.windows-consent-dialog .polkit-dialog-user-root-label { font-size:13px; font-weight:400; }
+.windows-consent-dialog .prompt-dialog-password-layout { padding:0 24px 16px; spacing:4px; }
+.windows-consent-dialog .prompt-dialog-password-entry {
+ width:388px; padding:8px 9px; font-size:13px; border-radius:4px;
+}
+.windows-consent-dialog .prompt-dialog-error-label,
+.windows-consent-dialog .prompt-dialog-info-label {
+ font-size:12px; font-weight:400; padding:6px; margin:4px 0 0; border-radius:4px;
+}

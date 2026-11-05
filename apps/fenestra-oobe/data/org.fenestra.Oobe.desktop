@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Fenestra Setup
+Name[es]=Configuración de Fenestra
+Comment=Set up your device for the first time
+Comment[es]=Configura tu dispositivo por primera vez
+Exec=/usr/libexec/fenestra-oobe --demo --windowed
+Icon=preferences-system
+NoDisplay=true
+Terminal=false
+Categories=System;
+X-GNOME-HiddenUnderSystemd=true

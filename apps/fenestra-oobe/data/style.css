@@ -1,0 +1,396 @@
+/* Fenestra OOBE - GTK 4 stylesheet (no libadwaita).
+ * Metrics follow the reference OOBE at 100 % scale on a 1920x1080 screen. */
+
+@define-color accent #0067c0;
+@define-color accent_hover #1975c5;
+@define-color accent_pressed #3183ca;
+@define-color accent_soft #e5f1fb;
+@define-color text #1b1b1b;
+@define-color text_secondary #5f5f5f;
+@define-color stroke rgba(0, 0, 0, 0.0578);
+@define-color stroke_strong rgba(0, 0, 0, 0.4458);
+@define-color critical #c42b1c;
+
+window.oobe-window,
+window.oobe-window * {
+  font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", "Selawik", "Inter", sans-serif;
+}
+
+window.oobe-window {
+  background: #9cc6e8;
+  color: @text;
+  font-size: 14px;
+}
+
+/* ---------- card ---------- */
+/* A single, very light translucent surface (no separate coloured pane). */
+.oobe-card {
+  border-radius: 8px;
+  background-color: rgba(246, 249, 253, 0.97);
+  background-image:
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 45%),
+    radial-gradient(ellipse at 80% 92%, rgba(240, 236, 240, 0.9) 0%, rgba(240, 236, 240, 0) 55%),
+    linear-gradient(120deg, #f8fafc 0%, #eef4fc 40%, #edf1fa 65%, #f1f0f4 100%);
+  box-shadow: 0 2px 4px rgba(30, 50, 90, 0.06), 0 12px 40px rgba(30, 50, 90, 0.16);
+}
+
+.art-pane { background: transparent; }
+
+.content-column {
+  padding: 63px 53px 51px 47px;
+}
+
+.page-title {
+  font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", "Selawik", "Inter", sans-serif;
+  font-size: 28.4px;
+  font-weight: 400;
+  line-height: 0.98;
+  color: #000000;
+  margin-right: 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  line-height: 1.0;
+  color: #5c5c5c;
+  margin-top: 14px;
+}
+
+.page-body {
+  margin-top: 53px;
+  margin-left: 3px;
+  margin-right: 16px;
+  margin-bottom: 18px;
+}
+.spinner-page .page-body { margin: 0 0 0 0; }
+
+.hint-text {
+  font-size: 12px;
+  color: @text_secondary;
+  margin-top: 10px;
+}
+
+.error-text {
+  font-size: 13px;
+  color: @critical;
+  margin-top: 8px;
+}
+
+.dim { color: @text_secondary; }
+
+.placeholder {
+  padding: 24px;
+}
+
+.field-label {
+  font-size: 13px;
+  color: @text;
+}
+
+.spinner-box { margin-top: 0; margin-bottom: 0; }
+.spinner-caption {
+  font-size: 20px;
+  color: #1b1b1b;
+  margin-top: 21px;
+}
+
+/* ---------- back button (top-left of the card) ---------- */
+button.back-button {
+  margin: 9px 0 0 10px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+button.back-button:hover { background: rgba(0, 0, 0, 0.0373); }
+button.back-button:active { background: rgba(0, 0, 0, 0.0241); }
+
+/* ---------- footer buttons ---------- */
+.footer { min-height: 40px; }
+
+button.oobe-button {
+  min-width: 100px;   /* + padding + border = 126 px */
+  min-height: 36px;   /* + border = 38 px */
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  box-shadow: none;
+  text-shadow: none;
+  -gtk-icon-shadow: none;
+  outline-offset: 2px;
+  outline-color: #1a1a1a;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+button.oobe-button label { font-weight: 400; }
+
+button.oobe-button.primary {
+  background: @accent;
+  color: #ffffff;
+  border: 1px solid @accent;
+}
+button.oobe-button.primary:hover { background: @accent_hover; border-color: @accent_hover; }
+button.oobe-button.primary:active { background: @accent_pressed; color: rgba(255, 255, 255, 0.78); }
+button.oobe-button.primary:disabled {
+  background: rgba(0, 0, 0, 0.2169);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+button.oobe-button.secondary {
+  background: #fbfbfb;
+  color: #1a1a1a;
+  border: 1px solid @stroke;
+  border-bottom-color: rgba(0, 0, 0, 0.1622);
+}
+
+/* Secondary actions are plain accent-coloured text ("Add layout"). */
+button.plain-link {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 4px;
+  color: #0b4fa8;
+  font-size: 14px;
+}
+button.plain-link.secondary { margin-right: 24px; }
+button.plain-link:hover { background: rgba(0, 0, 0, 0.0373); }
+button.plain-link:active { color: #003e92; background: rgba(0, 0, 0, 0.0241); }
+button.plain-link:disabled { color: rgba(0, 0, 0, 0.3614); }
+button.plain-link:first-child { margin-left: -12px; }
+
+/* ---------- text boxes ---------- */
+entry.oobe-entry,
+entry.oobe-search,
+passwordentry.oobe-entry,
+searchentry.oobe-search {
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 4px;
+  background: #ffffff;
+  color: @text;
+  border: 1px solid @stroke;
+  border-bottom-color: @stroke_strong;
+  box-shadow: none;
+  outline: none;
+  font-size: 14px;
+  caret-color: @text;
+}
+entry.oobe-entry:hover,
+passwordentry.oobe-entry:hover,
+searchentry.oobe-search:hover { background: #f9f9f9; }
+entry.oobe-entry:focus-within,
+passwordentry.oobe-entry:focus-within,
+searchentry.oobe-search:focus-within {
+  background: #ffffff;
+  border-bottom-color: @accent;
+  box-shadow: inset 0 -1px 0 @accent;
+}
+entry.oobe-entry.invalid,
+entry.oobe-entry.invalid:focus-within {
+  border-bottom-color: @critical;
+  box-shadow: inset 0 -1px 0 @critical;
+}
+entry.oobe-entry text placeholder,
+passwordentry.oobe-entry text placeholder,
+searchentry.oobe-search text placeholder { color: #707070; }
+entry.oobe-entry image, passwordentry.oobe-entry image, entry.oobe-search image, searchentry.oobe-search image {
+  color: @text_secondary;
+  -gtk-icon-size: 16px;
+}
+passwordentry.oobe-entry, entry.oobe-entry { min-width: 360px; min-height: 38px; font-size: 15px; }
+entry.oobe-entry selection,
+passwordentry.oobe-entry selection,
+searchentry.oobe-search selection { background: @accent; color: #ffffff; }
+
+/* ---------- lists ---------- */
+scrolledwindow.oobe-list-frame { background: transparent; border: none; }
+scrolledwindow.plain-scroller { background: transparent; }
+
+list.oobe-list {
+  background: transparent;
+  padding: 0;
+}
+list.oobe-list > row {
+  min-height: 58px;
+  padding: 0 16px;
+  margin: 0 0 4px 0;
+  border-radius: 3px;
+  color: #1b1b1b;
+  background: transparent;
+  outline: none;
+  transition: background 80ms ease-out;
+}
+list.oobe-list > row:hover { background: rgba(0, 0, 0, 0.0373); }
+list.oobe-list > row:selected,
+list.oobe-list > row:selected:hover { background: @accent; color: #ffffff; }
+list.oobe-list > row:selected label { color: #ffffff; }
+list.oobe-list > row:focus-visible { outline: 2px solid #1a1a1a; outline-offset: -2px; }
+list.oobe-list > row label { font-size: 18px; }
+list.oobe-list .indicator { min-width: 0; min-height: 0; margin: 0; background: none; }
+
+scrollbar { background: transparent; border: none; }
+scrollbar slider {
+  min-width: 3px;
+  min-height: 3px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  border: none;
+}
+scrollbar:hover slider { min-width: 6px; }
+
+/* wifi rows */
+list.wifi-list > row { padding-top: 6px; padding-bottom: 6px; }
+.wifi-icon { color: @text; }
+.wifi-name { font-size: 16px; }
+.wifi-status { font-size: 12px; color: @text_secondary; }
+list.oobe-list > row:selected .wifi-status, list.oobe-list > row:selected .wifi-icon { color: #ffffff; }
+list.oobe-list > row:selected .field-label { color: #ffffff; }
+.wifi-detail { padding: 10px 4px 6px 33px; }
+.wifi-detail passwordentry.oobe-entry { min-width: 0; }
+
+/* ---------- privacy / customize rows ---------- */
+.settings-list { margin-right: 6px; }
+.setting-row {
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: #f9f9f9;
+  border: 1px solid rgba(0, 0, 0, 0.045);
+  margin-bottom: 4px;
+}
+.setting-icon { color: @text; margin-top: 2px; }
+.setting-title { font-size: 14px; font-weight: 600; }
+.setting-desc { font-size: 12px; color: @text_secondary; line-height: 1.05; }
+.switch-state { font-size: 14px; color: @text; }
+
+button.toggle-switch {
+  min-width: 32px;
+  min-height: 18px;
+  padding: 0 3px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.0241);
+  border: 1px solid rgba(0, 0, 0, 0.6063);
+  box-shadow: none;
+  outline-offset: 2px;
+  transition: background 120ms ease-out;
+}
+button.toggle-switch:hover { background: rgba(0, 0, 0, 0.0578); }
+button.toggle-switch .knob {
+  min-width: 12px;
+  min-height: 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6063);
+  transition: min-width 100ms ease-out;
+}
+button.toggle-switch:hover .knob { min-width: 14px; }
+button.toggle-switch:checked { background: @accent; border-color: @accent; }
+button.toggle-switch:checked:hover { background: @accent_hover; border-color: @accent_hover; }
+button.toggle-switch:checked .knob { background: #ffffff; }
+window.high-contrast button.toggle-switch:checked { background: #ffff00; border-color: #ffff00; }
+window.high-contrast button.toggle-switch:checked .knob { background: #000000; }
+window.high-contrast button.toggle-switch .knob { background: #ffffff; }
+window.high-contrast button.toggle-switch { border-color: #ffffff; }
+
+.interest-grid { margin-right: 6px; }
+.interest-grid > flowboxchild { padding: 0; outline: none; }
+.check-row {
+  padding: 14px 14px;
+  border-radius: 6px;
+  background: #f9f9f9;
+  border: 1px solid rgba(0, 0, 0, 0.045);
+}
+.check-row:hover { background: #f3f3f3; }
+.check-row.checked { background: @accent_soft; border-color: rgba(0, 103, 192, 0.25); }
+.check-icon { color: @accent; }
+.check-title { font-size: 14px; font-weight: 600; }
+.check-desc { font-size: 12px; color: @text_secondary; }
+
+checkbutton { padding: 0; outline: none; }
+checkbutton check, checkbutton radio {
+  min-width: 18px;
+  min-height: 18px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.0241);
+  border: 1px solid rgba(0, 0, 0, 0.6063);
+  box-shadow: none;
+  color: transparent;
+  -gtk-icon-size: 12px;
+}
+checkbutton radio { border-radius: 50%; }
+checkbutton check:checked, checkbutton radio:checked {
+  background: @accent;
+  border-color: @accent;
+  color: #ffffff;
+}
+
+/* benefits / progress */
+.benefit-row { padding: 8px 0; }
+.benefit-icon { color: @accent; }
+.progress-row { margin-top: 4px; }
+spinner, .oobe-spinner { color: @accent; min-width: 22px; min-height: 22px; }
+
+/* ---------- corner (accessibility) ---------- */
+.corner-controls menubutton.corner-button > button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.corner-controls menubutton.corner-button > button:hover { background: rgba(255, 255, 255, 0.45); }
+.corner-controls menubutton.corner-button > button:checked { background: rgba(255, 255, 255, 0.65); }
+
+popover.oobe-popover > contents {
+  background: #f9f9f9;
+  color: @text;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 12px 16px;
+}
+.popover-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.popover-row { min-height: 40px; }
+scale trough { background: rgba(0, 0, 0, 0.45); min-height: 4px; border-radius: 2px; }
+scale highlight { background: @accent; border-radius: 2px; }
+scale slider {
+  min-width: 18px; min-height: 18px; border-radius: 50%;
+  background: #ffffff; border: 4px solid @accent; box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+  margin: -8px;
+}
+
+/* ---------- finale ---------- */
+.finale-headline {
+  color: rgba(255, 255, 255, 0.96);
+  font-family: "Segoe UI Variable Display", "Segoe UI", "Selawik", "Inter", sans-serif;
+  font-size: 44px;
+  font-weight: 300;
+}
+.finale-small {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 18px;
+  font-weight: 300;
+}
+
+/* ---------- accessibility: contrast theme ---------- */
+window.high-contrast .oobe-card { background: #000000; }
+window.high-contrast .art-pane { background: #000000; }
+window.high-contrast, window.high-contrast label { color: #ffffff; }
+window.high-contrast .dim, window.high-contrast .hint-text,
+window.high-contrast .setting-desc, window.high-contrast .check-desc { color: #ffffff; }
+window.high-contrast button.oobe-button.primary { background: #ffff00; color: #000000; }
+window.high-contrast button.oobe-button.primary label { color: #000000; }
+window.high-contrast button.oobe-button.secondary { background: #000000; border-color: #ffffff; }
+window.high-contrast entry.oobe-entry, window.high-contrast passwordentry.oobe-entry,
+window.high-contrast searchentry.oobe-search { background: #000000; color: #ffffff; border-color: #ffffff; }
+window.high-contrast scrolledwindow.oobe-list-frame { background: #000000; border-color: #ffffff; }
+window.high-contrast list.oobe-list > row:selected { background: #1aebff; }
+window.high-contrast list.oobe-list > row:selected label { color: #000000; }
+window.high-contrast .setting-row, window.high-contrast .check-row { background: #000000; border-color: #ffffff; }
+window.high-contrast button.plain-link label { color: #ffff00; }

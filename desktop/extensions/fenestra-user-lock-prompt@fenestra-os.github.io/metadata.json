@@ -1,0 +1,14 @@
+{
+  "uuid": "fenestra-user-lock-prompt@fenestra-os.github.io",
+  "name": "Fenestra User Lock Prompt",
+  "description": "Show the account instead of the clock until the user interacts.",
+  "shell-version": [
+    "49"
+  ],
+  "session-modes": [
+    "user",
+    "unlock-dialog"
+  ],
+  "version": 1,
+  "url": "https://github.com/miguelcoxcaballero/fenestra-os"
+}

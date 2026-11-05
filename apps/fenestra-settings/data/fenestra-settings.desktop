@@ -1,0 +1,36 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+Name[es]=Configuración
+GenericName=Settings
+GenericName[es]=Configuración
+Comment=Change system settings
+Comment[es]=Cambiar la configuración del sistema
+Exec=fenestra-settings %U
+Icon=fenestra-settings
+Terminal=false
+StartupNotify=true
+StartupWMClass=org.fenestra.Settings
+Categories=Settings;GTK;DesktopSettings;X-GNOME-Settings-Panel;
+Keywords=Preferences;Settings;Control;Panel;Display;Network;Bluetooth;Sound;Update;Configuración;Preferencias;
+X-GNOME-UsesNotifications=true
+Actions=Display;Network;Bluetooth;Update;
+
+[Desktop Action Display]
+Name=Display
+Name[es]=Pantalla
+Exec=fenestra-settings --page display
+
+[Desktop Action Network]
+Name=Network & internet
+Name[es]=Red e Internet
+Exec=fenestra-settings --page network
+
+[Desktop Action Bluetooth]
+Name=Bluetooth & devices
+Name[es]=Bluetooth y dispositivos
+Exec=fenestra-settings --page devices
+
+[Desktop Action Update]
+Name=Fenestra Update
+Exec=fenestra-settings --page update

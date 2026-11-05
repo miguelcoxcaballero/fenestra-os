@@ -1,0 +1,150 @@
+"""Spanish (es) translation of the Fenestra OOBE."""
+
+MESSAGES = {
+    "Next": "Siguiente",
+    "Skip for now": "Omitir por ahora",
+    "Let's name your device": "Pongamos nombre a tu dispositivo",
+    "Give your device a unique name that's easy to recognize when connecting to it from other devices.":
+        "Dale a tu dispositivo un nombre único que sea fácil de reconocer cuando te conectes a él desde otros dispositivos.",
+    "Device name": "Nombre del dispositivo",
+    "Who's going to use this device?": "¿Quién va a usar este dispositivo?",
+    "What's your name?": "¿Cuál es tu nombre?",
+    "Name": "Nombre",
+    "Create a super memorable password": "Crea una contraseña fácil de recordar",
+    "Make sure to pick something you'll absolutely remember.":
+        "Asegúrate de elegir algo que puedas recordar sin problemas.",
+    "Password": "Contraseña",
+    "Confirm your password": "Confirma tu contraseña",
+    "Please enter your password again.": "Vuelve a escribir tu contraseña.",
+    "Confirm password": "Confirmar contraseña",
+    "Add a password hint": "Agrega un indicio de contraseña",
+    "Choose a hint that will help you remember your password. It's optional, and it can't contain your password.":
+        "Elige un indicio que te ayude a recordar tu contraseña. Es opcional y no puede contener la contraseña.",
+    "Password hint (optional)": "Indicio de contraseña (opcional)",
+    "Just a moment…": "Un momento…",
+    "We're setting up your account and applying your settings.":
+        "Estamos creando tu cuenta y aplicando tu configuración.",
+    "Try again": "Reintentar",
+    "Signing you in…": "Iniciando sesión…",
+    "Can't be more than 15 characters, contain spaces, or the following characters: ` ~ ! @ # $ % ^ & * ( ) = + _ [ ] { } \\ | ; : . ' \" , < > / ?":
+        "No puede tener más de 15 caracteres, contener espacios ni los siguientes caracteres: ` ~ ! @ # $ % ^ & * ( ) = + _ [ ] { } \\ | ; : . ' \" , < > / ?",
+    "The passwords don't match. Try again.": "Las contraseñas no coinciden. Inténtalo de nuevo.",
+    "Your hint can't contain your password.": "El indicio no puede contener tu contraseña.",
+    "Creating your account…": "Creando tu cuenta…",
+    "Use letters or numbers in your name.": "Usa letras o números en tu nombre.",
+    "You'll use <b>{user}</b> to sign in.": "Usarás <b>{user}</b> para iniciar sesión.",
+    "Something went wrong while creating your account.": "Se produjo un error al crear tu cuenta.",
+    "I don't have internet": "No tengo Internet",
+    "Connect now": "Conectar ahora",
+    "Continue with limited setup": "Continuar con la configuración limitada",
+    "Connecting…": "Conectando…",
+    "Let's connect you to a network": "Vamos a conectarte a una red",
+    "You'll need an internet connection to continue setting up your device. Once connected, you'll get the latest features and security updates.":
+        "Necesitarás una conexión a Internet para seguir configurando tu dispositivo. Una vez conectado, obtendrás las últimas características y actualizaciones de seguridad.",
+    "There's more to discover when you connect to the internet": "Hay mucho más por descubrir cuando te conectas a Internet",
+    "Connect now to get the latest features and security updates. You can still set up your device without an internet connection and connect later.":
+        "Conéctate ahora para obtener las últimas características y actualizaciones de seguridad. También puedes configurar tu dispositivo sin conexión y conectarte más tarde.",
+    "Checking for updates.": "Buscando actualizaciones.",
+    "This might take a few minutes.": "Esto puede tardar unos minutos.",
+    "Connect": "Conectar",
+    "Can't connect to this network. Check the security key and try again.":
+        "No se puede conectar a esta red. Comprueba la clave de seguridad e inténtalo de nuevo.",
+    "Get the latest updates and security fixes": "Obtén las últimas actualizaciones y correcciones de seguridad",
+    "Set the right date and time automatically": "Ajusta la fecha y la hora automáticamente",
+    "Install apps from the Software center": "Instala aplicaciones desde el centro de Software",
+    "Connected, secured": "Conectado, protegida",
+    "Connected": "Conectado",
+    "Secured": "Protegida",
+    "Open": "Abierta",
+    "Looking for networks…": "Buscando redes…",
+    "Checking for updates…": "Buscando actualizaciones…",
+    "Enter the network security key": "Escribe la clave de seguridad de red",
+    "No Wi‑Fi adapter was found. Plug in a network cable or continue without internet.":
+        "No se encontró ningún adaptador Wi‑Fi. Conecta un cable de red o continúa sin Internet.",
+    "No networks found": "No se encontraron redes",
+    "Accept": "Aceptar",
+    "Send crash reports automatically so problems can be found and fixed faster. Reports never include your files.":
+        "Envía informes de errores automáticamente para que los problemas se detecten y corrijan antes. Los informes nunca incluyen tus archivos.",
+    "Skip": "Omitir",
+    "Import": "Importar",
+    "Not now": "Ahora no",
+    "Choose privacy settings for your device": "Elige la configuración de privacidad de tu dispositivo",
+    "Fenestra puts you in control of your privacy. Choose your settings, then select “Accept” to save them. You can change these settings at any time in Settings.":
+        "Fenestra te permite controlar tu privacidad. Elige tu configuración y selecciona «Aceptar» para guardarla. Puedes cambiarla en cualquier momento en Configuración.",
+    "Allow apps to report technical problems so they can be found and fixed faster. Reports never include your files.":
+        "Permite que las aplicaciones informen de problemas técnicos para detectarlos y corregirlos antes. Los informes nunca incluyen tus archivos.",
+    "Let's customize your experience": "Personalicemos tu experiencia",
+    "Select all the ways you plan to use your device to get personalized tips and app suggestions. You can change these anytime.":
+        "Selecciona todas las formas en que piensas usar tu dispositivo para recibir sugerencias de aplicaciones y consejos personalizados. Puedes cambiarlas en cualquier momento.",
+    "Bring your fonts and pointers along": "Trae tus fuentes y punteros",
+    "We found another operating system on this device. Fenestra can copy the fonts and mouse pointers you already own from it into your personal folder, so documents and apps look the way you're used to.":
+        "Encontramos otro sistema operativo en este dispositivo. Fenestra puede copiar desde él las fuentes y punteros del mouse que ya tienes a tu carpeta personal, para que documentos y aplicaciones se vean como siempre.",
+    "Copying your fonts and pointers…": "Copiando tus fuentes y punteros…",
+    "Done": "Listo",
+    "Location": "Ubicación",
+    "Let apps use your location for things like weather, maps and directions. Location services use nearby Wi‑Fi networks to work out where you are.":
+        "Permite que las aplicaciones usen tu ubicación para el tiempo, los mapas y las indicaciones. Los servicios de ubicación usan las redes Wi‑Fi cercanas para saber dónde estás.",
+    "Automatic time zone": "Zona horaria automática",
+    "Keep the clock right when you travel by setting the time zone from your location.":
+        "Mantén el reloj en hora cuando viajes ajustando la zona horaria según tu ubicación.",
+    "Diagnostic data": "Datos de diagnóstico",
+    "Tailored experiences": "Experiencias personalizadas",
+    "Remember the files and apps you've used recently so you can get back to them quickly from the Start menu and file dialogs.":
+        "Recuerda los archivos y aplicaciones que usaste recientemente para que puedas volver a ellos rápidamente desde el menú Inicio y los diálogos de archivos.",
+    "Fonts are copied to ~/.local/share/fonts": "Las fuentes se copian en ~/.local/share/fonts",
+    "Mouse pointers are copied to ~/.local/share/icons": "Los punteros del mouse se copian en ~/.local/share/icons",
+    "The other partition is only read, never changed": "La otra partición solo se lee, nunca se modifica",
+    "Some items couldn't be copied. You can try again later from Settings.":
+        "No se pudieron copiar algunos elementos. Puedes volver a intentarlo más tarde desde Configuración.",
+    "The import tool isn't installed, so nothing was copied.":
+        "La herramienta de importación no está instalada, así que no se copió nada.",
+    "Found at {path}": "Encontrado en {path}",
+    "Yes": "Sí",
+    "No": "No",
+    "Add layout": "Agregar distribución",
+    "Is this the right country or region?": "¿Es este el país o la región correctos?",
+    "Is this the right keyboard layout or input method?":
+        "¿Es esta la distribución de teclado o el método de entrada correctos?",
+    "If you also use another keyboard layout, you can add that next.":
+        "Si también usas otra distribución de teclado, puedes agregarla a continuación.",
+    "Want to add a second keyboard layout?": "¿Quieres agregar una segunda distribución de teclado?",
+    "Choose a second keyboard layout": "Elige una segunda distribución de teclado",
+    "No results": "No hay resultados",
+    "Search": "Buscar",
+    "Accessibility": "Accesibilidad",
+    "Volume": "Volumen",
+    "Text size": "Tamaño del texto",
+    "Contrast themes": "Temas de contraste",
+    "Narrator": "Narrador",
+    "On-screen keyboard": "Teclado en pantalla",
+    "Hi": "Hola",
+    "We're getting everything ready for you": "Estamos preparando todo para ti",
+    "This might take a few minutes": "Esto puede tardar unos minutos",
+    "Don't turn off your PC": "No apagues el equipo",
+    "Let's start": "Empecemos",
+    "Fenestra Setup": "Configuración de Fenestra",
+    "Back": "Atrás",
+    "Your device name can't contain spaces.": "El nombre del dispositivo no puede contener espacios.",
+    "Your device name can't be more than 15 characters.":
+        "El nombre del dispositivo no puede tener más de 15 caracteres.",
+    "Your device name can only contain letters, numbers and hyphens.":
+        "El nombre del dispositivo solo puede contener letras, números y guiones.",
+    "Your device name can't be only numbers.": "El nombre del dispositivo no puede ser solo números.",
+    "Your device name can't start or end with a hyphen.":
+        "El nombre del dispositivo no puede empezar ni terminar con un guion.",
+    # Interests
+    "Gaming": "Juegos",
+    "Play and discover games": "Juega y descubre juegos",
+    "Family": "Familia",
+    "Keep your family connected and safe": "Mantén a tu familia conectada y segura",
+    "Creativity": "Creatividad",
+    "Bring ideas to life": "Da vida a tus ideas",
+    "Schoolwork": "Tareas escolares",
+    "Take notes, write essays, collaborate": "Toma notas, escribe redacciones, colabora",
+    "Entertainment": "Entretenimiento",
+    "Stream videos and music": "Reproduce vídeos y música",
+    "Business": "Negocios",
+    "Track expenses, manage your business": "Controla gastos y gestiona tu negocio",
+    "Development": "Desarrollo",
+    "Write code and build apps": "Escribe código y crea aplicaciones",
+}

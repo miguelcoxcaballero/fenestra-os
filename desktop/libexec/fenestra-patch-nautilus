@@ -1,0 +1,70 @@
+#!/usr/bin/python3
+"""Create Fenestra's Explorer-style Nautilus binary.
+
+Nautilus hard-codes the icon names of its sidebar entries. Fenestra wants the
+coloured Windows-11-style place icons there, so this tool copies /usr/bin/nautilus
+to /usr/libexec/fenestra/nautilus and swaps those icon-name strings for aliases
+that exist only in the Fenestra icon theme (same length or shorter, NUL padded).
+It is re-run at boot whenever Nautilus changes (fenestra-patch-nautilus.service).
+"""
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+SRC = '/usr/bin/nautilus'
+DEST_DIR = '/usr/libexec/fenestra'
+DEST = os.path.join(DEST_DIR, 'nautilus')
+STAMP = os.path.join(DEST_DIR, 'nautilus.stamp')
+TABLE = {
+    b'user-trash-symbolic': b'twne', b'user-trash-full-symbolic': b'twnf',
+    b'document-open-recent-symbolic': b'rwin', b'network-computer-symbolic': b'network-drvwin',
+    b'non-starred-symbolic': b'non-swin', b'folder-documents-symbolic': b'dwin',
+    b'folder-download-symbolic': b'dlwin', b'folder-music-symbolic': b'mwin',
+    b'folder-pictures-symbolic': b'pwin', b'folder-publicshare-symbolic': b'pubwin',
+    b'folder-templates-symbolic': b'tmpwin', b'folder-videos-symbolic': b'vwin',
+    b'folder-remote-symbolic': b'nwin', b'drive-harddisk-symbolic': b'drvwin',
+    b'user-home-symbolic': b'hwin',
+}
+
+
+def sha(path):
+    return hashlib.sha256(open(path, 'rb').read()).hexdigest()
+
+
+def main():
+    if not os.path.exists(SRC):
+        return 0
+    digest = sha(SRC)
+    try:
+        if json.load(open(STAMP)).get('source') == digest and os.path.exists(DEST):
+            return 0
+    except (OSError, ValueError):
+        pass
+    data = bytearray(open(SRC, 'rb').read())
+    count = 0
+    for old, new in TABLE.items():
+        needle = b'\0' + old + b'\0'
+        start = 0
+        while (i := data.find(needle, start)) != -1:
+            data[i + 1:i + 1 + len(old)] = new + b'\0' * (len(old) - len(new))
+            count += 1
+            start = i + len(needle)
+    os.makedirs(DEST_DIR, exist_ok=True)
+    tmp = DEST + '.new'
+    open(tmp, 'wb').write(data)
+    shutil.copymode(SRC, tmp)
+    os.replace(tmp, DEST)
+    try:
+        version = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}', 'nautilus'], capture_output=True, text=True).stdout
+    except OSError:
+        version = ''
+    json.dump({'source': digest, 'replacements': count, 'version': version}, open(STAMP, 'w'))
+    print(f'fenestra-patch-nautilus: {count} replacements (nautilus {version})')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Fenestra Settings icon: original design, CC0 / same license as the project. -->
+  <defs>
+    <linearGradient id="body" x1="20" y1="14" x2="108" y2="116" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8fa4b8"/>
+      <stop offset="0.55" stop-color="#5d7085"/>
+      <stop offset="1" stop-color="#3b4a5c"/>
+    </linearGradient>
+    <linearGradient id="hub" x1="44" y1="44" x2="84" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4fd2ff"/>
+      <stop offset="1" stop-color="#0a6cd6"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(64 64)">
+    <g fill="url(#body)">
+      <circle r="42"/>
+      <g id="tooth"><rect x="-10" y="-58" width="20" height="24" rx="5"/></g>
+      <use href="#tooth" transform="rotate(45)"/>
+      <use href="#tooth" transform="rotate(90)"/>
+      <use href="#tooth" transform="rotate(135)"/>
+      <use href="#tooth" transform="rotate(180)"/>
+      <use href="#tooth" transform="rotate(225)"/>
+      <use href="#tooth" transform="rotate(270)"/>
+      <use href="#tooth" transform="rotate(315)"/>
+    </g>
+    <circle r="41" fill="none" stroke="url(#rim)" stroke-width="2"/>
+    <circle r="25" fill="#26313d" opacity="0.35"/>
+    <circle r="21" fill="url(#hub)"/>
+    <circle r="9" fill="#e9f6ff"/>
+  </g>
+</svg>

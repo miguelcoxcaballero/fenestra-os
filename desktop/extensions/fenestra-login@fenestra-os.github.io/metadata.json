@@ -1,0 +1,14 @@
+{
+  "uuid": "fenestra-login@fenestra-os.github.io",
+  "name": "Fenestra Login",
+  "description": "Login screen that selects the single account like Windows does; authentication still required.",
+  "shell-version": [
+    "49",
+    "50"
+  ],
+  "session-modes": [
+    "gdm"
+  ],
+  "version": 1,
+  "url": "https://github.com/miguelcoxcaballero/fenestra-os"
+}

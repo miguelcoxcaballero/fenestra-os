@@ -1,0 +1,52 @@
+name: Build Fenestra ISO
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax
+        run: |
+          python3 -m py_compile tools/*.py tools/fenestra-import-windows-assets desktop/nautilus/python/*.py desktop/libexec/fenestra-patch-nautilus
+          find apps -name '*.py' -print0 | xargs -0 -r python3 -m py_compile
+      - name: Kickstart syntax
+        run: |
+          pip install pykickstart
+          cat kickstart/fenestra-test.ks kickstart/fenestra-base.ks > /tmp/ks.cfg
+          ksvalidator -v F43 /tmp/ks.cfg
+      - name: No Microsoft assets in tree
+        run: |
+          ! find . -iname 'segoe*' -o -iname 'sysbatt*' -o -iname '*.cur' -o -iname '*.ani' | grep -v '^./.git' | grep .
+
+  iso:
+    needs: lint
+    runs-on: ubuntu-latest
+    container:
+      image: registry.fedoraproject.org/fedora:43
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build dependencies
+        run: dnf -y install lorax xorriso isomd5sum git rsync glib2 gtk-update-icon-cache python3-pillow python3-numpy ImageMagick librsvg2-tools curl unzip
+      - name: Fedora netinstall ISO
+        run: |
+          mkdir -p ~/.local/share/fenestra-vm && cd ~/.local/share/fenestra-vm
+          curl -fsSLO https://dl.fedoraproject.org/pub/fedora/linux/releases/43/Everything/x86_64/iso/Fedora-Everything-netinst-x86_64-43-1.6.iso
+      - name: Generate assets
+        run: python3 tools/generate-assets.py
+      - name: Build ISO
+        env:
+          FENESTRA_NO_CONTAINER: '1'
+        run: bash build/build-iso.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fenestra-43-netinst-x86_64
+          path: build/out/Fenestra-43-netinst-x86_64.iso
+          retention-days: 7

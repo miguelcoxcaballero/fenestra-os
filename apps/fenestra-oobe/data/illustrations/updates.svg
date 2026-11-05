@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="arc" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#62d0ff"/>
+      <stop offset="1" stop-color="#1068cc"/>
+    </linearGradient>
+    <linearGradient id="arc2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#58e0c8"/>
+      <stop offset="1" stop-color="#1a8fb0"/>
+    </linearGradient>
+    <radialGradient id="core" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d5ecf8"/>
+    </radialGradient>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0b3f73" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#0b3f73" stop-opacity="0"/>
+    </radialGradient>
+    <marker id="head1" viewBox="0 0 10 10" refX="3" refY="5" markerUnits="userSpaceOnUse"
+            markerWidth="46" markerHeight="46" orient="auto">
+      <path d="M0 0.5L9.5 5 0 9.5z" fill="#1068cc" stroke="#1068cc" stroke-width="1" stroke-linejoin="round"/>
+    </marker>
+    <marker id="head2" viewBox="0 0 10 10" refX="3" refY="5" markerUnits="userSpaceOnUse"
+            markerWidth="46" markerHeight="46" orient="auto">
+      <path d="M0 0.5L9.5 5 0 9.5z" fill="#1a8fb0" stroke="#1a8fb0" stroke-width="1" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <ellipse cx="200" cy="336" rx="112" ry="16" fill="url(#shadow)"/>
+  <circle cx="200" cy="200" r="84" fill="url(#core)"/>
+  <circle cx="200" cy="200" r="84" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <g fill="none" stroke-linecap="round" stroke-width="22">
+    <path d="M89.1 215.6A112 112 0 0 1 256 103" stroke="url(#arc)" marker-end="url(#head1)"/>
+    <path d="M310.9 184.4A112 112 0 0 1 144 297" stroke="url(#arc2)" marker-end="url(#head2)"/>
+  </g>
+  <path d="M200 160v58m-26-24l26 26 26-26" fill="none" stroke="#1373cf" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="166" y="236" width="68" height="12" rx="6" fill="#58b8f0"/>
+  <path d="M120 150a96 96 0 0 1 40-36" stroke="#ffffff" stroke-opacity="0.7" stroke-width="5" stroke-linecap="round" fill="none"/>
+</svg>

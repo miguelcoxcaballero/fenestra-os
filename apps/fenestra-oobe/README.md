@@ -1,0 +1,166 @@
+# Fenestra OOBE
+
+First-boot setup ("out-of-box experience") for Fenestra (Fedora 43 / GNOME 49).
+It replaces GNOME Initial Setup with a full-screen, card-based flow modelled on
+the familiar desktop OOBE: a soft gradient background, a centered rounded card
+with an illustration on the left and the question on the right, and
+accessibility and volume buttons in the bottom-left corner.
+
+Written in Python 3.14 + PyGObject + GTK 4.20, with its own CSS (no
+libadwaita). It only uses Fedora Workstation packages: python3-gobject, gtk4,
+python3-cairo, librsvg2, NetworkManager (nmcli), accountsservice,
+systemd-localed/timedated/hostnamed, and the `Gdm-1.0` typelib from gdm.
+All illustrations in `data/illustrations/` are original SVGs.
+
+## Flow
+
+**System mode.** GDM starts this when the system has no users. It runs as the
+dynamic initial-setup user in GDM's `gnome-initial-setup` session.
+
+| # | page id | Title |
+|---|---------|-------|
+| 1 | `region` | Is this the right country or region? (searchable; guessed from time zone, then locale) |
+| 2 | `keyboard` | Is this the right keyboard layout or input method? (xkb `evdev.lst`, translated) |
+| 3 | `keyboard-second` → `keyboard-pick` | Want to add a second keyboard layout? (Add layout / Skip) |
+| 4 | `network` (+ `network-offline`) | Let's connect you to a network. Wi‑Fi through nmcli, with the password entered inline. "I don't have internet" leads to "Continue with limited setup". The page is skipped when a wired or full connection already exists. |
+| 5 | `updates` | Checking for updates. Spinner for at least 3 s while `nmcli networking connectivity check` runs. Shown only when online. |
+| 6 | `device-name` | Let's name your device. Up to 15 characters; letters, digits and hyphens; not only digits. |
+| 7 | `account-name`, `account-password`, `account-confirm`, `account-hint` | Who's going to use this device? / Create a super memorable password / Confirm your password / Add a password hint |
+| 8 | `applying` | Just a moment… Applies hostname, locale, keyboard and time zone, creates the account, then logs in automatically. |
+
+**Existing-user mode (`--existing-user`).** This runs at the first login of
+the new user, full screen over the desktop.
+
+| # | page id | Title |
+|---|---------|-------|
+| 9 | `privacy` | Choose privacy settings for your device. Toggles for Location, Automatic time zone, Diagnostic data and Tailored experiences. |
+| 10 | `customize` | Let's customize your experience. Grid of interests, saved to `~/.config/fenestra/oobe.json`. |
+| 11 | `import` | Bring your fonts and pointers along. Shown only when another system's partition with `Windows/Fonts/segoeui.ttf` is found. The UI never names that system. |
+| 12 | `finale-1..4` | Full-screen sequence: "Hi" → "We're getting everything ready for you" → "This might take a few minutes / Don't turn off your PC" → "Let's start" (about 10 s), then it writes `~/.config/gnome-initial-setup-done` and exits. |
+
+Keyboard: **Enter** triggers the primary button and **Esc** goes back where
+that's allowed. In demo mode, Ctrl+Q quits. Page changes slide and fade over
+about 260 ms with ease-out, and illustrations crossfade.
+
+## How system mode creates the user and logs in
+
+1. **System settings.** These are set over D-Bus. The polkit rule
+   `20-gnome-initial-setup.rules` allows them without a password prompt.
+   - `hostname1.SetStaticHostname` gets the name in lower case;
+     `SetPrettyHostname` keeps the name as typed.
+   - `locale1.SetLocale` sets `LANG` plus `LC_*` formats for the chosen
+     region.
+   - `locale1.SetX11Keyboard` sets the layouts; with two layouts it also sets
+     `grp:win_space_toggle`.
+   - `timedate1.SetTimezone` and `SetNTP(true)` set the clock.
+   - The keyboard choice is also applied immediately to the setup session's
+     `org.gnome.desktop.input-sources`, so the password is typed with the
+     right layout.
+2. **Account.** The account is created through AccountsService:
+   - `CreateUser(name, full name, 1 = administrator)`.
+   - `SetPassword(crypt, hint)`. The crypt value is a SHA-512 `$6$` hash
+     made through ctypes calls to libxcrypt's `crypt_gensalt` and `crypt`.
+     If that fails, it falls back to `openssl passwd -6 -stdin`.
+   - `SetLanguage`, plus `SetFormatsLocale` where accountsservice supports it.
+   - If "Try again" is used after a partial failure, the account that was
+     already created is reused.
+3. **Hand-off files.** These go into the setup user's home
+   (`/run/gdm/gnome-initial-setup`):
+   - `.config/fenestra/oobe-system.json` holds the region, formats and
+     layouts for the first-login step.
+   - `gnome-initial-setup-uid` holds the new uid. As with g-i-s, GDM uses it
+     to chown that home to the new user.
+   - The done file is **not** written here. That keeps the first-login
+     service enabled for the new user.
+4. **Automatic login.** This uses `Gdm.Client`, mirroring g-i-s's summary
+   page:
+   - `get_greeter_sync` and `get_user_verifier_sync` connect at startup.
+   - `begin_verification_for_user("gdm-password", user)` starts the login.
+   - The `secret-info-query` signal is answered with the password.
+   - On the greeter's `session-opened`, `start_session_when_ready` is called.
+   - On failure, or after a 25 s timeout, the app exits and GDM shows its
+     normal login screen.
+
+## Integration
+
+`install.sh` installs:
+
+- `/usr/libexec/fenestra-oobe`: the launcher.
+- `/usr/share/fenestra-oobe/`: the Python package, `style.css` and the
+  illustrations.
+- `/usr/lib/systemd/user/gnome-initial-setup.service.d/fenestra.conf`: sets
+  `ExecStart=` then `ExecStart=/usr/libexec/fenestra-oobe`.
+- `/usr/lib/systemd/user/gnome-initial-setup-first-login.service.d/fenestra.conf`:
+  sets `ExecStart=` then `ExecStart=… --existing-user`. The unit keeps its
+  `ConditionPathExists=!%E/gnome-initial-setup-done`.
+- `/usr/share/applications/org.fenestra.Oobe.desktop`: `NoDisplay=true`.
+
+```sh
+sudo ./install.sh                            # /usr
+DESTDIR=$PWD/stage PREFIX=/usr ./install.sh  # packaging / kickstart %post
+DESTDIR=$PWD/stage ./install.sh --uninstall
+```
+
+The import page calls `/usr/libexec/fenestra-import-windows-assets <mountpoint>`
+(also exported as `FENESTRA_WINDOWS_ROOT`) if that helper is installed.
+
+## Testing
+
+**Never run the app on your real desktop session.** Use a headless compositor
+instead, with `WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland` and `DISPLAY`
+unset.
+
+```sh
+export WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland; unset DISPLAY
+bin/fenestra-oobe --demo --windowed                  # whole flow, nothing on the system changes
+bin/fenestra-oobe --demo --existing-user --windowed  # first-login part only
+bin/fenestra-oobe --list-pages
+bin/fenestra-oobe --page network --screenshot out.png [--size 1920x1080] [--lang es]
+tools/screenshot-all.sh        # every page -> screenshots/<page>.png (uses fenestra-test)
+tools/screenshot-all.sh --es   # Spanish variants -> screenshots/<page>-es.png
+python3 -m unittest tests.test_backends tests.test_flow_demo
+```
+
+- `--demo` mocks every write: account creation, hostname, localed/timedated,
+  Wi‑Fi connection (fake network list), gsettings, the done file and volume.
+  Reads are real, such as the country and layout lists.
+- `--screenshot` renders the window's widget tree through
+  `Gtk.WidgetPaintable` and `GskRenderer.render_texture`, then saves a PNG.
+  It forces the GL renderer because Vulkan read-back is corrupt on some Intel
+  drivers. The window is not resizable so that mutter doesn't auto-maximize
+  it.
+- `tests/test_backends.py` covers:
+  - hostname rules;
+  - username derivation (lower case, accents removed, reserved names,
+    collisions such as `alex` → `alex2`, `miguel` → `miguelcaballero` →
+    `mcaballero`);
+  - that `$6$` hashes verify through libcrypt and match `openssl`;
+  - locale defaults and nmcli parsing;
+  - Spanish catalog completeness, and that the product name is never
+    replaced by another vendor's.
+- `tests/test_flow_demo.py` drives the whole demo flow programmatically, from
+  region to the finale.
+
+UI language comes from `LANG` / `LC_MESSAGES` (English by default, Spanish
+included in `fenestra_oobe/translations/es.py`) or `--lang`.
+
+## Screenshots
+
+See `screenshots/`: one PNG per page id (`region.png` … `finale-4.png`),
+Spanish variants (`*-es.png`) and `privacy-1366x768.png` for small screens.
+
+## Known limitations
+
+- Automatic GDM login, the AccountsService/localed/hostnamed calls and
+  `nmcli` Wi‑Fi connections have not been exercised on a real first boot.
+  They are written against the APIs and the g-i-s 49 behaviour, but only the
+  demo/mocked paths were run.
+- The Wi‑Fi list doesn't handle enterprise (802.1X) or hidden networks.
+- "Checking for updates" only checks connectivity.
+- Text size and high contrast are applied to the OOBE itself immediately. In
+  real mode they are also written to gsettings, and the setup session's dconf
+  is copied to the new user by `gnome-initial-setup-copy-worker`.
+- Fonts fall back to Selawik/Inter/sans when Segoe UI is not installed. The
+  light weight on the finale needs a font with a 300 weight.
+- `Gtk.Switch` prints baseline warnings on GTK 4.20, so a custom pill
+  `ToggleSwitch` is used instead.

@@ -1,0 +1,85 @@
+.windows-search-layout { font-family:'Segoe UI Variable','Segoe UI'; color:#ffffff; }
+.arcmenu-menu .windows-search-layout #ArcMenuSearchEntry {
+ margin:8px 30px 0px 33px; border-radius:16px !important; height:32px; min-height:0; padding:0 12px; font-size:13px;
+ background-color:rgba(28,28,28,0.75); border:1px solid rgba(255,255,255,.06) !important; box-shadow:none !important;
+}
+.arcmenu-menu .windows-search-layout #ArcMenuSearchEntry:focus { border-color:rgba(255,255,255,.06) !important; box-shadow:none !important; }
+.arcmenu-menu .windows-search-layout .win-search-home { spacing:6px; padding:14px 33px 20px; }
+.arcmenu-menu .windows-search-layout .win-search-home-title { spacing:12px; padding:0 0 4px; }
+.arcmenu-menu .windows-search-layout .win-search-heading { font-size:18px; font-weight:600; margin:0; }
+.arcmenu-menu .windows-search-layout .win-search-settings { width:16px; height:32px; padding:0; border:0; border-radius:4px; background-color:transparent; }
+.arcmenu-menu .windows-search-layout .win-search-settings:hover { background-color:rgba(255,255,255,.08); }
+.arcmenu-menu .windows-search-layout .win-search-recent { spacing:0px; }
+.arcmenu-menu .windows-search-layout .win-search-row { border:0; box-shadow:none; border-radius:4px !important; padding:6px 0px; margin:0; background-color:transparent; min-height:48px; }
+.arcmenu-menu .windows-search-layout .win-search-row:hover, .arcmenu-menu .windows-search-layout .win-search-row:focus { background-color:rgba(255,255,255,.06); }
+.arcmenu-menu .windows-search-layout .win-search-row-content { spacing:12px; }
+.arcmenu-menu .windows-search-layout .win-search-recent-icon { width:40px; height:40px; border:0; border-radius:4px; background-color:rgba(255,255,255,.06); }
+.arcmenu-menu .windows-search-layout .win-search-recent-text { spacing:1px; }
+.arcmenu-menu .windows-search-layout .win-search-recent-name { font-size:14px; font-weight:400; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-search-recent-type { font-size:12px; font-weight:400; color:#c8c8c8; }
+.arcmenu-menu .windows-search-layout .win-search-age { font-size:12px; font-weight:400; color:#c8c8c8; }
+.arcmenu-menu .windows-search-layout .win-search-filters { spacing:6px; padding:17px 26px 0px 21px; }
+.arcmenu-menu .windows-search-layout .win-search-back { width:32px; height:30px; padding:0; margin-right:4px; border:0; border-radius:4px; background-color:transparent; color:#ffffff; font-family:'Segoe UI'; font-size:22px; }
+.arcmenu-menu .windows-search-layout .win-search-back:hover, .arcmenu-menu .windows-search-layout .win-search-more:hover, .arcmenu-menu .windows-search-layout .win-search-icon-button:hover { background-color:rgba(255,255,255,.08); }
+.arcmenu-menu .windows-search-layout .win-search-more { width:32px; height:30px; padding:0; margin-left:8px; border:0; border-radius:4px; background-color:transparent; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-search-more { font-size:10px; }
+.arcmenu-menu .windows-search-layout .win-search-icon-button { width:32px; height:30px; padding:0; margin-left:6px; border:0; border-radius:4px; background-color:transparent; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-search-account { width:16px; height:32px; padding:0; margin-right:17px; border:0; border-radius:4px; background-color:transparent; }
+.arcmenu-menu .windows-search-layout .win-search-filter {
+ padding:0 10px; height:28px; min-height:0; border-radius:15px !important; border:1px solid rgba(255,255,255,.04) !important; box-shadow:none !important;
+ background-color:rgba(255,255,255,.055); font-size:14.3px; color:#ffffff;
+}
+.arcmenu-menu .windows-search-layout .win-search-filter .win-search-row-content { spacing:0; }
+.arcmenu-menu .windows-search-layout .win-search-filter:hover { background-color:rgba(255,255,255,.09); }
+.arcmenu-menu .windows-search-layout .win-search-filter:checked { background-color:#a8bea6; color:#0f1a14; border:1px solid #a8bea6 !important; box-shadow:none !important; }
+.arcmenu-menu .windows-search-layout .win-search-filter:checked StLabel { color:#0f1a14; }
+
+/* Results: Best match column + preview pane (Windows 11 metrics, logical px). */
+.arcmenu-menu .windows-search-layout .win-results { padding:23px 32px 18px 25px; spacing:22px; }
+.arcmenu-menu .windows-search-layout .win-results-scroll { width:328px; }
+.arcmenu-menu .windows-search-layout .win-results-list { spacing:0; padding-bottom:12px; }
+.arcmenu-menu .windows-search-layout .win-results-heading-row { margin:15px 0 11px; padding:0 8px 0 5px; }
+.arcmenu-menu .windows-search-layout .win-results-heading-row.first { margin-top:9px; }
+.arcmenu-menu .windows-search-layout .win-results-heading { font-size:14px; font-weight:600; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-results-more { color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-result { border:0; box-shadow:none; border-radius:4px !important; padding:11px 0; margin:0; background-color:transparent; }
+.arcmenu-menu .windows-search-layout .win-result-best { padding:9px 0; min-height:35px; }
+.arcmenu-menu .windows-search-layout .win-result:hover { background-color:rgba(255,255,255,.05); }
+.arcmenu-menu .windows-search-layout .win-result:selected, .arcmenu-menu .windows-search-layout .win-result:focus { background-color:rgba(255,255,255,.075); }
+.arcmenu-menu .windows-search-layout .win-result-content { spacing:0; }
+.arcmenu-menu .windows-search-layout .win-result-indicator { width:3px; height:16px; border-radius:2px; margin-right:8px; background-color:transparent; }
+.arcmenu-menu .windows-search-layout .win-result-best .win-result-indicator { margin-right:11px; }
+.arcmenu-menu .windows-search-layout .win-result:selected .win-result-indicator { background-color:#a8bba7; }
+.arcmenu-menu .windows-search-layout .win-result-icon { width:40px; height:40px; border-radius:4px; background-color:rgba(255,255,255,.075); }
+.arcmenu-menu .windows-search-layout .win-result-icon-plain { width:32px; height:32px; }
+.arcmenu-menu .windows-search-layout .win-result-text { margin-left:11px; spacing:1px; }
+.arcmenu-menu .windows-search-layout .win-result-best .win-result-text { margin-left:16px; }
+.arcmenu-menu .windows-search-layout .win-result-name { font-size:14px; font-weight:400; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-result-sub { font-size:12px; font-weight:400; color:#c8cbca; }
+
+.arcmenu-menu .windows-search-layout .win-preview { width:376px; border-radius:8px; background-color:rgba(255,255,255,.05); padding:23px 25px 25px 24px; spacing:0; }
+.arcmenu-menu .windows-search-layout .win-preview-title { font-size:14px; font-weight:600; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-preview-type { font-size:12px; color:#c8cbca; margin-top:1px; }
+.arcmenu-menu .windows-search-layout .win-preview-card { margin-top:14px; height:107px; border-radius:6px; background-color:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.06); }
+.arcmenu-menu .windows-search-layout .win-preview-buttons { margin-top:16px; spacing:6px; }
+.arcmenu-menu .windows-search-layout .win-preview-button { width:120px; height:32px; padding:0; border:0; border-radius:4px; background-color:rgba(255,255,255,.06); color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-preview-button:hover { background-color:rgba(255,255,255,.09); }
+.arcmenu-menu .windows-search-layout .win-preview-button-content { spacing:8px; }
+.arcmenu-menu .windows-search-layout .win-preview-button-label { font-size:14px; }
+.arcmenu-menu .windows-search-layout .win-preview-details { margin-top:17px; font-size:14px; font-weight:600; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-preview-detail { margin-top:16px; }
+.arcmenu-menu .windows-search-layout .win-preview-detail.next { margin-top:19px; }
+.arcmenu-menu .windows-search-layout .win-preview-detail-key { width:124px; min-width:124px; font-size:14px; color:#d0d3d2; }
+.arcmenu-menu .windows-search-layout .win-preview-detail-value { font-size:14px; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-preview-options { margin-top:6px; padding:4px; border-radius:6px; background-color:rgba(255,255,255,.06); }
+.arcmenu-menu .windows-search-layout .win-preview-hero { spacing:6px; padding:16px 0 0; }
+.arcmenu-menu .windows-search-layout .win-preview-hero-icon { margin-bottom:10px; }
+.arcmenu-menu .windows-search-layout .win-preview-hero-name { font-size:20px; font-weight:600; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-preview-hero-type { font-size:14px; color:#c8cbca; }
+.arcmenu-menu .windows-search-layout .win-preview-separator { height:1px; margin:24px 0 8px; background-color:rgba(255,255,255,.08); }
+.arcmenu-menu .windows-search-layout .win-preview-actions { spacing:2px; }
+.arcmenu-menu .windows-search-layout .win-preview-action { border:0; border-radius:4px; padding:0 12px; height:36px; background-color:transparent; color:#ffffff; }
+.arcmenu-menu .windows-search-layout .win-preview-action:hover { background-color:rgba(255,255,255,.06); }
+.arcmenu-menu .windows-search-layout .win-preview-action-content { spacing:12px; }
+.arcmenu-menu .windows-search-layout .win-preview-action-label { font-size:14px; }
+.arcmenu-menu .windows-search-layout .win-search-empty { color:#c8c8c8; font-size:13px; padding:12px 0; }

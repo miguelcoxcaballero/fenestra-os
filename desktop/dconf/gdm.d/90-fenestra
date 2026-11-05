@@ -1,0 +1,12 @@
+# Login screen: Fenestra look, single-account selection and Spotlight-style background.
+[org/gnome/shell]
+enabled-extensions=['fenestra-login@fenestra-os.github.io', 'fenestra-spotlight@fenestra-os.github.io']
+
+[org/gnome/desktop/interface]
+icon-theme='Fenestra'
+cursor-theme='Bibata-Original-Classic'
+font-name='Segoe UI Variable Text 10'
+color-scheme='prefer-dark'
+
+[org/gnome/login-screen]
+disable-user-list=false

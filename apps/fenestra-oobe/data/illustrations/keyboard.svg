@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d9ecf7"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fc3e6"/>
+      <stop offset="1" stop-color="#4f93c8"/>
+    </linearGradient>
+    <linearGradient id="key" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4fb3f6"/>
+      <stop offset="1" stop-color="#1373cf"/>
+    </linearGradient>
+    <linearGradient id="keyLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e3f1fa"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0b3f73" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#0b3f73" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="ks" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+      <feOffset dy="2" result="b"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <ellipse cx="200" cy="300" rx="160" ry="22" fill="url(#shadow)"/>
+  <g transform="translate(200 210) skewX(-14) scale(1 0.78) translate(-200 -210)">
+    <rect x="44" y="132" width="312" height="166" rx="22" fill="url(#edge)"/>
+    <rect x="44" y="120" width="312" height="166" rx="22" fill="url(#body)"/>
+    <g filter="url(#ks)">
+      <g fill="url(#keyLight)">
+        <rect x="64" y="140" width="34" height="30" rx="7"/><rect x="104" y="140" width="34" height="30" rx="7"/>
+        <rect x="144" y="140" width="34" height="30" rx="7"/><rect x="184" y="140" width="34" height="30" rx="7"/>
+        <rect x="224" y="140" width="34" height="30" rx="7"/><rect x="264" y="140" width="34" height="30" rx="7"/>
+        <rect x="304" y="140" width="32" height="30" rx="7"/>
+        <rect x="64" y="178" width="48" height="30" rx="7"/><rect x="118" y="178" width="34" height="30" rx="7"/>
+        <rect x="198" y="178" width="34" height="30" rx="7"/>
+        <rect x="238" y="178" width="34" height="30" rx="7"/><rect x="278" y="178" width="58" height="30" rx="7"/>
+        <rect x="64" y="216" width="60" height="30" rx="7"/><rect x="130" y="216" width="34" height="30" rx="7"/>
+        <rect x="170" y="216" width="34" height="30" rx="7"/><rect x="250" y="216" width="34" height="30" rx="7"/>
+        <rect x="290" y="216" width="46" height="30" rx="7"/>
+        <rect x="64" y="254" width="44" height="22" rx="6"/><rect x="290" y="254" width="46" height="22" rx="6"/>
+      </g>
+      <g fill="url(#key)">
+        <rect x="158" y="178" width="34" height="30" rx="7"/>
+        <rect x="210" y="216" width="34" height="30" rx="7"/>
+        <rect x="114" y="254" width="170" height="22" rx="6"/>
+      </g>
+    </g>
+  </g>
+  <g transform="translate(296 92)">
+    <circle r="34" fill="url(#key)"/>
+    <circle r="34" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2"/>
+    <text x="0" y="9" font-family="Inter, Selawik, sans-serif" font-size="26" font-weight="600" fill="#ffffff" text-anchor="middle">Aa</text>
+  </g>
+</svg>

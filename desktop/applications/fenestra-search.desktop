@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Search
+Name[es]=Buscar
+Comment=Search apps, settings and files
+Comment[es]=Buscar aplicaciones, configuración y archivos
+Icon=/usr/share/fenestra/assets/search/search.png
+Exec=gdbus call --session --dest com.Extensions.ArcMenu --object-path /com/Extensions/ArcMenu --method com.Extensions.ArcMenu.ToggleStandaloneRunner
+Terminal=false
+StartupNotify=false
+NoDisplay=false
+Categories=Utility;

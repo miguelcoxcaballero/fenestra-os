@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Fenestra-Dark
+[X-GNOME-Metatheme]
+GtkTheme=Fenestra-Dark
+IconTheme=Windows11-status-original

@@ -1,0 +1,28 @@
+# Fenestra look & feel defaults (hand written).
+[org/gnome/desktop/interface]
+gtk-theme='Fenestra-Dark'
+icon-theme='Fenestra'
+cursor-theme='Bibata-Original-Classic'
+cursor-size=32
+color-scheme='prefer-dark'
+accent-color='blue'
+font-name='Segoe UI Variable Text 10'
+document-font-name='Segoe UI Variable Text 11'
+monospace-font-name='Cascadia Mono 10'
+show-battery-percentage=false
+clock-show-weekday=false
+enable-hot-corners=false
+
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/fenestra/fenestra-bloom-light.jpg'
+picture-uri-dark='file:///usr/share/backgrounds/fenestra/fenestra-bloom-dark.jpg'
+picture-options='zoom'
+
+[org/gnome/desktop/screensaver]
+picture-uri='file:///usr/share/backgrounds/fenestra/fenestra-bloom-dark.jpg'
+
+[org/gnome/desktop/wm/preferences]
+button-layout='appmenu:minimize,maximize,close'
+
+[org/gnome/shell/extensions/arcmenu]
+menu-button-icon='/usr/share/fenestra/assets/branding/start-button.svg'

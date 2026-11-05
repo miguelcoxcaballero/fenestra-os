@@ -1,0 +1,177 @@
+@import 'colors.css';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Windows Explorer and caption controls */
+/* Windows 11 caption controls. GTK owns all minimize/maximize/restore actions. */
+windowcontrols {  margin: 0; }
+windowcontrols > button,
+headerbar button.titlebutton {
+ min-width: 46px; min-height: 32px; padding: 0; margin: 0;
+ border: none; border-radius: 0; background-image: none; background-color: transparent; box-shadow: none;
+}
+windowcontrols > button > image,
+headerbar button.titlebutton > image { min-width: 16px; min-height: 16px;  padding: 0; margin: 0; }
+windowcontrols > button:not(.close):hover,
+headerbar button.titlebutton:not(.close):hover { background-color: rgba(255,255,255,0.08); }
+windowcontrols > button.close:hover,
+headerbar button.titlebutton.close:hover { background-color: #c42b1c; color: white; }
+windowcontrols > button.close:active,
+headerbar button.titlebutton.close:active { background-color: #b3261e; color: white; }
+/* Native GTK menus retain keyboard navigation and accessible labels. */
+popover.menu > contents { background: rgba(44,44,44,0.96); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; padding: 4px; }
+popover.menu modelbutton { min-height: 30px; padding: 2px 10px; margin: 1px 0; border-radius: 4px; }
+popover.menu modelbutton:hover { background: rgba(255,255,255,0.065); }
+popover.menu separator { min-height: 1px; margin: 4px 0; background-color: rgba(255,255,255,0.07); }
+
+/* GTK3 application and desktop context menus. */
+menu { background-color: rgba(44,44,44,0.96); color: #f4f4f4; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 4px; }
+menu menuitem { min-height: 30px; padding: 2px 10px; margin: 1px 0; border-radius: 4px; }
+menu menuitem:hover { background-color: rgba(255,255,255,0.065); }
+menu menuitem image { min-width: 16px; margin-right: 10px; }
+menu separator { min-height: 1px; margin: 4px 0; background-color: rgba(255,255,255,0.07); }
+
+.desktopmenu { min-width: 260px; }
+.desktopmenu .windows-menu-action { min-height: 30px; padding: 3px 10px; }
+.desktopmenu .windows-menu-action image { margin: 0; }
+
+
+
+/* Original Windows caption glyphs, fixed Windows proportions */
+windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { min-width:46px; min-height:32px; padding:0; margin:0; border:0; border-radius:0; box-shadow:none; background-color:transparent; background-repeat:no-repeat; background-position:center; background-size:10px 10px; }
+windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity:1; }
+windowcontrols > button.minimize, headerbar button.titlebutton.minimize, .titlebar button.titlebutton.minimize { background-image:none; }
+windowcontrols > button.maximize, headerbar button.titlebutton.maximize, .titlebar button.titlebutton.maximize { background-image:none; }
+windowcontrols > button.close, headerbar button.titlebutton.close, .titlebar button.titlebutton.close { background-image:none; }
+window.maximized windowcontrols > button.maximize, window.maximized headerbar button.titlebutton.maximize, .maximized .titlebar button.titlebutton.maximize { background-image:none; }
+windowcontrols > button:hover, headerbar button.titlebutton:hover, .titlebar button.titlebutton:hover { background-color:rgba(255,255,255,0.08); }
+windowcontrols > button.close:hover, headerbar button.titlebutton.close:hover, .titlebar button.titlebutton.close:hover { background-color:#c42b1c; }
+windowcontrols > button.close:active, headerbar button.titlebutton.close:active, .titlebar button.titlebutton.close:active { background-color:#a51c28; }
+
+/* Caption hover must not inherit circular button styling from Fluent/libadwaita. */
+window windowcontrols > button.titlebutton,
+window windowcontrols > button.close,
+window windowcontrols > button.minimize,
+window windowcontrols > button.maximize,
+window headerbar button.titlebutton,
+window .titlebar button.titlebutton,
+window windowcontrols > button:hover,
+window windowcontrols > button:active,
+window headerbar button.titlebutton:hover,
+window headerbar button.titlebutton:active,
+window .titlebar button.titlebutton:hover,
+window .titlebar button.titlebutton:active {
+ border-radius: 0; box-shadow: none; border: 0;
+}
+window windowcontrols > button.close:hover,
+window headerbar button.titlebutton.close:hover,
+window .titlebar button.titlebutton.close:hover { background-color: #c42b1c; }
+window windowcontrols > button.close:active,
+window headerbar button.titlebutton.close:active,
+window .titlebar button.titlebutton.close:active { background-color: #a51c28; }
+
+/* One native symbolic glyph per control, including Chromium/Electron. */
+windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { background-image: none; }
+windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity: 1; min-width: 16px; min-height: 16px;  }
+
+windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image {
+ background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; margin: 0;
+}
+
+/* Chromium measures the header padding before scaling caption buttons. */
+window.background.csd headerbar.header-bar.titlebar {
+ padding: 0; margin: 0; min-height: 32px; border: 0;
+}
+windowcontrols > button.titlebutton, headerbar button.titlebutton {
+ min-width: 46px; min-height: 32px; padding: 0; margin: 0;
+}
+window windowcontrols > button.close,
+window headerbar button.titlebutton.close,
+window .titlebar button.titlebutton.close,
+window windowcontrols > button.close:hover,
+window headerbar button.titlebutton.close:hover,
+window .titlebar button.titlebutton.close:hover,
+window windowcontrols > button.close:active,
+window headerbar button.titlebutton.close:active,
+window .titlebar button.titlebutton.close:active { border-radius: 0 8px 0 0; }
+window.maximized windowcontrols > button.close,
+window.maximized headerbar button.titlebutton.close,
+window.maximized .titlebar button.titlebutton.close,
+window.tiled windowcontrols > button.close,
+window.fullscreen windowcontrols > button.close { border-radius: 0; }
+
+/* Align Chromium's 32px captions with the top of its 40px tab strip.
+   GTK's navigation provider otherwise centres them with a 4px top gap. */
+window.background.csd headerbar.header-bar.titlebar button.titlebutton {
+ margin-top: 0; margin-bottom: 0;
+}
+
+
+/* Remove the GTK header's vertical inset around native caption controls. */
+window headerbar { min-height: 32px; padding-top: 0; padding-bottom: 0; }
+window headerbar windowcontrols { margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+
+window headerbar > windowhandle > box,
+window headerbar > windowhandle > centerbox { padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; }
+
+/* Native GtkImage owns its icon; avoid an additional CSS icon render. */
+windowcontrols > button > image, headerbar button.titlebutton > image { -gtk-icon-shadow: none; }
+
+/* Chromium: one native symbolic icon, explicit hover independent of foreground alpha. */
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton,
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton > image {
+ color:#eeeeee; background-image:none; -gtk-icon-source:none; -gtk-icon-shadow:none; box-shadow:none;
+}
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.minimize:hover,
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.maximize:hover {
+ background-image:none; background-color:rgba(255,255,255,0.10); color:#ffffff;
+}
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.minimize:active,
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.maximize:active {
+ background-color:rgba(255,255,255,0.16);
+}
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.close:hover { background-color:#c42b1c; color:white; }
+window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.close:active { background-color:#a51c28; color:white; }
+/* Fit the restored Chromium caption band without scaling the button bitmap. */
+window.background.csd:not(.maximized) headerbar.header-bar.titlebar windowcontrols button.titlebutton { min-height:40px; margin:0; -gtk-icon-transform:translateY(0.333333px); }

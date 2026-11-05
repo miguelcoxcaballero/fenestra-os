@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Launcher for Fenestra Settings (works from the source tree and when installed)."""
+import os
+import sys
+
+here = os.path.dirname(os.path.realpath(__file__))
+candidates = [
+    os.path.dirname(here),                                            # source tree: apps/fenestra-settings
+    os.path.join(os.path.dirname(here), "share", "fenestra-settings"),  # $PREFIX/bin -> $PREFIX/share
+    "/usr/share/fenestra-settings",
+]
+for c in candidates:
+    if os.path.isdir(os.path.join(c, "fenestra_settings")):
+        sys.path.insert(0, c)
+        break
+
+from fenestra_settings.app import main  # noqa: E402
+
+sys.exit(main(sys.argv))

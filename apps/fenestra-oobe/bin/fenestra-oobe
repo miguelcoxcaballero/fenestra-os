@@ -1,0 +1,17 @@
+#!/usr/bin/python3 -sP
+"""Launcher for Fenestra OOBE (installed as /usr/libexec/fenestra-oobe)."""
+import os
+import sys
+
+# install.sh replaces @PKGDATADIR@; in a source checkout bin/.. is used.
+_here = os.path.dirname(os.path.realpath(__file__))
+for _cand in (os.path.dirname(_here), "@PKGDATADIR@",
+              os.path.join(os.path.dirname(_here), "share", "fenestra-oobe"),  # staged DESTDIR
+              "/usr/share/fenestra-oobe"):
+    if os.path.isdir(os.path.join(_cand, "fenestra_oobe")):
+        sys.path.insert(0, _cand)
+        break
+
+from fenestra_oobe.app import main  # noqa: E402
+
+sys.exit(main(sys.argv))

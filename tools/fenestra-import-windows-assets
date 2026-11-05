@@ -1,0 +1,384 @@
+#!/usr/bin/python3
+"""Import the user's own Windows look from a Windows partition on the same PC.
+
+Fenestra cannot redistribute Microsoft's fonts, cursors and system glyphs, so it
+ships open replacements. If you own a Windows installation (dual boot), this
+tool copies those originals *for your user only*:
+
+  * Segoe UI / Segoe UI Variable / Segoe Fluent Icons / Consolas fonts
+      -> ~/.local/share/fonts/fenestra-windows/   (fontconfig picks them first)
+  * Windows cursors (aero arrow + busy ring)  -> ~/.local/share/icons/Fenestra-Windows-Cursors
+  * Taskbar battery glyphs from Sysbatt.ttf   -> ~/.local/share/fenestra/assets/battery
+  * Explorer empty/full folder icons          -> ~/.local/share/fenestra/assets/folders
+  * Start button logo and colour Search icon  -> ~/.local/share/fenestra/assets/{branding,search}
+    (the taskbar Start button and Search launcher are switched to them)
+
+Nothing is uploaded anywhere and the Windows partition is only read.
+Usage: fenestra-import-windows-assets [--windows /path/to/C:] [--dry-run] [--no-cursors]
+"""
+import argparse
+import glob
+import io
+import os
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+HOME = Path.home()
+DATA = Path(os.environ.get('XDG_DATA_HOME', HOME / '.local/share'))
+ASSETS = DATA / 'fenestra' / 'assets'
+FONTS = ['segoeui.ttf', 'segoeuib.ttf', 'segoeuii.ttf', 'segoeuiz.ttf', 'segoeuil.ttf', 'segoeuisl.ttf',
+         'seguisb.ttf', 'seguisbi.ttf', 'SegUIVar.ttf', 'SegoeIcons.ttf', 'consola.ttf', 'consolab.ttf',
+         'consolai.ttf', 'consolaz.ttf']
+
+
+def log(msg):
+    print(f'fenestra-import: {msg}')
+
+
+def mount_windows_partitions():
+    """Mount unmounted NTFS partitions read-only through UDisks (no root needed
+    for the logged-in user; polkit may ask for the password once)."""
+    import json
+    try:
+        out = subprocess.run(['lsblk', '-J', '-o', 'PATH,FSTYPE,MOUNTPOINT'], capture_output=True, text=True).stdout
+        devices = json.loads(out).get('blockdevices', [])
+    except (OSError, ValueError):
+        return []
+    mounted = []
+
+    def walk(items):
+        for d in items:
+            yield d
+            yield from walk(d.get('children') or [])
+    for d in walk(devices):
+        if d.get('fstype') == 'ntfs' and not d.get('mountpoint'):
+            r = subprocess.run(['udisksctl', 'mount', '--no-user-interaction', '-b', d['path'], '-o', 'ro'],
+                               capture_output=True, text=True)
+            if r.returncode != 0:
+                r = subprocess.run(['udisksctl', 'mount', '-b', d['path'], '-o', 'ro'], capture_output=True, text=True)
+            if r.returncode == 0 and ' at ' in r.stdout:
+                mounted.append(r.stdout.strip().split(' at ', 1)[1].rstrip('.'))
+    return mounted
+
+
+def find_windows(explicit=None):
+    candidates = [explicit] if explicit else []
+    candidates += ['/mnt/windows', '/mnt/c', '/media/windows']
+    candidates += glob.glob(f'/run/media/{os.environ.get("USER", "")}/*') + glob.glob('/mnt/*') + glob.glob('/media/*/*')
+    for c in candidates:
+        if c and Path(c, 'Windows', 'Fonts', 'segoeui.ttf').exists():
+            return Path(c)
+    if not explicit:
+        for c in mount_windows_partitions():
+            if Path(c, 'Windows', 'Fonts', 'segoeui.ttf').exists():
+                return Path(c)
+    return None
+
+
+def ci(path: Path):
+    """Case-insensitive path resolution on NTFS mounts."""
+    if path.exists():
+        return path
+    cur = Path(path.anchor)
+    for part in path.parts[1:]:
+        match = next((p for p in cur.iterdir() if p.name.lower() == part.lower()), None) if cur.is_dir() else None
+        if not match:
+            return None
+        cur = match
+    return cur
+
+
+# ------------------------------------------------------------------ fonts ---
+def import_fonts(win, dry):
+    dest = DATA / 'fonts' / 'fenestra-windows'
+    copied = 0
+    for name in FONTS:
+        src = ci(win / 'Windows' / 'Fonts' / name)
+        if src:
+            copied += 1
+            if not dry:
+                dest.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dest / name)
+    if copied and not dry:
+        subprocess.run(['fc-cache', '-f', str(dest)], check=False)
+    log(f'fonts: {copied} files')
+
+
+# ---------------------------------------------------------------- cursors ---
+def _chunks(d, start=0):
+    while start + 8 <= len(d):
+        typ, n = struct.unpack_from('<4sI', d, start)
+        yield typ, d[start + 8:start + 8 + n]
+        start += 8 + n + n % 2
+
+
+def _cur(data):
+    from PIL import Image
+    _, _, n = struct.unpack_from('<HHH', data)
+    res = []
+    for i in range(n):
+        w, h, _, _, hx, hy, size, offset = struct.unpack_from('<BBBBHHII', data, 6 + 16 * i)
+        w, h = w or 256, h or 256
+        dib = data[offset:offset + size]
+        if dib.startswith(b'\x89PNG'):
+            im = Image.open(io.BytesIO(dib)).convert('RGBA')
+        else:
+            hdr, _, _, _, bits = struct.unpack_from('<IiiHH', dib)
+            pal = (1 << bits) * 4 if bits <= 8 else 0
+            xs, ms = ((w * bits + 31) // 32) * 4, ((w + 31) // 32) * 4
+            px = hdr + pal
+            mo = px + xs * h
+            palette = [struct.unpack_from('<BBBB', dib, hdr + 4 * k) for k in range(pal // 4)]
+            im = Image.new('RGBA', (w, h))
+            P = im.load()
+            for y in range(h):
+                row, mrow = px + (h - 1 - y) * xs, mo + (h - 1 - y) * ms
+                for x in range(w):
+                    andb = (dib[mrow + x // 8] >> (7 - x % 8)) & 1 if mo + ms * h <= len(dib) else 0
+                    if bits == 32:
+                        b, g, r, a = dib[row + 4 * x:row + 4 * x + 4]
+                        if a == 0 and not andb and (r or g or b):
+                            a = 255
+                        P[x, y] = (r, g, b, 0 if andb and a == 0 else a)
+                    else:
+                        idx = ((dib[row + x // 8] >> (7 - x % 8)) & 1 if bits == 1 else
+                               (dib[row + x // 2] >> (4 * (1 - x % 2))) & 15 if bits == 4 else dib[row + x])
+                        b, g, r, _ = palette[idx]
+                        P[x, y] = ((255, 255, 255, 255) if (r or g or b) else (0, 0, 0, 0)) if andb else (r, g, b, 255)
+        res.append((w, im, hx, hy))
+    return res
+
+
+def _ani(d):
+    parts = dict(_chunks(d, 12))
+    hdr = struct.unpack('<9I', parts[b'anih'])
+    frames = [_cur(v) for t, v in _chunks(parts[b'LIST'], 4) if t == b'icon']
+    seq = struct.unpack('<' + 'I' * (len(parts[b'seq ']) // 4), parts[b'seq ']) if b'seq ' in parts else list(range(len(frames)))
+    rates = struct.unpack('<' + 'I' * (len(parts[b'rate']) // 4), parts[b'rate']) if b'rate' in parts else [hdr[7]] * len(seq)
+    return [(frames[j], round(1000 * rates[i] / 60)) for i, j in enumerate(seq)]
+
+
+def _xcursor(path, frames):
+    blobs, toc, pos = [], [], 16 + 12 * len(frames)
+    for im, hx, hy, delay, size in frames:
+        w, h = im.size
+        pix = bytearray()
+        for r, g, b, a in im.getdata():
+            pix += struct.pack('<I', (a << 24) | ((r * a // 255) << 16) | ((g * a // 255) << 8) | (b * a // 255))
+        c = struct.pack('<9I', 36, 0xfffd0002, size, 1, w, h, hx, hy, delay) + pix
+        toc.append(struct.pack('<III', 0xfffd0002, size, pos))
+        blobs.append(c)
+        pos += len(c)
+    path.write_bytes(struct.pack('<4sIII', b'Xcur', 16, 0x10000, len(frames)) + b''.join(toc) + b''.join(blobs))
+
+
+CURSOR_MAP = {'left_ptr': 'aero_arrow', 'hand2': 'aero_link', 'xterm': 'beam_r', 'crosshair': 'cross_r',
+              'question_arrow': 'aero_helpsel', 'not-allowed': 'aero_unavail', 'size_hor': 'aero_ew',
+              'size_ver': 'aero_ns', 'size_fdiag': 'aero_nwse', 'size_bdiag': 'aero_nesw', 'fleur': 'aero_move',
+              'pencil': 'aero_pen', 'center_ptr': 'aero_up'}
+ALIASES = {'default': 'left_ptr', 'arrow': 'left_ptr', 'top_left_arrow': 'left_ptr', 'context-menu': 'left_ptr',
+           'wait': 'watch', 'progress': 'left_ptr_watch', 'half-busy': 'left_ptr_watch', 'pointer': 'hand2',
+           'hand': 'hand2', 'hand1': 'hand2', 'pointing_hand': 'hand2', 'grab': 'hand2', 'grabbing': 'hand2',
+           'text': 'xterm', 'ibeam': 'xterm', 'help': 'question_arrow', 'cross': 'crosshair', 'no-drop': 'not-allowed',
+           'ew-resize': 'size_hor', 'col-resize': 'size_hor', 'ns-resize': 'size_ver', 'row-resize': 'size_ver',
+           'nwse-resize': 'size_fdiag', 'nesw-resize': 'size_bdiag', 'move': 'fleur', 'all-scroll': 'fleur',
+           'copy': 'left_ptr', 'alias': 'left_ptr', 'zoom-in': 'left_ptr', 'zoom-out': 'left_ptr',
+           'e-resize': 'size_hor', 'w-resize': 'size_hor', 'n-resize': 'size_ver', 's-resize': 'size_ver',
+           'ne-resize': 'size_bdiag', 'sw-resize': 'size_bdiag', 'nw-resize': 'size_fdiag', 'se-resize': 'size_fdiag'}
+
+
+def import_cursors(win, dry):
+    from PIL import Image
+    cdir = ci(win / 'Windows' / 'Cursors')
+    if not cdir:
+        log('cursors: not found')
+        return False
+    out = DATA / 'icons' / 'Fenestra-Windows-Cursors'
+    if dry:
+        log(f'cursors: would build from {cdir}')
+        return True
+    cd = out / 'cursors'
+    cd.mkdir(parents=True, exist_ok=True)
+
+    def load(name):
+        for suffix in ('_xl', '_l', ''):
+            p = ci(cdir / f'{name}{suffix}.cur')
+            if p:
+                return _cur(p.read_bytes())
+        return None
+    built = 0
+    for xname, wname in CURSOR_MAP.items():
+        imgs = load(wname)
+        if imgs:
+            _xcursor(cd / xname, [(im, hx, hy, 0, w) for w, im, hx, hy in imgs])
+            built += 1
+    busy = ci(cdir / 'aero_busy_xl.ani') or ci(cdir / 'aero_busy.ani')
+    work = ci(cdir / 'aero_working_xl.ani') or ci(cdir / 'aero_working.ani')
+    for xname, src in (('watch', busy), ('left_ptr_watch', work)):
+        if src:
+            frames = []
+            for frame, delay in _ani(src.read_bytes()):
+                for w, im, hx, hy in frame:
+                    frames.append((im, hx, hy, delay, w))
+            _xcursor(cd / xname, frames)
+            built += 1
+    for alias, target in ALIASES.items():
+        p = cd / alias
+        if p.exists() or p.is_symlink():
+            p.unlink()
+        if (cd / target).exists():
+            p.symlink_to(target)
+    (out / 'index.theme').write_text('[Icon Theme]\nName=Fenestra-Windows-Cursors\n'
+                                     'Comment=Cursors imported from your own Windows installation\nInherits=Bibata-Original-Classic\n')
+    subprocess.run(['gsettings', 'set', 'org.gnome.desktop.interface', 'cursor-theme', 'Fenestra-Windows-Cursors'], check=False)
+    log(f'cursors: {built} built')
+    return True
+
+
+# ---------------------------------------------------------------- battery ---
+def import_battery(win, dry):
+    src = None
+    for rel in ('Windows/SystemApps/MicrosoftWindows.Client.Core_cw5n1h2txyewy/SystemTray/Assets/Sysbatt.ttf',
+                'Windows/SystemResources/Windows.UI.ControlCenter/Assets/Sysbatt.ttf',
+                'Windows/SystemApps/Microsoft.LockApp_cw5n1h2txyewy/Assets/Sysbatt.ttf'):
+        src = ci(win / rel)
+        if src:
+            break
+    if not src:
+        log('battery: Sysbatt.ttf not found')
+        return
+    if dry:
+        log(f'battery: would compose from {src}')
+        return
+    try:
+        from fontTools.pens.boundsPen import BoundsPen
+        from fontTools.pens.svgPathPen import SVGPathPen
+        from fontTools.pens.transformPen import TransformPen
+        from fontTools.ttLib import TTFont
+    except ImportError:
+        log('battery: python3-fonttools not installed, skipped')
+        return
+    f = TTFont(str(src))
+    gs, cm = f.getGlyphSet(), f.getBestCmap()
+    outline = {'plain': 0xf8d0, 'bolt': 0xf8db, 'plug': 0xf8e4}
+    fill = {'plain': [None] + list(range(0xf8d1, 0xf8db)),
+            'bolt': [None, 0xf8d1, 0xf8d2] + list(range(0xf8dc, 0xf8e4)),
+            'plug': [None, 0xf8d1, 0xf8d2] + list(range(0xf8e5, 0xf8ed))}
+    b = BoundsPen(gs)
+    for cp in outline.values():
+        gs[cm[cp]].draw(b)
+    x0, y0, x1, y1 = b.bounds
+    S = 24 / max(x1 - x0, y1 - y0)
+    tx, ty = 12 - (x0 + x1) * S / 2, 12 + (y0 + y1) * S / 2
+
+    def path(cp):
+        p = SVGPathPen(gs)
+        gs[cm[cp]].draw(TransformPen(p, (S, 0, 0, -S, tx, ty)))
+        return p.getCommands()
+
+    def svg(kind, level, color):
+        parts = [f'<path fill="#ffffff" d="{path(outline[kind])}"/>']
+        if fill[kind][level]:
+            parts.append(f'<path fill="{color}" d="{path(fill[kind][level])}"/>')
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' + ''.join(parts) + '</svg>\n'
+    out = ASSETS / 'battery'
+    out.mkdir(parents=True, exist_ok=True)
+    green, yellow, red, white = '#9fd89f', '#fce100', '#ff99a4', '#ffffff'
+    for lvl in range(11):
+        for v in (0, 1):
+            (out / f'normal-{v}-{lvl}.svg').write_text(svg('plain', lvl, white))
+            (out / f'saver-{v}-{lvl}.svg').write_text(svg('plain', lvl, yellow))
+            (out / f'low-{v}-{lvl}.svg').write_text(svg('plain', lvl, red))
+            (out / f'charging-{v}-{lvl}.svg').write_text(svg('bolt', lvl, green))
+        (out / f'plugged-0-{lvl}.svg').write_text(svg('plug', lvl, green))
+    log('battery: 99 glyphs')
+
+
+# ---------------------------------------------------------------- folders ---
+def import_folders(win, dry):
+    mun = ci(win / 'Windows/SystemResources/imageres.dll.mun')
+    if not mun or not shutil.which('wrestool'):
+        log('folders: imageres.dll.mun or wrestool (icoutils) missing')
+        return
+    if dry:
+        log(f'folders: would extract from {mun}')
+        return
+    from PIL import Image
+    out = ASSETS / 'folders'
+    out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        for rid, name in ((3, 'folder-empty'), (162, 'folder-full')):
+            ico = Path(tmp) / f'{rid}.ico'
+            subprocess.run(['wrestool', '-x', '--type=14', f'--name={rid}', '-o', str(ico), str(mun)], check=False,
+                           stderr=subprocess.DEVNULL)
+            if ico.exists():
+                im = Image.open(ico)
+                im.size = max(im.info.get('sizes', {(256, 256)}))
+                im.convert('RGBA').save(out / f'{name}.png')
+    log('folders: empty/full icons')
+
+
+# ------------------------------------------------------- taskbar icons ---
+def import_taskbar_icons(win, dry):
+    core = ci(win / 'Windows/SystemApps/MicrosoftWindows.Client.Core_cw5n1h2txyewy')
+    logo = ci(core / 'Icons/WindowsLogo.svg') if core else None
+    search = None
+    shared = ci(win / 'Windows/SystemApps/Shared')
+    if shared:
+        for scale in ('400', '200', '100'):
+            hits = sorted(shared.glob(f'SearchIconOnDark.scale-{scale}/*/SearchIconOnDark.scale-{scale}.png'))
+            if hits:
+                search = hits[0]
+                break
+    if dry:
+        log(f'taskbar: start logo {logo or "missing"}, search icon {search or "missing"}')
+        return
+    if logo:
+        dest = ASSETS / 'branding' / 'start-button.svg'
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(logo, dest)
+        subprocess.run(['gsettings', 'set', 'org.gnome.shell.extensions.arcmenu', 'menu-button-icon', str(dest)], check=False)
+    if search:
+        dest = ASSETS / 'search' / 'search.png'
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(search, dest)
+        src_desktop = Path('/usr/share/applications/fenestra-search.desktop')
+        if src_desktop.exists():
+            apps = DATA / 'applications'
+            apps.mkdir(parents=True, exist_ok=True)
+            text = src_desktop.read_text()
+            text = '\n'.join(f'Icon={dest}' if l.startswith('Icon=') else l for l in text.splitlines()) + '\n'
+            (apps / 'fenestra-search.desktop').write_text(text)
+    log(f'taskbar: start logo {"imported" if logo else "not found"}, search icon {"imported" if search else "not found"}')
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--windows', help='path where the Windows partition is mounted')
+    ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--no-cursors', action='store_true')
+    args = ap.parse_args()
+    win = find_windows(args.windows)
+    if not win:
+        log('no Windows partition found (mount it first, read-only is fine)')
+        return 1
+    log(f'using Windows installation at {win}')
+    import_fonts(win, args.dry_run)
+    if not args.no_cursors:
+        import_cursors(win, args.dry_run)
+    import_battery(win, args.dry_run)
+    import_folders(win, args.dry_run)
+    import_taskbar_icons(win, args.dry_run)
+    if not args.dry_run:
+        (ASSETS / '.imported').parent.mkdir(parents=True, exist_ok=True)
+        (ASSETS / '.imported').write_text(str(win) + '\n')
+    log('done — log out and back in to see everything')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,15 @@
+{
+  "uuid": "fenestra-lock-clock@fenestra-os.github.io",
+  "name": "Fenestra Lock Clock",
+  "description": "Lock screen clock and date in the Windows 11 layout.",
+  "shell-version": [
+    "49",
+    "50"
+  ],
+  "session-modes": [
+    "user",
+    "unlock-dialog"
+  ],
+  "version": 1,
+  "url": "https://github.com/miguelcoxcaballero/fenestra-os"
+}

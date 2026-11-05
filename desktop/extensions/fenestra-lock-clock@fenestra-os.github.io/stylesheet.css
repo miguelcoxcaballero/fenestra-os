@@ -1,0 +1,17 @@
+.unlock-dialog-clock {
+    spacing: 0;
+}
+.unlock-dialog-clock-time {
+    font-family: "Segoe UI Variable";
+    font-size: 96px;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+}
+.unlock-dialog-clock-date {
+    font-family: "Segoe UI Variable";
+    font-size: 18px;
+    font-weight: 400;
+    margin: 0;
+    padding: 0;
+}

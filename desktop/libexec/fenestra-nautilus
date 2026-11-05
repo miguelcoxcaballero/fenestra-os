@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+# Launch Nautilus with Fenestra's Explorer layer (UI overlay + patched sidebar
+# icon names) when they match the installed Nautilus; otherwise run stock Nautilus.
+STAMP=/usr/libexec/fenestra/nautilus.stamp
+OVERLAY=/usr/share/fenestra/nautilus/overlay
+want=$(cat /usr/share/fenestra/nautilus/VERSION 2>/dev/null)
+have=$(python3 -c 'import json;print(json.load(open("'$STAMP'"))["version"])' 2>/dev/null)
+if [ -x /usr/libexec/fenestra/nautilus ] && [ -n "$want" ] && [ "${have%%.*}" = "${want%%.*}" ]; then
+    export G_RESOURCE_OVERLAYS="/org/gnome/nautilus=$OVERLAY${G_RESOURCE_OVERLAYS:+:$G_RESOURCE_OVERLAYS}"
+    exec /usr/libexec/fenestra/nautilus "$@"
+fi
+exec /usr/bin/nautilus "$@"

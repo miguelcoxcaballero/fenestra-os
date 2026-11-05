@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="shield" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6fd3ff"/>
+      <stop offset="0.55" stop-color="#2a8ce6"/>
+      <stop offset="1" stop-color="#0d4fae"/>
+    </linearGradient>
+    <linearGradient id="inner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="toggle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e2f0f9"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0b3f73" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#0b3f73" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="200" cy="340" rx="110" ry="15" fill="url(#shadow)"/>
+  <path d="M200 52l118 42v84c0 74-50 128-118 154C132 306 82 252 82 178V94z" fill="url(#shield)"/>
+  <path d="M200 70l100 36v72c0 30-8 56-24 78L200 70z" fill="#ffffff" opacity="0.10"/>
+  <path d="M200 70l-100 36v72c0 20 4 38 10 54h180" fill="url(#inner)" opacity="0.5"/>
+  <path d="M152 190l34 34 64-68" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(70 262)">
+    <rect width="96" height="48" rx="24" fill="url(#toggle)" stroke="#bcd8ec" stroke-width="2"/>
+    <rect x="12" y="12" width="72" height="24" rx="12" fill="#1373cf"/>
+    <circle cx="72" cy="24" r="8" fill="#ffffff"/>
+  </g>
+</svg>

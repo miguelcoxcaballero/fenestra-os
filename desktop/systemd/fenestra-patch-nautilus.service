@@ -1,0 +1,11 @@
+[Unit]
+Description=Prepare Fenestra's Explorer-style Files app
+After=local-fs.target
+ConditionPathExists=/usr/bin/nautilus
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/fenestra/fenestra-patch-nautilus
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+{
+  "uuid": "fenestra-consent@fenestra-os.github.io",
+  "name": "Fenestra Consent",
+  "description": "Windows-11-style administrator consent (UAC-like) prompt over the native polkit dialog.",
+  "shell-version": [
+    "49",
+    "50"
+  ],
+  "session-modes": [
+    "user"
+  ],
+  "version": 1,
+  "url": "https://github.com/miguelcoxcaballero/fenestra-os"
+}

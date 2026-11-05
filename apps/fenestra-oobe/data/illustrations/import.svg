@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="drive" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6fafd"/>
+      <stop offset="1" stop-color="#bcd2e3"/>
+    </linearGradient>
+    <linearGradient id="folderBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f9de8"/>
+      <stop offset="1" stop-color="#1263c4"/>
+    </linearGradient>
+    <linearGradient id="folderFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7dd5ff"/>
+      <stop offset="1" stop-color="#2f8ae4"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#58e0c8"/>
+      <stop offset="1" stop-color="#1a8fb0"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0b3f73" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#0b3f73" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="200" cy="330" rx="160" ry="16" fill="url(#shadow)"/>
+  <!-- drive -->
+  <rect x="40" y="136" width="128" height="96" rx="14" fill="url(#drive)" stroke="#a8c2d6" stroke-width="2"/>
+  <rect x="56" y="200" width="60" height="10" rx="5" fill="#8fb0c8"/>
+  <circle cx="144" cy="205" r="7" fill="#46c48a"/>
+  <!-- glyph sheet -->
+  <g transform="translate(70 92)">
+    <rect width="70" height="60" rx="10" fill="#ffffff" stroke="#bcd8ec" stroke-width="2"/>
+    <text x="35" y="42" font-family="Inter, Selawik, serif" font-size="30" font-weight="600" fill="#1373cf" text-anchor="middle">Aa</text>
+  </g>
+  <!-- arrow -->
+  <path d="M178 186h34" stroke="url(#arrow)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M206 166l24 20-24 20z" fill="#1a8fb0" stroke="#1a8fb0" stroke-width="8" stroke-linejoin="round"/>
+  <!-- folder -->
+  <path d="M252 140h40l12 14h48a12 12 0 0 1 12 12v120a12 12 0 0 1-12 12H252a12 12 0 0 1-12-12V152a12 12 0 0 1 12-12z" fill="url(#folderBack)"/>
+  <path d="M240 186h136v100a12 12 0 0 1-12 12H252a12 12 0 0 1-12-12z" fill="url(#folderFront)"/>
+  <!-- pointer -->
+  <path d="M292 206l0 64 16-14 12 26 12-6-12-25 21-2z" fill="#ffffff" stroke="#0d4fae" stroke-width="4" stroke-linejoin="round"/>
+</svg>

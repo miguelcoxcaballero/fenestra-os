@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Tiny QMP client for the Fenestra VM tests (screenshots + input)."""
+import json
+import os
+import socket
+import sys
+import tempfile
+import time
+
+
+def connect(path):
+    s = socket.socket(socket.AF_UNIX)
+    s.connect(path)
+    f = s.makefile('rw')
+    json.loads(f.readline())
+    cmd(f, 'qmp_capabilities')
+    return s, f
+
+
+def cmd(f, name, **args):
+    f.write(json.dumps({'execute': name, 'arguments': args} if args else {'execute': name}) + '\n')
+    f.flush()
+    while True:
+        r = json.loads(f.readline())
+        if 'return' in r or 'error' in r:
+            if 'error' in r:
+                raise SystemExit(r['error'])
+            return r['return']
+
+
+KEYMAP = {' ': 'spc', '\n': 'ret', '.': 'dot', ',': 'comma', '-': 'minus', '/': 'slash', '@': ('shift', '2'),
+          '_': ('shift', 'minus'), '!': ('shift', '1'), ':': ('shift', 'semicolon'), ';': 'semicolon'}
+
+
+def keyseq(f, keys):
+    for k in keys:
+        parts = k.split('-') if len(k) > 1 and '-' in k and k != '-' else [k]
+        cmd(f, 'send-key', keys=[{'type': 'qcode', 'data': p} for p in parts])
+        time.sleep(0.08)
+
+
+def main():
+    sock, f = connect(sys.argv[1])
+    op = sys.argv[2]
+    if op == 'shot':
+        out = sys.argv[3]
+        tmp = tempfile.mktemp(suffix='.ppm', dir='/tmp')
+        cmd(f, 'screendump', filename=tmp)
+        from PIL import Image
+        Image.open(tmp).save(out)
+        os.unlink(tmp)
+        print(out)
+    elif op == 'key':
+        keyseq(f, sys.argv[3:])
+    elif op == 'type':
+        for ch in sys.argv[3]:
+            k = KEYMAP.get(ch)
+            if k is None:
+                k = ('shift', ch.lower()) if ch.isupper() else ch
+            parts = list(k) if isinstance(k, tuple) else [k]
+            cmd(f, 'send-key', keys=[{'type': 'qcode', 'data': p} for p in parts])
+            time.sleep(0.05)
+    elif op in ('click', 'move'):
+        x, y, w, h = map(int, sys.argv[3:7])
+        ax, ay = int(x * 32767 / (w - 1)), int(y * 32767 / (h - 1))
+        cmd(f, 'input-send-event', events=[{'type': 'abs', 'data': {'axis': 'x', 'value': ax}},
+                                           {'type': 'abs', 'data': {'axis': 'y', 'value': ay}}])
+        if op == 'click':
+            time.sleep(0.1)
+            for down in (True, False):
+                cmd(f, 'input-send-event', events=[{'type': 'btn', 'data': {'down': down, 'button': 'left'}}])
+                time.sleep(0.08)
+    elif op == 'quit':
+        cmd(f, 'quit')
+    sock.close()
+
+
+if __name__ == '__main__':
+    main()
