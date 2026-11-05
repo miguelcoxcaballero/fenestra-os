@@ -32,7 +32,7 @@ public sealed record ExportResult(int Files, long Bytes, int Missing, string Pat
 /// </summary>
 public sealed class Exporter
 {
-    public const string Version = "1.0.1";
+    public const string Version = "1.1.0";
     public const string IconTheme = "Fenestra-Windows";
     public const string CursorTheme = "Fenestra-Windows-Cursors";
     static readonly int[] Sizes = { 256, 48, 32, 16 };
@@ -135,6 +135,7 @@ public sealed class Exporter
         var steps = new List<(string Title, Action Run)>();
         if (_o.Fonts) steps.Add(("Fonts", ExportFonts));
         if (_o.Cursors) steps.Add(("Cursors", ExportCursors));
+        if (_o.SystemIcons) steps.Add(("File type icons", ExportFileTypeIcons));
         if (_o.SystemIcons) steps.Add(("System icons", ExportSystemIcons));
         if (_o.FolderIcons) steps.Add(("Explorer folder icons", ExportFolderIcons));
         if (_o.Taskbar) steps.Add(("Start button and Search icon", ExportTaskbar));
@@ -315,6 +316,25 @@ public sealed class Exporter
         finally
         {
             foreach (var m in modules.Values) m?.Dispose();
+        }
+    }
+
+    // Before ExportSystemIcons: the per-type icons win over its generic mimetype ones.
+    void ExportFileTypeIcons()
+    {
+        foreach (var (ext, names) in FileTypeIcons.Map)
+        {
+            foreach (var size in Sizes)
+            {
+                byte[]? png;
+                try { png = FileTypeIcons.Png(ext, size); }
+                catch (Exception e) { Log($"  {ext}: {e.Message}"); png = null; }
+                if (png == null) { Missing($"{ext} icon ({size} px)"); continue; }
+                var dir = $"{size}x{size}/mimetypes";
+                _themeDirs.Add(dir);
+                foreach (var name in names)
+                    AddBytes($"icons/{IconTheme}/{dir}/{name}.png", png);
+            }
         }
     }
 
