@@ -691,3 +691,28 @@ button.fluent-fontbutton, .fluent-fontbutton > button {
   box-shadow: none; color: var(--fg);
 }
 .fluent-fontbutton label { color: var(--fg); }
+
+/* ------------------------------------------------------------------ Fenestra Hello setup */
+.hello-dialog {
+  background-color: var(--popover);
+  border: 1px solid var(--popover-border);
+  border-radius: 8px;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.37), 0 2px 21px rgba(0,0,0,0.30);
+}
+.hello-titlebar { min-height: 32px; padding: 0 0 0 12px; }
+.hello-titlebar > image { margin-right: 10px; }
+.hello-caption { font-size: 12px; }
+button.hello-close {
+  min-width: 46px; min-height: 32px; padding: 0; border-radius: 0 8px 0 0;
+  background: none; border: none; box-shadow: none;
+}
+button.hello-close:hover { background-color: var(--close-hover); color: #ffffff; }
+.hello-page { padding: 20px 32px 24px 32px; }
+.hello-title {
+  font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", "Selawik", "Inter", sans-serif;
+  font-size: 20px; font-weight: 600; margin-bottom: 10px;
+}
+.hello-body { font-size: 14px; color: var(--fg2); }
+.hello-status { font-size: 14px; color: var(--fg); min-height: 20px; }
+.hello-footer { margin-top: 12px; }
+.hello-camera { border-radius: 9999px; background-color: #000000; }

@@ -61,15 +61,15 @@ def main():
             parts = list(k) if isinstance(k, tuple) else [k]
             cmd(f, 'send-key', keys=[{'type': 'qcode', 'data': p} for p in parts])
             time.sleep(0.05)
-    elif op in ('click', 'move'):
+    elif op in ('click', 'move', 'rclick'):
         x, y, w, h = map(int, sys.argv[3:7])
         ax, ay = int(x * 32767 / (w - 1)), int(y * 32767 / (h - 1))
         cmd(f, 'input-send-event', events=[{'type': 'abs', 'data': {'axis': 'x', 'value': ax}},
                                            {'type': 'abs', 'data': {'axis': 'y', 'value': ay}}])
-        if op == 'click':
+        if op in ('click', 'rclick'):
             time.sleep(0.1)
             for down in (True, False):
-                cmd(f, 'input-send-event', events=[{'type': 'btn', 'data': {'down': down, 'button': 'left'}}])
+                cmd(f, 'input-send-event', events=[{'type': 'btn', 'data': {'down': down, 'button': 'left' if op == 'click' else 'right'}}])
                 time.sleep(0.08)
     elif op == 'link':
         cmd(f, 'set_link', name='n0', up=sys.argv[3] == 'on')

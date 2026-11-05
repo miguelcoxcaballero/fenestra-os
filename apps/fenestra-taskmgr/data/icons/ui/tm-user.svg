@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- user placeholder (original artwork) -->
+  <rect x="0.5" y="0.5" width="15" height="15" rx="1.5" fill="#d9d9d9" stroke="#a6a6a6"/>
+  <circle cx="8" cy="6" r="2.8" fill="#7d7d7d"/>
+  <path d="M3 14c0.6-2.8 2.6-4.2 5-4.2s4.4 1.4 5 4.2z" fill="#7d7d7d"/>
+</svg>

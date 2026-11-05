@@ -38,6 +38,7 @@ case "${1:-}" in
   key) shift; qmp key "$@" ;;
   type) shift; qmp type "$*" ;;
   click) qmp click "$2" "$3" $W $H ;;
+  rclick) qmp rclick "$2" "$3" $W $H ;;
   link) qmp link "$2" ;;
   stop) qmp quit ;;
   *) sed -n 2,3p "$0"; exit 1 ;;

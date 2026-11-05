@@ -4,10 +4,10 @@ from __future__ import annotations
 from gi.repository import Gio, GLib, Gtk
 
 from .. import util
-from ..backends import accounts
+from ..backends import accounts, hello
 from ..i18n import N_, _
 from ..nav import Avatar
-from ..widgets import SettingRow, button, label, toast, value_label
+from ..widgets import ExpanderRow, SettingRow, ToggleSwitch, button, confirm, label, show_dialog, toast, value_label
 from .base import Page, register
 
 
@@ -138,17 +138,24 @@ class SignInPage(Page):
     id = "signin"
     parent = "accounts"
     title = "Sign-in options"
-    keywords = "password fingerprint pin automatic login lock"
-    index = [("password", "Password", "change password"), ("fingerprint", "Fingerprint recognition", "fprint"),
+    keywords = "password fingerprint face facial recognition hello howdy pin automatic login lock"
+    index = [("face", "Facial recognition (Fenestra Hello)", "face camera howdy hello"),
+             ("fingerprint", "Fingerprint recognition (Fenestra Hello)", "fprint finger hello"),
+             ("password", "Password", "change password"),
              ("autologin", "Automatic login", "sign in without password")]
 
     def build(self, box):
         g = self.group(_("Ways to sign in"))
-        self.fp = SettingRow(_("Fingerprint recognition"), _("Checking…"), "fs-fingerprint-symbolic",
-                             key="fingerprint")
+        # ---- face
+        self.face = ExpanderRow(_("Facial recognition (Fenestra Hello)"), _("Checking…"), "fs-person-symbolic",
+                                key="face")
+        self.remember("face", self.face)
+        g.add(self.face)
+        # ---- fingerprint
+        self.fp = ExpanderRow(_("Fingerprint recognition (Fenestra Hello)"), _("Checking…"),
+                              "fs-fingerprint-symbolic", key="fingerprint")
         self.remember("fingerprint", self.fp)
         g.add(self.fp)
-        accounts.fingerprint_status(self._fp)
         pw = SettingRow(_("Password"), _("Sign in with your account's password"), "fs-key-symbolic",
                         control=button(_("Change"), lambda: self._cc()), key="password")
         self.remember("password", pw)
@@ -160,32 +167,114 @@ class SignInPage(Page):
         g2.add(auto)
         g2.add(SettingRow(_("Lock screen"), _("Require sign-in after the screen turns off"),
                           "fs-lock-closed-symbolic", chevron=True, on_click=lambda: self.go("screenlock")))
+        self.refresh()
+
+    def on_show(self):
+        if hasattr(self, "face"):
+            self.refresh()
+
+    def refresh(self):
+        self._face_state()
+        hello.fingerprint_device(self._fp_device)
+
+    # ------------------------------------------------------------------ face
+    def _face_state(self):
+        exp = self.face
+        exp.clear()
+        if not hello.howdy_available():
+            exp.header.set_subtitle(_("This option is currently unavailable"))
+            exp.add(SettingRow(_("Facial recognition needs Howdy and an infrared camera."), None, None))
+            return
+        enrolled = hello.howdy_enrolled()
+        if not enrolled:
+            exp.header.set_subtitle(_("Sign in with your camera (Recommended)"))
+            exp.add(SettingRow(_("Use your face to sign in, unlock your device and confirm it's you"), None, None,
+                               control=button(_("Set up"), lambda: self._wizard("face"), accent=False)))
+        else:
+            exp.header.set_subtitle(_("You're all set up to sign in with your face"))
+            exp.add(SettingRow(_("Improve recognition"), _("Add another face model, for example with glasses"),
+                               None, control=button(_("Improve recognition"),
+                                                    lambda: self._wizard("face", improve=True))))
+            exp.add(SettingRow(_("Remove this sign-in option"), None, None,
+                               control=button(_("Remove"), self._face_remove)))
+        t = ToggleSwitch(hello.howdy_auto_dismiss(), self._auto_dismiss)
+        exp.add(SettingRow(_("Automatically dismiss the lock screen if we recognize your face"), None, None,
+                           control=t))
+
+    def _auto_dismiss(self, on):
+        def done(ok, msg):
+            if not ok:
+                toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
+                      else hello.howdy_error_text(msg) if msg == "auth" else _("The change was not applied"))
+            self._face_state()
+        hello.howdy_set_auto_dismiss(on, done)
+
+    def _face_remove(self):
+        def go():
+            hello.howdy_clear(lambda ok, msg: (toast(self.box, _("Facial recognition was removed") if ok else
+                                                     _("This action is disabled in read-only mode")
+                                                     if util.READ_ONLY else hello.howdy_error_text(msg)),
+                                               self._face_state()))
+        confirm(self.box, _("Remove facial recognition?"),
+                _("You won't be able to use your face to sign in anymore."), _("Remove"), go)
+
+    # ------------------------------------------------------------------ fingerprint
+    def _fp_device(self, dev):
+        exp = self.fp
+        exp.clear()
+        if dev is None:
+            exp.header.set_subtitle(_("This option is currently unavailable"))
+            exp.add(SettingRow(_("No fingerprint reader was found"), None, None))
+            return
+        self.fp_dev = dev
+        dev.list_fingers(self._fp_fingers)
+
+    def _fp_fingers(self, fingers):
+        exp = self.fp
+        exp.clear()
+        if not fingers:
+            exp.header.set_subtitle(_("Sign in with your fingerprint scanner (Recommended)"))
+            exp.add(SettingRow(_("Use your fingerprint to sign in, unlock your device and confirm it's you"),
+                               self.fp_dev.name or None, None,
+                               control=button(_("Set up"), lambda: self._wizard("finger"))))
+            return
+        exp.header.set_subtitle(_("You're all set up to sign in with your fingerprint"))
+        for f in fingers:
+            exp.add(SettingRow(_(hello.FINGER_LABELS.get(f, f)), None, None))
+        exp.add(SettingRow(_("Add another fingerprint"), None, None,
+                           control=button(_("Add a finger"), lambda: self._wizard("finger"))))
+        exp.add(SettingRow(_("Remove this sign-in option"), None, None,
+                           control=button(_("Remove"), self._fp_remove)))
+
+    def _fp_remove(self):
+        dev = self.fp_dev
+
+        def go():
+            def claimed(ok, _e):
+                if not ok:
+                    toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
+                          else _("Couldn't access the fingerprint sensor. It might be in use by another app."))
+                    return
+
+                def deleted(ok2, _e2):
+                    dev.release()
+                    toast(self.box, _("Fingerprints removed") if ok2 else _("The change was not applied"))
+                    dev.list_fingers(self._fp_fingers)
+                dev.delete_all(deleted)
+            dev.claim(claimed)
+        confirm(self.box, _("Remove fingerprint recognition?"),
+                _("All fingerprints enrolled for your account will be deleted."), _("Remove"), go)
+
+    # ------------------------------------------------------------------ wizard
+    def _wizard(self, kind, improve=False):
+        from ..hello_wizard import HelloWizard
+        wiz = HelloWizard(kind, on_finish=lambda changed: self.refresh(), improve=improve)
+        show_dialog(self.box, wiz)
 
     def _cc(self):
         if not util.open_control_center("users"):
             toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
                   else _("Could not open {0}").format("gnome-control-center"))
-
-    def _fp(self, state):
-        if state == "none":
-            self.fp.set_subtitle(_("No fingerprint reader was found"))
-            self.fp.set_control(label(_("Not available"), "row-value"))
-        elif state == "enrolled":
-            self.fp.set_subtitle(_("You're all set up to sign in with your fingerprint"))
-            self.fp.set_control(button(_("Manage"), lambda: self._enroll()))
-        else:
-            self.fp.set_subtitle(_("Sign in with your fingerprint scanner"))
-            self.fp.set_control(button(_("Set up"), lambda: self._enroll()))
-
-    def _enroll(self):
-        if util.READ_ONLY:
-            toast(self.box, _("This action is disabled in read-only mode"))
-            return
-        toast(self.box, _("Touch the fingerprint sensor repeatedly…"), )
-        util.run_async(["fprintd-enroll"], lambda ok, o, e: (toast(self.box, _("Fingerprint enrolled") if ok
-                                                                        else _("Fingerprint enrollment failed")),
-                                                                  accounts.fingerprint_status(self._fp)),
-                       mutating=True)
 
 
 @register

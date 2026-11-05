@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Fenestra Task Manager icon (original artwork, CC0) -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b7fd8"/>
+      <stop offset="1" stop-color="#1a4fa8"/>
+    </linearGradient>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fe3ff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#6cc7f7" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <rect x="5" y="9" width="54" height="46" rx="7" fill="url(#bg)"/>
+  <rect x="5" y="9" width="54" height="46" rx="7" fill="none" stroke="#0e3577" stroke-opacity="0.45" stroke-width="1"/>
+  <rect x="10" y="15" width="44" height="34" rx="3" fill="#0f2f63" fill-opacity="0.55"/>
+  <path d="M10 49 V36 L17 29 L22 35 L28 22 L34 38 L39 31 L45 34 L54 24 V49 Z" fill="url(#area)"/>
+  <path d="M10 36 L17 29 L22 35 L28 22 L34 38 L39 31 L45 34 L54 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -55,6 +55,9 @@ def parse_args(argv):
                    help="show neutral sample data instead of the real user/device (implies --read-only;"
                         " implied by --screenshot)")
     p.add_argument("--search", default=None, help="(screenshot) type this into the search box")
+    p.add_argument("--hello-demo", default=None,
+                   help="(screenshot) show a Fenestra Hello wizard state: welcome, welcome-finger, face-1, face-2, "
+                        "face-done, finger-1, finger-2, finger-edges, finger-done, error")
     p.add_argument("--list-pages", action="store_true", help="print page ids and exit")
     p.add_argument("page_pos", nargs="?", default=None, help=argparse.SUPPRESS)
     return p.parse_args(argv[1:])
@@ -105,6 +108,14 @@ class App(Gtk.Application):
         elif page:
             self.win.navigate(page)
         self.win.present()
+        if self.opts.hello_demo and util.DEMO:
+            def show_hello():
+                from .hello_wizard import HelloWizard
+                st = self.opts.hello_demo
+                kind = "face" if st.startswith(("face", "welcome")) and st != "welcome-finger" else "finger"
+                self.win.show_dialog(HelloWizard(kind, demo_state=st))
+                return False
+            GLib.timeout_add(200, show_hello)
         if self.screenshot:
             if self.opts.search:
                 GLib.timeout_add(300, lambda: (self.win.nav.entry.set_text(self.opts.search), False)[1])

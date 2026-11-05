@@ -37,6 +37,7 @@ case "${1:-}" in
   key) shift; qmp key "$@" ;;
   type) shift; qmp type "$*" ;;
   click) qmp click "$2" "$3" $W $H ;;
+  rclick) qmp rclick "$2" "$3" $W $H ;;
   move) qmp move "$2" "$3" $W $H ;;
   ssh) shift; exec ssh -q -i "$VM/test_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 root@127.0.0.1 "$@" ;;
   stop) qmp quit ;;
