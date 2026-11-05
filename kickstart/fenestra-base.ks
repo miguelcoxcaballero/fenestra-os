@@ -24,6 +24,8 @@ bootloader --timeout=1
 nautilus-python
 # ArcMenu (Start) needs the GMenu typelib.
 gnome-menus
+# Taskbar weather: GNOME Shell's WeatherClient needs the Weather app (locations, provider).
+gnome-weather
 python3-gobject
 python3-pillow
 python3-fonttools

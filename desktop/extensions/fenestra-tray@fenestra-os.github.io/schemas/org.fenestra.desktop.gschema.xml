@@ -11,5 +11,21 @@
       <summary>Pick the accent colour from the wallpaper</summary>
       <description>Like Windows' "Automatic" accent: derive the accent from the dominant colour of the current wallpaper.</description>
     </key>
+    <key name="taskbar-search" type="s">
+      <choices>
+        <choice value="hide"/>
+        <choice value="icon"/>
+        <choice value="icon-label"/>
+        <choice value="box"/>
+      </choices>
+      <default>'icon'</default>
+      <summary>Search on the taskbar</summary>
+      <description>Like Settings › Personalization › Taskbar › Search: 'hide', 'icon' (search icon only), 'icon-label' (search icon and label) or 'box' (search box).</description>
+    </key>
+    <key name="taskbar-widgets" type="b">
+      <default>true</default>
+      <summary>Weather on the taskbar</summary>
+      <description>Show the current weather (icon, temperature and conditions) at the left end of the taskbar. Needs GNOME Weather and a location (automatic location or a city chosen in Weather).</description>
+    </key>
   </schema>
 </schemalist>

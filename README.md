@@ -34,6 +34,10 @@ update: just GNOME Shell extensions, an Explorer layer for Files, and apps writt
 |---|---|
 | ![Explorer Home with Quick access and Recent files](docs/images/explorer-home.png) | ![Explorer This PC with drive usage bars](docs/images/explorer-thispc.png) |
 
+**Taskbar: weather and the four Search options** (*Settings › Personalization › Taskbar*)
+
+![Taskbar with the weather on the left and each Search option](docs/images/taskbar-weather-search.png)
+
 | Quick settings | Notifications and calendar | Volume flyout |
 |---|---|---|
 | ![Quick settings](docs/images/theme-dark-quick.png) | ![Notification centre and calendar cards](docs/images/notifications-calendar-empty.png) | ![Volume flyout](docs/images/osd-volume.png) |
@@ -87,7 +91,7 @@ More comparisons are in `apps/*/screenshots/compare-*.png`.
 
 | Area | Windows 11 behaviour reproduced |
 |---|---|
-| **Taskbar** | Centred icons, acrylic bar, press-shrink animation, live window previews, Show desktop corner, Windows tray layout (overflow ^, language, Wi‑Fi/volume/battery, clock + date) |
+| **Taskbar** | Centred icons, weather at the left end, Search as icon, icon and label, or search box (or hidden), acrylic bar, press-shrink animation, live window previews, Show desktop corner, Windows tray layout (overflow ^, language, Wi‑Fi/volume/battery, clock + date) |
 | **Start** | Search box, Pinned, Recommended, *All* apps by category / grid / list, account and power flyouts, Windows motion and a luminosity acrylic effect |
 | **Search** | Separate Search flyout: recent searches, Top apps, filter chips (All · Web · Apps · Documents · Settings · Folders · Photos), *Best match* and a preview pane |
 | **Quick settings, OSD** | Windows quick settings tiles, media flyout, volume/brightness flyout |
