@@ -67,7 +67,9 @@ def main():
         cmd(f, 'input-send-event', events=[{'type': 'abs', 'data': {'axis': 'x', 'value': ax}},
                                            {'type': 'abs', 'data': {'axis': 'y', 'value': ay}}])
         if op in ('click', 'rclick'):
-            time.sleep(0.1)
+            # GNOME Shell drops a press that arrives right after the pointer warps
+            # onto a new actor (e.g. the Start button), so give it time to settle.
+            time.sleep(0.3)
             for down in (True, False):
                 cmd(f, 'input-send-event', events=[{'type': 'btn', 'data': {'down': down, 'button': 'left' if op == 'click' else 'right'}}])
                 time.sleep(0.08)
