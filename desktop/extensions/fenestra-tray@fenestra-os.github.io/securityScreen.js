@@ -81,7 +81,12 @@ export class SecurityScreen {
         this._root = new St.Widget({name: 'fenestraSecurityScreen', style_class: 'fenestra-cad', reactive: true,
             can_focus: true, visible: false, layout_manager: new Clutter.FixedLayout()});
         this._root.connect('key-press-event', (_a, event) => this._onKey(event));
-        this._root.connect('button-press-event', () => { this._closeMenu(); return Clutter.EVENT_STOP; });
+        // Clicking the empty background closes an open menu. Do NOT stop button-press
+        // events on the grab actor: in GNOME 49 St.Button clicks are Clutter gestures,
+        // and a stopped press on an ancestor cancels them (buttons never fired).
+        this._backdrop = new St.Widget({reactive: true, x_expand: true, y_expand: true});
+        this._backdrop.connect('button-release-event', () => { this._closeMenu(); return Clutter.EVENT_PROPAGATE; });
+        this._root.add_child(this._backdrop);
 
         const actions = [
             ['Lock', () => this._lock()],
@@ -134,6 +139,7 @@ export class SecurityScreen {
         const s = St.ThemeContext.get_for_stage(global.stage).scale_factor;
         this._root.set_position(0, 0);
         this._root.set_size(global.stage.width, global.stage.height);
+        this._backdrop.set_size(global.stage.width, global.stage.height);
         const cx = m.x + Math.floor(m.width / 2), cy = m.y + Math.floor(m.height / 2);
         // The list is as wide as its longest entry (Windows: text + 9 px left, 10 px right).
         let w = G.itemW * s;
@@ -258,7 +264,6 @@ export class SecurityScreen {
     _showMenu(button, rows) {
         const box = new St.BoxLayout({style_class: 'fenestra-cad-menu', orientation: Clutter.Orientation.VERTICAL,
             reactive: true});
-        box.connect('button-press-event', () => Clutter.EVENT_STOP);
         const items = [];
         for (const row of rows) {
             if (row.header) {
@@ -361,7 +366,7 @@ export class SecurityScreen {
 
     _powerMenu() {
         this._showMenu(this._corner[2], [
-            {label: _('Sleep'), icon: 'security/sleep.svg', run: () => LoginManager.getLoginManager().suspend()},
+            {label: _('Sleep'), icon: 'security/sleep.svg', run: () => this._suspend()},
             {label: _('Shut down'), icon: 'security/shutdown.svg', run: () => this._endSession('Shutdown', 'ConfirmedShutdown')},
             {label: _('Restart'), icon: 'security/restart.svg', run: () => this._endSession('Reboot', 'ConfirmedReboot')},
         ]);
@@ -380,6 +385,10 @@ export class SecurityScreen {
             Main.screenShield?.lock(false);
             Util.trySpawn(['gdmflexiserver']);
         }
+    }
+
+    _suspend() {
+        LoginManager.getLoginManager().suspend();
     }
 
     _signOut() {
