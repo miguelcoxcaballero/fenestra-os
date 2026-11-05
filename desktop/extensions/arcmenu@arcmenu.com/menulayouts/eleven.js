@@ -83,8 +83,9 @@ export class Layout extends BaseMenuLayout {
             ...getOrientationProp(false),
         });
         topBox.add_child(this.searchEntry);
-        // Windows 11: darker acrylic header band holding the search pill.
-        topBox.style = 'background-color: rgba(0,0,0,0.21); border-bottom: 1px solid rgba(0,0,0,0.2); padding: 8px 32px 15px;';
+        // Windows 11: the search pill sits on the menu's own acrylic (no header
+        // band or separator; only the footer is tinted). Same 58 px height.
+        topBox.style = 'background-color: transparent; padding: 16px 32px 8px;';
         topBox.x_expand = true;
         this.insert_child_at_index(topBox, 0);
 
@@ -276,7 +277,7 @@ export class Layout extends BaseMenuLayout {
                        min-height: 58px; border-color: rgba(0,0,0,0.2); border-top-width: 1px;`;
 
         this.actionsContainerBox.style = style + borderRadiusStyle;
-        this.arcMenu.box.style = 'padding-bottom: 0px; padding-left: 0px; padding-right: 0px; font-family: Segoe UI; font-size: 14px;';
+        this.arcMenu.box.style = 'padding: 0px; font-family: Segoe UI; font-size: 14px;';
     }
 
     setGridLayout(displayType, spacing, setStyle = true) {
