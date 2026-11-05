@@ -124,7 +124,8 @@ fi
 # Task Manager: Fenestra Task Manager replaces GNOME System Monitor in menus/search.
 if [ -x /usr/bin/fenestra-taskmgr ] && [ -f /usr/share/applications/org.gnome.SystemMonitor.desktop ]; then
     install -d /usr/local/share/applications
-    sed -e '/^NoDisplay=/d' /usr/share/applications/org.gnome.SystemMonitor.desktop \
+    sed -e '/^NoDisplay=/d' -e 's|^Exec=.*|Exec=fenestra-taskmgr|' -e '/^DBusActivatable/d' -e '/^\[Desktop Action/,$d' \
+        /usr/share/applications/org.gnome.SystemMonitor.desktop \
         > /usr/local/share/applications/org.gnome.SystemMonitor.desktop
     sed -i '/^\[Desktop Entry\]/a NoDisplay=true' /usr/local/share/applications/org.gnome.SystemMonitor.desktop
 fi

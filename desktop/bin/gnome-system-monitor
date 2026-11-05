@@ -1,0 +1,8 @@
+#!/bin/bash
+# Fenestra: GNOME System Monitor is replaced by Fenestra Task Manager.
+# Use `gnome-system-monitor --real` (or FENESTRA_REAL_SYSMON=1) for the original.
+if [ "$1" = "--real" ] || [ -n "$FENESTRA_REAL_SYSMON" ]; then
+    [ "$1" = "--real" ] && shift
+    exec /usr/bin/gnome-system-monitor "$@"
+fi
+exec /usr/bin/fenestra-taskmgr "$@"

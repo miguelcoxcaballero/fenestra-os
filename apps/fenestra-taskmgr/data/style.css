@@ -7,7 +7,7 @@ window.taskmgr {
   font-family: "Segoe UI Variable Text", "Segoe UI", "Selawik", "Inter", sans-serif;
   font-size: 12px;
 }
-window.taskmgr.csd { border-radius: 8px; }
+window.taskmgr.csd { border-radius: 0; } /* shell rounds corners; square when maximised/snapped */
 window.taskmgr.maximized, window.taskmgr.maximized-look { border-radius: 0; }
 window.taskmgr * { color: inherit; text-shadow: none; -gtk-icon-shadow: none; outline-color: var(--fg); }
 window.taskmgr image { -gtk-icon-style: symbolic; }
@@ -48,7 +48,7 @@ button.caption > drawingarea { min-width: 46px; min-height: 30px; }
 button.caption:hover { background-color: var(--hover); }
 button.caption:active { background-color: var(--press); }
 button.caption.close:hover { background-color: var(--close-hover); }
-window.taskmgr.csd:not(.maximized):not(.maximized-look) button.caption.close { border-top-right-radius: 8px; }
+window.taskmgr.csd button.caption.close { border-top-right-radius: 0; }
 
 /* ------------------------------------------------------------- nav rail */
 .nav { min-width: 48px; padding: 6px 0 6px 0; }

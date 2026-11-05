@@ -430,11 +430,14 @@ export class SecurityScreen {
 
     _taskManager() {
         const apps = Shell.AppSystem.get_default();
-        for (const id of ['net.nokyan.Resources.desktop', 'org.gnome.SystemMonitor.desktop', 'gnome-system-monitor.desktop']) {
+        // Fenestra Task Manager first (it replaces GNOME System Monitor).
+        for (const id of ['org.fenestra.TaskManager.desktop', 'net.nokyan.Resources.desktop', 'org.gnome.SystemMonitor.desktop', 'gnome-system-monitor.desktop']) {
             const app = apps.lookup_app(id);
             if (app) { app.activate(); return; }
         }
-        Util.trySpawn(['gnome-system-monitor']);
+        const own = GLib.find_program_in_path('fenestra-taskmgr') ?? GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'fenestra-taskmgr']);
+        if (GLib.file_test(own, GLib.FileTest.IS_EXECUTABLE)) Util.trySpawn([own]);
+        else Util.trySpawn(['gnome-system-monitor']);
     }
 
     destroy() {

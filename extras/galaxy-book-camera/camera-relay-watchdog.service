@@ -1,0 +1,13 @@
+[Unit]
+Description=Restart the camera relay if an app waits for the camera and no pipeline starts
+After=camera-relay-login.service
+Requires=camera-relay-login.service
+
+[Service]
+ExecStart=/usr/local/bin/camera-relay-watchdog
+Restart=always
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

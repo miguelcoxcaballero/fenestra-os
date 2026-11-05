@@ -9,9 +9,9 @@ window.fenestra-settings {
   font-size: 14px;
 }
 
-window.fenestra-settings.csd {
-  border-radius: 8px;
-}
+/* Corners are drawn by the shell (rounded-window-corners), which squares them
+   when maximised or snapped like Windows 11; the client draws none itself. */
+window.fenestra-settings.csd { border-radius: 0; }
 
 /* Shield the app from the user's GTK theme / gtk.css: inherit our colors everywhere. */
 * { color: inherit; text-shadow: none; -gtk-icon-shadow: none; }
@@ -69,7 +69,7 @@ windowcontrols.window-controls button:hover { background: var(--subtle-hover); }
 windowcontrols.window-controls button:active { background: var(--subtle-press); }
 windowcontrols.window-controls button.close:hover { background: var(--close-hover); color: #ffffff; }
 windowcontrols.window-controls button.close:active { background: rgba(196,43,28,0.9); color: #ffffff; }
-windowcontrols.window-controls button.close { border-top-right-radius: 8px; }
+windowcontrols.window-controls button.close { border-top-right-radius: 0; }
 window.maximized windowcontrols.window-controls button.close { border-radius: 0; }
 
 /* ------------------------------------------------------------------ nav pane */
