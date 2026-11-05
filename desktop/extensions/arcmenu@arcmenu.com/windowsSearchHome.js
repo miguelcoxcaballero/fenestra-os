@@ -49,6 +49,9 @@ export class WindowsSearchHome {
   account.connect('clicked',()=>{Gio.Subprocess.new(['fenestra-settings','--page','yourinfo'],Gio.SubprocessFlags.NONE);layout.arcMenu.close();});
   top.add_child(account);top.add_child(settings);
   this.recent=box(true,'win-search-recent');this.home.add_child(this.recent);
+  // Windows 11: "Top apps" under the recent list (most used apps, then pinned ones).
+  this.topTitle=heading('Top apps');this.topTitle.add_style_class_name('win-search-top-title');this.home.add_child(this.topTitle);
+  this.top=box(false,'win-search-top');this.home.add_child(this.top);
   this.web=button('Search the web',()=>{const q=layout.searchEntry.getText().trim();if(q){this.save(q);Gio.AppInfo.launch_default_for_uri(`https://www.bing.com/search?q=${encodeURIComponent(q)}`,global.create_app_launch_context(0,-1));layout.arcMenu.close();}},'web-browser-symbolic');this.web.visible=false;
   this.originalProvider=layout.searchResults._doProviderSearch;const helper=this;
   layout.searchResults._doProviderSearch=async function(provider,previous){
@@ -80,6 +83,25 @@ export class WindowsSearchHome {
    b.connect('clicked',()=>{if(app)this.launch(app);else {this.layout.searchEntry.setText(entry.value);this.layout.searchEntry.grab_key_focus();}});this.recent.add_child(b);count++;
   }
   if(!count){const empty=new St.Label({text:'Your recent searches will appear here.',style_class:'win-search-empty'});empty.clutter_text.line_wrap=true;this.recent.add_child(empty);}
+  this.renderTop();
+ }
+ topApps(){
+  const seen=new Set(['fenestra-search.desktop']);const apps=[];
+  const add=app=>{if(app&&apps.length<6&&!seen.has(app.get_id())&&app.get_app_info()?.should_show()){seen.add(app.get_id());apps.push(app);}};
+  try{Shell.AppUsage.get_default().get_most_used().forEach(add);}catch{}
+  try{new Gio.Settings({schema_id:'org.gnome.shell'}).get_strv('favorite-apps').forEach(id=>add(this.appSystem.lookup_app(id)));}catch{}
+  for(const id of ['org.gnome.Nautilus.desktop','fenestra-settings.desktop','org.mozilla.firefox.desktop','org.gnome.TextEditor.desktop','org.gnome.Calculator.desktop','org.gnome.Ptyxis.desktop'])add(this.appSystem.lookup_app(id));
+  return apps;
+ }
+ renderTop(){
+  this.top.destroy_all_children();const apps=this.topApps();
+  this.topTitle.visible=this.top.visible=apps.length>0;
+  for(const app of apps){
+   const b=new St.Button({reactive:true,can_focus:true,style_class:'win-search-top-app',accessible_name:app.get_name()});
+   const col=box(true,'win-search-top-content');col.add_child(app.create_icon_texture(32));
+   const name=new St.Label({text:app.get_name(),style_class:'win-search-top-name',x_align:Clutter.ActorAlign.CENTER});name.clutter_text.ellipsize=Pango.EllipsizeMode.END;col.add_child(name);
+   b.set_child(col);b.connect('clicked',()=>this.launch(app));this.top.add_child(b);
+  }
  }
  attach(){const l=this.layout;for(const a of [this.filters,this.home,this.web,this.results.actor])if(a.get_parent())a.get_parent().remove_child(a);l.insert_child_at_index(this.filters,1);l.add_child(this.home);l.add_child(this.results.actor);this.update();}
  filter(id){this.category=id;for(const [key,b]of this.buttons){if(key===id)b.add_style_pseudo_class('checked');else b.remove_style_pseudo_class('checked');}const q=this.layout.searchEntry.getText().trim();this.layout.searchResults.setTerms([]);if(q)this.layout.searchResults.setTerms(q.split(/\s+/));this.update();}
