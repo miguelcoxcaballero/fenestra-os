@@ -200,7 +200,7 @@ class Table(Gtk.Widget, Gtk.Scrollable):
         if self.selected is not None and self.selected not in self._index:
             self.selected = None
             self.emit("selection-changed")
-        if len(self._layouts) > 6000:
+        if len(self._layouts) > 3000:
             self._layouts.clear()
         self._configure()
         self.queue_draw()
@@ -478,6 +478,16 @@ class Table(Gtk.Widget, Gtk.Scrollable):
 
     # ------------------------------------------------------------ snapshot
     def do_snapshot(self, snap):
+        try:
+            self._draw(snap)
+        except Exception as e:  # noqa: BLE001 - a drawing bug must not take the window down
+            if not getattr(self, "_draw_failed", False):
+                self._draw_failed = True
+                import traceback
+                print(f"fenestra-taskmgr: table drawing failed: {e!r}", flush=True)
+                traceback.print_exc()
+
+    def _draw(self, snap):
         th = theme.get()
         c = th.c
         w, h = self.get_width(), self.get_height()

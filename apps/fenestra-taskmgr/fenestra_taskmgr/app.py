@@ -46,13 +46,20 @@ def parse_args(argv):
     p.add_argument("--select", default=None, help="(screenshot) row key to select")
     p.add_argument("--timing", action="store_true", help="print startup timing")
     p.add_argument("--real-data", action="store_true", help="(screenshot) use real /proc data, for testing only")
-    return p.parse_known_args(argv[1:])[0]
+    # gnome-system-monitor compatible tab options (Fenestra's wrapper forwards them)
+    p.add_argument("-p", "--show-processes-tab", dest="gsm_p", action="store_true", help=argparse.SUPPRESS)
+    p.add_argument("-r", "--show-resources-tab", dest="gsm_r", action="store_true", help=argparse.SUPPRESS)
+    p.add_argument("-f", "--show-file-systems-tab", dest="gsm_f", action="store_true", help=argparse.SUPPRESS)
+    o = p.parse_known_args(argv[1:])[0]
+    if not o.page:
+        o.page = "processes" if o.gsm_p else "performance" if (o.gsm_r or o.gsm_f) else None
+    return o
 
 
 class App(Gtk.Application):
     def __init__(self, opts):
         flags = Gio.ApplicationFlags.HANDLES_COMMAND_LINE
-        if opts.screenshot:
+        if opts.screenshot or os.environ.get("FENESTRA_TASKMGR_NON_UNIQUE"):
             flags |= Gio.ApplicationFlags.NON_UNIQUE
         super().__init__(application_id=util.APP_ID, flags=flags)
         self.opts = opts
@@ -103,8 +110,11 @@ class App(Gtk.Application):
             clock = self.win.get_frame_clock()
 
             def first_frame(c):
-                print(f"first frame after {(time.monotonic() - T0) * 1000:.0f} ms", flush=True)
+                print(f"first frame after {(time.monotonic() - T0) * 1000:.0f} ms (epoch {time.time():.3f})",
+                      flush=True)
                 c.disconnect(self._ff)
+                if os.environ.get("FENESTRA_TASKMGR_EXIT_AFTER_FIRST_FRAME"):
+                    GLib.timeout_add(300, lambda: (self.quit(), False)[1])
             if clock:
                 self._ff = clock.connect("after-paint", first_frame)
             GLib.idle_add(lambda: (print(f"mapped after {(time.monotonic() - T0) * 1000:.0f} ms",
@@ -132,7 +142,40 @@ class App(Gtk.Application):
             from .sampler import Sampler
             speed = util.SPEEDS.get(util.opts()["speed"], 1.0)
             self.sampler = Sampler(collector, self.win.on_snapshot, speed)
-            self.sampler.start()
+            # Start sampling once the first frame is out: the /proc walk would otherwise
+            # compete with window construction for the GIL (matters when the system is
+            # saturated, which is exactly when Task Manager gets opened).
+            started = []
+
+            def start(*_a):
+                if not started:
+                    started.append(1)
+                    self.sampler.start()
+                return False
+            clock = self.win.get_frame_clock()
+            if clock is not None:
+                hid = []
+                hid.append(clock.connect("after-paint", lambda c: (c.disconnect(hid[0]), GLib.idle_add(start))))
+            GLib.timeout_add(400, start)  # safety net
+            cycle = os.environ.get("FENESTRA_TASKMGR_SOAK_CYCLE")
+            if cycle:  # test hook: keep switching pages/devices (navigation only, no actions)
+                self._soak_i = 0
+                GLib.timeout_add(int(float(cycle) * 1000), self._soak_step)
+
+    def _soak_step(self):
+        steps = ["processes", "performance:cpu", "performance:mem", "performance:disk0",
+                 "performance:net0", "apphistory", "startup", "users", "details", "services", "settings"]
+        page = steps[self._soak_i % len(steps)]
+        self._soak_i += 1
+        pid, _, dev = page.partition(":")
+        self.win.navigate(pid)
+        if dev and "performance" in self.win.pages:
+            self.win.pages["performance"].select(dev)
+        if pid == "processes" and self._soak_i % 3 == 0:
+            t = self.win.pages["processes"].table
+            t.expanded |= {r.key for r in t.rows if r.expandable}
+            self.win.pages["processes"].refresh()
+        return True
 
     def set_speed(self, name):
         util.opts().set("speed", name)

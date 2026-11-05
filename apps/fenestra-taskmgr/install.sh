@@ -17,6 +17,8 @@ install -d "$SHARE/data/icons/ui" "$SHARE/data/icons/hicolor/scalable/apps" "$DE
 rm -rf "$SHARE/fenestra_taskmgr"
 cp -r "$SRC/fenestra_taskmgr" "$SHARE/"
 find "$SHARE/fenestra_taskmgr" -name '__pycache__' -type d -prune -exec rm -rf {} +
+# Precompile: Task Manager is opened when the machine is busy, don't compile on every start.
+python3 -m compileall -q "$SHARE/fenestra_taskmgr" >/dev/null 2>&1 || true
 
 install -m 0644 "$SRC/data/style.css" "$SHARE/data/style.css"
 install -m 0644 "$SRC"/data/icons/ui/*.svg "$SHARE/data/icons/ui/"

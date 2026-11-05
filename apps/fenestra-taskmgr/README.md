@@ -88,6 +88,26 @@ read-only mode; `--expanded/--collapsed` choose the rail, `--perf cpu|memory|dis
 the performance device, `--light/--dark`, `--lang es`.  `--real-data` renders the real system
 (for testing only, do not publish).
 
+### Reliability
+
+* **Single instance** – a second launch (menu, Ctrl+Shift+Esc, Ctrl+Alt+Del,
+  `gnome-system-monitor`) only forwards its arguments to the running window and exits
+  (~180 ms).  `-p/-r/-f` (gnome-system-monitor tab options) are understood.
+* **Priority under load** – `bin/fenestra-taskmgr` raises its own systemd scope to
+  `CPUWeight=1000 IOWeight=1000` (`systemctl --user set-property --runtime`), or re-execs
+  itself in a scope with those weights when it shares a scope (terminal, shortcut).
+* **Never crashes on /proc** – every process is read inside its own guard (vanishing
+  processes, permission errors, zombies, kernel threads, control characters and 3000-char
+  names in argv); each sampling subsystem and each page update is guarded too, problems are
+  logged once and the UI keeps running.  Samples are coalesced if the main loop is busy.
+* **Bounded memory** – caches are trimmed, App history folds finished processes into a
+  per-app total, `smaps_rollup` is read at most every 5–10 s per process.
+
+Test tools (run them inside `fenestra-test-run`, they never touch processes they did not start):
+`tools/fuzz-proc.py SECONDS` (process churn fuzzer), `tools/soak.sh MINUTES OUT` (real data,
+High speed, pages cycling, RSS/CPU every 30 s), `tools/load-launch.sh` (launch-to-first-frame
+with every CPU saturated by busy loops in their own scope), `tools/smoke-test.py`.
+
 ### Automated tests against real data
 
 Never drive the app with synthetic input on real `/proc` data without the sandbox:

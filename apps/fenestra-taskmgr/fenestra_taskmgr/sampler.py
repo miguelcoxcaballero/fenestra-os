@@ -18,6 +18,10 @@ class Sampler(threading.Thread):
         self.interval = interval
         self._wake = threading.Event()
         self._quit = False
+        self._lock = threading.Lock()
+        self._pending = None
+        self._failed = False
+        self._failed_cb = False
 
     def set_interval(self, seconds):
         """seconds == 0 pauses sampling."""
@@ -37,17 +41,32 @@ class Sampler(threading.Thread):
             if self.interval > 0 or first:
                 try:
                     snap = self.collector.sample()
-                    GLib.idle_add(self._deliver, snap, priority=GLib.PRIORITY_DEFAULT_IDLE)
+                    # coalesce: if the main loop is busy, only the newest sample is kept
+                    with self._lock:
+                        pending = self._pending is not None
+                        self._pending = snap
+                    if not pending:
+                        GLib.idle_add(self._deliver, priority=GLib.PRIORITY_DEFAULT_IDLE)
                 except Exception:  # noqa: BLE001 - never kill the thread
-                    traceback.print_exc()
+                    if not self._failed:
+                        traceback.print_exc()
+                    self._failed = True
             # the very first CPU figures need a second sample: take it quickly
             delay = 0.35 if first else (self.interval if self.interval > 0 else None)
             first = False
             self._wake.wait(delay)
             self._wake.clear()
 
-    def _deliver(self, snap):
-        self.callback(snap)
+    def _deliver(self):
+        with self._lock:
+            snap, self._pending = self._pending, None
+        if snap is not None:
+            try:
+                self.callback(snap)
+            except Exception:  # noqa: BLE001 - the UI must keep running
+                if not self._failed_cb:
+                    traceback.print_exc()
+                self._failed_cb = True
         return False
 
 

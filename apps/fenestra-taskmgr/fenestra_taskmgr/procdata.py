@@ -57,12 +57,31 @@ class Snapshot:
         self.demo = False
 
 
+_logged = set()
+
+
+def log_once(key, msg):
+    """Print a problem once per kind so a bad /proc entry can't flood the journal."""
+    if key not in _logged:
+        _logged.add(key)
+        print(f"fenestra-taskmgr: {msg}", flush=True)
+
+
 def _read(path, mode="r"):
     try:
-        with open(path, mode) as f:
+        with open(path, mode, **({} if "b" in mode else {"errors": "replace"})) as f:
             return f.read()
-    except OSError:
+    except (OSError, ValueError):
         return None
+
+
+_CTRL = {i: " " for i in range(32)}
+_CTRL[127] = " "
+
+
+def _clean(text):
+    """Process names/cmdlines can contain anything (newlines, escapes): keep them one line."""
+    return text.translate(_CTRL).strip()[:512] if text else text
 
 
 def _user(uid, _cache={}):
@@ -380,18 +399,15 @@ def _ip_addrs():
 
 
 class Collector:
+    """Construction is free; the hardware probing (udevadm, /sys scans) happens on the
+    first sample, i.e. in the sampler thread, so the window paints without waiting."""
+
     def __init__(self):
-        self.static = StaticInfo()
-        self.disk_info = disk_static()
-        self.net_info = net_static()
+        self._static = None
+        self._probed = False
+        self.disk_info = []
+        self.net_info = []
         self.gpu_paths = []
-        try:
-            for c in sorted(os.listdir("/sys/class/drm")):
-                p = f"/sys/class/drm/{c}/device/gpu_busy_percent"
-                if c.startswith("card") and "-" not in c and os.path.exists(p):
-                    self.gpu_paths.append((c, p, _udev_model(f"/sys/class/drm/{c}/device") or c))
-        except OSError:
-            pass
         self.prev_cpu = None
         self.prev_t = None
         self.prev_ticks: dict[int, tuple] = {}
@@ -403,6 +419,29 @@ class Collector:
         self.nm = {}
         self.ips = {}
         self.boot = time.time() - float((_read("/proc/uptime") or "0 0").split()[0])
+
+    @property
+    def static(self):
+        if self._static is None:
+            self._static = StaticInfo()
+        return self._static
+
+    def _probe(self):
+        self._probed = True
+        for name, fn in (("disks", lambda: setattr(self, "disk_info", disk_static())),
+                         ("nets", lambda: setattr(self, "net_info", net_static())),
+                         ("static", lambda: self.static)):
+            try:
+                fn()
+            except Exception as e:  # noqa: BLE001
+                log_once("probe-" + name, f"probing {name} failed: {e!r}")
+        try:
+            for c in sorted(os.listdir("/sys/class/drm")):
+                p = f"/sys/class/drm/{c}/device/gpu_busy_percent"
+                if c.startswith("card") and "-" not in c and os.path.exists(p):
+                    self.gpu_paths.append((c, p, _udev_model(f"/sys/class/drm/{c}/device") or c))
+        except OSError:
+            pass
 
     # ----------------------------------------------------------------- processes
     def _static_proc(self, pid, start):
@@ -459,93 +498,98 @@ class Collector:
         except OSError:
             pids = []
         for pid in pids:
-            data = _read(f"/proc/{pid}/stat", "rb")
-            if not data:
-                continue
-            r = data.rfind(b")")
-            comm = data[data.find(b"(") + 1:r].decode(errors="replace")
-            f = data[r + 2:].split()
             try:
-                state = f[0].decode()
-                ppid = int(f[1])
-                flags = int(f[6])
-                ticks = int(f[11]) + int(f[12])
-                nice = int(f[16])
-                nthreads = int(f[17])
-                start = int(f[19])
-                rss_pages = int(f[21])
-            except (IndexError, ValueError):
-                continue
-            p = Proc()
-            p.pid, p.ppid, p.comm, p.state, p.nice, p.threads, p.start = pid, ppid, comm, state, nice, nthreads, start
-            p.ticks = ticks
-            p.cputime = ticks / CLK_TCK
-            threads += nthreads
-            kthread = bool(flags & PF_KTHREAD) or pid == 2 or ppid == 2
-            prev = self.prev_ticks.get(pid)
-            if prev and prev[1] == start and dt > 0:
-                p.cpu = max(0.0, (ticks - prev[0]) / CLK_TCK / dt / NCPU * 100.0)
-            ticks_now[pid] = (ticks, start)
-            if kthread:
-                p.kind = "kernel"
-                p.uid, p.user, p.cmdline, p.unit, p.cgroup = 0, "root", [], "", ""
-                p.name = comm
-                p.desc = comm
-                p.mem = 0
-                p.efficiency = False
-                procs[pid] = p
-                continue
-            c = self._static_proc(pid, start)
-            p.uid = c["uid"]
-            p.user = _user(p.uid)
-            p.cmdline = c["cmdline"]
-            p.unit = c["unit"]
-            p.cgroup = c["cgroup"]
-            p.app_id = c["app"]
-            p.arch = c["arch"]
-            p.name = _proc_name(comm, p.cmdline)
-            p.efficiency = nice >= 10
-            # memory: PSS (smaps_rollup, refreshed round-robin) or private anonymous RSS
-            if c["smaps"] and (c["pss"] is None or (pid + self.cycle) % 3 == 0):
-                sm = _read(f"/proc/{pid}/smaps_rollup")
-                if sm:
-                    i = sm.find("\nPss:")
-                    if i >= 0:
-                        try:
-                            c["pss"] = int(sm[i + 5:sm.index("kB", i)].strip()) * 1024
-                        except ValueError:
-                            c["smaps"] = False
-                else:
-                    c["smaps"] = False
-            if c["pss"] is not None:
-                p.mem = c["pss"]
-            else:
-                sm = _read(f"/proc/{pid}/statm")
+                data = _read(f"/proc/{pid}/stat", "rb")
+                if not data:
+                    continue
+                r = data.rfind(b")")
+                comm = _clean(data[data.find(b"(") + 1:r].decode(errors="replace"))
+                f = data[r + 2:].split()
                 try:
-                    parts = sm.split()
-                    p.mem = max(0, int(parts[1]) - int(parts[2])) * PAGE
-                except (AttributeError, IndexError, ValueError):
-                    p.mem = rss_pages * PAGE
-            if c["io"]:
-                io = _read(f"/proc/{pid}/io")
-                if io is None:
-                    c["io"] = False
+                    state = f[0].decode()
+                    ppid = int(f[1])
+                    flags = int(f[6])
+                    ticks = int(f[11]) + int(f[12])
+                    nice = int(f[16])
+                    nthreads = int(f[17])
+                    start = int(f[19])
+                    rss_pages = int(f[21])
+                except (IndexError, ValueError):
+                    continue
+                p = Proc()
+                p.pid, p.ppid, p.comm, p.state, p.nice, p.threads, p.start = pid, ppid, comm, state, nice, nthreads, start
+                p.ticks = ticks
+                p.cputime = ticks / CLK_TCK
+                threads += nthreads
+                kthread = bool(flags & PF_KTHREAD) or pid == 2 or ppid == 2
+                prev = self.prev_ticks.get(pid)
+                if prev and prev[1] == start and dt > 0:
+                    p.cpu = max(0.0, (ticks - prev[0]) / CLK_TCK / dt / NCPU * 100.0)
+                ticks_now[pid] = (ticks, start)
+                if kthread:
+                    p.kind = "kernel"
+                    p.uid, p.user, p.cmdline, p.unit, p.cgroup = 0, "root", [], "", ""
+                    p.name = comm
+                    p.desc = comm
+                    p.mem = 0
+                    p.efficiency = False
+                    procs[pid] = p
+                    continue
+                c = self._static_proc(pid, start)
+                p.uid = c["uid"]
+                p.user = _user(p.uid)
+                p.cmdline = c["cmdline"]
+                p.unit = c["unit"]
+                p.cgroup = c["cgroup"]
+                p.app_id = c["app"]
+                p.arch = c["arch"]
+                p.name = _clean(_proc_name(comm, p.cmdline)) or comm or str(pid)
+                p.efficiency = nice >= 10
+                # memory: PSS (smaps_rollup, refreshed round-robin) or private anonymous RSS
+                if c["smaps"] and (c["pss"] is None or snap.t - c.get("pss_t", 0) > 5.0 + (pid % 5)):
+                    c["pss_t"] = snap.t
+                    sm = _read(f"/proc/{pid}/smaps_rollup")
+                    if sm:
+                        i = sm.find("\nPss:")
+                        if i >= 0:
+                            try:
+                                c["pss"] = int(sm[i + 5:sm.index("kB", i)].strip()) * 1024
+                            except ValueError:
+                                c["smaps"] = False
+                    else:
+                        c["smaps"] = False
+                if c["pss"] is not None:
+                    p.mem = c["pss"]
                 else:
-                    tot = 0
-                    for line in io.splitlines():
-                        if line.startswith(("read_bytes", "write_bytes")):
-                            tot += int(line.split()[1])
-                    io_now[pid] = tot
-                    pv = self.prev_io.get(pid)
-                    if pv is not None and dt > 0:
-                        p.disk = max(0.0, (tot - pv) / dt)
-            if p.app_id:
-                p.kind = "app"
-            elif p.uid >= 1000 and p.uid != 65534:
-                p.kind = "bg"
-            else:
-                p.kind = "sys"
-            procs[pid] = p
+                    sm = _read(f"/proc/{pid}/statm")
+                    try:
+                        parts = sm.split()
+                        p.mem = max(0, int(parts[1]) - int(parts[2])) * PAGE
+                    except (AttributeError, IndexError, ValueError):
+                        p.mem = rss_pages * PAGE
+                if c["io"]:
+                    io = _read(f"/proc/{pid}/io")
+                    if io is None:
+                        c["io"] = False
+                    else:
+                        tot = 0
+                        for line in io.splitlines():
+                            if line.startswith(("read_bytes", "write_bytes")):
+                                tot += int(line.split()[1])
+                        io_now[pid] = tot
+                        pv = self.prev_io.get(pid)
+                        if pv is not None and dt > 0:
+                            p.disk = max(0.0, (tot - pv) / dt)
+                if p.app_id:
+                    p.kind = "app"
+                elif p.uid >= 1000 and p.uid != 65534:
+                    p.kind = "bg"
+                else:
+                    p.kind = "sys"
+                procs[pid] = p
+            except Exception as e:  # noqa: BLE001 - a vanishing/odd process must never stop sampling
+                log_once("proc", f"skipping pid {pid}: {e!r}")
+                continue
         # forget dead pids
         for pid in list(self.cache):
             if pid not in procs:
@@ -696,16 +740,23 @@ class Collector:
         snap.gpus = out
 
     def sample(self) -> Snapshot:
+        if not self._probed:
+            self._probe()
         snap = Snapshot()
         now = snap.t
         dt = (now - self.prev_t) if self.prev_t else 0.0
         self.prev_t = now
-        self._cpu(snap)
-        self._mem(snap)
-        self._procs(snap, dt)
-        self._disks(snap, dt)
-        self._nets(snap, dt)
-        self._gpus(snap)
+        for name, fn in (("cpu", lambda: self._cpu(snap)), ("mem", lambda: self._mem(snap)),
+                         ("procs", lambda: self._procs(snap, dt)), ("disks", lambda: self._disks(snap, dt)),
+                         ("nets", lambda: self._nets(snap, dt)), ("gpus", lambda: self._gpus(snap))):
+            try:
+                fn()
+            except Exception as e:  # noqa: BLE001 - keep the rest of the snapshot
+                log_once("sample-" + name, f"{name} sampling failed: {e!r}")
+        if not snap.mem:
+            snap.mem = {"total": 1, "avail": 0, "used": 0, "free": 0, "cached": 0, "modified": 0,
+                        "committed": 0, "commit_limit": 1, "swap_total": 0, "swap_used": 0, "paged": 0,
+                        "nonpaged": 0, "compressed": 0, "zram_orig": 0, "reserved": 0}
         try:
             snap.n_handles = int((_read("/proc/sys/fs/file-nr") or "0").split()[0])
         except (ValueError, IndexError):

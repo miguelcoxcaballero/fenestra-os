@@ -1,6 +1,19 @@
 #!/usr/bin/env python3
-"""Launcher for Fenestra Task Manager (works from the source tree and when installed)."""
+"""Launcher for Fenestra Task Manager (works from the source tree and when installed).
+
+Task Manager is what people open when the system is struggling, so before loading GTK
+the launcher gives itself a bigger share of CPU and I/O through systemd:
+* launched from the menu / Ctrl+Alt+Del (GNOME puts it in app-gnome-…TaskManager…scope):
+  `systemctl --user set-property --runtime <scope> CPUWeight=1000 IOWeight=1000`
+  (asynchronous, costs nothing at startup);
+* launched from a shortcut or a terminal (shared scope): re-exec once inside its own
+  transient scope `app-fenestra-org.fenestra.TaskManager-<pid>.scope` with those weights.
+A second launch only forwards its arguments to the running instance (single instance).
+Set FENESTRA_TASKMGR_NO_BOOST=1 to skip all of this.
+"""
 import os
+import shutil
+import subprocess
 import sys
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -10,6 +23,47 @@ for c in (os.path.dirname(here),
     if os.path.isdir(os.path.join(c, "fenestra_taskmgr")):
         sys.path.insert(0, c)
         break
+
+WEIGHTS = ["CPUWeight=1000", "IOWeight=1000"]
+
+
+def _boost():
+    if os.environ.get("FENESTRA_TASKMGR_NO_BOOST") or "--screenshot" in sys.argv:
+        return
+    try:
+        with open("/proc/self/cgroup") as f:
+            path = next((ln[3:].strip() for ln in f if ln.startswith("0::")), "")
+    except OSError:
+        return
+    if "fenestra-tests.slice" in path or "/user@" not in path:
+        return  # never escape a test slice; system sessions/ssh: leave alone
+    unit = path.rsplit("/", 1)[-1]
+    own = unit.endswith(".scope") and ("TaskManager" in unit or "fenestra\\x2dtaskmgr" in unit
+                                       or "fenestra-taskmgr" in unit)
+    systemctl = shutil.which("systemctl")
+    if own and systemctl:
+        try:
+            subprocess.Popen([systemctl, "--user", "set-property", "--runtime", unit] + WEIGHTS,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        except OSError:
+            pass
+        return
+    run = shutil.which("systemd-run")
+    if run and not os.environ.get("FENESTRA_TASKMGR_SCOPED"):
+        os.environ["FENESTRA_TASKMGR_SCOPED"] = "1"
+        argv = [run, "--user", "--scope", "--quiet", "--collect",
+                f"--unit=app-fenestra-org.fenestra.TaskManager-{os.getpid()}",
+                "--description=Task Manager"]
+        for w in WEIGHTS:
+            argv += ["-p", w]
+        argv += [sys.executable, os.path.realpath(__file__)] + sys.argv[1:]
+        try:
+            os.execv(run, argv)
+        except OSError:
+            pass
+
+
+_boost()
 
 from fenestra_taskmgr.app import main  # noqa: E402
 

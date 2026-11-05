@@ -67,7 +67,7 @@ class AppHistoryPage(Page):
     def delete_history(self):
         self.saved = {}
         self.since = time.time()
-        self.base = {k: sum(v["pids"].values()) for k, v in self.win.app_cpu.items()}
+        self.base = {k: sum(v["pids"].values()) + v.get("done", 0.0) for k, v in self.win.app_cpu.items()}
         self._save()
         self.refresh()
 
@@ -75,7 +75,7 @@ class AppHistoryPage(Page):
         base = getattr(self, "base", {})
         out = {}
         for aid, rec in self.win.app_cpu.items():
-            live = sum(rec["pids"].values()) - base.get(aid, 0)
+            live = sum(rec["pids"].values()) + rec.get("done", 0.0) - base.get(aid, 0)
             prev = self.saved.get(aid, {}).get("cpu", 0)
             out[aid] = (rec["name"], rec["icon"], prev + max(0.0, live))
         for aid, rec in self.saved.items():

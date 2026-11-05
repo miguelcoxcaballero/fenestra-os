@@ -45,6 +45,15 @@ class NavItem(Gtk.Button):
             self.remove_css_class("selected")
 
 
+_logged = set()
+
+
+def _log_once(key, msg):
+    if key not in _logged:
+        _logged.add(key)
+        print(f"fenestra-taskmgr: {msg}", flush=True)
+
+
 class TitleBar(Gtk.Widget):
     """Title bar layout: icon + title on the left, caption buttons on the right and the
     search box centred like Windows (34 % of the width, 200-600 px).  Its minimum width
@@ -378,16 +387,40 @@ class TaskWindow(Gtk.ApplicationWindow):
 
     # ------------------------------------------------------------ data
     def on_snapshot(self, snap):
+        """Main-loop side of a sample.  Never raises: a failure is logged once per kind
+        and the UI keeps running with the previous data."""
         self.snap = snap
-        self.history.add_snapshot(snap)
+        try:
+            self.history.add_snapshot(snap)
+            self._account_app_cpu(snap)
+        except Exception as e:  # noqa: BLE001
+            _log_once("history", f"history update failed: {e!r}")
+        if self.current is not None:
+            try:
+                self.current.update(snap)
+            except Exception as e:  # noqa: BLE001
+                _log_once("page-" + self.current.pid, f"{self.current.pid} page update failed: {e!r}")
+                import traceback
+                traceback.print_exc()
+
+    def _account_app_cpu(self, snap):
+        """App history: CPU seconds per app = finished processes (folded into 'done')
+        + live processes.  Dead pids are dropped so the table stays bounded."""
+        live = {}
         for p in snap.procs.values():
             if p.app_id:
-                info = snap.apps.get(p.app_id)
-                name, ic = (info[0], info[1]) if info else (p.app_id, None)
-                rec = self.app_cpu.setdefault(p.app_id, {"name": name, "icon": ic, "pids": {}})
-                rec["pids"][(p.pid, p.start)] = p.cputime
-        if self.current is not None:
-            self.current.update(snap)
+                live.setdefault(p.app_id, {})[(p.pid, p.start)] = p.cputime
+        for aid, pids in live.items():
+            if aid not in self.app_cpu:
+                info = snap.apps.get(aid)
+                name, ic = (info[0], info[1]) if info else (aid, None)
+                self.app_cpu[aid] = {"name": name, "icon": ic, "pids": {}, "done": 0.0}
+        for aid, rec in self.app_cpu.items():
+            now = live.get(aid, {})
+            for key, secs in rec["pids"].items():
+                if key not in now:
+                    rec["done"] = rec.get("done", 0.0) + secs
+            rec["pids"] = now
 
     # ------------------------------------------------------------ dialogs
     def show_dialog(self, dlg):
