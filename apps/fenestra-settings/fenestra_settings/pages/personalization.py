@@ -269,7 +269,7 @@ class ColorsPage(Page):
         g.add(exp)
         wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         wrap.add_css_class("plain")
-        wrap.append(label(_("Windows colors"), "body-strong"))
+        wrap.append(label(_("Fenestra colors"), "body-strong"))
         grid = Gtk.FlowBox()
         grid.set_selection_mode(Gtk.SelectionMode.NONE)
         grid.set_max_children_per_line(8)

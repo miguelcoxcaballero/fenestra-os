@@ -104,6 +104,9 @@ export function installWeatherWidget(settings) {
             let button = buttons.get(panel);
             if (!button) {
                 button = new WeatherButton(client);
+                // Follow taskbar alignment / size changes right away.
+                for (const actor of [panel.panelBox, panel._leftBox].filter(Boolean))
+                    actor.connectObject('notify::allocation', queue, button.actor);
                 Main.layoutManager.addChrome(button.actor, {affectsInputRegion: true, trackFullscreen: true});
                 buttons.set(panel, button);
             }
@@ -134,6 +137,8 @@ export function installWeatherWidget(settings) {
         [Main.layoutManager, Main.layoutManager.connect('monitors-changed', queue)],
         [Main.layoutManager, Main.layoutManager.connect('startup-complete', queue)],
     ];
+    if (global.dashToPanel?.connect)
+        ids.push([global.dashToPanel, global.dashToPanel.connect('panels-created', queue)]);
     // Panels are rebuilt when Dash to Panel settings change; check periodically,
     // and refresh the weather every 15 minutes (WeatherClient rate-limits itself).
     const timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 10, () => {

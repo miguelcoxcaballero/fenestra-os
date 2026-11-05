@@ -18,7 +18,7 @@
         <choice value="icon-label"/>
         <choice value="box"/>
       </choices>
-      <default>'icon'</default>
+      <default>'box'</default>
       <summary>Search on the taskbar</summary>
       <description>Like Settings › Personalization › Taskbar › Search: 'hide', 'icon' (search icon only), 'icon-label' (search icon and label) or 'box' (search box).</description>
     </key>

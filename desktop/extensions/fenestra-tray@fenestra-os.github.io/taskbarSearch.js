@@ -13,13 +13,14 @@ import St from 'gi://St';
 // takes its place in the same taskbar box (Dash to Panel ignores children that
 // are not its own app icons). Clicking opens the Search flyout.
 
-const SEARCH_ID = 'fenestra-search.desktop';
+// windows-search.desktop: the id used by installs from before the rename.
+const SEARCH_IDS = ['fenestra-search.desktop', 'windows-search.desktop'];
 const ES = (GLib.get_language_names()[0] || '').startsWith('es');
 const LABEL = ES ? 'Buscar' : 'Search';
 
 function searchItems(panel) {
     return (panel.taskbar?._getTaskbarIcons?.() ?? [])
-        .filter(item => item.child?._delegate?.app?.get_id?.() === SEARCH_ID);
+        .filter(item => SEARCH_IDS.includes(item.child?._delegate?.app?.get_id?.()));
 }
 
 function makeButton(mode, gicon, activate) {
@@ -44,8 +45,9 @@ export function installTaskbarSearch(settings) {
     const buttons = new Map(); // dash-to-panel panel -> {button, mode}
     let pending = 0;
 
-    const activate = () => appSystem.lookup_app(SEARCH_ID)?.activate();
-    const gicon = () => appSystem.lookup_app(SEARCH_ID)?.get_icon() ??
+    const searchApp = () => SEARCH_IDS.map(id => appSystem.lookup_app(id)).find(Boolean);
+    const activate = () => searchApp()?.activate();
+    const gicon = () => searchApp()?.get_icon() ??
         new Gio.ThemedIcon({name: 'system-search-symbolic'});
 
     const apply = () => {

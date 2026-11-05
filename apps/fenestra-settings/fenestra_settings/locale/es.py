@@ -575,6 +575,8 @@ STRINGS = {
     'Available fonts': 'Fuentes disponibles',
     'Type here to search': 'Escribe aquí para buscar',
     'Fenestra colors': 'Colores de Fenestra',
+    'Custom colors': 'Colores personalizados',
+    'Pick a custom accent color': 'Elige un color de énfasis personalizado',
     'Theme used by GTK 3 apps': 'Tema usado por las aplicaciones GTK 3',
     'More appearance options': 'Más opciones de apariencia',
     'Tweaks': 'Retoques',
