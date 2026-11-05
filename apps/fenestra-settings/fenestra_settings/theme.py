@@ -9,19 +9,6 @@ from . import util
 
 IFACE = "org.gnome.desktop.interface"
 
-# GNOME accent-color -> (light-mode accent, dark-mode accent)
-ACCENTS = {
-    "blue": ("#0067c0", "#4cc2ff"),
-    "teal": ("#00777a", "#3fd5d9"),
-    "green": ("#107c10", "#6ccb5f"),
-    "yellow": ("#8a6100", "#ffd04a"),
-    "orange": ("#c24e00", "#ff9e5e"),
-    "red": ("#c42b1c", "#ff99a4"),
-    "pink": ("#bf0077", "#ff8ad8"),
-    "purple": ("#744da9", "#c8a8ff"),
-    "slate": ("#4a5a70", "#a9b8cc"),
-}
-ACCENT_ORDER = list(ACCENTS)
 
 DARK = {
     "bg": "#202020",
@@ -144,16 +131,17 @@ class ThemeManager:
         return util.gget(IFACE, "color-scheme", "default") == "prefer-dark"
 
     @property
-    def accent_name(self) -> str:
-        if util.DEMO:
-            return "blue"
-        a = util.gget(IFACE, "accent-color", "blue")
-        return a if a in ACCENTS else "blue"
+    def accent_color(self) -> str:
+        """The exact accent colour (one of accent.ACCENT_PALETTE or custom)."""
+        from . import accent
+        return accent.current()
 
-    def accent_hex(self, name=None, dark=None) -> str:
-        light_hex, dark_hex = ACCENTS.get(name or self.accent_name, ACCENTS["blue"])
+    def accent_hex(self, color=None, dark=None) -> str:
+        """Shade of the accent used for fills: lighter on dark surfaces."""
+        from . import accent
+        c = color or self.accent_color
         d = self.dark if dark is None else dark
-        return dark_hex if d else light_hex
+        return (accent.light2(c) if d else accent.dark1(c)).lower()
 
     def apply(self, *_):
         dark = self.dark

@@ -85,8 +85,8 @@ or async D-Bus; missing backends show a "Not available" row instead of failing):
   & pair via `bluetoothctl`), Mouse, Touchpad, Cameras, AutoPlay.
 - **Network & internet** – status hero, Wi‑Fi on/off, network list with connect
   (password dialog), disconnect, forget, airplane mode (gsd-rfkill), Ethernet details.
-- **Personalization** – Background (gallery of `/usr/share/backgrounds`, Browse photos,
-  fit), Colors (light/dark, accent grid writing `accent-color`), Themes (GTK/icon/cursor
+- **Personalization** – Background (picture: gallery of `/usr/share/backgrounds`, Browse photos,
+  fit; solid colour: the reference 24-colour palette), Colors (light/dark; the 48-colour accent palette of the reference Settings app, stored exactly in `~/.config/fenestra/accent.json` and applied to this app, the shell via `~/.config/fenestra/accent-shell.css` and Dash to Panel; libadwaita apps get the nearest GNOME `accent-color`), Themes (GTK/icon/cursor
   themes), Lock screen, Start (ArcMenu prefs), Taskbar (Dash to Panel prefs, clock
   options), Fonts (interface fonts, smoothing, hinting, font gallery).
 - **Apps** – Installed apps (search, sort, filter, sizes/dates from rpm/flatpak,

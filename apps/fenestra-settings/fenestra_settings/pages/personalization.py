@@ -5,7 +5,7 @@ import os
 
 from gi.repository import Gio, GLib, Gtk, Pango
 
-from .. import theme, util
+from .. import accent, theme, util
 from ..i18n import N_, _
 from ..widgets import (Dropdown, ExpanderRow, SettingRow, button, label, not_available_row, toast)
 from .base import Page, register
@@ -16,10 +16,6 @@ SS = "org.gnome.desktop.screensaver"
 IFACE = "org.gnome.desktop.interface"
 PRIVACY = "org.gnome.desktop.privacy"
 NOTIF = "org.gnome.desktop.notifications"
-
-ACCENT_LABELS = {"blue": N_("Blue"), "teal": N_("Teal"), "green": N_("Green"), "yellow": N_("Yellow"),
-                 "orange": N_("Orange"), "red": N_("Red"), "pink": N_("Pink"), "purple": N_("Purple"),
-                 "slate": N_("Slate")}
 
 IMG_EXT = (".jpg", ".jpeg", ".png", ".webp", ".svg", ".jxl", ".avif", ".heic", ".bmp")
 
@@ -137,6 +133,7 @@ class BackgroundPage(Page):
     keywords = "wallpaper desktop picture image photo"
     index = [
         ("bg-type", "Personalize your background", "picture solid color"),
+        ("solid", "Choose your background color", "solid color plain"),
         ("recent", "Recent images", "wallpaper gallery"),
         ("browse", "Choose a photo", "browse photos file"),
         ("fit", "Choose a fit for your desktop image", "fill fit stretch tile center span"),
@@ -152,8 +149,7 @@ class BackgroundPage(Page):
         box.append(self.preview_holder)
         g = self.group()
         mode = "none" if util.gget(BG, "picture-options") == "none" else "picture"
-        dd = Dropdown([("picture", _("Picture")), ("none", _("Solid color"))], mode,
-                      lambda v: util.gset(BG, "picture-options", "none" if v == "none" else "zoom"))
+        dd = Dropdown([("picture", _("Picture")), ("none", _("Solid color"))], mode, self._set_mode)
         r = SettingRow(_("Personalize your background"),
                        _("A picture background applies to your current desktop"), "fs-image-symbolic",
                        control=dd, key="bg-type")
@@ -161,6 +157,13 @@ class BackgroundPage(Page):
         exp = ExpanderRow(_("Recent images"), None, "fs-image-symbolic", key="recent", expanded=True)
         self.remember("recent", exp)
         g.add(r)
+        self.solid = ExpanderRow(_("Choose your background color"), None, "fs-color-symbolic", key="solid",
+                                 expanded=True)
+        self.remember("solid", self.solid)
+        current_bg = (util.gget(BG, "primary-color") or "").upper()
+        self.bg_swatches = swatch_grid(accent.BACKGROUND_PALETTE, current_bg, self._pick_color)
+        self.solid.add(self.bg_swatches[0])
+        g.add(self.solid)
         g.add(exp)
         grid = Gtk.Grid()
         grid.set_column_spacing(8)
@@ -189,6 +192,30 @@ class BackgroundPage(Page):
                             key="fit")
             self.remember("fit", fr)
             g.add(fr)
+        self.picture_rows = [w for w in (exp, browse, locals().get("fr")) if w is not None]
+        self._show_mode(mode)
+
+    def _show_mode(self, mode):
+        self.solid.set_visible(mode == "none")
+        for w in self.picture_rows:
+            w.set_visible(mode != "none")
+
+    def _set_mode(self, mode):
+        if mode == "none":
+            util.gset(BG, "picture-options", "none")
+            util.gset(BG, "color-shading-type", "solid")
+        else:
+            util.gset(BG, "picture-options", "zoom")
+        self._show_mode(mode)
+        GLib.timeout_add(150, self._refresh_preview)
+
+    def _pick_color(self, color):
+        if util.READ_ONLY:
+            toast(self.box, _("This action is disabled in read-only mode"))
+            return
+        accent.set_solid_background(color)
+        select_swatch(self.bg_swatches, color)
+        GLib.timeout_add(150, self._refresh_preview)
 
     def _apply(self, path):
         if util.READ_ONLY:
@@ -260,40 +287,15 @@ class ColorsPage(Page):
                        "fs-dark-theme-symbolic", control=dd, key="mode")
         self.remember("mode", r)
         g.add(r)
-        if not util.has_key(IFACE, "accent-color"):
-            g.add(not_available_row(_("Accent color")))
-            return
         exp = ExpanderRow(_("Accent color"), None, "fs-color-symbolic", key="accent", expanded=True)
         self.remember("accent", exp)
         g.add(exp)
         wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         wrap.add_css_class("plain")
         wrap.append(label(_("Fenestra colors"), "body-strong"))
-        grid = Gtk.FlowBox()
-        grid.set_selection_mode(Gtk.SelectionMode.NONE)
-        grid.set_max_children_per_line(9)
-        grid.set_min_children_per_line(5)
-        grid.set_column_spacing(4)
-        grid.set_row_spacing(4)
-        grid.set_halign(Gtk.Align.START)
-        self.swatches = []
-        tm = theme.get()
-        for name in theme.ACCENT_ORDER:
-            b = Gtk.Button()
-            b.add_css_class("color-swatch-btn")
-            sw = Gtk.Box()
-            sw.add_css_class("color-swatch")
-            prov = Gtk.CssProvider()
-            prov.load_from_string(f"box {{ background-color: {tm.accent_hex(name)}; }}")
-            sw.get_style_context().add_provider(prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 5)
-            b.set_child(sw)
-            b.set_tooltip_text(_(ACCENT_LABELS.get(name, name)))
-            if name == tm.accent_name:
-                b.add_css_class("selected")
-            b.connect("clicked", lambda _b, n=name: self._pick(n))
-            grid.append(b)
-            self.swatches.append((b, name))
-        wrap.append(grid)
+        cur = theme.get().accent_color
+        self.swatches = swatch_grid(accent.ACCENT_PALETTE, cur, self._pick)
+        wrap.append(self.swatches[0])
         exp.add(wrap)
         g2 = self.group(_("Related settings"))
         g2.add(SettingRow(_("Contrast themes"), _("Color themes for low vision, light sensitivity"),
@@ -301,10 +303,46 @@ class ColorsPage(Page):
         g2.add(SettingRow(_("Themes"), None, "fs-paint-brush-symbolic", chevron=True,
                           on_click=lambda: self.go("themes")))
 
-    def _pick(self, name):
-        util.gset(IFACE, "accent-color", name)
-        for b, n in self.swatches:
-            (b.add_css_class if n == name else b.remove_css_class)("selected")
+    def _pick(self, color):
+        if not accent.apply(color):
+            toast(self.box, _("This action is disabled in read-only mode"))
+            return
+        select_swatch(self.swatches, color)
+        theme.get().apply()
+
+
+def swatch_grid(colors, current, on_pick, per_line=8):
+    """Square colour swatches in rows of eight, like the reference palettes."""
+    grid = Gtk.FlowBox()
+    grid.set_selection_mode(Gtk.SelectionMode.NONE)
+    grid.set_max_children_per_line(per_line)
+    grid.set_min_children_per_line(per_line)
+    grid.set_column_spacing(4)
+    grid.set_row_spacing(4)
+    grid.set_halign(Gtk.Align.START)
+    buttons = []
+    for color in colors:
+        b = Gtk.Button()
+        b.add_css_class("color-swatch-btn")
+        sw = Gtk.Box()
+        sw.add_css_class("color-swatch")
+        prov = Gtk.CssProvider()
+        prov.load_from_string(f"box {{ background-color: {color}; }}")
+        sw.get_style_context().add_provider(prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 5)
+        b.set_child(sw)
+        b.set_tooltip_text(color.upper())
+        b.update_property([Gtk.AccessibleProperty.LABEL], [color.upper()])
+        if current and color.upper() == current.upper():
+            b.add_css_class("selected")
+        b.connect("clicked", lambda _b, c=color: on_pick(c))
+        grid.append(b)
+        buttons.append((b, color))
+    return grid, buttons
+
+
+def select_swatch(swatches, color):
+    for b, c in swatches[1]:
+        (b.add_css_class if c.upper() == color.upper() else b.remove_css_class)("selected")
 
 
 def _list_themes(sub):

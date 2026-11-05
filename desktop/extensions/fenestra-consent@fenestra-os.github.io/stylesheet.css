@@ -36,7 +36,7 @@
 }
 .windows-consent-dialog .modal-dialog-button:hover { background-color:#454545; }
 .windows-consent-dialog .modal-dialog-button:focus {
- background-color:#4cc2ff; color:#000000; border-color:white; box-shadow:inset 0 0 0 1px #202020;
+ background-color:#60cdff; color:#000000; border-color:white; box-shadow:inset 0 0 0 1px #202020;
 }
 /* Compact the real native authentication controls, preserving every field,
    error, prompt, and action. The Avatar supports icon-size through its API. */

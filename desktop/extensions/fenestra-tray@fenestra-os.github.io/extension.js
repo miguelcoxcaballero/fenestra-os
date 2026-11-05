@@ -9,6 +9,7 @@ import {installTrayLayout} from './trayLayout.js';
 import {watchExternalPower} from './powerSource.js';
 import {BaseIcon} from 'resource:///org/gnome/shell/ui/iconGrid.js';
 import {installTaskbarStyle} from './taskbarStyle.js';
+import {installAccentStyle} from './accentStyle.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -40,6 +41,7 @@ export default class WindowsTrayTypography extends Extension {
         this._stopQuickPanel=installQuickPanel();
         this._stopCalendar=installCalendarPanel();
         this._stopMedia=installMediaPanel();
+        this._stopAccent=installAccentStyle();
         this._power(Main.panel.statusArea.quickSettings?._system);
         this._timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,15,()=>{
             this._date(Main.panel.statusArea.dateMenu);
@@ -97,7 +99,7 @@ export default class WindowsTrayTypography extends Extension {
         this._stopPreview?.();this._stopPreview=null;
         this._stopOverview?.();this._stopOverview=null;
         this._stopPress?.();this._stopPress=null;
-        this._stopMedia?.();this._stopMedia=null;
+        this._stopMedia?.();this._stopMedia=null;this._stopAccent?.();this._stopAccent=null;
         this._stopCalendar?.();this._stopCalendar=null;
         this._stopQuickPanel?.();this._stopQuickPanel=null;
         this._stopTrayLayout?.();this._stopTrayLayout=null;
