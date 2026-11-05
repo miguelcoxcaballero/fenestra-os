@@ -83,6 +83,14 @@ sed -e 's/^NAME=.*/NAME="Fenestra"/' \
     -e 's/^VARIANT=.*/VARIANT="Fenestra Desktop"/' \
     /usr/lib/os-release > /etc/os-release
 install -Dm644 /usr/share/fenestra/assets/branding/fenestra-logo.svg /usr/share/icons/hicolor/scalable/apps/fenestra-logo.svg
+# Boot entries written before os-release changed still say "Fedora Linux";
+# later kernels take PRETTY_NAME from the new os-release.
+. /etc/os-release
+for e in /boot/loader/entries/*.conf; do
+    [ -f "$e" ] || continue
+    v=$(sed -n 's/^version //p' "$e")
+    sed -i "s|^title .*|title $PRETTY_NAME ($v)|" "$e"
+done
 
 # Files: Explorer layer (patched sidebar icons + UI overlay), launched via a wrapper.
 /usr/libexec/fenestra/fenestra-patch-nautilus
