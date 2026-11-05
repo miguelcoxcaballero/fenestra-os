@@ -115,8 +115,12 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
         super().__init__()
         GLib.idle_add(self._start)
         # Every popover menu (context menus are recreated per popup) gets Windows icons.
-        GObject.type_class_ref(Gtk.Widget)
-        GObject.add_emission_hook(Gtk.Widget, 'map', _map_hook)
+        # (PyGObject has no GObject.type_class_ref; GtkWidget's class is already
+        # initialised inside Nautilus, which is all add_emission_hook needs.)
+        try:
+            GObject.add_emission_hook(Gtk.Widget, 'map', _map_hook)
+        except Exception as e:  # never take the rest of the Explorer layer down
+            print(f"fenestra-explorer: no menu icon hook: {e}")
 
     def _start(self):
         app = Gio.Application.get_default()
