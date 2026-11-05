@@ -361,8 +361,94 @@ window.win11-explorer, window.win11-explorer label { font-family: "Segoe UI Vari
 .win11-explorer .navigation-sidebar row, .win11-explorer placessidebar row { padding-right: 2px; }
 .win11-explorer pathbar button, .win11-explorer .path-bar button { font-weight: 400; }
 .win11-explorer .path-bar-box button.image-button, .win11-explorer pathbar > button.image-button { opacity: 0; min-width: 0; padding: 0; }
+/* ---- Fenestra: Explorer special pages, menus, breadcrumb (Windows 11 25H2) ---- */
+.win11-explorer .fenestra-page, .win11-explorer .fenestra-page > viewport { background: #191919; }
+.win11-explorer .fenestra-page label { font-size: 12px; color: #ffffff; }
+.win11-explorer .fenestra-section-header { margin: 3px 0 0 12px; min-height: 38px; padding: 0 14px 0 16px; border-radius: 4px; border: 2px solid transparent; background: transparent; box-shadow: none; }
+.win11-explorer .fenestra-section-header:hover { background: #2d2d2d; }
+.win11-explorer .fenestra-section-header:focus-visible, .win11-explorer .fenestra-section-header:focus-within { border-color: #ffffff; outline: none; }
+.win11-explorer .fenestra-section-header:checked { background: transparent; }
+.win11-explorer .fenestra-page .fenestra-section-title { font-size: 14px; font-weight: 600; }
+.win11-explorer .fenestra-quick-grid { margin: 2px 0 0 80px; padding: 0; }
+.win11-explorer .fenestra-quick-grid > flowboxchild { padding: 0; min-width: 284px; max-width: 284px; border-radius: 4px; }
+.win11-explorer .fenestra-quick-grid > flowboxchild:hover { background: #2d2d2d; }
+.win11-explorer .fenestra-quick-grid > flowboxchild:selected { background: #383838; }
+.win11-explorer .fenestra-quick-tile { min-height: 60px; padding: 0 12px; }
+.win11-explorer .fenestra-page .fenestra-tile-sub { color: #c5c5c5; }
+.win11-explorer .fenestra-tile-pin { margin-top: 3px; -gtk-icon-size: 10px; opacity: .8; }
+.win11-explorer .fenestra-home-tabs { margin: 20px 0 0 18px; }
+.win11-explorer .fenestra-section-chevron { min-width: 24px; min-height: 30px; padding: 0; background: transparent; box-shadow: none; }
+.win11-explorer .fenestra-pill { min-height: 30px; padding: 0 12px; border-radius: 6px; background: #2d2d2d; border: 1px solid #353535; box-shadow: none; }
+.win11-explorer .fenestra-pill:hover { background: #323232; }
+.win11-explorer .fenestra-page .fenestra-pill label { font-size: 14px; }
+.win11-explorer .fenestra-pill.active, .win11-explorer .fenestra-pill:checked { background: #4cc2ff; background-image: none; border-color: #4cc2ff; }
+.win11-explorer .fenestra-pill, .win11-explorer .fenestra-section-header, .win11-explorer .fenestra-group-header { background-image: none; }
+.win11-explorer .fenestra-page .fenestra-pill.active label { color: #000000; }
+.win11-explorer .fenestra-pill.active image { -gtk-icon-filter: brightness(0); }
+.win11-explorer .fenestra-home-empty { margin-top: 38px; }
+.win11-explorer .fenestra-home-empty > image { margin-bottom: 14px; }
+.win11-explorer .fenestra-page .fenestra-empty-title { font-weight: 800; margin-bottom: 4px; }
+.win11-explorer .fenestra-details { margin: 14px 0 0 18px; }
+.win11-explorer .fenestra-details-header { min-height: 26px; padding-left: 12px; }
+.win11-explorer .fenestra-page .fenestra-col-title { color: #d4d4d4; padding-left: 6px; border-right: 1px solid #3a3a3a; }
+.win11-explorer .fenestra-details-rows { background: transparent; }
+.win11-explorer .fenestra-details-rows > row { min-height: 28px; padding: 0 0 0 12px; border-radius: 4px; }
+.win11-explorer .fenestra-details-rows > row:hover { background: #2d2d2d; }
+.win11-explorer .fenestra-details-rows > row:selected { background: #383838; }
+.win11-explorer .fenestra-page .fenestra-cell.dim { color: #c5c5c5; padding-left: 6px; }
+/* This PC */
+.win11-explorer .fenestra-group-header { margin: 8px 0 0 2px; min-height: 26px; padding: 0 4px; background: transparent; box-shadow: none; border: 0; border-radius: 4px; outline: none; }
+.win11-explorer .fenestra-group-header:hover { background: #2d2d2d; }
+.win11-explorer .fenestra-page .fenestra-group-title { font-size: 15px; }
+.win11-explorer .fenestra-drives { margin: 2px 0 0 12px; }
+.win11-explorer .fenestra-drives > flowboxchild { padding: 2px 8px 4px 6px; min-width: 250px; border-radius: 4px; }
+.win11-explorer .fenestra-drives > flowboxchild:hover { background: #2d2d2d; }
+.win11-explorer .fenestra-drives > flowboxchild:selected { background: #383838; }
+.win11-explorer .fenestra-page .fenestra-drive-free { color: #c5c5c5; }
+/* Gallery */
+.win11-explorer .fenestra-gallery-empty { margin-top: 61px; }
+.win11-explorer .fenestra-page .fenestra-gallery-title { font-size: 20px; font-weight: 600; margin-top: 26px; }
+.win11-explorer .fenestra-page .fenestra-gallery-body { font-size: 14px; margin-top: 12px; }
+.win11-explorer .fenestra-gallery-sep { margin: 24px 0 24px 0; background: #3a3a3a; min-height: 1px; }
+.win11-explorer .fenestra-accent-button { min-height: 32px; min-width: 168px; border-radius: 4px; background: #4cc2ff; background-image: none; color: #000000; box-shadow: none; border: 0; }
+.win11-explorer .fenestra-page .fenestra-accent-button label { color: #000000; font-size: 14px; }
+.win11-explorer .fenestra-accent-button:hover { background: #48b1e8; }
+.win11-explorer .fenestra-gallery { margin: 0 12px 12px 12px; }
+.win11-explorer .fenestra-page .fenestra-gallery-month { font-size: 14px; font-weight: 600; margin: 16px 0 10px 4px; }
+.win11-explorer .fenestra-gallery-row { margin-bottom: 4px; }
+.win11-explorer .fenestra-photo-frame { border-radius: 4px; background: #2b2b2b; }
+/* Details view: empty folder text and header separators */
+.win11-explorer statuspage.fenestra-empty-folder > scrolledwindow > viewport > box { margin: 0; padding: 36px 0 0 0; }
+.win11-explorer statuspage.fenestra-empty-folder .title { font-size: 12px; font-weight: 400; color: #ffffff; }
+.win11-explorer columnview > header > button { border-right: 1px solid #333333; }
+/* Breadcrumb chevrons */
+.win11-explorer .fenestra-crumb-sep { font-size: 14px; color: #d0d0d0; margin: 0 6px; opacity: 1; }
+.win11-explorer .fenestra-crumb-lead { margin: 0 4px 0 10px; }
+/* Context menus: 16px tinted glyphs, 32px rows, chevron on the right edge */
+.win11-explorer popover.menu contents { min-width: 250px; }
+.win11-explorer popover.menu modelbutton { min-height: 30px; }
+.win11-explorer popover.menu modelbutton > arrow { margin-left: 24px; min-width: 16px; -gtk-icon-size: 12px; }
+.win11-explorer popover.menu modelbutton > accelerator { margin-left: 24px; color: #c5c5c5; }
+.win11-explorer .fenestra-section-chevron, .win11-explorer .fenestra-section-chevron:checked { background: transparent; border: 0; }
+.win11-explorer .fenestra-section-chevron:hover { background: #2d2d2d; }
+.win11-explorer .fenestra-crumbs button label, .win11-explorer .fenestra-crumbs button.current-dir label { font-size: 14px; font-weight: 400; color: #ffffff; }
+.win11-explorer .fenestra-crumbs button image { -gtk-icon-filter: none; opacity: 1; }
+/* Narrow windows: the search box shrinks to 150px (its width is set from Python) instead of pushing the window controls out. */
+.win11-explorer .win11-navigation .win11-search { min-width: 150px; }
+/* Light mode: the white Fluent glyphs used on these pages are inverted like the command bar's. */
+@media (prefers-color-scheme: light) {
+  .win11-explorer .fenestra-section-header image, .win11-explorer .fenestra-section-chevron image,
+  .win11-explorer .fenestra-pill:not(.active) image, .win11-explorer image.fenestra-tile-pin,
+  .win11-explorer .fenestra-group-header image, .win11-explorer image.fenestra-mono { -gtk-icon-filter: invert(0.9); }
+}
+/* ---- end Fenestra: Explorer special pages ---- */
 
 /* ---- Fenestra light mode + accent (generated by tools/gtk-user-light.py; do not edit) ---- */
+@media (prefers-color-scheme: dark) {
+  .win11-explorer .fenestra-pill.active, .win11-explorer .fenestra-pill:checked { background: @fenestra_accent_dark; border-color: @fenestra_accent_dark; }
+  .win11-explorer .fenestra-accent-button { background: @fenestra_accent_dark; color: @fenestra_accent_dark_fg; }
+  .win11-explorer .fenestra-accent-button:hover { background: shade(@fenestra_accent_dark, 0.92); }
+}
 @media (prefers-color-scheme: light) {
   windowcontrols > button:not(.close):hover,
 headerbar button.titlebutton:not(.close):hover { background-color: rgba(0,0,0,0.048); }
@@ -411,6 +497,34 @@ window.background.csd headerbar.header-bar.titlebar windowcontrols button.titleb
   .win11-explorer placessidebar row:selected, .win11-explorer .navigation-sidebar row:selected { background: rgba(0,0,0,0.048); }
   .win11-explorer .navigation-sidebar separator.fenestra-sidebar-sep { background: #e5e5e5; }
   .win11-explorer label.win11-status { color: #1a1a1a; background: #ffffff; }
+  .win11-explorer .fenestra-page, .win11-explorer .fenestra-page > viewport { background: #ffffff; }
+  .win11-explorer .fenestra-page label { color: #1a1a1a; }
+  .win11-explorer .fenestra-section-header:hover { background: #f0f0f0; }
+  .win11-explorer .fenestra-section-header:focus-visible, .win11-explorer .fenestra-section-header:focus-within { border-color: #1a1a1a; }
+  .win11-explorer .fenestra-quick-grid > flowboxchild:hover { background: #f0f0f0; }
+  .win11-explorer .fenestra-quick-grid > flowboxchild:selected { background: #e5e5e5; }
+  .win11-explorer .fenestra-page .fenestra-tile-sub { color: #5f5f5f; }
+  .win11-explorer .fenestra-pill { background: #f0f0f0; border: 1px solid #e5e5e5; }
+  .win11-explorer .fenestra-pill:hover { background: #ebebeb; }
+  .win11-explorer .fenestra-pill.active, .win11-explorer .fenestra-pill:checked { background: @fenestra_accent_light; border-color: @fenestra_accent_light; }
+  .win11-explorer .fenestra-page .fenestra-col-title { color: #5f5f5f; border-right: 1px solid #e5e5e5; }
+  .win11-explorer .fenestra-details-rows > row:hover { background: #f0f0f0; }
+  .win11-explorer .fenestra-details-rows > row:selected { background: #e5e5e5; }
+  .win11-explorer .fenestra-page .fenestra-cell.dim { color: #5f5f5f; }
+  .win11-explorer .fenestra-group-header:hover { background: #f0f0f0; }
+  .win11-explorer .fenestra-drives > flowboxchild:hover { background: #f0f0f0; }
+  .win11-explorer .fenestra-drives > flowboxchild:selected { background: #e5e5e5; }
+  .win11-explorer .fenestra-page .fenestra-drive-free { color: #5f5f5f; }
+  .win11-explorer .fenestra-gallery-sep { background: #e5e5e5; }
+  .win11-explorer .fenestra-accent-button { background: @fenestra_accent_light; color: @fenestra_accent_light_fg; }
+  .win11-explorer .fenestra-accent-button:hover { background: shade(@fenestra_accent_light, 1.1); }
+  .win11-explorer .fenestra-photo-frame { background: #ffffff; }
+  .win11-explorer statuspage.fenestra-empty-folder .title { color: #1a1a1a; }
+  .win11-explorer columnview > header > button { border-right: 1px solid #e5e5e5; }
+  .win11-explorer .fenestra-crumb-sep { color: #5f5f5f; }
+  .win11-explorer popover.menu modelbutton > accelerator { color: #5f5f5f; }
+  .win11-explorer .fenestra-section-chevron:hover { background: #f0f0f0; }
+  .win11-explorer .fenestra-crumbs button label, .win11-explorer .fenestra-crumbs button.current-dir label { color: #1a1a1a; }
   .win11-explorer .win11-commandbar image, .win11-explorer .win11-navigation image, .win11-explorer image.fenestra-pin, .win11-explorer .win11-cmd-chevron { -gtk-icon-filter: invert(0.9); }
 }
 /* ---- end Fenestra light mode ---- */

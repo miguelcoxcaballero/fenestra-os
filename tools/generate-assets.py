@@ -292,7 +292,9 @@ MENU = {'cancel': 'dismiss_16_regular', 'commandprompt': 'window_console_20_regu
         'rename': 'rename_16_regular', 'selectall': 'select_all_on_16_regular', 'settings': 'settings_16_regular',
         'share': 'share_16_regular', 'sort': 'arrow_sort_16_regular', 'stop': 'stop_16_regular',
         'tvmonitor': 'desktop_16_regular', 'undo': 'arrow_undo_16_regular', 'viewall': 'grid_16_regular',
-        'zipfolder': 'folder_zip_16_regular'}
+        'zipfolder': 'folder_zip_16_regular', 'view': 'grid_16_regular', 'groupby': 'text_bullet_list_ltr_16_regular',
+        'new': 'add_circle_16_regular', 'properties': 'wrench_16_regular', 'copypath': 'clipboard_link_16_regular',
+        'openwith': 'apps_16_regular', 'terminal': 'window_console_20_regular'}
 
 
 def gen_menu():
@@ -306,13 +308,38 @@ EXPLORER = {'add': 'add_circle_16_regular', 'more': 'more_horizontal_16_regular'
             'view': 'apps_list_20_regular', 'sort': 'arrow_sort_16_regular', 'filter': 'filter_16_regular',
             'details': 'panel_right_16_regular', 'share': 'share_16_regular', 'home': 'home_16_regular',
             'chevron-down': 'chevron_down_12_regular', 'chevron-right': 'chevron_right_12_regular',
-            'search': 'search_16_regular', 'pin': 'pin_12_regular'}
+            'search': 'search_16_regular', 'pin': 'pin_12_regular', 'thispc': 'desktop_16_regular',
+            'gallery': 'image_multiple_16_regular', 'collection': 'folder_multiple_16_regular',
+            'recent': 'clock_16_regular', 'favorite': 'star_16_regular', 'shared': 'people_16_regular',
+            'addfolder': 'folder_add_20_regular'}
+
+# Empty-state illustrations for the Explorer Home and Gallery pages (own drawings).
+RECENT_EMPTY = '''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="104" viewBox="0 0 128 104">
+<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d9d9d9"/></linearGradient>
+<linearGradient id="c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#78d1f8"/><stop offset="1" stop-color="#3aa0e0"/></linearGradient></defs>
+<g transform="rotate(-28 50 60)"><rect x="18" y="26" width="58" height="66" rx="3" fill="#c9c9c9"/><rect x="24" y="20" width="58" height="66" rx="3" fill="url(#p)"/>
+<rect x="32" y="32" width="18" height="16" rx="2" fill="#a8a8a8"/><rect x="32" y="56" width="40" height="3" rx="1.5" fill="#b8b8b8"/><rect x="32" y="64" width="34" height="3" rx="1.5" fill="#b8b8b8"/></g>
+<circle cx="92" cy="50" r="27" fill="url(#c)"/><path d="M92 33v19l12 8" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>'''
+
+
+def _photo(x, w, sky0, sky1, hill, star):
+    return (f'<g><clipPath id="k{x}"><rect x="{x}" y="0" width="{w}" height="124" rx="7"/></clipPath><g clip-path="url(#k{x})">'
+            f'<linearGradient id="s{x}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{sky0}"/><stop offset="1" stop-color="{sky1}"/></linearGradient>'
+            f'<rect x="{x}" y="0" width="{w}" height="124" fill="url(#s{x})"/>'
+            + ''.join(f'<circle cx="{x + (i * 37) % w}" cy="{(i * 23) % 60 + 6}" r="0.8" fill="#fff" opacity="{star}"/>' for i in range(18)) +
+            f'<path d="M{x} 124 L{x} 100 Q{x + w * .3} 92 {x + w * .45} 70 Q{x + w * .55} 50 {x + w * .62} 62 Q{x + w * .8} 84 {x + w} 96 L{x + w} 124Z" fill="{hill}"/></g></g>')
+
+
+GALLERY_EMPTY = ('<svg xmlns="http://www.w3.org/2000/svg" width="348" height="124" viewBox="0 0 348 124">'
+                 + _photo(0, 124, '#3b3550', '#8b6c7a', '#2a2438', 1) + _photo(136, 212, '#4b4e6e', '#c79a8a', '#8a6250', .6) + '</svg>')
 
 
 def gen_explorer():
     # File Explorer chrome (Fluent UI System Icons, MIT): white glyphs for the dark command/address bars.
     for name, icon in EXPLORER.items():
         write(f'menu-icons/win11-explorer-{name}.svg', fluent(icon, '#ffffff', 16))
+    write('menu-icons/win11-explorer-recent-empty.svg', RECENT_EMPTY)
+    write('menu-icons/win11-explorer-gallery-empty.svg', GALLERY_EMPTY)
 
 
 STEPS = {'osd': gen_osd, 'explorer': gen_explorer, 'menu': gen_menu, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,

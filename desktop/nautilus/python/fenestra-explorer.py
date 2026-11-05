@@ -5,9 +5,9 @@ import os
 gi.require_version('Nautilus', '4.1')
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gio, GLib, GObject, Gtk, Nautilus
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Nautilus
 from fenestra_views import FenestraViews
-from fenestra_sidebar import tr
+from fenestra_sidebar import tr, GALLERY
 
 
 def walk(widget):
@@ -18,12 +18,37 @@ def walk(widget):
         child = child.get_next_sibling()
 
 
+# Icons for menu items that come without one (extension items, generated "Open With <app>").
+LABEL_ICONS = {'Copy as path': 'win11-menu-copypath', 'Copiar como ruta de acceso': 'win11-menu-copypath',
+               'Open': 'win11-menu-openfile', 'Abrir': 'win11-menu-openfile'}
+
+
 def decorate_menu(widget):
     for button in walk(widget):
         if GObject.type_name(button.__gtype__) != 'GtkModelButton':
             continue
         if button.get_property('iconic'):
             continue
+        text = (button.get_property('text') or '').replace('_', '')
+        accel = button.get_property('accel') or ''
+        # Nautilus' default-application item ("Open With Text Editor", Return) is Windows' plain "Open".
+        if accel == 'Return' and text and text != tr('Open'):
+            button.set_property('text', tr('Open'))
+            text = tr('Open')
+        if text in ('Scripts', 'Scripts'.replace('Scripts', 'Guiones')):
+            scripts = os.path.join(GLib.get_user_data_dir(), 'nautilus', 'scripts')
+            # Windows has no Scripts entry; keep it only when the user has scripts.
+            button.set_visible(bool(os.path.isdir(scripts) and os.listdir(scripts)))
+        if button.get_property('icon') is None and text in LABEL_ICONS:
+            button.set_property('icon', Gio.ThemedIcon.new(LABEL_ICONS[text]))
+        for child in walk(button):
+            if isinstance(child, Gtk.Label):
+                if child.get_css_name() == 'accelerator':
+                    if 'Return' in child.get_label():
+                        child.set_label(child.get_label().replace('Return', 'Enter'))
+                else:
+                    child.set_hexpand(True)
+                    child.set_xalign(0)
         icon = button.get_property('icon')
         # GTK receives these icons from GMenu but hides them beside text.
         # Reveal its existing image, leaving action, focus and shortcuts native.
@@ -35,6 +60,20 @@ def decorate_menu(widget):
                 image.set_visible(True)
                 image.set_hexpand(False)
                 image.add_css_class('windows-menu-icon')
+
+
+def _popover_mapped(menu):
+    decorate_menu(menu)
+    # Submenu pages are built lazily; decorate again once they exist.
+    GLib.idle_add(lambda: (decorate_menu(menu), GLib.SOURCE_REMOVE)[1])
+
+
+def _map_hook(widget):
+    if isinstance(widget, Gtk.PopoverMenu) and not getattr(widget, '_windows_menu', False):
+        widget._windows_menu = True
+        widget.connect('map', _popover_mapped)
+        _popover_mapped(widget)
+    return True
 
 
 class TabStripSizer:
@@ -74,6 +113,9 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
     def __init__(self):
         super().__init__()
         GLib.idle_add(self._start)
+        # Every popover menu (context menus are recreated per popup) gets Windows icons.
+        GObject.type_class_ref(Gtk.Widget)
+        GObject.add_emission_hook(Gtk.Widget, 'map', _map_hook)
 
     def _start(self):
         app = Gio.Application.get_default()
@@ -157,6 +199,8 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
                 name = {'trash':'user-trash', 'recent':'document-open-recent', 'starred':'starred',
                         'network':'network-workgroup', 'computer':'computer'}.get(location.get_uri_scheme(), 'folder-remote')
         page.set_icon(Gio.ThemedIcon.new('hwin' if name == 'folder-home' else name))
+        if location and location.get_uri_scheme() == 'computer':
+            page.set_title(tr('This PC'))
         window = slot.get_root()
         if window:
             title = tr('Home') if location and location.get_path() == os.path.expanduser('~') else page.get_title()
@@ -164,6 +208,11 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
                 page.set_title(tr('Home'))
             GLib.idle_add(lambda: (self._search_label(window, title), GLib.SOURCE_REMOVE)[1])
         if location and location.get_uri_scheme()=='computer' and page.get_title()!=tr('This PC'):page.set_title(tr('This PC'))
+        if location and location.get_path() == str(GALLERY):
+            page.set_title(tr('Gallery'))
+            page.set_icon(Gio.ThemedIcon.new('folder-pictures'))
+            if window:
+                GLib.idle_add(lambda: (self._search_label(window, tr('Gallery')), GLib.SOURCE_REMOVE)[1])
 
     def _menus(self):
         app = Gio.Application.get_default()
@@ -174,7 +223,13 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
 
     def get_file_items(self, *args):
         GLib.idle_add(self._menus)
-        return []
+        files = args[-1] if args else []
+        paths = [f.get_location().get_path() for f in files or [] if f.get_location().get_path()]
+        if not paths:
+            return []
+        item = Nautilus.MenuItem(name='FenestraExplorer::copy-path', label=tr('Copy as path'))
+        item.connect('activate', lambda *_a: Gdk.Display.get_default().get_clipboard().set('\n'.join(f'"{p}"' for p in paths)))
+        return [item]
 
     def get_background_items(self, *args):
         GLib.idle_add(self._menus)

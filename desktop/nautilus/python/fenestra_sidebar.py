@@ -7,7 +7,7 @@ _L = {
     'es': {'New': 'Nuevo', 'Sort': 'Ordenar', 'View': 'Ver', 'Filter': 'Filtrar', 'Details': 'Detalles',
            'Search': 'Buscar', 'Search %s': 'Buscar en %s', 'New folder': 'Nueva carpeta', 'Cut': 'Cortar',
            'Copy': 'Copiar', 'Paste': 'Pegar', 'Rename': 'Cambiar nombre', 'Share': 'Compartir', 'Delete': 'Eliminar',
-           'See more': 'Ver más', 'Home': 'Inicio', 'Gallery': 'Galería', 'This PC': 'Este equipo', 'Network': 'Red', 'Desktop': 'Escritorio',
+           'See more': 'Ver más', 'Copy as path': 'Copiar como ruta de acceso', 'Open': 'Abrir', 'Home': 'Inicio', 'Gallery': 'Galería', 'This PC': 'Este equipo', 'Network': 'Red', 'Desktop': 'Escritorio',
            'Downloads': 'Descargas', 'Documents': 'Documentos', 'Pictures': 'Imágenes', 'Music': 'Música', 'Videos': 'Vídeos'},
 }
 

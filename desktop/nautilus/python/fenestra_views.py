@@ -3,10 +3,12 @@ from gi.repository import Gio, GLib, GObject, Gtk, Pango
 from pathlib import Path
 import json
 from fenestra_sidebar import FenestraSidebar, GALLERY
+from fenestra_pages import SpecialPages, gallery_folders
 
 from fenestra_sidebar import _L, tr
 _L.setdefault('es', {}).update({'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
-    'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar', 'Compact view': 'Vista compacta', 'View': 'Ver', '1 item': '1 elemento', '%d items': '%d elementos'})
+    'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar', 'Compact view': 'Vista compacta', 'View': 'Ver', '1 item': '1 elemento', '%d items': '%d elementos',
+    'Date modified': 'Fecha de modificación', 'This folder is empty.': 'Esta carpeta está vacía.', 'Collection': 'Colección', 'Add a folder': 'Agregar una carpeta'})
 VIEWS = [(k, tr(v)) for k, v in [('extra-large','Extra large icons'),('large','Large icons'),('medium','Medium icons'),('small','Small icons'),('list','List'),('details','Details'),('tiles','Tiles'),('content','Content')]]
 
 def walk(w):
@@ -31,23 +33,78 @@ def _count_items(location):
 
 class FenestraViews:
     def __init__(self, window):
-        self.window=window;self.mode='details';self.compact=False;self.pending=0;self.changing=False
+        self.window=window;self.mode='details';self.compact=False;self.pending=0;self.changing=False;self.special=None
         self.sidebar=FenestraSidebar(window,walk)
         self.initial=True
+        self.pages=SpecialPages(window,walk,kind)
+        self.folders={}
         self.config=Path(GLib.get_user_config_dir())/'fenestra-explorer/view.json'
         try:
-            state=json.loads(self.config.read_text());self.mode=state.get('view','details');self.compact=bool(state.get('compact',False))
-            if self.mode not in dict(VIEWS):self.mode='details'
-        except (OSError,ValueError,TypeError):pass
+            state=json.loads(self.config.read_text());self.compact=bool(state.get('compact',False))
+            self.folders={k:v for k,v in (state.get('folders') or {}).items() if v in dict(VIEWS)}
+        except (OSError,ValueError,TypeError,AttributeError):pass
         self.action=Gio.SimpleAction.new_stateful('windows-view',GLib.VariantType.new('s'),GLib.Variant('s',self.mode))
-        self.action.connect('activate',lambda a,v:self.select(v.get_string()))
+        self.action.connect('activate',lambda a,v:self.select(v.get_string(),remember=True))
         window.add_action(self.action)
-        self.density=Gio.SimpleAction.new_stateful('windows-row-spacing',None,GLib.Variant('b',not self.compact))
+        self.order=Gio.SimpleAction.new_stateful('fenestra-sort-order',GLib.VariantType.new('s'),GLib.Variant('s','ascending'))
+        self.order.connect('activate',self.sort_order);window.add_action(self.order)
+        group=Gio.SimpleAction.new_stateful('fenestra-group',GLib.VariantType.new('s'),GLib.Variant('s','none'))
+        group.connect('activate',lambda a,v:a.set_state(v));window.add_action(group)
+        add=Gio.SimpleAction.new('fenestra-gallery-add',None)
+        add.connect('activate',lambda *_:self.pages.page('gallery').add_folder());window.add_action(add)
+        opener=Gio.SimpleAction.new('fenestra-open',GLib.VariantType.new('s'))
+        opener.connect('activate',lambda a,v:self.pages._open(v.get_string()));window.add_action(opener)
+        self.density=Gio.SimpleAction.new_stateful('windows-row-spacing',None,GLib.Variant('b',self.compact))
         self.density.connect('activate',self.toggle_compact);window.add_action(self.density)
         window.connect('notify::active-slot',lambda *_:self.queue())
         window.connect('destroy',self.destroy)
         if self.compact:window.add_css_class('win11-compact')
+        self._width=0
+        window.add_tick_callback(self._tick)
         self.queue()
+
+    def _tick(self,window,_clock):
+        if self.window is None:return False
+        width=window.get_width()
+        if width and width!=self._width:
+            self._width=width;self._responsive(width)
+        return True
+
+    def _responsive(self,width):
+        """Explorer shrinks the search box and folds command-bar buttons into "See more"
+        instead of letting the window's minimum width grow past the screen."""
+        for w in walk(self.window):
+            if w.has_css_class('win11-search'):
+                w.set_size_request(max(150,min(260,int((width-560)*0.45))),-1)
+                break
+        bar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
+        if not bar:return
+        children=[];c=bar.get_first_child()
+        while c:children.append(c);c=c.get_next_sibling()
+        clip=[c for c in children if isinstance(c,Gtk.Actionable) and (c.get_action_name() or '') in
+              ('view.cut','view.copy','view.paste','view.rename','view.open-with-other-application','view.move-to-trash')]
+        seps=[c for c in children if c.has_css_class('win11-cmd-separator')]
+        collapse=width<820
+        for c in clip:c.set_visible(not collapse)
+        if seps:seps[0].set_visible(not collapse)
+        for c in children:
+            if isinstance(c,Gtk.Actionable) and c.get_action_name()=='slot.search-visible':
+                c.set_visible(width>=700 and self.special not in ('computer','gallery'))
+            if isinstance(c,Gtk.Actionable) and c.get_action_name()=='view.current-directory-properties':
+                for lab in walk(c):
+                    if isinstance(lab,Gtk.Label):lab.set_visible(width>=900)
+        more=next((c for c in children if isinstance(c,Gtk.MenuButton) and c.get_icon_name()=='win11-explorer-more'),None)
+        model=more.get_menu_model() if more else None
+        if isinstance(model,Gio.Menu):
+            has=getattr(self.window,'_fenestra_folded',False)
+            if collapse and not has:
+                section=Gio.Menu()
+                for label,action in (('Cut','view.cut'),('Copy','view.copy'),('Paste','view.paste'),('Rename','view.rename'),
+                                     ('Share','view.open-with-other-application'),('Delete','view.move-to-trash')):
+                    section.append(tr(label),action)
+                model.insert_section(0,None,section);self.window._fenestra_folded=True
+            elif not collapse and has:
+                model.remove(0);self.window._fenestra_folded=False
 
     def destroy(self,*_):
         if self.pending:GLib.source_remove(self.pending)
@@ -58,15 +115,27 @@ class FenestraViews:
 
     def slot(self):return self.window.get_property('active-slot') if self.window else None
 
-    def select(self,mode):
+    def wanted(self,location):
+        """Windows keeps a view per folder: Details by default, Large icons for Pictures/Videos."""
+        uri=location.get_uri()
+        if uri in self.folders:return self.folders[uri]
+        media=[GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES),GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_VIDEOS)]+gallery_folders()
+        return 'large' if location.get_path() and location.get_path() in media else 'details'
+
+    def save(self):
+        try:
+            self.config.parent.mkdir(parents=True,exist_ok=True)
+            self.config.write_text(json.dumps({'compact':self.compact,'folders':self.folders}))
+        except OSError:pass
+
+    def select(self,mode,remember=False):
         if mode not in dict(VIEWS) or self.changing:return
         slot=self.slot()
         if not slot:return
         self.mode=mode
-        try:
-            self.config.parent.mkdir(parents=True,exist_ok=True)
-            self.config.write_text(json.dumps({'view':self.mode,'compact':self.compact}))
-        except OSError:pass
+        location=slot.get_property('location')
+        if remember and location and not self.special:
+            self.folders[location.get_uri()]=mode;self.save()
         for name,_ in VIEWS:self.window.remove_css_class('windows-view-'+name)
         self.window.add_css_class('windows-view-'+mode)
         self.action.set_state(GLib.Variant('s',mode));self.changing=True
@@ -87,15 +156,121 @@ class FenestraViews:
         self.changing=False;self.queue();return False
 
     def toggle_compact(self,*_):
-        self.compact=not self.compact;self.density.set_state(GLib.Variant('b',not self.compact))
+        self.compact=not self.compact;self.density.set_state(GLib.Variant('b',self.compact));self.save()
         self.window.add_css_class('win11-compact') if self.compact else self.window.remove_css_class('win11-compact')
         self.select(self.mode)
 
-    def _status(self,slot):
+    def sort_order(self,action,value):
+        action.set_state(value)
+        slot=self.slot()
+        view=next((w for w in walk(slot) if kind(w)=='NautilusFilesView'),None) if slot else None
+        key=getattr(self,'sort_key','name')
+        if view:view.activate_action('view.sort',GLib.Variant('(sb)',(key,value.get_string()=='descending')))
+
+    def _sort_state(self,slot):
+        cv=next((w for w in walk(slot) if isinstance(w,Gtk.ColumnView)),None)
+        sorter=cv.get_sorter() if cv else None
+        column=sorter.get_primary_sort_column() if sorter else None
+        if column:
+            title=column.get_title() or ''
+            self.sort_key={tr('Name'):'name','Name':'name',tr('Date modified'):'date_modified','Size':'size',tr('Size'):'size','Type':'type',tr('Type'):'type'}.get(title,'name')
+            descending=sorter.get_primary_sort_order()==Gtk.SortType.DESCENDING
+            self.order.set_state(GLib.Variant('s','descending' if descending else 'ascending'))
+
+    def _commandbar(self,special):
+        bar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
+        if not bar:return
+        for w in walk(bar):
+            if isinstance(w,Gtk.Actionable) and w.get_action_name()=='slot.search-visible':
+                w.set_visible(special not in ('computer','gallery') and (not self._width or self._width>=700))
+        sort=getattr(self.window,'_windows_sort_menu',None)
+        if sort:sort.set_sensitive(special!='gallery')
+        coll=getattr(self.window,'_fenestra_collection',None)
+        if coll is None and special=='gallery':
+            coll=Gtk.MenuButton();coll.add_css_class('win11-cmd-text');coll.add_css_class('flat')
+            contents=Gtk.Box(spacing=8)
+            image=Gtk.Image.new_from_icon_name('win11-explorer-collection');image.set_pixel_size(16)
+            lab=Gtk.Label(label=tr('Collection'));lab.add_css_class('win11-cmd-label')
+            chev=Gtk.Image.new_from_icon_name('win11-explorer-chevron-down');chev.set_pixel_size(8);chev.add_css_class('win11-cmd-chevron')
+            contents.append(image);contents.append(lab);contents.append(chev);coll.set_child(contents)
+            control=next((a for a in walk(bar) if kind(a)=='NautilusViewControls'),None)
+            if control:bar.insert_child_after(coll,control)
+            else:bar.append(coll)
+            self.window._fenestra_collection=coll
+        if coll is not None:
+            coll.set_visible(special=='gallery')
+            if special=='gallery':
+                menu=Gio.Menu();folders=Gio.Menu()
+                for path in gallery_folders():
+                    item=Gio.MenuItem.new(GLib.path_get_basename(path),None)
+                    item.set_action_and_target_value('win.fenestra-open',GLib.Variant('s',Gio.File.new_for_path(path).get_uri()))
+                    folders.append_item(item)
+                menu.append_section(None,folders);menu.append(tr('Add a folder'),'win.fenestra-gallery-add')
+                coll.set_menu_model(menu)
+
+    def _crumbs(self,special=None):
+        bar=next((w for w in walk(self.window) if kind(w)=='NautilusPathBar'),None)
+        if not bar:return
+        boxes=[]
+        for w in walk(bar):
+            if isinstance(w,Gtk.Label) and w.has_css_class('dim-label') and w.get_label()=='/' :
+                w.set_label('›');w.add_css_class('fenestra-crumb-sep')
+            if isinstance(w,Gtk.Label) and w.has_css_class('fenestra-crumb-tail'):
+                w.get_parent().remove(w)
+        crumbs=[w for w in walk(bar) if isinstance(w,Gtk.Button) and not isinstance(w.get_parent(),Gtk.MenuButton) and isinstance(w.get_parent(),Gtk.Box)]
+        crumbs=[c for c in crumbs if kind(c)=='GtkButton' and c.get_ancestor(Gtk.ScrolledWindow)]
+        if not crumbs:return
+        for c in crumbs:
+            for lab in walk(c):
+                if isinstance(lab,Gtk.Label) and not getattr(lab,'_fenestra_weight',False):
+                    lab._fenestra_weight=True
+                    attrs=Pango.AttrList();attrs.insert(Pango.attr_weight_new(Pango.Weight.NORMAL));lab.set_attributes(attrs)
+            if c.get_parent():c.get_parent().set_visible(True)
+        if special in ('gallery','computer'):
+            # Virtual locations in Windows: one crumb (icon › name), no filesystem path.
+            for c in crumbs[:-1]:c.get_parent().set_visible(False)
+            for w in walk(crumbs[-1].get_parent()):
+                if isinstance(w,Gtk.Label) and w.get_label()=='›' and not w.is_ancestor(crumbs[-1]):w.set_visible(False)
+            box=crumbs[-1].get_child()
+            if isinstance(box,Gtk.Box):
+                lab=next((c for c in walk(box) if isinstance(c,Gtk.Label) and not c.has_css_class('fenestra-crumb-sep')),None)
+                if lab:lab.set_label(tr('Gallery') if special=='gallery' else tr('This PC'))
+                if not next((c for c in walk(box) if isinstance(c,Gtk.Image)),None):
+                    box.prepend(Gtk.Image.new_from_icon_name('win11-explorer-gallery'))
+            crumbs=crumbs[-1:]
+        first=crumbs[0].get_child()
+        image=None
+        if isinstance(first,Gtk.Box):
+            image=next((c for c in walk(first) if isinstance(c,Gtk.Image)),None)
+            if image and not getattr(first,'_fenestra_lead',False):
+                first._fenestra_lead=True
+                sep=Gtk.Label(label='›');sep.add_css_class('fenestra-crumb-sep');sep.add_css_class('fenestra-crumb-lead')
+                first.insert_child_after(sep,image)
+        bar.add_css_class('fenestra-crumbs')
+        if isinstance(first,Gtk.Box) and image:
+            name=next((c.get_label() for c in walk(first) if isinstance(c,Gtk.Label) and not c.has_css_class('fenestra-crumb-sep')),'')
+            glyph={tr('Home'):'win11-explorer-home',tr('This PC'):'win11-explorer-thispc',tr('Gallery'):'win11-explorer-gallery'}.get(name)
+            if glyph:image.set_from_icon_name(glyph);image.set_pixel_size(16);image.set_visible(True);image.add_css_class('fenestra-mono')
+        last=crumbs[-1].get_child()
+        if isinstance(last,Gtk.Box):
+            tail=Gtk.Label(label='›');tail.add_css_class('fenestra-crumb-sep');tail.add_css_class('fenestra-crumb-tail')
+            last.append(tail)
+
+    def _empty(self,slot):
+        for w in walk(slot):
+            if kind(w)=='AdwStatusPage' and w.has_css_class('view'):
+                if w.get_title()!=tr('This folder is empty.') and w.get_title():
+                    w._fenestra_orig=True
+                if getattr(w,'_fenestra_orig',False):
+                    w.set_icon_name(None);w.set_paintable(None);w.set_description(None)
+                    w.set_title(tr('This folder is empty.'));w.add_css_class('fenestra-empty-folder')
+                    w.set_valign(Gtk.Align.START)
+
+    def _status(self,slot,special=None):
         label=next((w for w in walk(self.window) if isinstance(w,Gtk.Label) and w.has_css_class('win11-status')),None)
         if not label: return
         loc=slot.get_property('location') if slot else None
-        n=_count_items(loc) if loc and loc.get_path() else None
+        n=self.pages.count(special) if special else (_count_items(loc) if loc and loc.get_path() else None)
         label.set_label('' if n is None else (tr('1 item') if n==1 else tr('%d items') % n))
 
     def refresh(self):
@@ -104,19 +279,27 @@ class FenestraViews:
         slot=self.slot()
         if not slot:return False
         self.sidebar.refresh()
-        location=slot.get_property('location')
-        uri=location.get_uri() if location else None
-        if uri!=getattr(self,'_last_sidebar_uri',None):
-            self._last_sidebar_uri=uri
-            if uri==GALLERY.as_uri():
-                self.initial=False;self.select('large');return False
-        if self.initial:
-            self.initial=False;self.select(self.mode);return False
         if not getattr(slot,'_windows_views_signals',False):
             slot._windows_views_signals=True
             slot.connect('notify::loading',self.queue)
             slot.connect('notify::location',self.queue)
-        self._status(slot)
+        location=slot.get_property('location')
+        uri=location.get_uri() if location else None
+        self.special=self.pages.update(slot)
+        self._commandbar(self.special)
+        self._crumbs(self.special)
+        if uri!=getattr(self,'_last_view_uri',None) and location and not self.special:
+            self._last_view_uri=uri
+            mode=self.wanted(location)
+            view=next((w for w in walk(slot) if kind(w) in ('NautilusGridView','NautilusListView')),None)
+            matches=view is not None and (kind(view)=='NautilusListView')==(mode=='details')
+            if self.initial or mode!=self.mode or not matches:
+                self.initial=False;self.select(mode);return False
+        elif self.special:
+            self._last_view_uri=None
+        self._status(slot,self.special)
+        if not self.special:
+            self._empty(slot);self._sort_state(slot)
         for w in walk(self.window):
             if isinstance(w,Gtk.PopoverMenu):
                 model=w.get_menu_model()
@@ -162,9 +345,12 @@ class FenestraViews:
                     column=columns.get_item(index)
                     title=column.get_title() or ''
                     if title=='':column.set_visible(False)
+                    if title in ('Modified','Date Modified','Modificado','Fecha de modificación'):
+                        column.set_title(tr('Date modified'));title=tr('Date modified')
                     if not getattr(column,'_windows_width_set',False):
-                        width={'Modified':160,'Date Modified':160,'Modificado':160,'Fecha de modificación':160,'Type':120,'Tipo':120,'Size':80,'Tamaño':80}.get(title)
-                        if width:column.set_fixed_width(width);column.set_expand(False)
+                        # Windows 11 Details column widths.
+                        width={'Name':248,'Nombre':248,tr('Date modified'):144,'Type':120,'Tipo':120,'Size':80,'Tamaño':80}.get(title)
+                        if width:column.set_fixed_width(width);column.set_expand(False);column.set_resizable(True)
                         column._windows_width_set=True
             if kind(w)=='GtkGridView':
                 # Only alter widgets inside the active slot (is_ancestor is reversed).
@@ -185,7 +371,12 @@ class FenestraViews:
         mode=self.mode
         if mode in ('extra-large','large','medium'):
             for label in walk(cell):
-                if isinstance(label,Gtk.Label) and label.has_css_class('caption'):label.hide()
+                if isinstance(label,Gtk.Label) and label.has_css_class('caption'):
+                    label.set_visible(False)
+                    if not getattr(label,'_fenestra_hidden',False):
+                        # Nautilus re-shows captions when file info updates; icon views show the name only.
+                        label._fenestra_hidden=True
+                        label.connect('notify::visible',lambda l,_p:l.set_visible(False) if l.get_visible() and self.mode in ('extra-large','large','medium') else None)
             return
         if mode=='details':return
         horizontal=mode in ('small','list','tiles','content')
