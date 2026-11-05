@@ -15,13 +15,16 @@ export const RecentFilesManager = class ArcMenuRecentFilesManager {
     }
 
     getRecentFiles() {
+        // A brand-new account has no recently-used.xbel yet. Fenestra: check for it
+        // instead of e.matches(code), which throws on GJS 1.86 (needs domain + code)
+        // and made the whole Start menu layout fail to build on first login.
+        if (!GLib.file_test(this._recentFile, GLib.FileTest.EXISTS))
+            return [];
         try {
             this._bookmarksFile.load_from_file(this._recentFile);
         } catch (e) {
-            if (!e.matches(GLib.BookmarkFileError.FILE_NOT_FOUND)) {
-                console.log(`Could not open recent files: ${e.message}`);
-                return [];
-            }
+            console.log(`Could not open recent files: ${e.message}`);
+            return [];
         }
 
         const recentFilesUris = this._bookmarksFile.get_uris();
