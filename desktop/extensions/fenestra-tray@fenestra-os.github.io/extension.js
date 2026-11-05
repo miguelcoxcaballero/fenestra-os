@@ -16,6 +16,7 @@ import {Appearance} from './appearance.js';
 import {installWeatherWidget} from './weatherWidget.js';
 import {installTaskbarSearch} from './taskbarSearch.js';
 import {syncCaptionButtons} from './captionSync.js';
+import {installFlyoutGap} from './flyoutGap.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -44,6 +45,7 @@ export default class WindowsTrayTypography extends Extension {
         this._injections.overrideMethod(PowerIndicator.prototype,'_sync',original=>function(...args){original.apply(this,args);ext._power(this);});
         this._date(Main.panel.statusArea.dateMenu);
         this._stopTrayLayout=installTrayLayout(this._injections);
+        try{installFlyoutGap(this._injections);}catch(e){logError(e,'Fenestra flyout gap');}
         this._stopPress=installPressAnimation();
         this._stopOverview=installOverviewBlock(this._injections);
         this._stopPreview=installPreviewStyle();

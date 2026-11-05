@@ -132,3 +132,10 @@
 .arcmenu-menu .windows-search-layout .win-search-top-name { font-size:12px; font-weight:400; color:#ffffff; }
 #uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-top-name { color:#1a1a1a; }
 #uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-top-app:hover, #uiGroup.fenestra-light .arcmenu-menu .windows-search-layout .win-search-top-app:focus { background-color:rgba(0,0,0,0.042); }
+
+/* Start and Search boxes: no accent underline or focus ring when focused (as in
+   the reference, the box only shows the caret). */
+.arcmenu-menu StEntry:focus, .arcmenu-menu #ArcMenuSearchEntry:focus, .arcmenu-menu .arcmenu-search-entry:focus { box-shadow: none !important; }
+.arcmenu-menu .arcmenu-search-entry:focus { border-color: rgba(255,255,255,0.06) !important; }
+#uiGroup.fenestra-light .arcmenu-menu .arcmenu-search-entry:focus { border-color: rgba(0,0,0,0.06) !important; }
+
