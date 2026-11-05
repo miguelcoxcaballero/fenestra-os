@@ -99,6 +99,8 @@ for n in z.namelist():
         open(os.path.join(sys.argv[2], base), 'wb').write(z.read(n))
 PY
 
+install -Dm755 "$D/bin/gnome-system-monitor" "$OUT/usr/local/bin/gnome-system-monitor"
+
 log "Fenestra apps"
 for app in "$REPO"/apps/*/; do
     if [ -x "$app/install.sh" ]; then
