@@ -31,8 +31,8 @@
 }
 .arcmenu-menu .windows-search-layout .win-search-filter .win-search-row-content { spacing:0; }
 .arcmenu-menu .windows-search-layout .win-search-filter:hover { background-color:rgba(255,255,255,.09); }
-.arcmenu-menu .windows-search-layout .win-search-filter:checked { background-color:#a8bea6; color:#0f1a14; border:1px solid #a8bea6 !important; box-shadow:none !important; }
-.arcmenu-menu .windows-search-layout .win-search-filter:checked StLabel { color:#0f1a14; }
+.arcmenu-menu .windows-search-layout .win-search-filter:checked { background-color:#4cc2ff; color:#000000; border:1px solid #4cc2ff !important; box-shadow:none !important; }
+.arcmenu-menu .windows-search-layout .win-search-filter:checked StLabel { color:#000000; }
 
 /* Results: Best match column + preview pane (Windows 11 metrics, logical px). */
 .arcmenu-menu .windows-search-layout .win-results { padding:23px 32px 18px 25px; spacing:22px; }
@@ -49,7 +49,7 @@
 .arcmenu-menu .windows-search-layout .win-result-content { spacing:0; }
 .arcmenu-menu .windows-search-layout .win-result-indicator { width:3px; height:16px; border-radius:2px; margin-right:8px; background-color:transparent; }
 .arcmenu-menu .windows-search-layout .win-result-best .win-result-indicator { margin-right:11px; }
-.arcmenu-menu .windows-search-layout .win-result:selected .win-result-indicator { background-color:#a8bba7; }
+.arcmenu-menu .windows-search-layout .win-result:selected .win-result-indicator { background-color:#4cc2ff; }
 .arcmenu-menu .windows-search-layout .win-result-icon { width:40px; height:40px; border-radius:4px; background-color:rgba(255,255,255,.075); }
 .arcmenu-menu .windows-search-layout .win-result-icon-plain { width:32px; height:32px; }
 .arcmenu-menu .windows-search-layout .win-result-text { margin-left:11px; spacing:1px; }

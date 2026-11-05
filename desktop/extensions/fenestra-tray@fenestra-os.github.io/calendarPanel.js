@@ -4,7 +4,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 const _LANG=(GLib.getenv('LANGUAGE')||GLib.getenv('LC_MESSAGES')||GLib.getenv('LANG')||'en').split(':')[0].slice(0,2);
-const _ES={'Decrease duration':'Reducir duración','Increase duration':'Aumentar duración','Focus':'Concentración'};
+const _ES={'Decrease duration':'Reducir duración','Increase duration':'Aumentar duración','Focus':'Concentración','Notifications':'Notificaciones','Do not disturb':'No molestar','No new notifications':'Sin notificaciones nuevas'};
 const _t=t=>(_LANG==='es'&&_ES[t])||t;
 const box=style=>new St.BoxLayout({vertical:true,style_class:style,x_expand:true});
 const button=(icon,action,name)=>{const b=new St.Button({style_class:'windows-panel-small-button',can_focus:true,accessible_name:name});b.set_child(new St.Icon({icon_name:icon,icon_size:16}));b.connect('clicked',action);return b;};
@@ -16,12 +16,12 @@ export function installCalendarPanel(){
  d.menu.actor.add_style_class_name('windows-calendar-menu');
  column.layout_manager=new Clutter.BoxLayout({orientation:Clutter.Orientation.VERTICAL});column.add_style_class_name('windows-calendar-card');
  const notifications=box('windows-notification-card');area.remove_child(list);area.insert_child_at_index(notifications,0);
- const head=new St.BoxLayout({style_class:'windows-notification-heading'}),title=new St.Label({text:'Notificaciones',x_expand:true,y_align:Clutter.ActorAlign.CENTER});head.add_child(title);
- const dnd=button('notifications-disabled-symbolic',()=>settings.set_boolean('show-banners',!settings.get_boolean('show-banners')),'No molestar');head.add_child(dnd);notifications.add_child(head);notifications.add_child(list);
+ const head=new St.BoxLayout({style_class:'windows-notification-heading'}),title=new St.Label({text:_t('Notifications'),x_expand:true,y_align:Clutter.ActorAlign.CENTER});head.add_child(title);
+ const dnd=button('notifications-disabled-symbolic',()=>settings.set_boolean('show-banners',!settings.get_boolean('show-banners')),_t('Do not disturb'));head.add_child(dnd);notifications.add_child(head);notifications.add_child(list);
  const syncDnd=()=>dnd.set_checked(!settings.get_boolean('show-banners'));const ds=settings.connect('changed::show-banners',syncDnd);syncDnd();
  list._placeholder._icon.hide();
  const oldPlaceholder=list._placeholder._label.text;
- list._placeholder._label.text='Sin notificaciones nuevas';
+ list._placeholder._label.text=_t('No new notifications');
  const cal=d._calendar;
  const oldMonthAlign=cal._monthLabel.x_align;
  const polishMonth=()=>{

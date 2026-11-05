@@ -18,10 +18,15 @@ export const RecentFilesManager = class ArcMenuRecentFilesManager {
         try {
             this._bookmarksFile.load_from_file(this._recentFile);
         } catch (e) {
-            if (!e.matches(GLib.BookmarkFileError.FILE_NOT_FOUND)) {
+            // A new account has no recently-used.xbel yet (GFileError NOENT).
+            // GLib.Error.matches() needs (domain, code); the old one-argument
+            // call threw here and the Start menu layout failed to build.
+            const missing = e instanceof GLib.Error &&
+                (e.matches(GLib.FileError, GLib.FileError.NOENT) ||
+                 e.matches(GLib.BookmarkFileError, GLib.BookmarkFileError.FILE_NOT_FOUND));
+            if (!missing)
                 console.log(`Could not open recent files: ${e.message}`);
-                return [];
-            }
+            return [];
         }
 
         const recentFilesUris = this._bookmarksFile.get_uris();

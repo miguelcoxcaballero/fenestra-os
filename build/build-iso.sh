@@ -26,6 +26,17 @@ rm -rf "$WORK"
 mkdir -p "$WORK/add/fenestra"
 tar -C "$REPO/build/out/rootfs" --owner=0 --group=0 -czf "$WORK/add/fenestra/rootfs.tar.gz" .
 cp "$REPO/kickstart/fenestra-base.ks" "$WORK/add/fenestra/"
+
+# Installer branding: an Anaconda updates image (overlaid on the installer's
+# root) with the product name, Fenestra artwork instead of Fedora's logos,
+# and hidden account spokes (the first-boot setup creates the user).
+UPD="$WORK/updates"
+cp -a "$REPO/build/installer/updates" "$UPD"
+python3 "$REPO/build/installer/make-branding.py" "$UPD/usr/share/anaconda/pixmaps/fenestra"
+printf '%s\n' '[Main]' 'Product=Fenestra' 'Version=43' \
+    'BugURL=https://github.com/miguelcoxcaballero/fenestra-os/issues' 'IsFinal=True' 'Variant=Everything' \
+    > "$UPD/.buildstamp"
+(cd "$UPD" && find . | LC_ALL=C sort | cpio --quiet -o -H newc -R 0:0 | gzip -9) > "$WORK/fenestra-updates.img"
 if [ $TEST = 1 ]; then
     cat "$REPO/kickstart/fenestra-test.ks" "$REPO/kickstart/fenestra-base.ks" > "$WORK/ks.cfg"
     # Test builds only: root SSH with a local key so tests/vm can collect logs.
@@ -33,13 +44,20 @@ if [ $TEST = 1 ]; then
     if [ -f "$KEY" ]; then
         printf 'sshkey --username=root "%s"\nservices --enabled=sshd\n' "$(cat "$KEY")" >> "$WORK/ks.cfg"
     fi
+    # FENESTRA_MIRROR=http://mirrors.kernel.org/fedora uses one fixed mirror
+    # instead of the mirrorlists (VMs behind TLS-intercepting proxies).
+    if [ -n "${FENESTRA_MIRROR:-}" ]; then
+        sed -i -e "s|^url --mirrorlist=.*|url --url=$FENESTRA_MIRROR/releases/43/Everything/x86_64/os/|" \
+            -e "s|^repo --name=updates --mirrorlist=.*|repo --name=updates --baseurl=$FENESTRA_MIRROR/updates/43/Everything/x86_64/|" \
+            "$WORK/ks.cfg"
+    fi
     EXTRA_ARGS="inst.text console=tty0 console=ttyS0,115200"
 else
     cp "$REPO/kickstart/fenestra-base.ks" "$WORK/ks.cfg"
     EXTRA_ARGS=""
 fi
 
-MKKSISO_ARGS=(--ks "$WORK/ks.cfg" --add "$WORK/add/fenestra" --rm rd.live.check
+MKKSISO_ARGS=(--ks "$WORK/ks.cfg" --add "$WORK/add/fenestra" --updates "$WORK/fenestra-updates.img" --rm rd.live.check
     -R 'Install Fedora 43' 'Install Fenestra 43'
     -R 'Test this media & install Fedora 43' 'Test this media & install Fenestra 43'
     -R 'set default="1"' 'set default="0"' -R 'set timeout=60' 'set timeout=5')
