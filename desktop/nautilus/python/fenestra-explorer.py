@@ -84,12 +84,13 @@ class TabStripSizer:
         self.target = None
 
     def resize(self, animate):
-        available = max(220, self.window.get_width() - 200)
-        target = min(max(220, self.view.get_n_pages() * 220), available)
+        # Windows 11 tabs are 240px wide (+10px tab-box padding).
+        available = max(250, self.window.get_width() - 200)
+        target = min(max(250, self.view.get_n_pages() * 250), available)
         if target == self.target:
             return
         self.target = target
-        current = self.animation.get_value() if self.animation else max(220, self.bar.get_width())
+        current = self.animation.get_value() if self.animation else max(250, self.bar.get_width())
         if self.animation:
             self.animation.pause()
             self.animation = None

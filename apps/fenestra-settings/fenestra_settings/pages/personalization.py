@@ -364,7 +364,8 @@ class ThemesPage(Page):
     parent = "personalization"
     title = "Themes"
     keywords = "gtk theme icons cursor"
-    index = [("icons", "Icons", "icon theme"), ("cursor", "Mouse cursor", "pointer theme"),
+    index = [("icons", "Icons", "icon theme"), ("iconpack", "Icon pack", "import icons zip windows"),
+             ("cursor", "Mouse cursor", "pointer theme"),
              ("gtk", "App style", "gtk theme legacy apps")]
 
     def build(self, box):
@@ -393,6 +394,10 @@ class ThemesPage(Page):
             r = SettingRow(title, sub, ic, control=dd, key=key)
             self.remember(key, r)
             g.add(r)
+        # Icon packs (own Windows icons, Fenestra Icon Extractor zips, icon theme
+        # zips): handled by the same step as the first-login setup.
+        self.ext_row(g, _("Icon pack"), _("Import your own icons or an icon pack (.zip)"),
+                     "fs-apps-symbolic", ["/usr/libexec/fenestra-oobe", "--icons"], key="iconpack")
         g2 = self.group(_("Related settings"))
         if util.have("gnome-tweaks"):
             self.ext_row(g2, _("More appearance options"), _("Tweaks"), "fs-options-symbolic", ["gnome-tweaks"])

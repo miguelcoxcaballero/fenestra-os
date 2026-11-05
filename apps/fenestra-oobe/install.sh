@@ -44,10 +44,13 @@ install -d "$DESTDIR$PKGDATADIR/illustrations"
 for svg in "$SRC"/data/illustrations/*.svg; do
     install -m 0644 "$svg" "$DESTDIR$PKGDATADIR/illustrations/"
 done
-# UI glyphs (back arrow, accessibility button).
-install -d "$DESTDIR$PKGDATADIR/icons"
+install -d "$DESTDIR$PKGDATADIR/icons" "$DESTDIR$PKGDATADIR/help"
 for svg in "$SRC"/data/icons/*.svg; do
     install -m 0644 "$svg" "$DESTDIR$PKGDATADIR/icons/"
+done
+# Local help page shown by the icon pack mini browser.
+for html in "$SRC"/data/help/*.html; do
+    install -m 0644 "$html" "$DESTDIR$PKGDATADIR/help/"
 done
 
 # Launcher.

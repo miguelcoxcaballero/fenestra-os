@@ -109,7 +109,7 @@
                           <object class="AdwTabBar" id="tab_bar">
                             <property name="view">tab_view</property>
                             <property name="autohide">false</property>
-                            <property name="expand-tabs">false</property>
+                            <property name="expand-tabs">true</property>
                             <style>
                               <class name="win11-tabs" />
                             </style>

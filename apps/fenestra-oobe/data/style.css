@@ -399,3 +399,40 @@ window.high-contrast list.oobe-list > row:selected { background: #1aebff; }
 window.high-contrast list.oobe-list > row:selected label { color: #000000; }
 window.high-contrast .setting-row, window.high-contrast .check-row { background: #000000; border-color: #ffffff; }
 window.high-contrast button.plain-link label { color: #ffff00; }
+
+/* ---------- Personalize your icons ---------- */
+list.option-list > row.option-row { min-height: 64px; padding: 8px 16px; }
+.option-title { font-size: 16px; }
+.option-desc { font-size: 13px; color: @text_secondary; }
+list.option-list > row:selected .option-desc { color: rgba(255, 255, 255, 0.86); }
+
+.pack-facts { font-size: 14px; color: @text; }
+.preview-grid { margin-top: 2px; }
+.preview-grid > flowboxchild { padding: 0; outline: none; }
+.preview-tile { padding: 8px 4px; border-radius: 6px; }
+.preview-well {
+  min-width: 64px; min-height: 64px; padding: 8px;
+  border-radius: 8px; background: #ffffff; border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.preview-well.dark { background: #202833; border-color: #202833; }
+.preview-caption { font-size: 12px; color: @text_secondary; }
+
+/* mini browser */
+.browser-page .page-body { margin-top: 24px; margin-right: 0; }
+.browser-bar { margin-bottom: 10px; }
+button.browser-tool {
+  min-width: 34px; min-height: 34px; padding: 0; border-radius: 4px;
+  background: transparent; border: none; box-shadow: none; color: @text;
+}
+button.browser-tool:hover { background: rgba(0, 0, 0, 0.0373); }
+button.browser-tool:disabled { color: rgba(0, 0, 0, 0.30); }
+entry.address-entry { min-width: 0; margin: 0 6px; }
+button.oobe-button.go-button { min-width: 60px; }
+.browser-view {
+  border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.10); background: #ffffff;
+}
+.browser-fallback { padding: 24px 28px; font-size: 14px; }
+.download-row { margin-top: 10px; min-height: 28px; }
+.download-status { font-size: 13px; color: @text; }
+progressbar.oobe-progress trough { min-height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.12); }
+progressbar.oobe-progress progress { min-height: 4px; border-radius: 2px; background: @accent; }

@@ -1,8 +1,7 @@
 """First-login pages: privacy, customization and asset import."""
 
-from gi.repository import GLib, Gtk
+from gi.repository import Gtk
 
-from ..backends import run_async
 from ..backends.privacy import abrt_available
 from ..i18n import _
 from ..widgets.controls import CheckRow, SettingRow
@@ -109,68 +108,4 @@ class CustomizePage(Page):
 
     def on_secondary(self):
         self._save([])
-        self.ctx.next()
-
-
-class ImportPage(Page):
-    """Offered only when another system's partition with its fonts is found."""
-
-    page_id = "import"
-    illustration = "import"
-
-    def __init__(self, ctx):
-        super().__init__(ctx, _("Bring your fonts and pointers along"),
-                         _("We found another operating system on this device. Fenestra can copy the "
-                           "fonts and mouse pointers you already own from it into your personal folder, "
-                           "so documents and apps look the way you're used to."))
-        self.primary_label = _("Import")
-        self.secondary_label = _("Not now")
-        self.location = Gtk.Label(xalign=0, wrap=True, css_classes=["hint-text"])
-        self.body.append(self.location)
-        for icon, text in (
-            ("font-x-generic-symbolic", _("Fonts are copied to ~/.local/share/fonts")),
-            ("input-mouse-symbolic", _("Mouse pointers are copied to ~/.local/share/icons")),
-            ("security-high-symbolic", _("The other partition is only read, never changed")),
-        ):
-            row = Gtk.Box(spacing=14, css_classes=["benefit-row"])
-            row.append(Gtk.Image(icon_name=icon, pixel_size=20, css_classes=["benefit-icon"]))
-            row.append(Gtk.Label(label=text, xalign=0, wrap=True))
-            self.body.append(row)
-        prog = Gtk.Box(spacing=12, css_classes=["progress-row"])
-        self.spinner = Gtk.Spinner(css_classes=["oobe-spinner"])
-        self.status = Gtk.Label(xalign=0, wrap=True, css_classes=["dim"])
-        prog.append(self.spinner)
-        prog.append(self.status)
-        self.body.append(prog)
-
-    def should_skip(self):
-        return not self.ctx.other_system_root
-
-    def on_enter(self, direction):
-        root = self.ctx.other_system_root or ""
-        self.location.set_label(_("Found at {path}").format(path=root))
-
-    def on_primary(self):
-        if self.busy:
-            return
-        self.set_busy(True)
-        self.spinner.start()
-        self.status.set_label(_("Copying your fonts and pointers…"))
-        run_async(self.backends.privacy.run_import, self.ctx.other_system_root, callback=self._done)
-
-    def _done(self, result, error):
-        self.spinner.stop()
-        self.set_busy(False)
-        if error is not None:
-            self.status.set_label(_("Some items couldn't be copied. You can try again later from Settings."))
-            GLib.timeout_add(1800, lambda: (self.ctx.next(), False)[1])
-            return
-        if result == "missing-helper":
-            self.status.set_label(_("The import tool isn't installed, so nothing was copied."))
-            GLib.timeout_add(1800, lambda: (self.ctx.next(), False)[1])
-            return
-        self.status.set_label(_("Done"))
-        self.ctx.next()
-
-    def on_secondary(self):
         self.ctx.next()

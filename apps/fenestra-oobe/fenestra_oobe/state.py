@@ -22,6 +22,8 @@ class OobeState:
     interests: list = field(default_factory=list)
     other_system_root: str | None = None
     import_requested: bool = False
+    icon_choice: str = "default"
+    icon_pack: str | None = None
 
     def forget_secrets(self):
         self.password = ""
