@@ -32,7 +32,7 @@ export const KEY = 'security-screen';
 
 // Geometry measured on a 1920x1080 Windows 11 capture, relative to the
 // primary monitor centre (list/cancel) and bottom-right corner (buttons).
-const G = {itemX: -72, itemW: 139, itemY: -177, itemH: 44, cancelX: -63, cancelY: 83, cancelW: 120, cancelH: 32,
+const G = {itemX: -72, itemW: 139, itemY: -177, itemH: 44, cancelY: 83, cancelW: 120, cancelH: 32,
     btn: 40, btnRight: [168, 120, 72], btnBottom: 62};
 
 export class SecurityScreen {
@@ -92,10 +92,12 @@ export class SecurityScreen {
         ];
         this._targets = [];
         for (const [label, run] of actions) {
-            const button = new St.Button({style_class: 'fenestra-cad-item', label: _(label), reactive: true,
-                x_align: Clutter.ActorAlign.START});
-            button.get_child().x_align = Clutter.ActorAlign.START;
-            button.get_child().y_align = Clutter.ActorAlign.CENTER;
+            const text = new St.Label({text: _(label), y_align: Clutter.ActorAlign.CENTER});
+            const row = new St.BoxLayout({x_expand: true});
+            row.add_child(text);
+            const button = new St.Button({style_class: 'fenestra-cad-item', child: row, reactive: true,
+                accessible_name: _(label)});
+            button.text = text;
             button.connect('clicked', () => this._activate(run));
             this._root.add_child(button);
             this._targets.push({actor: button, run, kind: 'item'});
@@ -136,12 +138,14 @@ export class SecurityScreen {
         // The list is as wide as its longest entry (Windows: text + 9 px left, 10 px right).
         let w = G.itemW * s;
         for (const t of this._targets.filter(t => t.kind === 'item'))
-            w = Math.max(w, t.actor.get_preferred_width(-1)[1]);
+            w = Math.max(w, Math.ceil(t.actor.text.get_preferred_width(-1)[1]) + 19 * s);
+        // Longer (translated) entries widen the column symmetrically; Cancel stays centred under it.
+        const listX = cx + G.itemX * s - Math.floor((w - G.itemW * s) / 2);
         this._targets.filter(t => t.kind === 'item').forEach((t, i) => {
-            t.actor.set_position(cx + G.itemX * s, cy + (G.itemY + G.itemH * i) * s);
+            t.actor.set_position(listX, cy + (G.itemY + G.itemH * i) * s);
             t.actor.set_size(w, G.itemH * s);
         });
-        this._cancel.set_position(cx + G.cancelX * s, cy + G.cancelY * s);
+        this._cancel.set_position(listX + Math.floor((w - G.cancelW * s) / 2), cy + G.cancelY * s);
         this._cancel.set_size(G.cancelW * s, G.cancelH * s);
         this._corner.forEach((b, i) => {
             b.set_position(m.x + m.width - G.btnRight[i] * s, m.y + m.height - G.btnBottom * s);
@@ -171,6 +175,7 @@ export class SecurityScreen {
         global.stage.set_child_above_sibling(this._root, null);
         this._root.opacity = 255;
         this._root.show();
+        this._layout(); // a few cached size queries; keeps geometry right after theme/font/monitor changes
         this._grab = Main.pushModal(this._root, {actionMode: Shell.ActionMode.SYSTEM_MODAL});
         this._setFocus(0);
         this._root.grab_key_focus();
@@ -357,7 +362,7 @@ export class SecurityScreen {
     _powerMenu() {
         this._showMenu(this._corner[2], [
             {label: _('Sleep'), icon: 'security/sleep.svg', run: () => LoginManager.getLoginManager().suspend()},
-            {label: _('Shut down'), icon: 'security/power.svg', run: () => this._endSession('Shutdown', 'ConfirmedShutdown')},
+            {label: _('Shut down'), icon: 'security/shutdown.svg', run: () => this._endSession('Shutdown', 'ConfirmedShutdown')},
             {label: _('Restart'), icon: 'security/restart.svg', run: () => this._endSession('Reboot', 'ConfirmedReboot')},
         ]);
     }

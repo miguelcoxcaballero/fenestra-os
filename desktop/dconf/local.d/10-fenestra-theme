@@ -26,3 +26,13 @@ button-layout='appmenu:minimize,maximize,close'
 
 [org/gnome/shell/extensions/arcmenu]
 menu-button-icon='/usr/share/fenestra/assets/branding/start-button.svg'
+
+# Ctrl+Alt+Del opens Fenestra's Windows-style security screen (fenestra-tray
+# keybinding 'security-screen'), so GNOME's logout shortcut must not grab it.
+[org/gnome/settings-daemon/plugins/media-keys]
+logout=@as []
+
+# Note: mutter 49 already runs its KMS (page-flip) thread with high/realtime
+# priority through rtkit by default ("Thread 'KMS thread' will be using high
+# priority scheduling"); the old 'rt-scheduler' experimental feature no longer
+# exists, so nothing needs to be added to org.gnome.mutter experimental-features.

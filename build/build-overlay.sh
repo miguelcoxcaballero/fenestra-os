@@ -34,6 +34,8 @@ cp -a "$D/lib/folder-icons/folder_icons.py" "$OUT/usr/share/fenestra/lib/"
 install -m755 "$D/libexec/fenestra-patch-nautilus" "$D/libexec/fenestra-nautilus" "$OUT/usr/libexec/fenestra/"
 install -Dm755 "$REPO/tools/fenestra-import-windows-assets" "$OUT/usr/bin/fenestra-import-windows-assets"
 install -Dm644 "$D/systemd/fenestra-patch-nautilus.service" "$OUT/usr/lib/systemd/system/fenestra-patch-nautilus.service"
+install -d "$OUT/usr/lib/systemd/user"
+cp -a "$D/systemd/user/." "$OUT/usr/lib/systemd/user/"   # e.g. gnome-shell CPU/IO priority drop-in
 
 log "Files (Nautilus) Explorer layer"
 install -d "$OUT/usr/share/nautilus-python/extensions" "$OUT/usr/share/fenestra/nautilus"

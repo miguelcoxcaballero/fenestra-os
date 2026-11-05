@@ -142,10 +142,13 @@ def gen_osd():
                        'mic-off': 'mic_off_16_regular', 'keyboard': 'keyboard_16_regular'}.items():
         write(f'osd/{name}.svg', fluent(icon, '#ffffff', 16))
     # Ctrl+Alt+Del security screen: bottom-right buttons and their menus (Fluent UI System Icons, MIT).
-    for name, icon in {'network-offline': 'globe_prohibited_16_regular', 'network-wired': 'globe_16_regular',
-                       'network-wifi': 'wifi_1_20_regular', 'accessibility': 'accessibility_16_regular',
-                       'power': 'power_20_regular', 'sleep': 'weather_moon_16_regular',
-                       'restart': 'arrow_clockwise_16_regular', 'check': 'checkmark_16_regular'}.items():
+    # The 20px designs cropped to their 16px glyph box match the Windows glyph size on this screen.
+    for name, icon in {'network-offline': 'globe_prohibited_20_regular', 'network-wired': 'globe_20_regular',
+                       'network-wifi': 'wifi_1_20_regular', 'accessibility': 'accessibility_20_regular',
+                       'power': 'power_20_regular'}.items():
+        write(f'security/{name}.svg', fluent(icon, '#ffffff', 16).replace('viewBox="0 0 20 20"', 'viewBox="2 2 16 16"'))
+    for name, icon in {'sleep': 'weather_moon_16_regular', 'restart': 'arrow_clockwise_16_regular',
+                       'shutdown': 'power_20_regular'}.items():
         write(f'security/{name}.svg', fluent(icon, '#ffffff', 16))
 
 
