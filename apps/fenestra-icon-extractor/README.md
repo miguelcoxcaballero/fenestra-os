@@ -9,7 +9,7 @@ For use with your own Windows licence. Don't redistribute the exported pack.
 ## Using it
 
 1. Download `FenestraIconExtractorSetup.exe` (or the portable `FenestraIconExtractor.exe`)
-   from the [`extractor-v1.0` release](https://github.com/miguelcoxcaballero/fenestra-os/releases/tag/extractor-v1.0).
+   from the [latest `extractor-v*` release](https://github.com/miguelcoxcaballero/fenestra-os/releases/latest).
 2. Run it, keep the default choices and press **Export**. The pack is saved to
    `Desktop\Fenestra-Windows-icons.zip` unless you choose another place.
 3. Copy the zip to Fenestra OS and import it there.
@@ -27,7 +27,7 @@ Headless use (scripts):
 | `cursors/` | `C:\Windows\Cursors\aero_*`, `beam_*`, `cross_*` (`.cur`/`.ani`) plus files of your current pointer scheme (`HKCU\Control Panel\Cursors`), role mapping in `fenestra-pack.json` → `cursor_scheme` |
 | `icons/Fenestra-Windows/` | freedesktop icon theme, 256/48/32/16 px PNGs from `SystemResources\imageres.dll.mun`, `shell32.dll.mun` and Edge's PDF/HTML document icons: `folder`, `folder-documents`, `folder-pictures`, `folder-music`, `folder-videos`, `folder-download`, `user-desktop`, `user-trash`, `user-trash-full`, `network-workgroup`, `computer`, `drive-harddisk`, `drive-optical`, `text-x-generic`, `image-x-generic`, `application-pdf`, … |
 | `icons/Fenestra-Windows/*/apps/` | `fenestra-settings` (ImmersiveControlPanel logo), `org.fenestra.TaskManager` / `utilities-system-monitor` (Taskmgr.exe), `system-file-manager` / `org.gnome.Nautilus` (explorer.exe) |
-| `assets/folders/folder-empty.png`, `folder-full.png` | imageres icon groups 3 and 162 |
+| `assets/folders/folder-empty.png`, `folder-full.png` | imageres icon groups 3 and 162; Explorer draws the content of a full folder at run time, so the extractor adds a white sheet between the two flaps of group 162 |
 | `assets/branding/settings.png` | Settings app logo (256 px) |
 | `assets/branding/start-button.svg` | `SystemApps\MicrosoftWindows.Client.Core_cw5n1h2txyewy\Icons\WindowsLogo.svg` |
 | `assets/search/search.png` | `SystemApps\Shared\SearchIconOnDark.scale-400\*\*.png` |
