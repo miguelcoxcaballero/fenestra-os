@@ -29,17 +29,30 @@ export function watchBackground(update) {
     });
     return ()=>{if(pending) GLib.source_remove(pending);monitor.cancel();};
 }
+// BCP 47 tag for the system locale (/etc/locale.conf), e.g. "en-US" or "es-ES".
+function systemLocale() {
+    let lang='';
+    try {
+        const [,bytes]=GLib.file_get_contents('/etc/locale.conf');
+        const text=new TextDecoder().decode(bytes);
+        lang=(text.match(/^LC_TIME="?([^"\n]+)"?/m)??text.match(/^LANG="?([^"\n]+)"?/m)??[])[1]??'';
+    } catch(e) {}
+    lang=lang||GLib.get_language_names()[0]||'';
+    const tag=lang.split('.')[0].split('@')[0].replace('_','-');
+    try { return Intl.DateTimeFormat.supportedLocalesOf([tag]).length?tag:undefined; } catch(e) { return undefined; }
+}
 export function createClockFace(parent) {
     const box=new St.BoxLayout({orientation:Clutter.Orientation.VERTICAL,reactive:false,style:'spacing: 0; padding: 0; margin: 0;'});
     const time=new St.Label({x_align:Clutter.ActorAlign.CENTER,style:'font-family: "Segoe UI Variable"; font-size: 96px; font-weight: 600; color: white; margin: 0; padding: 0;'});
     const date=new St.Label({x_align:Clutter.ActorAlign.CENTER,style:'font-family: "Segoe UI Variable"; font-size: 18px; font-weight: 400; color: white; margin: 0; padding: 0;'});
     box.add_child(time);box.add_child(date);parent.add_child(box);
     const clock=new GnomeDesktop.WallClock({time_only:true});
+    const locale=systemLocale();
     const update=()=>{
-        // Explicit identical locale and 24-hour format in user session and GDM.
+        // Same locale (the system one chosen in setup) in the user session and GDM.
         const now=new Date();
-        time.text=new Intl.DateTimeFormat('es-ES',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);
-        date.text=new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long'}).format(now);
+        time.text=new Intl.DateTimeFormat(locale,{hour:'numeric',minute:'2-digit'}).format(now).replace(/\s*[AaPp]\.?\s?[Mm]\.?$/,'');
+        date.text=new Intl.DateTimeFormat(locale,{weekday:'long',day:'numeric',month:'long'}).format(now);
     };
     clock.connect('notify::clock',update);update();
     const place=()=>{
