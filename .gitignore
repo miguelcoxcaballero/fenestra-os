@@ -6,3 +6,9 @@ __pycache__/
 tests/vm/shots/*.ppm
 tests/vm/shots/
 docs/INVENTORY.md
+
+# Fenestra Icon Extractor build output and exported packs (never commit Microsoft files)
+apps/fenestra-icon-extractor/bin/
+apps/fenestra-icon-extractor/obj/
+apps/fenestra-icon-extractor/out/
+*.zip

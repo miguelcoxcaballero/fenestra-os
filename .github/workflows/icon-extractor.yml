@@ -1,0 +1,53 @@
+name: Fenestra Icon Extractor
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/fenestra-icon-extractor/**', '.github/workflows/icon-extractor.yml']
+    tags: ['extractor-v*']
+  pull_request:
+    paths: ['apps/fenestra-icon-extractor/**', '.github/workflows/icon-extractor.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/fenestra-icon-extractor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build portable exe
+        run: dotnet publish FenestraIconExtractor.csproj -c Release -o out/portable -nologo
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "/DSourceExe=$PWD\out\portable\FenestraIconExtractor.exe" "/DOutputDir=$PWD\out" installer\FenestraIconExtractor.iss
+      - name: Smoke test (headless export on the runner's own Windows)
+        shell: pwsh
+        run: |
+          python -m pip install --quiet Pillow
+          $p = Start-Process out\portable\FenestraIconExtractor.exe -ArgumentList '--export', "$env:RUNNER_TEMP\pack.zip", '--log', "$env:RUNNER_TEMP\pack.log" -Wait -PassThru
+          Get-Content "$env:RUNNER_TEMP\pack.log"
+          if ($p.ExitCode -ne 0) { exit 1 }
+          python tools\validate-pack.py "$env:RUNNER_TEMP\pack.zip" | Select-Object -Last 25
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fenestra-icon-extractor
+          path: |
+            apps/fenestra-icon-extractor/out/FenestraIconExtractorSetup.exe
+            apps/fenestra-icon-extractor/out/portable/FenestraIconExtractor.exe
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/extractor-v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" out\FenestraIconExtractorSetup.exe out\portable\FenestraIconExtractor.exe --clobber
