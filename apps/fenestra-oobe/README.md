@@ -147,6 +147,11 @@ about 260 ms with ease-out, and illustrations crossfade.
   `ConditionPathExists=!%E/gnome-initial-setup-done`.
 - `/usr/share/applications/org.fenestra.Oobe.desktop`: `NoDisplay=true`.
 
+GDM only starts the initial-setup session when there are no users, initial
+setup isn't disabled in `/etc/gdm/custom.conf`, and (Fedora patch)
+`/etc/sysconfig/anaconda` doesn't say `post_install_tools_disabled = 1`.
+That's why the kickstart uses `firstboot --enable` and creates no user.
+
 ```sh
 sudo ./install.sh                            # /usr
 DESTDIR=$PWD/stage PREFIX=/usr ./install.sh  # packaging / kickstart %post
@@ -205,10 +210,9 @@ Spanish variants (`*-es.png`), `privacy-1366x768.png` for small screens, and
 
 ## Known limitations
 
-- Automatic GDM login, the AccountsService/localed/hostnamed calls and
-  `nmcli` Wi‑Fi connections have not been exercised on a real first boot.
-  They are written against the APIs and the g-i-s 49 behaviour, but only the
-  demo/mocked paths were run.
+- The whole first boot (system mode, account creation, automatic GDM login,
+  first-login pages, finale) is exercised in the `tests/vm` VM on a fresh
+  install; `nmcli` Wi‑Fi connections are not (the VM is wired).
 - The Wi‑Fi list doesn't handle enterprise (802.1X) or hidden networks.
 - "Checking for updates" only checks connectivity.
 - Text size and high contrast are applied to the OOBE itself immediately. In
