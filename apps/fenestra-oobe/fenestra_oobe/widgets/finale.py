@@ -3,7 +3,6 @@
 from gi.repository import GLib, Gtk
 
 from ..i18n import _
-from .background import GradientBackground
 
 FADE = 0.7
 
@@ -23,7 +22,9 @@ class FinaleView(Gtk.Overlay):
 
     def __init__(self):
         super().__init__(css_classes=["finale"])
-        self.set_child(GradientBackground("dark", animate=True, speed=2.5))
+        # Plain black, like the reference ("Hi", "We're getting everything ready…");
+        # the shell keeps a black curtain after it until the desktop is smooth.
+        self.set_child(Gtk.Box(css_classes=["finale-black"], hexpand=True, vexpand=True))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                       halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
         self.headline = Gtk.Label(css_classes=["finale-headline"], justify=Gtk.Justification.CENTER,

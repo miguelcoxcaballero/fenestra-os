@@ -371,6 +371,7 @@ scale slider {
 }
 
 /* ---------- finale ---------- */
+.finale, .finale-black { background-color: #000000; }
 .finale-headline {
   color: rgba(255, 255, 255, 0.96);
   font-family: "Segoe UI Variable Display", "Segoe UI", "Selawik", "Inter", sans-serif;
