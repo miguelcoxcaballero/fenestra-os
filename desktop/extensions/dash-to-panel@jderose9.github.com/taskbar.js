@@ -1662,13 +1662,31 @@ export const TaskbarItemContainer = GObject.registerClass(
 
       // The clone itself
       this._raisedClone = cloneButton.child
-      this._raisedClone.connect('destroy', () => {
-        adjustment.disconnect(adjustmentChangedId)
-        taskbarBox.disconnect(taskbarBoxAllocationChangedId)
+      // Fenestra: if this container is destroyed while raised, the clone's
+      // destroy handler never ran and the taskbar allocation handler kept
+      // touching the disposed container on every relayout (hundreds of
+      // "already disposed" stack traces per hour). Tear down from both sides.
+      let cleaned = false
+      let selfDestroyId = 0
+      const cleanup = () => {
+        if (cleaned) return
+        cleaned = true
+        try {
+          adjustment.disconnect(adjustmentChangedId)
+          taskbarBox.disconnect(taskbarBoxAllocationChangedId)
+          if (selfDestroyId) this.disconnect(selfDestroyId)
+        } catch {}
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
           cloneContainer.destroy()
           return GLib.SOURCE_REMOVE
         })
+      }
+      selfDestroyId = this.connect('destroy', () => {
+        selfDestroyId = 0
+        cleanup()
+      })
+      this._raisedClone.connect('destroy', () => {
+        cleanup()
         delete this._raisedClone
       })
 

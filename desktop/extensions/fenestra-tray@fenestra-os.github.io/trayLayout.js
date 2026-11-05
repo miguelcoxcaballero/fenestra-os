@@ -61,10 +61,28 @@ export function installTrayLayout(injections) {
         // menus and action handlers, only reorder their existing containers.
         const parent=keyboard?.container?.get_parent();
         if(parent&&overflow.container.get_parent()===parent){
-            const target=parent.get_children().indexOf(keyboard.container);
-            parent.set_child_at_index(overflow.container,Math.max(0,target-1));
+            const children=parent.get_children();
+            const target=Math.max(0,children.indexOf(keyboard.container)-1);
+            // set_child_at_index() always re-inserts and relayouts the whole panel.
+            if(children.indexOf(overflow.container)!==target)parent.set_child_at_index(overflow.container,target);
         }
     }
-    sync();const timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,2,()=>{sync();return GLib.SOURCE_CONTINUE;});
-    return ()=>{closed=true;GLib.source_remove(timer);if(bluetoothId)bluetooth.disconnect(bluetoothId);for(const [actor,old]of saved){try{actor.set_style(old);}catch{}}saved.clear();overflow.destroy();keyboard?._currentSourceChanged(keyboard._inputSourceManager,null);bluetooth?._sync?.();};
+    // Event-driven: re-apply when the right box / quick settings indicators change
+    // (coalesced to one idle pass). A slow safety net replaces the old 2 s poll.
+    let idleId=0;const watched=[];
+    const queueSync=()=>{if(idleId||closed)return;idleId=GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE,()=>{idleId=0;sync();return GLib.SOURCE_REMOVE;});};
+    const watch=(obj,...signals)=>{if(obj)for(const s of signals)watched.push([obj,obj.connect(s,queueSync)]);};
+    watch(Main.panel._rightBox,'child-added','child-removed');
+    watch(Main.panel.statusArea.quickSettings?._indicators,'child-added');
+    watch(Main.sessionMode,'updated');
+    sync();let ticks=0;
+    const timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,2,()=>{
+        // Quick Settings builds its indicators asynchronously right after login:
+        // settle every 2 s for the first 20 s, then every 30 s.
+        sync();
+        if(++ticks===10){timers.slow=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,30,()=>{sync();return GLib.SOURCE_CONTINUE;});timers.fast=0;return GLib.SOURCE_REMOVE;}
+        return GLib.SOURCE_CONTINUE;
+    });
+    const timers={fast:timer,slow:0};
+    return ()=>{closed=true;if(timers.fast)GLib.source_remove(timers.fast);if(timers.slow)GLib.source_remove(timers.slow);if(idleId)GLib.source_remove(idleId);for(const [o,id] of watched){try{o.disconnect(id);}catch{}}if(bluetoothId)bluetooth.disconnect(bluetoothId);for(const [actor,old]of saved){try{actor.set_style(old);}catch{}}saved.clear();overflow.destroy();keyboard?._currentSourceChanged(keyboard._inputSourceManager,null);bluetooth?._sync?.();};
 }

@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 from fenestra_sidebar import FenestraSidebar, GALLERY
 from fenestra_pages import SpecialPages, gallery_folders
+from fenestra_menus import CommandMenus
 
 from fenestra_sidebar import _L, tr
 _L.setdefault('es', {}).update({'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
@@ -37,10 +38,12 @@ class FenestraViews:
         self.sidebar=FenestraSidebar(window,walk)
         self.initial=True
         self.pages=SpecialPages(window,walk,kind)
+        self.pane='none'
         self.folders={}
         self.config=Path(GLib.get_user_config_dir())/'fenestra-explorer/view.json'
         try:
             state=json.loads(self.config.read_text());self.compact=bool(state.get('compact',False))
+            self.pane=state.get('pane','none') if state.get('pane') in ('none','details','preview') else 'none'
             self.folders={k:v for k,v in (state.get('folders') or {}).items() if v in dict(VIEWS)}
         except (OSError,ValueError,TypeError,AttributeError):pass
         self.action=Gio.SimpleAction.new_stateful('windows-view',GLib.VariantType.new('s'),GLib.Variant('s',self.mode))
@@ -60,6 +63,7 @@ class FenestraViews:
         window.connect('destroy',self.destroy)
         if self.compact:window.add_css_class('win11-compact')
         self._width=0
+        self.menus=CommandMenus(self)
         window.add_tick_callback(self._tick)
         self.queue()
 
@@ -93,18 +97,7 @@ class FenestraViews:
             if isinstance(c,Gtk.Actionable) and c.get_action_name()=='view.current-directory-properties':
                 for lab in walk(c):
                     if isinstance(lab,Gtk.Label):lab.set_visible(width>=900)
-        more=next((c for c in children if isinstance(c,Gtk.MenuButton) and c.get_icon_name()=='win11-explorer-more'),None)
-        model=more.get_menu_model() if more else None
-        if isinstance(model,Gio.Menu):
-            has=getattr(self.window,'_fenestra_folded',False)
-            if collapse and not has:
-                section=Gio.Menu()
-                for label,action in (('Cut','view.cut'),('Copy','view.copy'),('Paste','view.paste'),('Rename','view.rename'),
-                                     ('Share','view.open-with-other-application'),('Delete','view.move-to-trash')):
-                    section.append(tr(label),action)
-                model.insert_section(0,None,section);self.window._fenestra_folded=True
-            elif not collapse and has:
-                model.remove(0);self.window._fenestra_folded=False
+        self.menus.folded=collapse
 
     def destroy(self,*_):
         if self.pending:GLib.source_remove(self.pending)
@@ -125,7 +118,7 @@ class FenestraViews:
     def save(self):
         try:
             self.config.parent.mkdir(parents=True,exist_ok=True)
-            self.config.write_text(json.dumps({'compact':self.compact,'folders':self.folders}))
+            self.config.write_text(json.dumps({'compact':self.compact,'folders':self.folders,'pane':self.pane}))
         except OSError:pass
 
     def select(self,mode,remember=False):
@@ -176,6 +169,7 @@ class FenestraViews:
             self.sort_key={tr('Name'):'name','Name':'name',tr('Date modified'):'date_modified','Size':'size',tr('Size'):'size','Type':'type',tr('Type'):'type'}.get(title,'name')
             descending=sorter.get_primary_sort_order()==Gtk.SortType.DESCENDING
             self.order.set_state(GLib.Variant('s','descending' if descending else 'ascending'))
+            self.menus.sort_key,self.menus.sort_desc=self.sort_key,descending
 
     def _commandbar(self,special):
         bar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
@@ -300,45 +294,10 @@ class FenestraViews:
         self._status(slot,self.special)
         if not self.special:
             self._empty(slot);self._sort_state(slot)
+        commandbar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
+        if commandbar:self.menus.ensure(commandbar)
+        if not self.special:self.menus.watch_selection()
         for w in walk(self.window):
-            if isinstance(w,Gtk.PopoverMenu):
-                model=w.get_menu_model()
-                if model and model.get_n_items() and not getattr(w,'_windows_views_menu',False):
-                    section=model.get_item_link(0,'section')
-                    label=model.get_item_attribute_value(0,'label',None)
-                    # Identify the native view menu by its zoom-out custom slot.
-                    if section and any((section.get_item_attribute_value(i,'custom',None) or GLib.Variant('s','')).unpack()=='zoom-out' for i in range(section.get_n_items())):
-                        w._windows_views_menu=True
-                        views=Gio.Menu()
-                        for key,name in VIEWS:
-                            item=Gio.MenuItem.new(name,None);item.set_action_and_target_value('win.windows-view',GLib.Variant('s',key));views.append_item(item)
-                        views.append(tr('Compact view'),'win.windows-row-spacing')
-                        model.remove(0);model.insert_section(0,tr('View'),views)
-                        commandbar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
-                        if commandbar and not getattr(self.window,'_windows_sort_menu',None):
-                            sortmodel=model.get_item_link(1,'section')
-                            if sortmodel:
-                                sortbutton=Gtk.MenuButton(menu_model=sortmodel)
-                                sortbutton.add_css_class('win11-cmd-text');sortbutton.add_css_class('flat')
-                                contents=Gtk.Box(spacing=8)
-                                image=Gtk.Image.new_from_icon_name('win11-explorer-sort');image.set_pixel_size(16)
-                                lab=Gtk.Label(label=tr('Sort'));lab.add_css_class('win11-cmd-label')
-                                chev=Gtk.Image.new_from_icon_name('win11-explorer-chevron-down');chev.set_pixel_size(8);chev.add_css_class('win11-cmd-chevron')
-                                contents.append(image);contents.append(lab);contents.append(chev)
-                                sortbutton.set_child(contents)
-                                control=next((a for a in walk(commandbar) if kind(a)=='NautilusViewControls'),None)
-                                if control:commandbar.insert_child_after(sortbutton,control.get_prev_sibling())
-                                else:commandbar.append(sortbutton)
-                                self.window._windows_sort_menu=sortbutton
-
-            if kind(w)=='AdwSplitButton' and not getattr(w,'_fenestra_dropdown',False):
-                w._fenestra_dropdown=True
-                if not self.window.lookup_action('fenestra-view-menu'):
-                    act=Gio.SimpleAction.new('fenestra-view-menu',None)
-                    act.connect('activate',lambda *_a,b=w:b.popup())
-                    self.window.add_action(act)
-                w.set_action_name('win.fenestra-view-menu')
-                w.add_css_class('win11-cmd-split')
             if isinstance(w,Gtk.ColumnView) and w.is_ancestor(slot):
                 columns=w.get_columns()
                 for index in range(columns.get_n_items()):

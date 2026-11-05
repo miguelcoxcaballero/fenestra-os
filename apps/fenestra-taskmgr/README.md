@@ -88,6 +88,15 @@ read-only mode; `--expanded/--collapsed` choose the rail, `--perf cpu|memory|dis
 the performance device, `--light/--dark`, `--lang es`.  `--real-data` renders the real system
 (for testing only, do not publish).
 
+### Automated tests against real data
+
+Never drive the app with synthetic input on real `/proc` data without the sandbox:
+`FENESTRA_TASKMGR_TEST_ALLOW_PIDS=pid1,pid2` restricts End task / Efficiency mode to those
+PIDs (your own dummy processes, e.g. `systemd-run --user --scope sleep 1000`), disables
+whole-app cgroup kills, and turns Run new task, Services start/stop, Startup enable/disable
+and the other launchers into logged no-ops.  `FENESTRA_TASKMGR_DEBUG_INPUT=1` logs every
+pointer press with the widget it hit (useful with a virtual-pointer shell harness).
+
 ## Installing
 
 ```sh

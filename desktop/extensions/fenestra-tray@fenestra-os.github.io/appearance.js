@@ -352,6 +352,17 @@ export class Appearance {
     tint(path) {
         const p = this._palette;
         if (!path) return path;
+        const key = `${p.dark ? 'd' : 'l'}${p.text}|${path}`;
+        this._tintCache ??= new Map();
+        const hit = this._tintCache.get(key);
+        if (hit) return hit;
+        const result = this._tint(path, p);
+        if (this._tintCache.size > 256) this._tintCache.clear();
+        this._tintCache.set(key, result);
+        return result;
+    }
+
+    _tint(path, p) {
         const src = readText(path);
         if (src === null) return path;
         const fg = p.dark ? '#ffffff' : '#1a1a1a';

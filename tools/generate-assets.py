@@ -294,7 +294,8 @@ MENU = {'cancel': 'dismiss_16_regular', 'commandprompt': 'window_console_20_regu
         'tvmonitor': 'desktop_16_regular', 'undo': 'arrow_undo_16_regular', 'viewall': 'grid_16_regular',
         'zipfolder': 'folder_zip_16_regular', 'view': 'grid_16_regular', 'groupby': 'text_bullet_list_ltr_16_regular',
         'new': 'add_circle_16_regular', 'properties': 'wrench_16_regular', 'copypath': 'clipboard_link_16_regular',
-        'openwith': 'apps_16_regular', 'terminal': 'window_console_20_regular'}
+        'openwith': 'apps_16_regular', 'terminal': 'window_console_20_regular', 'pin': 'pin_16_regular',
+        'selectnone': 'select_all_off_16_regular', 'invert': 'arrow_swap_16_regular'}
 
 
 def gen_menu():
@@ -312,6 +313,11 @@ EXPLORER = {'add': 'add_circle_16_regular', 'more': 'more_horizontal_16_regular'
             'gallery': 'image_multiple_16_regular', 'collection': 'folder_multiple_16_regular',
             'recent': 'clock_16_regular', 'favorite': 'star_16_regular', 'shared': 'people_16_regular',
             'addfolder': 'folder_add_20_regular'}
+
+VIEW_MENU = {'extra-large': 'desktop_mac_16_regular', 'large': 'desktop_16_regular', 'medium': 'tablet_16_regular',
+             'small': 'grid_16_regular', 'list': 'text_bullet_list_ltr_16_regular', 'details': 'navigation_16_regular',
+             'tiles': 'apps_list_20_regular', 'content': 'apps_list_detail_20_regular', 'details-pane': 'panel_right_16_regular',
+             'preview-pane': 'panel_right_contract_16_regular', 'check': 'checkmark_16_regular'}
 
 # Empty-state illustrations for the Explorer Home and Gallery pages (own drawings).
 RECENT_EMPTY = '''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="104" viewBox="0 0 128 104">
@@ -338,6 +344,9 @@ def gen_explorer():
     # File Explorer chrome (Fluent UI System Icons, MIT): white glyphs for the dark command/address bars.
     for name, icon in EXPLORER.items():
         write(f'menu-icons/win11-explorer-{name}.svg', fluent(icon, '#ffffff', 16))
+    # Command-bar dropdowns (View/Sort/...) use white glyphs like Windows 11's.
+    for name, icon in VIEW_MENU.items():
+        write(f'menu-icons/win11-view-{name}.svg', fluent(icon, '#ffffff', 16))
     write('menu-icons/win11-explorer-recent-empty.svg', RECENT_EMPTY)
     write('menu-icons/win11-explorer-gallery-empty.svg', GALLERY_EMPTY)
 

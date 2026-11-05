@@ -89,6 +89,9 @@ def set_enabled(entry, on):
     """Write a user copy with Hidden=true/false (the XDG way to disable an autostart entry)."""
     if util.DEMO or util.READ_ONLY:
         return
+    if os.environ.get("FENESTRA_TASKMGR_TEST_ALLOW_PIDS") is not None:
+        print("TEST-SANDBOX startup", entry["file"], on, flush=True)
+        return
     dst = os.path.join(user_autostart(), entry["file"])
     kf = GLib.KeyFile()
     try:

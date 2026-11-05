@@ -35,15 +35,24 @@ export function installHelloFeedback(injections, path) {
     for(const seq of Object.values(sequences))for(const frame of seq.frames){
         if(!icons.has(frame.file))icons.set(frame.file,new Gio.FileIcon({file:Gio.File.new_for_path(`${fenestraAsset('hello')}/${frame.file}`)}));
     }
-    const pending=[...icons.values()];let warmId=GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE,()=>{
-        // Decode off the authentication path, in small nonblocking batches.
-        for(let n=0;n<6&&pending.length;n++){
-            const actor=cache.load_gicon(null,pending.shift(),64,scale,1);
-            if(actor)warm.push(actor);
-        }
-        if(pending.length)return GLib.SOURCE_CONTINUE;
-        warmId=0;return GLib.SOURCE_REMOVE;
-    });
+    const pending=[...icons.values()];let warmId=0;
+    // Decode off the authentication path, in small nonblocking batches, but only
+    // when a lock/login screen is about to need the frames: warming at session
+    // start competed with the desktop's own startup for nothing.
+    const warmUp=()=>{
+        if(warmId||!pending.length)return;
+        warmId=GLib.idle_add(GLib.PRIORITY_LOW,()=>{
+            for(let n=0;n<6&&pending.length;n++){
+                const actor=cache.load_gicon(null,pending.shift(),64,scale,1);
+                if(actor)warm.push(actor);
+            }
+            if(pending.length)return GLib.SOURCE_CONTINUE;
+            warmId=0;return GLib.SOURCE_REMOVE;
+        });
+    };
+    let shieldId=0;
+    if(Main.sessionMode.isGreeter||Main.screenShield?.active)warmUp();
+    else if(Main.screenShield)shieldId=Main.screenShield.connect('active-changed',()=>{if(Main.screenShield.active)warmUp();});
     // Preserve native queues and completion callbacks, shortening only the two
     // informational Howdy notices. Password, fingerprint and errors are intact.
     injections.overrideMethod(ShellUserVerifier.prototype,'_queueMessage',original=>function(service,message,type){
@@ -100,6 +109,7 @@ export function installHelloFeedback(injections, path) {
     const existing=Main.screenShield?._dialog?._authPrompt;if(existing)attach(existing);
     return ()=>{
         if(warmId)GLib.source_remove(warmId);
+        if(shieldId)Main.screenShield.disconnect(shieldId);
         for(const [prompt,state] of prompts){
             state.stop();state.signals.forEach(id=>{try{state.verifier.disconnect(id);}catch{}});
             prompt.disconnect(state.destroyId);state.box.destroy();

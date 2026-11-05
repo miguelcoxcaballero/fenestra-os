@@ -9,6 +9,13 @@
 #   tests/vm/vm.sh ssh CMD...    - run a command as root (test ISOs only)
 #   tests/vm/vm.sh stop          - power off
 set -euo pipefail
+# Laptop has 16 GB: allow only one VM at a time and keep it inside fenestra-tests.slice.
+if [ "${1:-}" = install ] || [ "${1:-}" = boot ]; then
+    if pgrep -f qemu-system-x86_64 >/dev/null; then echo "only one VM at a time: stop the running one first" >&2; exit 1; fi
+    if [ -z "${FENESTRA_IN_SLICE:-}" ] && command -v systemd-run >/dev/null; then
+        exec systemd-run --user --scope --quiet --slice=fenestra-tests.slice -E FENESTRA_IN_SLICE=1 "$0" "$@"
+    fi
+fi
 HERE="$(cd "$(dirname "$0")" && pwd)"
 VM="${FENESTRA_VM_DIR:-$HOME/.local/share/fenestra-vm}"
 DISK="$VM/fenestra.qcow2"
@@ -22,7 +29,7 @@ qmp() { python3 "$HERE/qmp.py" "$QMP" "$@"; }
 # KVM when available; otherwise multi-threaded TCG (slow, but works in CI/containers).
 if [ -w /dev/kvm ]; then accel=(-enable-kvm -cpu host -smp "${FENESTRA_VM_CPUS:-6}")
 else accel=(-accel tcg,thread=multi,tb-size=1024 -cpu max -smp "${FENESTRA_VM_CPUS:-$(nproc)}"); fi
-common=("${accel[@]}" -m "${FENESTRA_VM_MEM:-6144}" -machine q35
+common=("${accel[@]}" -m "${FENESTRA_VM_MEM:-3584}" -machine q35
         -drive "file=$DISK,if=virtio,format=qcow2"
         -device virtio-vga,xres=$W,yres=$H -display none
         -device qemu-xhci -device usb-tablet -device usb-kbd

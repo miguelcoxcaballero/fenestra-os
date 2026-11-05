@@ -435,11 +435,38 @@ window.win11-explorer, window.win11-explorer label { font-family: "Segoe UI Vari
 .win11-explorer .fenestra-crumbs button image { -gtk-icon-filter: none; opacity: 1; }
 /* Narrow windows: the search box shrinks to 150px (its width is set from Python) instead of pushing the window controls out. */
 .win11-explorer .win11-navigation .win11-search { min-width: 150px; }
+/* Command-bar dropdowns (View / Sort / See more), measured from Windows 11 25H2. */
+popover.fenestra-winmenu { padding: 0; }
+popover.fenestra-winmenu > contents { background: #2c2c2c; border: 1px solid #121212; border-radius: 8px; padding: 2px 0; box-shadow: 0 8px 16px rgba(0,0,0,0.28); color: #ffffff; }
+popover.fenestra-winmenu .fenestra-winmenu-row { min-height: 32px; padding: 0 11px 0 5px; margin: 0 4px; border-radius: 4px; background: transparent; box-shadow: none; border: 0; }
+popover.fenestra-winmenu .fenestra-winmenu-row:hover { background: #383838; }
+popover.fenestra-winmenu .fenestra-winmenu-row:active { background: #333333; }
+popover.fenestra-winmenu .fenestra-winmenu-row:disabled label { color: #787878; }
+popover.fenestra-winmenu .fenestra-winmenu-label { font-size: 14px; font-weight: 400; color: #ffffff; margin-left: 9px; }
+popover.fenestra-winmenu .fenestra-winmenu-icon { margin: 0 2px 0 11px; }
+popover.fenestra-winmenu .fenestra-winmenu-icon + .fenestra-winmenu-label { margin-left: 9px; }
+popover.fenestra-winmenu .fenestra-winmenu-mark { font-size: 15px; color: #d0d0d0; }
+popover.fenestra-winmenu .fenestra-winmenu-accel { font-size: 12px; color: #c5c5c5; margin-left: 24px; }
+popover.fenestra-winmenu .fenestra-winmenu-chevron { margin-left: 24px; }
+popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; background: #3d3d3d; margin: 0 0 1px 0; }
+.win11-explorer .win11-commandbar menubutton:checked > button, .win11-explorer .win11-commandbar menubutton > button:checked { background: #272727; }
+.win11-explorer button.fenestra-cmd-on { background: #2d2d2d; }
+/* Details / Preview pane */
+.win11-explorer .fenestra-infopane { background: #191919; padding: 24px 20px; }
+.win11-explorer .fenestra-infopane-sep { background: #2b2b2b; min-width: 1px; }
+.win11-explorer .fenestra-infopane-icon { margin: 12px 0 18px 0; }
+.win11-explorer .fenestra-infopane-title { font-size: 14px; font-weight: 600; color: #ffffff; }
+.win11-explorer .fenestra-infopane-sub { font-size: 12px; color: #c5c5c5; margin: 2px 0 18px 0; }
+.win11-explorer .fenestra-infopane-facts label { font-size: 12px; color: #ffffff; }
+.win11-explorer .fenestra-infopane-facts label.fenestra-infopane-key { color: #c5c5c5; }
+.win11-explorer .fenestra-infopane-message, .win11-explorer .fenestra-infopane-text { font-size: 12px; color: #c5c5c5; }
 /* Light mode: the white Fluent glyphs used on these pages are inverted like the command bar's. */
 @media (prefers-color-scheme: light) {
   .win11-explorer .fenestra-section-header image, .win11-explorer .fenestra-section-chevron image,
   .win11-explorer .fenestra-pill:not(.active) image, .win11-explorer image.fenestra-tile-pin,
-  .win11-explorer .fenestra-group-header image, .win11-explorer image.fenestra-mono { -gtk-icon-filter: invert(0.9); }
+  .win11-explorer .fenestra-group-header image, .win11-explorer image.fenestra-mono,
+  popover.fenestra-winmenu image.fenestra-winmenu-icon, popover.fenestra-winmenu image.fenestra-winmenu-mark,
+  popover.fenestra-winmenu image.fenestra-winmenu-chevron { -gtk-icon-filter: invert(0.9); }
 }
 /* ---- end Fenestra: Explorer special pages ---- */
 
@@ -525,6 +552,20 @@ window.background.csd headerbar.header-bar.titlebar windowcontrols button.titleb
   .win11-explorer popover.menu modelbutton > accelerator { color: #5f5f5f; }
   .win11-explorer .fenestra-section-chevron:hover { background: #f0f0f0; }
   .win11-explorer .fenestra-crumbs button label, .win11-explorer .fenestra-crumbs button.current-dir label { color: #1a1a1a; }
+  popover.fenestra-winmenu > contents { color: #1a1a1a; }
+  popover.fenestra-winmenu .fenestra-winmenu-row:hover { background: #e5e5e5; }
+  popover.fenestra-winmenu .fenestra-winmenu-row:active { background: #e5e5e5; }
+  popover.fenestra-winmenu .fenestra-winmenu-label { color: #1a1a1a; }
+  popover.fenestra-winmenu .fenestra-winmenu-mark { color: #5f5f5f; }
+  popover.fenestra-winmenu .fenestra-winmenu-accel { color: #5f5f5f; }
+  .win11-explorer button.fenestra-cmd-on { background: #f0f0f0; }
+  .win11-explorer .fenestra-infopane { background: #ffffff; }
+  .win11-explorer .fenestra-infopane-sep { background: #ffffff; }
+  .win11-explorer .fenestra-infopane-title { color: #1a1a1a; }
+  .win11-explorer .fenestra-infopane-sub { color: #5f5f5f; }
+  .win11-explorer .fenestra-infopane-facts label { color: #1a1a1a; }
+  .win11-explorer .fenestra-infopane-facts label.fenestra-infopane-key { color: #5f5f5f; }
+  .win11-explorer .fenestra-infopane-message, .win11-explorer .fenestra-infopane-text { color: #5f5f5f; }
   .win11-explorer .win11-commandbar image, .win11-explorer .win11-navigation image, .win11-explorer image.fenestra-pin, .win11-explorer .win11-cmd-chevron { -gtk-icon-filter: invert(0.9); }
 }
 /* ---- end Fenestra light mode ---- */
