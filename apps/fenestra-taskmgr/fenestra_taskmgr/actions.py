@@ -27,6 +27,14 @@ def _test_sandbox_filter(pids, cgroup):
     return [p for p in pids if p in allowed], None
 
 
+def _testing():
+    return os.environ.get("FENESTRA_TASKMGR_TEST_ALLOW_PIDS") is not None
+
+
+def _test_log(*args):
+    print("TEST-SANDBOX", *args, flush=True)
+
+
 def _pids_alive(pids):
     alive = []
     for p in pids:
@@ -66,7 +74,9 @@ def end_task(pids, cgroup=None, on_error=None):
             pass
         except PermissionError:
             denied.append(p)
-    if denied:
+    if _testing():
+        _test_log("end_task", pids)
+    if denied and not _testing():
         _pkexec(["kill", "-TERM"] + [str(p) for p in denied])
 
     def finish():
@@ -89,7 +99,7 @@ def end_task(pids, cgroup=None, on_error=None):
                 pass
             except PermissionError:
                 theirs.append(p)
-        if theirs:
+        if theirs and not _testing():
             _pkexec(["kill", "-KILL"] + [str(p) for p in theirs])
         return False
     GLib.timeout_add(3000, finish)
@@ -100,8 +110,12 @@ def set_efficiency(pids, on):
     """Efficiency mode: nice +10 and idle I/O class (back to normal when turned off)."""
     if not _allowed():
         return False
+    pids, _cg = _test_sandbox_filter(pids, None)
+    if not pids:
+        return False
     need_root = []
     for p in pids:
+        _test_log("efficiency", p, on) if _testing() else None
         try:
             os.setpriority(os.PRIO_PROCESS, p, 10 if on else 0)
         except PermissionError:
@@ -111,13 +125,14 @@ def set_efficiency(pids, on):
         if shutil.which("ionice"):
             subprocess.Popen(["ionice", "-c", "3" if on else "2", "-p", str(p)],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if need_root:
+    if need_root and not _testing():
         _pkexec(["renice", "-n", "10" if on else "0", "-p"] + [str(p) for p in need_root])
     return True
 
 
 def open_file_location(pid):
-    if not _allowed():
+    if not _allowed() or _testing():
+        _test_log("open_file_location", pid)
         return
     try:
         exe = os.readlink(f"/proc/{pid}/exe")
@@ -140,7 +155,7 @@ def open_file_location(pid):
 
 
 def search_online(name):
-    if _allowed():
+    if _allowed() and not _testing():
         Gio.AppInfo.launch_default_for_uri(
             "https://duckduckgo.com/?q=" + GLib.uri_escape_string(name + " linux process", None, False), None)
 
@@ -148,6 +163,9 @@ def search_online(name):
 def run_task(text, admin=False):
     """Run new task: a command line, a path or a URI."""
     if not _allowed():
+        return True
+    if _testing():  # never launch programs from automated tests
+        _test_log("run_task", text, admin)
         return True
     text = text.strip()
     if not text:
@@ -177,6 +195,11 @@ def service_action(action, unit, user=False, done=None):
     """systemctl start/stop/restart (system units authenticate through polkit)."""
     if not _allowed():
         return
+    if _testing():  # tests never touch real services
+        _test_log("service", action, unit, user)
+        if done:
+            done()
+        return
     argv = ["systemctl"] + (["--user"] if user else []) + [action, unit]
     try:
         proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDERR_PIPE)
@@ -194,7 +217,7 @@ def service_action(action, unit, user=False, done=None):
 
 
 def open_users_settings():
-    if not _allowed():
+    if not _allowed() or _testing():
         return
     for argv in (["fenestra-settings", "--page", "accounts"], ["gnome-control-center", "users"]):
         if shutil.which(argv[0]):
@@ -205,7 +228,7 @@ def open_users_settings():
 def open_services_tool():
     for argv in (["systemd-manager"], ["cockpit-desktop", "services"], ["gnome-logs"]):
         if shutil.which(argv[0]):
-            if _allowed():
+            if _allowed() and not _testing():
                 subprocess.Popen(argv, start_new_session=True)
             return True
     return False

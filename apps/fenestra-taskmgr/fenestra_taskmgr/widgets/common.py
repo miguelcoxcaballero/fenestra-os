@@ -38,7 +38,10 @@ class ToolButton(Gtk.Button):
         box = Gtk.Box(spacing=8)
         box.append(icon(icon_name, 20))
         if text:
-            self.lbl = label(text)
+            # ellipsizing labels keep the command bar's minimum width small, so a narrow
+            # window never gets a layout wider than its surface
+            self.lbl = label(text, ellipsize=True)
+            self.lbl.set_width_chars(1)
             box.append(self.lbl)
         else:
             self.add_css_class("icon-only")

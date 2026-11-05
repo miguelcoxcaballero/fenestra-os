@@ -1,7 +1,9 @@
 """Main window: title bar with search, navigation rail, command bar and page stack."""
 from __future__ import annotations
 
-from gi.repository import Gdk, GLib, Gtk
+import os
+
+from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk
 
 from . import theme, util
 from .i18n import _
@@ -43,6 +45,89 @@ class NavItem(Gtk.Button):
             self.remove_css_class("selected")
 
 
+class TitleBar(Gtk.Widget):
+    """Title bar layout: icon + title on the left, caption buttons on the right and the
+    search box centred like Windows (34 % of the width, 200-600 px).  Its minimum width
+    never depends on the current window width, so restoring a maximised window can
+    always shrink it back (a size request computed from the allocation used to pin the
+    title bar wider than the window)."""
+    __gtype_name__ = "FenestraTaskTitleBar"
+
+    def __init__(self):
+        super().__init__()
+        self.add_css_class("titlebar")
+        self.start = self.center = self.end = None
+
+    def _set(self, attr, w):
+        old = getattr(self, attr)
+        if old is not None:
+            old.unparent()
+        setattr(self, attr, w)
+        w.set_parent(self)
+
+    def set_start(self, w):
+        self._set("start", w)
+
+    def set_center(self, w):
+        self._set("center", w)
+
+    def set_end(self, w):
+        self._set("end", w)
+
+    def _kids(self):
+        return [w for w in (self.start, self.center, self.end) if w is not None and w.get_visible()]
+
+    def do_measure(self, orientation, for_size):
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            mn = nat = 0
+            for w in (self.start, self.end):
+                if w is not None and w.get_visible():
+                    a, b, _x, _y = w.measure(orientation, -1)
+                    mn += a
+                    nat += b
+            return mn, nat + 600, -1, -1
+        mn = nat = 0
+        for w in self._kids():
+            a, b, _x, _y = w.measure(orientation, -1)
+            mn, nat = max(mn, a), max(nat, b)
+        return mn, nat, -1, -1
+
+    def do_size_allocate(self, w, h, baseline):
+        left = right = 0
+        if self.start is not None and self.start.get_visible():
+            mn, nat, _a, _b = self.start.measure(Gtk.Orientation.HORIZONTAL, -1)
+            sw = max(mn, min(nat, w))
+            self.start.allocate(sw, h, -1, None)
+            left = sw
+        if self.end is not None and self.end.get_visible():
+            mn, nat, _a, _b = self.end.measure(Gtk.Orientation.HORIZONTAL, -1)
+            ew = max(mn, min(nat, max(0, w - left)))
+            tr = Gsk.Transform().translate(_pt(w - ew, 0))
+            self.end.allocate(ew, h, -1, tr)
+            right = ew
+        c = self.center
+        if c is not None and c.get_visible():
+            mn, _nat, _a, _b = c.measure(Gtk.Orientation.HORIZONTAL, -1)
+            want = int(min(600, max(200, w * 0.34)))
+            avail_l, avail_r = left + 12, w - right - 12
+            cw = max(0, min(want, avail_r - avail_l))
+            if cw < max(mn, 120):
+                c.set_child_visible(False)
+                return
+            c.set_child_visible(True)
+            x = int(w / 2 - 15 - cw / 2)
+            x = max(avail_l, min(x, avail_r - cw))
+            ch = min(h, c.measure(Gtk.Orientation.VERTICAL, cw)[1])
+            tr = Gsk.Transform().translate(_pt(x, int((h - ch) / 2)))
+            c.allocate(cw, ch, -1, tr)
+
+
+def _pt(x, y):
+    p = Graphene.Point()
+    p.x, p.y = x, y
+    return p
+
+
 class TaskWindow(Gtk.ApplicationWindow):
     def __init__(self, app, collector, start_page="processes", expanded=None):
         super().__init__(application=app)
@@ -66,21 +151,19 @@ class TaskWindow(Gtk.ApplicationWindow):
 
         # ------------------------------------------------------------ title bar
         handle = Gtk.WindowHandle()
-        bar = Gtk.CenterBox()
+        bar = TitleBar()
         bar.add_css_class("titlebar")
         start = Gtk.Box()
         start.append(icon("org.fenestra.TaskManager", 16, "title-icon"))
         start.append(label(_("Task Manager"), "title-label"))
-        bar.set_start_widget(start)
+        bar.set_start(start)
         self.search = Gtk.Entry()
         self.search.add_css_class("title-search")
         self.search.set_placeholder_text(_("Type a name, publisher, or PID to search"))
         self.search.set_icon_from_icon_name(Gtk.EntryIconPosition.PRIMARY, "tm-search-symbolic")
         self.search.set_valign(Gtk.Align.CENTER)
-        self.search.set_margin_end(30)
         self.search.connect("changed", self._on_search)
-        self.search.set_size_request(260, -1)
-        bar.set_center_widget(self.search)
+        bar.set_center(self.search)
         caps = Gtk.Box()
         caps.add_css_class("caption-buttons")
         caps.set_valign(Gtk.Align.START)
@@ -94,7 +177,7 @@ class TaskWindow(Gtk.ApplicationWindow):
             b.get_child().set_draw_func(self._draw_caption, name)
             b.connect("clicked", cb)
             caps.append(b)
-        bar.set_end_widget(caps)
+        bar.set_end(caps)
         handle.set_child(bar)
         self.set_titlebar(handle)
 
@@ -133,7 +216,8 @@ class TaskWindow(Gtk.ApplicationWindow):
         self.panel.add_css_class("panel")
         self.toolbar = Gtk.Box()
         self.toolbar.add_css_class("page-toolbar")
-        self.page_title = label("", "page-title")
+        self.page_title = label("", "page-title", ellipsize=True)
+        self.page_title.set_width_chars(3)
         self.toolbar.append(self.page_title)
         self.toolbar.append(Gtk.Box(hexpand=True))
         self.tool_slot = Gtk.Box()
@@ -159,6 +243,20 @@ class TaskWindow(Gtk.ApplicationWindow):
         self.smoke.set_visible(False)
         self.overlay.add_overlay(self.smoke)
 
+        if os.environ.get("FENESTRA_TASKMGR_DEBUG_INPUT"):
+            dbg = Gtk.GestureClick(button=0)
+            dbg.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+
+            def _dbg(g, n, x, y):
+                w = self.pick(x, y, Gtk.PickFlags.DEFAULT)
+                chain = []
+                while w is not None:
+                    chain.append(type(w).__name__ + ("." + ".".join(w.get_css_classes()) if w.get_css_classes() else ""))
+                    w = w.get_parent()
+                print(f"PRESS t={GLib.get_monotonic_time()} {x:.0f},{y:.0f} n={n} -> {' < '.join(chain[:6])}", flush=True)
+            dbg.connect("pressed", _dbg)
+            self.add_controller(dbg)
+            self.connect("notify::is-active", lambda *_: print(f"ACTIVE {self.is_active()} t={GLib.get_monotonic_time()}", flush=True))
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._on_key)
         self.add_controller(keys)
@@ -191,12 +289,6 @@ class TaskWindow(Gtk.ApplicationWindow):
             cr.move_to(cx + 5, cy - 5)
             cr.line_to(cx - 5, cy + 5)
             cr.stroke()
-
-    def do_size_allocate(self, w, h, b):
-        Gtk.ApplicationWindow.do_size_allocate(self, w, h, b)
-        want = int(min(600, max(200, w * 0.34)))
-        if self.search.get_size_request()[0] != want:
-            GLib.idle_add(lambda: (self.search.set_size_request(want, -1), False)[1])
 
     def set_expanded(self, on):
         self.expanded = on
