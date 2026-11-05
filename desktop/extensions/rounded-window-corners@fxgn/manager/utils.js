@@ -249,6 +249,10 @@ export function shouldEnableEffect(win) {
         !isException) {
         return false;
     }
+    // Fenestra: like Windows 11, snapped windows (half/quarter/layouts via
+    // Tiling Assistant or mutter edge tiling) get square corners too.
+    if (isSnapped(win))
+        return false;
     // Skip maximized/fullscreen windows according to settings.
     const maximized = win.maximizedHorizontally || win.maximizedVertically;
     const fullscreen = win.fullscreen;
@@ -279,4 +283,28 @@ function getAppType(win) {
         logError(e);
         return 'Other';
     }
+}
+
+/** Fenestra: true when the window is snapped/tiled to screen edges. */
+export function isSnapped(win) {
+    if (win.isTiled || win.tiledRect)
+        return true;
+    try {
+        const tile = win.get_tile_match?.() || (win.tile_mode !== undefined && win.tile_mode !== 0);
+        if (tile === true)
+            return true;
+    } catch (e) {}
+    const wa = win.get_work_area_current_monitor?.();
+    if (!wa)
+        return false;
+    const r = win.get_frame_rect();
+    const near = (a, b) => Math.abs(a - b) <= 2;
+    const left = near(r.x, wa.x), right = near(r.x + r.width, wa.x + wa.width);
+    const top = near(r.y, wa.y), bottom = near(r.y + r.height, wa.y + wa.height);
+    const touching = [left, right, top, bottom].filter(Boolean).length;
+    const fullH = near(r.height, wa.height), fullW = near(r.width, wa.width);
+    // Half or column (full height against a side), row (full width), or quarter (corner, ≥2 edges and ≤ half size).
+    if ((fullH && (left || right)) || (fullW && (top || bottom)))
+        return true;
+    return touching >= 2 && r.width <= wa.width / 2 + 2 && r.height <= wa.height / 2 + 2;
 }
