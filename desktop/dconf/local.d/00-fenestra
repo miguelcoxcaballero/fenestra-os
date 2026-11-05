@@ -6,6 +6,8 @@ enabled-extensions=['no-screenshot-box@screenshot', 'blur-my-shell@aunetx', 'til
 favorite-apps=['fenestra-search.desktop', 'org.mozilla.firefox.desktop', 'org.gnome.Nautilus.desktop']
 
 [org/gnome/shell/extensions/arcmenu]
+# Right-clicking Start does nothing (no ArcMenu context menu).
+menu-button-right-click-action='None'
 apps-show-extra-details=false
 apps-show-generic-names=false
 dash-to-panel-standalone=false

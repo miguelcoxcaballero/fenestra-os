@@ -17,6 +17,7 @@ import {installWeatherWidget} from './weatherWidget.js';
 import {installTaskbarSearch} from './taskbarSearch.js';
 import {syncCaptionButtons} from './captionSync.js';
 import {installFlyoutGap} from './flyoutGap.js';
+import {installTaskbarMenu} from './taskbarMenu.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -46,6 +47,7 @@ export default class WindowsTrayTypography extends Extension {
         this._date(Main.panel.statusArea.dateMenu);
         this._stopTrayLayout=installTrayLayout(this._injections);
         try{installFlyoutGap(this._injections);}catch(e){logError(e,'Fenestra flyout gap');}
+        try{this._stopTaskbarMenu=installTaskbarMenu();}catch(e){logError(e,'Fenestra taskbar menu');}
         this._stopPress=installPressAnimation();
         this._stopOverview=installOverviewBlock(this._injections);
         this._stopPreview=installPreviewStyle();
@@ -116,6 +118,7 @@ export default class WindowsTrayTypography extends Extension {
         indicator._percentageLabel.set_style('font-family: "Fenestra Taskbar Text"; font-size: 12px; font-weight: 400; min-width: 36px; text-align: right;');
     }
     disable() {
+        this._stopTaskbarMenu?.();this._stopTaskbarMenu=null;
         this._stopWeather?.();this._stopWeather=null;
         this._stopSearch?.();this._stopSearch=null;this._desktop=null;
         this._security?.destroy();this._security=null;
