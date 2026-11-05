@@ -44,6 +44,11 @@ install -d "$DESTDIR$PKGDATADIR/illustrations"
 for svg in "$SRC"/data/illustrations/*.svg; do
     install -m 0644 "$svg" "$DESTDIR$PKGDATADIR/illustrations/"
 done
+# UI glyphs (back arrow, accessibility button).
+install -d "$DESTDIR$PKGDATADIR/icons"
+for svg in "$SRC"/data/icons/*.svg; do
+    install -m 0644 "$svg" "$DESTDIR$PKGDATADIR/icons/"
+done
 
 # Launcher.
 sed "s|@PKGDATADIR@|$PKGDATADIR|g" "$SRC/bin/fenestra-oobe" > "$DESTDIR$LIBEXECDIR/fenestra-oobe"
