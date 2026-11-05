@@ -316,9 +316,9 @@ class UsageBar(Gtk.DrawingArea):
     def __init__(self, fraction):
         super().__init__()
         self.fraction = fraction
-        self.set_size_request(190, 12)
+        self.set_size_request(190, 13)
         self.set_content_width(190)
-        self.set_content_height(12)
+        self.set_content_height(13)
         self.set_halign(Gtk.Align.START)
         self.set_draw_func(self._draw)
 
@@ -333,7 +333,7 @@ class UsageBar(Gtk.DrawingArea):
         if self.fraction > 0.9:
             cr.set_source_rgb(0.855, 0.149, 0.149)
         else:
-            cr.set_source_rgb(0.149, 0.627, 0.855)
+            cr.set_source_rgb(0.0, 0.439, 0.796)
         cr.rectangle(1, 1, max(0, (width - 2) * self.fraction), height - 2)
         cr.fill()
 

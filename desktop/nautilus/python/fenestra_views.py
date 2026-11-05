@@ -62,7 +62,7 @@ class FenestraViews:
         window.connect('notify::active-slot',lambda *_:self.queue())
         window.connect('destroy',self.destroy)
         if self.compact:window.add_css_class('win11-compact')
-        self._width=0
+        self._width=0;self._tick_n=0
         self.menus=CommandMenus(self)
         window.add_tick_callback(self._tick)
         self.queue()
@@ -71,15 +71,30 @@ class FenestraViews:
         if self.window is None:return False
         width=window.get_width()
         if width and width!=self._width:
-            self._width=width;self._responsive(width)
+            self._width=width;self._tick_n=0;self._responsive(width)
+        elif width and self._tick_n<20:
+            # The address bar request depends on its own x; settle it over a few frames.
+            self._tick_n+=1;self._responsive(width)
         return True
 
     def _responsive(self,width):
+        # Address bar takes all the width left of the search box (Windows), not a centred title.
+        # GtkCenterBox only gives the title its natural width, so request the width
+        # Windows gives the address bar (window - nav buttons - search - gaps). The
+        # request trails the window width, so the window can still be made narrower.
+        path=next((w for w in walk(self.window) if kind(w)=='NautilusPathBar'),None)
+        stack=path.get_parent() if path else None
+        if stack is not None:
+            search=max(150,min(269,int((width-560)*0.48)))
+            ok,b=stack.compute_bounds(self.window)
+            left=int(b.get_x()) if ok and b.get_x()>0 else 205
+            want=max(120,width-left-search-6-17)
+            if stack.get_size_request()[0]!=want:stack.set_size_request(want,-1)
         """Explorer shrinks the search box and folds command-bar buttons into "See more"
         instead of letting the window's minimum width grow past the screen."""
         for w in walk(self.window):
             if w.has_css_class('win11-search'):
-                w.set_size_request(max(150,min(260,int((width-560)*0.45))),-1)
+                w.set_size_request(max(150,min(269,int((width-560)*0.48))),-1)
                 break
         bar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
         if not bar:return
@@ -93,7 +108,7 @@ class FenestraViews:
         if seps:seps[0].set_visible(not collapse)
         for c in children:
             if isinstance(c,Gtk.Actionable) and c.get_action_name()=='slot.search-visible':
-                c.set_visible(width>=700 and self.special not in ('computer','gallery'))
+                c.set_visible(width>=700 and self.special=='home')
             if isinstance(c,Gtk.Actionable) and c.get_action_name()=='view.current-directory-properties':
                 for lab in walk(c):
                     if isinstance(lab,Gtk.Label):lab.set_visible(width>=900)
@@ -176,9 +191,17 @@ class FenestraViews:
         if not bar:return
         for w in walk(bar):
             if isinstance(w,Gtk.Actionable) and w.get_action_name()=='slot.search-visible':
-                w.set_visible(special not in ('computer','gallery') and (not self._width or self._width>=700))
+                # Windows shows Filter on Home only.
+                w.set_visible(special=='home' and (not self._width or self._width>=700))
         sort=getattr(self.window,'_windows_sort_menu',None)
-        if sort:sort.set_sensitive(special!='gallery')
+        if sort:sort.set_sensitive(special not in ('gallery','home'))
+        for w in walk(bar):
+            if isinstance(w,Gtk.Actionable) and (w.get_action_name() or '') in ('view.new-folder','view.cut','view.copy','view.paste','view.rename','view.open-with-other-application','view.move-to-trash'):
+                if special is not None:
+                    w.set_sensitive(False);w._fenestra_off=True
+                elif getattr(w,'_fenestra_off',False):
+                    # Re-sync with the action's enabled state (GtkActionHelper owns sensitivity).
+                    w._fenestra_off=False;name=w.get_action_name();w.set_action_name(None);w.set_action_name(name)
         coll=getattr(self.window,'_fenestra_collection',None)
         if coll is None and special=='gallery':
             coll=Gtk.MenuButton();coll.add_css_class('win11-cmd-text');coll.add_css_class('flat')
@@ -260,9 +283,30 @@ class FenestraViews:
                     w.set_title(tr('This folder is empty.'));w.add_css_class('fenestra-empty-folder')
                     w.set_valign(Gtk.Align.START)
 
+    def _statusbar(self,label):
+        """Windows' status bar: 'N items |' on the left, Details/Large icons toggles on the right."""
+        if getattr(label,'_fenestra_bar',False):return
+        parent=label.get_parent()
+        if not isinstance(parent,Gtk.Box):return
+        label._fenestra_bar=True
+        bar=Gtk.Box();bar.add_css_class('fenestra-statusbar')
+        parent.insert_child_after(bar,label);parent.remove(label);bar.append(label)
+        label.set_hexpand(False)
+        sep=Gtk.Separator(orientation=Gtk.Orientation.VERTICAL);bar.append(sep)
+        bar.append(Gtk.Box(hexpand=True))
+        self.status_buttons={}
+        for mode,glyph in (('details','win11-view-details'),('large','win11-view-large')):
+            b=Gtk.ToggleButton();img=Gtk.Image.new_from_icon_name(glyph);img.set_pixel_size(12);b.set_child(img)
+            b.set_tooltip_text(dict(VIEWS)[mode])
+            b.connect('clicked',lambda btn,m=mode:self.select(m,remember=True) if btn.get_active() else None)
+            bar.append(b);self.status_buttons[mode]=b
+
     def _status(self,slot,special=None):
         label=next((w for w in walk(self.window) if isinstance(w,Gtk.Label) and w.has_css_class('win11-status')),None)
         if not label: return
+        self._statusbar(label)
+        for m,b in getattr(self,'status_buttons',{}).items():
+            if b.get_active()!=(self.mode==m and not special):b.set_active(self.mode==m and not special)
         loc=slot.get_property('location') if slot else None
         n=self.pages.count(special) if special else (_count_items(loc) if loc and loc.get_path() else None)
         label.set_label('' if n is None else (tr('1 item') if n==1 else tr('%d items') % n))

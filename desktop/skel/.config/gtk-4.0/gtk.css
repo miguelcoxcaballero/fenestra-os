@@ -370,7 +370,7 @@ window.win11-explorer, window.win11-explorer label { font-family: "Segoe UI Vari
 .win11-explorer .fenestra-section-header:checked { background: transparent; }
 .win11-explorer .fenestra-page .fenestra-section-title { font-size: 14px; font-weight: 600; }
 .win11-explorer .fenestra-quick-grid { margin: 2px 0 0 80px; padding: 0; }
-.win11-explorer .fenestra-quick-grid > flowboxchild { padding: 0; min-width: 284px; max-width: 284px; border-radius: 4px; }
+.win11-explorer .fenestra-quick-grid > flowboxchild { padding: 0; min-width: 284px; border-radius: 4px; }
 .win11-explorer .fenestra-quick-grid > flowboxchild:hover { background: #2d2d2d; }
 .win11-explorer .fenestra-quick-grid > flowboxchild:selected { background: #383838; }
 .win11-explorer .fenestra-quick-tile { min-height: 60px; padding: 0 12px; }
@@ -460,6 +460,49 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
 .win11-explorer .fenestra-infopane-facts label { font-size: 12px; color: #ffffff; }
 .win11-explorer .fenestra-infopane-facts label.fenestra-infopane-key { color: #c5c5c5; }
 .win11-explorer .fenestra-infopane-message, .win11-explorer .fenestra-infopane-text { font-size: 12px; color: #c5c5c5; }
+/* Pixel pass vs Windows 11 25H2 (100%, dark): measured from ex-documents/explorer-2/ex-thispc. */
+.win11-explorer .win11-titlebar { min-height: 38px; padding-left: 3px; }
+.win11-explorer .win11-titlebar windowcontrols > button { min-height: 30px; }
+.win11-explorer .win11-tabs tab, .win11-explorer .win11-tabs tab:hover { border: 0; box-shadow: none; border-radius: 8px 8px 0 0; background-color: transparent; min-height: 31px; margin-top: 7px; padding: 0 6px 0 4px; }
+.win11-explorer .win11-tabs tab box, .win11-explorer .win11-tabs .tab-title { min-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; }
+.win11-explorer .win11-tabs, .win11-explorer .win11-tabs tabbox { min-height: 0; padding-top: 0; padding-bottom: 0; }
+.win11-explorer .win11-tabs tab:hover { background-color: #2d2d2d; }
+.win11-explorer .win11-tabs tab:selected, .win11-explorer .win11-tabs tab:checked { background-color: #2c2c2c; border: 0; }
+.win11-explorer .win11-titlebar .win11-new-tab { margin: 2px 8px 0 4px; }
+.win11-explorer .win11-navigation { min-height: 47px; padding: 2px 5px 2px 1px; background: #2c2c2c; border-top: 1px solid #1d1d1d; border-bottom: 1px solid #3a3a3a; box-shadow: none; }
+.win11-explorer .win11-navigation > button, .win11-explorer .win11-navigation .history-controls button, .win11-explorer .win11-navigation box.start button { margin: 0 2px 0 0; }
+.win11-explorer .fenestra-crumbs, .win11-explorer .win11-navigation box.linked.fenestra-crumbs, .win11-explorer .win11-navigation .win11-search { min-height: 32px; background: #383838; background-image: none; border-radius: 4px; }
+.win11-explorer #NautilusPathBar { background-color: #383838; border-radius: 4px; }
+.win11-explorer #NautilusPathBar > scrolledwindow undershoot.left, .win11-explorer #NautilusPathBar > scrolledwindow undershoot.right { background: none; border: 0; }
+.win11-explorer .fenestra-crumbs scrolledwindow, .win11-explorer .fenestra-crumbs viewport, .win11-explorer .fenestra-crumbs button, .win11-explorer .fenestra-crumbs menubutton > button { background: transparent; box-shadow: none; }
+.win11-explorer .win11-navigation .win11-search { margin-left: 9px; padding: 0 12px; }
+.win11-explorer .win11-commandbar { background: #191919; border-bottom: 1px solid #3a3a3a; }
+.win11-explorer .sidebar-pane, .win11-explorer placessidebar, .win11-explorer .navigation-sidebar, .win11-explorer placessidebar list { background: #191919; }
+.win11-explorer .navigation-sidebar { border-right: 0; padding-left: 0; padding-right: 0; }
+.win11-explorer .sidebar-pane { min-width: 160px; }
+.win11-explorer placessidebar { border-right: 1px solid #202020; }
+.win11-explorer placessidebar > scrolledwindow { border-right: 1px solid #2b2b2b; }
+.win11-explorer placessidebar .navigation-sidebar { border-right: 1px solid #202020; }
+.win11-explorer placessidebar row, .win11-explorer .navigation-sidebar row { margin: 0 5px 0 3px; padding-left: 24px; }
+.win11-explorer placessidebar row:selected, .win11-explorer .navigation-sidebar row:selected { background: #333333; }
+.win11-explorer placessidebar row:hover, .win11-explorer .navigation-sidebar row:hover { background: #2d2d2d; }
+.win11-explorer placessidebar row:selected:hover, .win11-explorer .navigation-sidebar row:selected:hover { background: #3d3d3d; }
+.win11-explorer placessidebar row image, .win11-explorer .navigation-sidebar row image { margin-right: 0; }
+.win11-explorer .navigation-sidebar row image.sidebarrow-icon { -gtk-icon-size: 16px; min-width: 16px; padding: 0; margin: 0 1px 0 1px; }
+.win11-explorer .navigation-sidebar separator.fenestra-sidebar-sep { margin: 16px 13px 15px 10px; background: #383838; }
+.win11-explorer label.win11-status, .win11-explorer .fenestra-statusbar { background: #1c1c1c; }
+.win11-explorer .fenestra-statusbar separator { min-width: 1px; margin: 6px 0; background: #c5c5c5; }
+.win11-explorer .fenestra-statusbar button { min-width: 22px; min-height: 20px; padding: 0; margin: 2px 1px; border-radius: 3px; background: transparent; box-shadow: none; }
+.win11-explorer .fenestra-statusbar button:checked { background: #3a3a3a; }
+.win11-explorer .win11-commandbar separator.win11-cmd-separator { margin: 8px 4px; background: #2c2c2c; }
+.win11-explorer .fenestra-crumbs .fenestra-crumb-sep { margin: 0 10px; }
+.win11-explorer .fenestra-crumbs .fenestra-crumb-lead { margin: 0 12px 0 20px; }
+.win11-explorer .fenestra-crumbs button { padding-left: 12px; }
+.win11-explorer .fenestra-statusbar { padding-left: 0; }
+.win11-explorer .fenestra-statusbar label.win11-status { padding-right: 9px; }
+.win11-explorer .fenestra-group-header { margin-top: 4px; }
+.win11-explorer .fenestra-drives > flowboxchild { padding-left: 11px; }
+.win11-explorer .win11-tabs tab .tab-title { margin-left: 5px; }
 /* Light mode: the white Fluent glyphs used on these pages are inverted like the command bar's. */
 @media (prefers-color-scheme: light) {
   .win11-explorer .fenestra-section-header image, .win11-explorer .fenestra-section-chevron image,
@@ -566,6 +609,20 @@ window.background.csd headerbar.header-bar.titlebar windowcontrols button.titleb
   .win11-explorer .fenestra-infopane-facts label { color: #1a1a1a; }
   .win11-explorer .fenestra-infopane-facts label.fenestra-infopane-key { color: #5f5f5f; }
   .win11-explorer .fenestra-infopane-message, .win11-explorer .fenestra-infopane-text { color: #5f5f5f; }
+  .win11-explorer .win11-tabs tab:hover { background-color: #f0f0f0; }
+  .win11-explorer .win11-navigation { border-bottom: 1px solid #e5e5e5; }
+  .win11-explorer .fenestra-crumbs, .win11-explorer .win11-navigation box.linked.fenestra-crumbs, .win11-explorer .win11-navigation .win11-search { background: #e5e5e5; }
+  .win11-explorer #NautilusPathBar { background-color: #e5e5e5; }
+  .win11-explorer .win11-commandbar { background: #ffffff; border-bottom: 1px solid #e5e5e5; }
+  .win11-explorer .sidebar-pane, .win11-explorer placessidebar, .win11-explorer .navigation-sidebar, .win11-explorer placessidebar list { background: #ffffff; }
+  .win11-explorer placessidebar { border-right: 1px solid #e5e5e5; }
+  .win11-explorer placessidebar > scrolledwindow { border-right: 1px solid #e5e5e5; }
+  .win11-explorer placessidebar .navigation-sidebar { border-right: 1px solid #e5e5e5; }
+  .win11-explorer placessidebar row:selected, .win11-explorer .navigation-sidebar row:selected { background: #e5e5e5; }
+  .win11-explorer placessidebar row:hover, .win11-explorer .navigation-sidebar row:hover { background: #f0f0f0; }
+  .win11-explorer .navigation-sidebar separator.fenestra-sidebar-sep { background: #e5e5e5; }
+  .win11-explorer .fenestra-statusbar separator { background: #5f5f5f; }
+  .win11-explorer .fenestra-statusbar button:checked { background: #e5e5e5; }
   .win11-explorer .win11-commandbar image, .win11-explorer .win11-navigation image, .win11-explorer image.fenestra-pin, .win11-explorer .win11-cmd-chevron { -gtk-icon-filter: invert(0.9); }
 }
 /* ---- end Fenestra light mode ---- */
