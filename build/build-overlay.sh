@@ -39,6 +39,10 @@ install -Dm755 "$REPO/tools/fenestra-import-windows-assets" "$OUT/usr/bin/fenest
 install -Dm644 "$D/systemd/fenestra-patch-nautilus.service" "$OUT/usr/lib/systemd/system/fenestra-patch-nautilus.service"
 # Settings > System > Recovery > Reset this PC (runs at the next boot, before GDM).
 install -m755 "$D/libexec/fenestra-reset" "$OUT/usr/libexec/fenestra/"
+# Settings > Fenestra Update: newer Fenestra builds from GitHub (fenestra-update),
+# and the steps every install and update ends with (fenestra-post-install).
+install -m755 "$D/libexec/fenestra-update" "$D/libexec/fenestra-post-install" "$OUT/usr/libexec/fenestra/"
+install -Dm644 "$D/polkit/org.fenestra.update.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.update.policy"
 install -Dm644 "$D/systemd/fenestra-reset.service" "$OUT/usr/lib/systemd/system/fenestra-reset.service"
 install -Dm644 "$D/polkit/org.fenestra.reset.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.reset.policy"
 install -d "$OUT/usr/lib/systemd/user"
@@ -124,6 +128,16 @@ for app in "$REPO"/apps/*/; do
         log "  installed $(basename "$app")"
     fi
 done
+
+log "Release stamp"
+# Which Fenestra build this is; Settings > Fenestra Update compares it with GitHub.
+COMMIT="${FENESTRA_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo unknown)}"
+COMMIT_DATE="${FENESTRA_COMMIT_DATE:-$(git -C "$REPO" log -1 --format=%cI 2>/dev/null || date -u +%FT%TZ)}"
+python3 - "$OUT/usr/share/fenestra/release.json" "$COMMIT" "$COMMIT_DATE" <<'PY'
+import json, sys
+json.dump({"repo": "miguelcoxcaballero/fenestra-os", "branch": "main",
+           "commit": sys.argv[2], "date": sys.argv[3]}, open(sys.argv[1], "w"), indent=1)
+PY
 
 log "Licenses"
 install -d "$OUT/usr/share/licenses/fenestra"

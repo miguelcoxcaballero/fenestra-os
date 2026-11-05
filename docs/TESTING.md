@@ -88,6 +88,8 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | OOBE demo flow (`tests.test_flow_demo`) | OK, except where the host has a real user called `alex`: the username derivation then (correctly) proposes `alexrivera` |
 | Settings pages in dark and light (`--demo-data`) | OK |
 | *System › Recovery › Reset this PC* (`fenestra-reset run`, both modes, on throw-away users in the Fedora 43 container) | OK: *Keep my files* leaves `~/Documents` and restores `~/.config` from `/etc/skel`; *Remove everything* deletes the users and their homes; the request file is consumed first, so it never runs twice. Not yet run on a real boot (polkit, `fenestra-reset.service` before GDM) |
+| *Fenestra Update* from GitHub: check | OK against the live repository: an older build lists the commits since it (merge commits left out), a build without a commit id offers the newest one, the newest build reports nothing to install |
+| *Fenestra Update* from GitHub: install (`fenestra-update apply`, Fedora 43 container, source tarball of the working tree) | OK: the overlay is rebuilt (`build/build-overlay.sh`) and installed; files dropped since the last update are removed (`/usr` only), `/var` state is kept, running programs keep their open files (new inodes), `fenestra-post-install` runs. Not yet run with pkexec on an installed system |
 
 ### Build and packaging
 

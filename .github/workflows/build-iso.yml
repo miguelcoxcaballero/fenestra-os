@@ -16,6 +16,11 @@ jobs:
         run: |
           python3 -m py_compile tools/*.py tools/fenestra-import-windows-assets desktop/nautilus/python/*.py desktop/libexec/fenestra-patch-nautilus
           find apps -name '*.py' -print0 | xargs -0 -r python3 -m py_compile
+      - name: Shell syntax
+        run: |
+          for f in desktop/libexec/fenestra-reset desktop/libexec/fenestra-update desktop/libexec/fenestra-post-install build/*.sh; do
+            bash -n "$f"
+          done
       - name: Kickstart syntax
         run: |
           pip install pykickstart

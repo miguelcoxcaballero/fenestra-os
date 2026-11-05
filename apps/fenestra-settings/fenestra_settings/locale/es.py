@@ -1248,4 +1248,11 @@ STRINGS = {
     'Keep my files: removes apps and settings, but keeps your personal files.\n\nRemove everything: removes all of your personal files, apps, and settings.': 'Conservar mis archivos: quita las aplicaciones y la configuración, pero conserva tus archivos personales.\n\nQuitar todo: quita todos tus archivos personales, aplicaciones y configuración.',
     'Keep my files': 'Conservar mis archivos',
     'Remove everything': 'Quitar todo',
+    # Fenestra updates from GitHub
+    '{0} changes · new features and fixes': '{0} cambios · nuevas funciones y correcciones',
+    'Fenestra update failed': 'No se pudo actualizar Fenestra',
+    'Fenestra {0}': 'Fenestra {0}',
+    'New features and fixes': 'Nuevas funciones y correcciones',
+    'Fenestra update failed: {0}': 'No se pudo actualizar Fenestra: {0}',
+    '{0} update · Last checked: {1}': '{0} actualización · Última comprobación: {1}',
 }
