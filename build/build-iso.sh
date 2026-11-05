@@ -46,7 +46,8 @@ MKKSISO_ARGS=(--ks "$WORK/ks.cfg" --add "$WORK/add/fenestra" --rm rd.live.check
 [ -n "$EXTRA_ARGS" ] && MKKSISO_ARGS+=(-c "$EXTRA_ARGS")
 # Rebuilding the EFI boot image needs loop devices (root). Rootless local builds
 # skip it: the kickstart then boots via BIOS only (fine for tests/vm).
-if [ "$(id -u)" != 0 ] || ! losetup -f >/dev/null 2>&1; then MKKSISO_ARGS+=(--skip-mkefiboot); fi
+# FENESTRA_SKIP_MKEFIBOOT=1 forces this (containers where loop mounts fail).
+if [ "${FENESTRA_SKIP_MKEFIBOOT:-}" = 1 ] || [ "$(id -u)" != 0 ] || ! losetup -f >/dev/null 2>&1; then MKKSISO_ARGS+=(--skip-mkefiboot); fi
 
 if [ "${FENESTRA_NO_CONTAINER:-}" = 1 ]; then
     mkksiso "${MKKSISO_ARGS[@]}" "$FEDORA_ISO" "$OUT_ISO"

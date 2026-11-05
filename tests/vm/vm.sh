@@ -19,7 +19,10 @@ mkdir -p "$VM" "$SHOTS"
 
 qmp() { python3 "$HERE/qmp.py" "$QMP" "$@"; }
 
-common=(-enable-kvm -cpu host -smp 6 -m 6144 -machine q35
+# KVM when available; otherwise multi-threaded TCG (slow, but works in CI/containers).
+if [ -w /dev/kvm ]; then accel=(-enable-kvm -cpu host -smp "${FENESTRA_VM_CPUS:-6}")
+else accel=(-accel tcg,thread=multi,tb-size=1024 -cpu max -smp "${FENESTRA_VM_CPUS:-$(nproc)}"); fi
+common=("${accel[@]}" -m "${FENESTRA_VM_MEM:-6144}" -machine q35
         -drive "file=$DISK,if=virtio,format=qcow2"
         -device virtio-vga,xres=$W,yres=$H -display none
         -device qemu-xhci -device usb-tablet -device usb-kbd
