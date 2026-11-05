@@ -51,7 +51,7 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | Desktop, centred taskbar (Start, Search, Files), tray, clock | OK |
 | Start opens | **Fixed**: failed on every new account (see below) |
 | Start layout: Pinned, Recommended, All (Category) | OK; "Recent" renamed "Recommended"; the strip/band above the search box was removed |
-| Search: recent searches, chips, Best match, preview pane | OK; selected chip used a green accent → blue |
+| Search: recent searches, chips, Best match, preview pane | OK; selected chip used a green accent → blue; added "Top apps" to the empty home |
 | Quick settings | OK (Wi‑Fi/volume tiles need NetworkManager/PipeWire, absent in the container) |
 | Notification centre + calendar + Focus | OK; strings were hard-coded Spanish → English (Spanish kept as translation) |
 | Files: Explorer sidebar, command bar, tabs | **Fixed**: Spanish labels, 5 missing icons, red tab close, sidebar missing Gallery/Desktop |
@@ -84,7 +84,6 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 
 - The Windows 11 reference VM was not re-run here (see Environment), so desktop and Settings
   were checked against Windows 11 25H2 behaviour, not against fresh side-by-side captures.
-- The Search home shows only "Recent searches"; there is no "Top apps" grid on a fresh account.
 - Anaconda's boot splash and some text in the installer environment still come from Fedora's
   installer image. Rebranding it fully needs a rebuilt `install.img` (lorax), not just
   `mkksiso`.
