@@ -93,7 +93,17 @@ or async D-Bus; missing backends show a "Not available" row instead of failing):
   Uninstall via `pkcon remove` / `flatpak uninstall` with confirmation dialog), Default
   apps, Startup apps (`~/.config/autostart` overrides).
 - **Accounts** – Your info (avatar via AccountsService `SetIconFile`, full name),
-  Sign-in options (fingerprint status/enroll via fprintd), Other users.
+  Sign-in options with **Fenestra Hello**, Other users.
+  - *Facial recognition* uses [Howdy](https://github.com/boltgolt/howdy): set up / improve
+    recognition (`pkexec howdy add`), remove (`howdy clear`), and "automatically dismiss the
+    lock screen" (`howdy set no_confirmation`). The setup wizard shows a live IR-camera preview
+    (GStreamer `v4l2src` → `gtk4paintablesink`) and a progress ring while Howdy captures the model.
+  - *Fingerprint recognition* talks to fprintd over D-Bus (`Claim`, `EnrollStart`,
+    `EnrollStatus`, `DeleteEnrolledFingers2`, `Release`); the wizard fills an original vector
+    fingerprint stage by stage (`num-enroll-stages`) and switches to "touch the edges" at 60 %.
+  - Wizard states can be rendered with `--screenshot out.png --page signin --hello-demo STATE`
+    (`welcome`, `welcome-finger`, `face-1`, `face-2`, `face-done`, `finger-1`, `finger-2`,
+    `finger-edges`, `finger-done`, `error`); see `screenshots/hello-*.png`.
 - **Time & language** – automatic time (timedated `SetNTP`), searchable time-zone list
   (`SetTimezone`), clock format, regional format (localed), keyboard layouts.
 - **Gaming** – Game Mode toggle (`gamemoded` user service) + launchers.
