@@ -53,7 +53,7 @@ class WifiRow(Gtk.ListBoxRow):
         btns = Gtk.Box(spacing=8, halign=Gtk.Align.END)
         self.spinner = Gtk.Spinner(visible=False)
         btns.append(self.spinner)
-        self.button = Gtk.Button(label=_("Connect"), css_classes=["oobe-button", "secondary"])
+        self.button = Gtk.Button(label=_("Connect"), css_classes=["oobe-button", "primary"])
         self.button.connect("clicked", lambda *_: self.connect_clicked())
         btns.append(self.button)
         detail.append(btns)
@@ -232,9 +232,9 @@ class UpdatesPage(Page):
         return not self.state.online
 
     def on_enter(self, direction):
-        self.spinner.start()
         if self.ctx.screenshot_mode:
             return
+        self.spinner.start()
         start = time.monotonic()
 
         def check():

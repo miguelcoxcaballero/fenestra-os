@@ -132,6 +132,10 @@ MESSAGES = {
     "Your device name can't be only numbers.": "El nombre del dispositivo no puede ser solo números.",
     "Your device name can't start or end with a hyphen.":
         "El nombre del dispositivo no puede empezar ni terminar con un guion.",
+    "Checking for updates": "Buscando actualizaciones",
+    "Getting things ready for you": "Preparando todo para ti",
+    "Thanks for your patience": "Gracias por tu paciencia",
+    "Something went wrong": "Algo salió mal",
     # Interests
     "Gaming": "Juegos",
     "Play and discover games": "Juega y descubre juegos",

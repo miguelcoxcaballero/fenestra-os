@@ -27,16 +27,15 @@ def _stop(offset: float, color: Gdk.RGBA) -> Gsk.ColorStop:
 # (base top-left, base bottom-right, blobs[(x, y, radius, color, drift)])
 THEMES = {
     # Very pale blue-grey with large soft blue / periwinkle blobs.
+    # Very pale blue-grey with large soft blue / periwinkle blobs.
     "light": (
-        "#dde7ef", "#d6e1ec",
+        "#d3e1ec", "#dee8f1",
         [
-            (0.10, 0.10, 0.30, "#e9eff5", 0.02),
-            (0.62, 0.10, 0.17, "#a9d2ff", 0.03),
-            (0.66, 0.16, 0.14, "#b9c8f6", 0.03),
-            (0.22, 0.88, 0.24, "#9fc3f7", 0.03),
-            (0.47, 0.97, 0.27, "#9ab6ef", 0.03),
-            (0.86, 0.66, 0.24, "#a1abdd", 0.03),
-            (0.95, 0.20, 0.20, "#d3dee9", 0.02),
+            (0.60, 0.13, 0.12, "#a6d1ff", 0.02),
+            (0.43, 0.99, 0.27, "#98b5e8", 0.02),
+            (0.19, 0.85, 0.14, "#a8cbfc", 0.03),
+            (0.87, 0.62, 0.14, "#a2acdc", 0.03),
+            (0.70, 0.97, 0.13, "#9fb4de", 0.02),
         ],
     ),
     "dark": (

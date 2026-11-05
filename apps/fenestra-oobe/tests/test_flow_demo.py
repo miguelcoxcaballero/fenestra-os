@@ -53,7 +53,7 @@ class DemoFlowTest(unittest.TestCase):
                 return True
             acted.add(key)
             if pid == "keyboard-second":
-                page.on_primary()  # Add layout
+                page.on_secondary()  # Add layout
             elif pid == "keyboard-pick":
                 page.picker.select("us")
                 page.on_primary()

@@ -236,9 +236,9 @@ class ApplyingPage(Page):
         self.status.set_label(_("Getting things ready for you"))
         self.primary_label = None
         self.ctx.update_footer(self)
-        self.spinner.start()
         if self.ctx.screenshot_mode:
             return
+        self.spinner.start()
         run_async(self._apply, callback=self._applied)
 
     def _apply(self):

@@ -36,8 +36,26 @@ class RegionPage(Page):
         self.ctx.next()
 
 
-def _layout_items(layouts):
-    return [(l.id, l.label) for l in layouts]
+def _layout_items(layouts, suggested=None):
+    """Suggested layout first, then related ones (same layout's variants and
+    layouts for the same language), then everything else - like the
+    reference list, which opens with the layouts relevant to the region."""
+    items = [l for l in layouts if l.layout != "custom"]
+    if not suggested:
+        return [(l.id, l.label) for l in items]
+    base = suggested.split("+")[0]
+    by_id = {l.id: l for l in items}
+    lang_word = (by_id[suggested].description if suggested in by_id else "").split(" (")[0]
+
+    def rank(l):
+        if l.id == suggested:
+            return 0
+        if l.layout == base:
+            return 1
+        if lang_word and l.description.split(" (")[0] == lang_word:
+            return 2
+        return 3
+    return [(l.id, l.label) for l in sorted(items, key=rank)]
 
 
 def _parse_id(layout_id: str) -> tuple[str, str]:
@@ -53,7 +71,7 @@ class KeyboardPage(Page):
         super().__init__(ctx, _("Is this the right keyboard layout or input method?"),
                          _("If you also use another keyboard layout, you can add that next."))
         self.primary_label = _("Yes")
-        self.picker = ListPicker(_layout_items(ctx.layouts), selected=self._suggested())
+        self.picker = ListPicker(_layout_items(ctx.layouts, self._suggested()), selected=self._suggested())
         self.picker.connect("activated", lambda *_: self.on_primary())
         self.body.append(self.picker)
         self._last_suggestion = self._suggested()
@@ -71,7 +89,7 @@ class KeyboardPage(Page):
             # Rebuild so the new suggestion is pinned at the top again.
             self._last_suggestion = sugg
             self.body.remove(self.picker)
-            self.picker = ListPicker(_layout_items(self.ctx.layouts), selected=sugg)
+            self.picker = ListPicker(_layout_items(self.ctx.layouts, sugg), selected=sugg)
             self.picker.connect("activated", lambda *_: self.on_primary())
             self.body.append(self.picker)
 
@@ -90,8 +108,9 @@ class SecondKeyboardPage(Page):
 
     def __init__(self, ctx):
         super().__init__(ctx, _("Want to add a second keyboard layout?"))
-        self.primary_label = _("Add layout")
-        self.secondary_label = _("Skip")
+        # Like the reference: "Skip" is the primary button, "Add layout" text.
+        self.primary_label = _("Skip")
+        self.secondary_label = _("Add layout")
 
     def on_enter(self, direction):
         # Coming back from the picker: forget a previously added layout.
@@ -99,10 +118,10 @@ class SecondKeyboardPage(Page):
             self.state.layouts = self.state.layouts[:1]
 
     def on_primary(self):
-        self.ctx.goto("keyboard-pick")
+        self.ctx.next()
 
     def on_secondary(self):
-        self.ctx.next()
+        self.ctx.goto("keyboard-pick")
 
 
 class PickSecondKeyboardPage(Page):

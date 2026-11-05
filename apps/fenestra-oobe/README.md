@@ -1,10 +1,28 @@
 # Fenestra OOBE
 
 First-boot setup ("out-of-box experience") for Fenestra (Fedora 43 / GNOME 49).
-It replaces GNOME Initial Setup with a full-screen, card-based flow modelled on
-the familiar desktop OOBE: a soft gradient background, a centered rounded card
-with an illustration on the left and the question on the right, and
-accessibility and volume buttons in the bottom-left corner.
+It replaces GNOME Initial Setup with a full-screen flow whose geometry is
+matched to reference captures of the familiar desktop OOBE (1920×1080):
+
+- a single light translucent card, 1200×760 at (360,160), radius 8, on a pale
+  blue-grey background with soft blue/periwinkle blobs;
+- the illustration is centred in the left half;
+- the title (28 px) starts at x≈1007;
+- lists start at y≈313, with 58 px rows on a 62 px pitch, 18 px text, and the
+  selected row filled solid with the #0067c0 accent;
+- the suggested item is pinned on top, with type-ahead instead of a search
+  box;
+- the primary button is 127×38 at the bottom right;
+- secondary actions are accent-coloured text;
+- a back arrow sits at the card's top-left;
+- a single accessibility button sits under the card's bottom-right corner;
+  its popover also holds the volume slider;
+- progress pages show a 64 px ring and a 20 px caption.
+
+`tools/compare.py` renders the matching pages and writes side-by-side
+`screenshots/compare-*.png` images (reference left, Fenestra right). Measured
+deviations are within about 2 px; the illustrations and branding are
+intentionally different.
 
 Written in Python 3.14 + PyGObject + GTK 4.20, with its own CSS (no
 libadwaita). It only uses Fedora Workstation packages: python3-gobject, gtk4,
@@ -23,10 +41,10 @@ dynamic initial-setup user in GDM's `gnome-initial-setup` session.
 | 2 | `keyboard` | Is this the right keyboard layout or input method? (xkb `evdev.lst`, translated) |
 | 3 | `keyboard-second` → `keyboard-pick` | Want to add a second keyboard layout? (Add layout / Skip) |
 | 4 | `network` (+ `network-offline`) | Let's connect you to a network. Wi‑Fi through nmcli, with the password entered inline. "I don't have internet" leads to "Continue with limited setup". The page is skipped when a wired or full connection already exists. |
-| 5 | `updates` | Checking for updates. Spinner for at least 3 s while `nmcli networking connectivity check` runs. Shown only when online. |
+| 5 | `updates` | "Checking for updates" progress ring, for at least 3 s while `nmcli networking connectivity check` runs. Shown only when online. |
 | 6 | `device-name` | Let's name your device. Up to 15 characters; letters, digits and hyphens; not only digits. |
 | 7 | `account-name`, `account-password`, `account-confirm`, `account-hint` | Who's going to use this device? / Create a super memorable password / Confirm your password / Add a password hint |
-| 8 | `applying` | Just a moment… Applies hostname, locale, keyboard and time zone, creates the account, then logs in automatically. |
+| 8 | `applying` | Progress ring: "Getting things ready for you", then "Thanks for your patience". Applies hostname, locale, keyboard and time zone, creates the account, then logs in automatically. |
 
 **Existing-user mode (`--existing-user`).** This runs at the first login of
 the new user, full screen over the desktop.
@@ -118,6 +136,7 @@ bin/fenestra-oobe --list-pages
 bin/fenestra-oobe --page network --screenshot out.png [--size 1920x1080] [--lang es]
 tools/screenshot-all.sh        # every page -> screenshots/<page>.png (uses fenestra-test)
 tools/screenshot-all.sh --es   # Spanish variants -> screenshots/<page>-es.png
+tools/compare.py               # side-by-side comparisons with tests/vm/shots/win11/*.png
 python3 -m unittest tests.test_backends tests.test_flow_demo
 ```
 
@@ -147,7 +166,8 @@ included in `fenestra_oobe/translations/es.py`) or `--lang`.
 ## Screenshots
 
 See `screenshots/`: one PNG per page id (`region.png` … `finale-4.png`),
-Spanish variants (`*-es.png`) and `privacy-1366x768.png` for small screens.
+Spanish variants (`*-es.png`), `privacy-1366x768.png` for small screens, and
+`compare-{region,keyboard,second-keyboard,checking-for-updates}.png`.
 
 ## Known limitations
 

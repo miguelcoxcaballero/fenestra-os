@@ -160,12 +160,16 @@ class RingSpinner(Gtk.Widget):
         cr = snapshot.append_cairo(Graphene.Rect().init(0, 0, s, s))
         r = (s - th) / 2
         cr.set_line_width(th)
-        cr.set_source_rgba(0.79, 0.80, 0.82, 1.0)
+        cr.set_source_rgba(0.78, 0.78, 0.80, 1.0)
         cr.arc(s / 2, s / 2, r, 0, 2 * math.pi)
         cr.stroke()
-        p = self.phase
-        length = (0.08 + 0.55 * math.sin(math.pi * p) ** 2) * 2 * math.pi
-        head = -math.pi / 2 + p * 4 * math.pi + length
+        if not self._tick:
+            # Not animating (e.g. screenshots): a half ring on the left side.
+            length, head = math.pi * 1.02, math.pi * 1.5
+        else:
+            p = self.phase
+            length = (0.08 + 0.55 * math.sin(math.pi * p) ** 2) * 2 * math.pi
+            head = -math.pi / 2 + p * 4 * math.pi + length
         cr.set_source_rgba(0.0, 0.404, 0.753, 1.0)  # #0067c0
         cr.set_line_cap(1)  # round
         cr.arc(s / 2, s / 2, r, head - length, head)

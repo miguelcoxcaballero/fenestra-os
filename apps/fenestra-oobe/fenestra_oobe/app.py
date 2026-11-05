@@ -130,7 +130,6 @@ class OobeApp(Gtk.Application):
         win = self.window
         for orient in (0, 1):
             log.debug("root measure %s: %s", orient, win.get_child().measure(orient, -1))
-        log.debug("primary button %sx%s %s footer %s", win.primary_button.get_width(), win.primary_button.get_height(), win.primary_button.measure(1, -1), win.footer.get_height())
         w, h = self.window.capture(self.args.screenshot)
         print(f"wrote {self.args.screenshot} ({w}x{h})")
         self.quit()

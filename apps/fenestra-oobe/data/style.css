@@ -37,31 +37,32 @@ window.oobe-window {
 .art-pane { background: transparent; }
 
 .content-column {
-  padding: 63px 53px 51px 47px;
+  padding: 67px 53px 51px 47px;
 }
 
 .page-title {
   font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", "Selawik", "Inter", sans-serif;
   font-size: 28.4px;
   font-weight: 400;
-  line-height: 0.98;
+  line-height: 0.82;
   color: #000000;
   margin-right: 0;
 }
 
 .page-subtitle {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.0;
   color: #5c5c5c;
-  margin-top: 14px;
+  margin-top: 21px;
 }
 
 .page-body {
-  margin-top: 53px;
+  margin-top: 55px;
   margin-left: 3px;
   margin-right: 16px;
   margin-bottom: 18px;
 }
+.page.has-subtitle .page-body { margin-top: 34px; }
 .spinner-page .page-body { margin: 0 0 0 0; }
 
 .hint-text {
@@ -87,7 +88,7 @@ window.oobe-window {
   color: @text;
 }
 
-.spinner-box { margin-top: 0; margin-bottom: 0; }
+.spinner-box { margin-top: 32px; margin-bottom: 0; }
 .spinner-caption {
   font-size: 20px;
   color: #1b1b1b;
@@ -112,7 +113,7 @@ button.back-button:active { background: rgba(0, 0, 0, 0.0241); }
 .footer { min-height: 40px; }
 
 button.oobe-button {
-  min-width: 100px;   /* + padding + border = 126 px */
+  min-width: 101px;   /* + padding + border = 127 px */
   min-height: 36px;   /* + border = 38 px */
   padding: 0 12px;
   border-radius: 4px;
@@ -156,7 +157,7 @@ button.plain-link {
   padding: 0 12px;
   border-radius: 4px;
   color: #0b4fa8;
-  font-size: 14px;
+  font-size: 16px;
 }
 button.plain-link.secondary { margin-right: 24px; }
 button.plain-link:hover { background: rgba(0, 0, 0, 0.0373); }
@@ -249,8 +250,12 @@ list.wifi-list > row { padding-top: 6px; padding-bottom: 6px; }
 .wifi-icon { color: @text; }
 .wifi-name { font-size: 16px; }
 .wifi-status { font-size: 12px; color: @text_secondary; }
-list.oobe-list > row:selected .wifi-status, list.oobe-list > row:selected .wifi-icon { color: #ffffff; }
-list.oobe-list > row:selected .field-label { color: #ffffff; }
+/* The expanded network row uses a subtle fill so its controls stay readable. */
+list.wifi-list > row:selected,
+list.wifi-list > row:selected:hover { background: rgba(0, 0, 0, 0.045); color: #1b1b1b; }
+list.wifi-list > row:selected label { color: #1b1b1b; }
+list.wifi-list > row:selected .wifi-status { color: @text_secondary; }
+list.wifi-list > row:selected button.oobe-button.primary label { color: #ffffff; }
 .wifi-detail { padding: 10px 4px 6px 33px; }
 .wifi-detail passwordentry.oobe-entry { min-width: 0; }
 

@@ -21,6 +21,8 @@ class Page(Gtk.Box):
         self.append(self.title_label)
         self.subtitle_label = Gtk.Label(label=subtitle, xalign=0, wrap=True, css_classes=["page-subtitle"])
         self.subtitle_label.set_visible(bool(subtitle))
+        if subtitle:
+            self.add_css_class("has-subtitle")
         self.append(self.subtitle_label)
         self.body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, vexpand=True, css_classes=["page-body"])
         self.append(self.body)
@@ -40,7 +42,7 @@ class Page(Gtk.Box):
         self.subtitle_label.set_visible(False)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER,
                       halign=Gtk.Align.CENTER, vexpand=True, css_classes=["spinner-box"])
-        self.spinner = RingSpinner(64, 6)
+        self.spinner = RingSpinner(64, 5)
         box.append(self.spinner)
         self.spinner_label = Gtk.Label(label=text, css_classes=["spinner-caption"],
                                        justify=Gtk.Justification.CENTER, wrap=True)
