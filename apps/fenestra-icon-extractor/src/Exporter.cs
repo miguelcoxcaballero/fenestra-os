@@ -32,7 +32,7 @@ public sealed record ExportResult(int Files, long Bytes, int Missing, string Pat
 /// </summary>
 public sealed class Exporter
 {
-    public const string Version = "1.0";
+    public const string Version = "1.0.1";
     public const string IconTheme = "Fenestra-Windows";
     public const string CursorTheme = "Fenestra-Windows-Cursors";
     static readonly int[] Sizes = { 256, 48, 32, 16 };
@@ -322,14 +322,26 @@ public sealed class Exporter
     {
         using var m = OpenModule(Src.Imageres);
         if (m == null) { Missing("imageres.dll.mun"); return; }
-        foreach (var (id, name) in new[] { (3, "folder-empty"), (162, "folder-full") })
+        var empty = m.Group(3);
+        if (empty == null) Missing("imageres icon 3 (empty folder)");
+        else
         {
-            var g = m.Group(id);
-            if (g == null) { Missing($"imageres icon {id}"); continue; }
-            using var bmp = g.Render(Math.Min(256, g.LargestSize));
-            AddBytes($"assets/folders/{name}.png", IconCodec.ToPng(bmp));
-            AddRawGroup(m, g);
+            using var bmp = empty.Render(Math.Min(256, empty.LargestSize));
+            AddBytes("assets/folders/folder-empty.png", IconCodec.ToPng(bmp));
+            AddRawGroup(m, empty);
         }
+        // Group 162 is Explorer's "folder with content" art: back flap, a thin sliver of paper and the
+        // front flap. Explorer adds the content preview at run time, so on its own it looks almost
+        // empty. Compose the white sheet between the flaps, the way a non-empty folder looks.
+        var full = m.Group(162);
+        if (full == null) { Missing("imageres icon 162 (full folder)"); return; }
+        using (var bmp = full.Render(Math.Min(256, full.LargestSize)))
+        {
+            using var composed = FolderArt.AddSheet(bmp);
+            if (composed == null) Log("  full folder: unexpected artwork, exported as is");
+            AddBytes("assets/folders/folder-full.png", IconCodec.ToPng(composed ?? bmp));
+        }
+        AddRawGroup(m, full);
     }
 
     // -------------------------------------------------------------- taskbar ---
@@ -364,32 +376,62 @@ public sealed class Exporter
     // ------------------------------------------------------------ app icons ---
     void ExportAppIcons()
     {
-        // Settings: ImmersiveControlPanel unplated target sizes, resized when one is missing.
-        var images = P("ImmersiveControlPanel", "images");
-        var big = FirstExisting(Path.Combine(images, "logo.targetsize-256_altform-unplated.png"),
-                                Path.Combine(images, "logo.scale-400.png"), Path.Combine(images, "logo.png"));
-        if (big == null) Missing(@"ImmersiveControlPanel\images\logo.targetsize-256_altform-unplated.png");
-        else
-        {
-            AddFile("assets/branding/settings.png", big);
-            foreach (var size in Sizes)
-            {
-                var exact = Path.Combine(images, $"logo.targetsize-{size}_altform-unplated.png");
-                var entry = $"icons/{IconTheme}/{size}x{size}/apps/fenestra-settings.png";
-                _themeDirs.Add($"{size}x{size}/apps");
-                if (File.Exists(exact)) AddFile(entry, exact);
-                else
-                {
-                    using var src = LoadImage(big);
-                    using var bmp = IconCodec.Scale(src, size);
-                    AddBytes(entry, IconCodec.ToPng(bmp));
-                }
-            }
-        }
+        ExportSettingsIcon();
 
         AppIcon(new[] { P("explorer.exe") }, "File Explorer", "system-file-manager", "org.gnome.Nautilus", "fenestra-file-explorer");
         AppIcon(new[] { P("SystemResources", "Taskmgr.exe.mun"), P("System32", "Taskmgr.exe") }, "Task Manager",
                 "org.fenestra.TaskManager", "utilities-system-monitor", "fenestra-taskmgr");
+    }
+
+    /// <summary>Settings app logo. File names differ between builds, so rank every logo*.png in
+    /// ImmersiveControlPanel\images (unplated, then targetsize, then pixel size; never high-contrast),
+    /// falling back to SystemSettings.exe's own icon.</summary>
+    void ExportSettingsIcon()
+    {
+        var images = P("ImmersiveControlPanel", "images");
+        var cands = new List<(string Path, bool Unplated, bool Target, int Size)>();
+        if (Directory.Exists(images))
+        {
+            foreach (var f in Directory.EnumerateFiles(images, "logo*.png", SearchOption.TopDirectoryOnly))
+            {
+                var n = Path.GetFileName(f).ToLowerInvariant();
+                if (n.Contains("contrast")) continue;
+                int size = 0;
+                try { using var im = LoadImage(f); size = Math.Min(im.Width, im.Height); } catch (Exception) { continue; }
+                cands.Add((f, n.Contains("unplated"), n.Contains("targetsize"), size));
+            }
+        }
+        var best = cands.OrderByDescending(c => c.Unplated).ThenByDescending(c => c.Size).ThenByDescending(c => c.Target).FirstOrDefault();
+        IconGroup? exeIcon = null;
+        ResourceModule? exe = null;
+        try
+        {
+            if (best.Path == null || best.Size < 48)
+            {
+                exe = ResourceModule.Open(P("SystemResources", "SystemSettings.exe.mun"), P("ImmersiveControlPanel", "SystemSettings.exe"));
+                exeIcon = exe?.FirstGroup();
+            }
+            if (best.Path == null && exeIcon == null) { Missing(@"Settings logo (ImmersiveControlPanel\images\logo*.png or SystemSettings.exe)"); return; }
+            bool usePng = best.Path != null && (best.Size >= 48 || exeIcon == null);
+            Log(usePng ? $"  Settings logo: {Path.GetFileName(best.Path)} ({best.Size} px)" : "  Settings logo: SystemSettings.exe icon");
+
+            Bitmap Render(int size)
+            {
+                if (!usePng) return exeIcon!.Render(size);
+                var exact = cands.FirstOrDefault(c => c.Unplated && c.Size == size).Path;
+                using var src = LoadImage(exact ?? best.Path!);
+                return src.Width == size && src.Height == size ? (Bitmap)src.Clone() : IconCodec.Scale(src, size);
+            }
+            using (var big = Render(256)) AddBytes("assets/branding/settings.png", IconCodec.ToPng(big));
+            foreach (var size in Sizes)
+            {
+                _themeDirs.Add($"{size}x{size}/apps");
+                using var bmp = Render(size);
+                AddBytes($"icons/{IconTheme}/{size}x{size}/apps/fenestra-settings.png", IconCodec.ToPng(bmp));
+            }
+            if (exe != null && exeIcon != null) AddRawGroup(exe, exeIcon);
+        }
+        finally { exe?.Dispose(); }
     }
 
     static Bitmap LoadImage(string path)

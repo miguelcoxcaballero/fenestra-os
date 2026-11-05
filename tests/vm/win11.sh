@@ -4,7 +4,7 @@
 set -euo pipefail
 # Laptop has 16 GB: allow only one VM at a time and keep it inside fenestra-tests.slice.
 if [ "${1:-}" = install ] || [ "${1:-}" = boot ]; then
-    if pgrep -f qemu-system-x86_64 >/dev/null; then echo "only one VM at a time: stop the running one first" >&2; exit 1; fi
+    if [ -z "${FENESTRA_ALLOW_SECOND_VM:-}" ] && pgrep -f qemu-system-x86_64 >/dev/null; then echo "only one VM at a time: stop the running one first" >&2; exit 1; fi
     if [ -z "${FENESTRA_IN_SLICE:-}" ] && command -v systemd-run >/dev/null; then
         exec systemd-run --user --scope --quiet --slice=fenestra-tests.slice -E FENESTRA_IN_SLICE=1 "$0" "$@"
     fi
@@ -21,7 +21,7 @@ start_tpm() {
 }
 run() {
     start_tpm
-    exec qemu-system-x86_64 -enable-kvm -cpu host -smp 6 -m 4096 -machine q35,smm=on \
+    exec qemu-system-x86_64 -enable-kvm -cpu host -smp 4 -m ${FENESTRA_WIN_MEM:-4096} -machine q35,smm=on \
         -global driver=cfi.pflash01,property=secure,value=on \
         -drive if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd \
         -drive if=pflash,format=raw,unit=1,file="$VM/OVMF_VARS.fd" \
