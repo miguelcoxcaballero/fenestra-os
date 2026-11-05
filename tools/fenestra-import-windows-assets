@@ -609,12 +609,41 @@ def _find_ci(base, *names):
     return None
 
 
+# Types Windows leaves unassociated (blank page) that open in Fenestra Notepad: show the
+# text-document icon, as Windows does once a type is associated with Notepad.
+TEXTISH_ICONS = ('text-x-log', 'text-markdown', 'text-x-markdown', 'text-x-ini', 'text-csv', 'text-x-csv',
+                 'application-json', 'application-javascript', 'text-javascript', 'text-css', 'application-xml',
+                 'text-xml', 'text-x-python', 'text-x-python3', 'text-x-script', 'application-x-shellscript',
+                 'text-x-sh', 'application-x-bat', 'text-x-csrc', 'text-x-chdr', 'text-x-c++src', 'text-x-c++hdr',
+                 'text-x-java', 'text-x-csharp', 'text-x-makefile', 'text-x-patch', 'text-x-dbus-service',
+                 'application-x-desktop', 'text-calendar', 'text-vcard', 'text-x-vcard', 'application-rtf', 'text-rtf')
+
+
+def fix_file_type_icons(theme_dir):
+    """Per-type icons from the extractor: a blank page means "no app on that PC". Text types get the
+    text-document icon; other blank ones are dropped so the inherited theme's icon shows."""
+    for mdir in Path(theme_dir).glob('*/mimetypes'):
+        blank = mdir / 'unknown.png'
+        text = mdir / 'text-plain.png'
+        if not blank.is_file():
+            continue
+        ref = blank.read_bytes()
+        for f in mdir.glob('*.png'):
+            if f.name in ('unknown.png', 'application-octet-stream.png', 'application-x-generic.png') or f.read_bytes() != ref:
+                continue
+            if f.stem in TEXTISH_ICONS and text.is_file():
+                shutil.copyfile(text, f)
+            else:
+                f.unlink()
+
+
 def install_icon_theme(src, name, inherit_fenestra=True):
     """Copy an icon theme directory to ~/.local/share/icons/<name>."""
     dest = DATA / 'icons' / name
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(src, dest, symlinks=False)
+    fix_file_type_icons(dest)
     index = dest / 'index.theme'
     if inherit_fenestra and index.exists():
         text = index.read_text(errors='replace')
