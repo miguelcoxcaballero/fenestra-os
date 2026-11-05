@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Launcher for Fenestra Task Manager (works from the source tree and when installed)."""
+import os
+import sys
+
+here = os.path.dirname(os.path.realpath(__file__))
+for c in (os.path.dirname(here),
+          os.path.join(os.path.dirname(here), "share", "fenestra-taskmgr"),
+          "/usr/share/fenestra-taskmgr"):
+    if os.path.isdir(os.path.join(c, "fenestra_taskmgr")):
+        sys.path.insert(0, c)
+        break
+
+from fenestra_taskmgr.app import main  # noqa: E402
+
+sys.exit(main(sys.argv))

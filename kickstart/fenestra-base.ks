@@ -87,6 +87,14 @@ if [ -f /usr/share/applications/fenestra-settings.desktop ]; then
     echo 'NoDisplay=true' >> /usr/local/share/applications/org.gnome.Settings.desktop
 fi
 
+# Task Manager: Fenestra Task Manager replaces GNOME System Monitor in menus/search.
+if [ -x /usr/bin/fenestra-taskmgr ] && [ -f /usr/share/applications/org.gnome.SystemMonitor.desktop ]; then
+    install -d /usr/local/share/applications
+    sed -e '/^NoDisplay=/d' /usr/share/applications/org.gnome.SystemMonitor.desktop \
+        > /usr/local/share/applications/org.gnome.SystemMonitor.desktop
+    sed -i '/^\[Desktop Entry\]/a NoDisplay=true' /usr/local/share/applications/org.gnome.SystemMonitor.desktop
+fi
+
 # System defaults.
 grep -q "system-db:local" /etc/dconf/profile/user 2>/dev/null || printf 'user-db:user\nsystem-db:local\nsystem-db:site\nsystem-db:distro\n' > /etc/dconf/profile/user
 dconf update

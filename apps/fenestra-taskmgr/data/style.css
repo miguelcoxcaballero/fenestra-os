@@ -1,0 +1,239 @@
+/* Fenestra Task Manager - Windows 11 Task Manager look.
+ * Colours are CSS custom properties set by theme.py (dark/light + accent). */
+
+window.taskmgr {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: "Segoe UI Variable Text", "Segoe UI", "Selawik", "Inter", sans-serif;
+  font-size: 12px;
+}
+window.taskmgr.csd { border-radius: 8px; }
+window.taskmgr.maximized, window.taskmgr.maximized-look { border-radius: 0; }
+window.taskmgr * { color: inherit; text-shadow: none; -gtk-icon-shadow: none; outline-color: var(--fg); }
+window.taskmgr image { -gtk-icon-style: symbolic; }
+window.taskmgr image.color-icon { -gtk-icon-style: regular; }
+
+/* ------------------------------------------------------------- title bar */
+.titlebar { min-height: 44px; background: none; padding: 0; margin: 0; border: none; box-shadow: none; }
+.title-icon { margin: 0 24px 0 16px; -gtk-icon-style: regular; }
+.title-label { font-size: 12px; }
+entry.title-search {
+  min-height: 30px;
+  border-radius: 4px;
+  padding: 0 10px 0 13px;
+  background-color: var(--search);
+  border: 1px solid var(--search-border);
+  border-bottom-color: #303030;
+  box-shadow: none;
+  font-size: 14px;
+  color: var(--fg);
+  caret-color: var(--fg);
+}
+entry.title-search > text > placeholder { color: var(--fg2); }
+entry.title-search image { color: var(--fg2); -gtk-icon-size: 14px; margin-right: 12px; }
+entry.title-search:focus-within {
+  background-color: var(--search-focus);
+  border-bottom: 2px solid var(--accent);
+  min-height: 29px;
+}
+entry.title-search selection { background-color: var(--accent); color: var(--accent-fg); }
+.caption-buttons { margin: 0; }
+button.caption {
+  min-width: 46px; min-height: 30px;
+  padding: 0; margin: 0;
+  border: none; border-radius: 0; box-shadow: none;
+  background: none;
+}
+button.caption > drawingarea { min-width: 46px; min-height: 30px; }
+button.caption:hover { background-color: var(--hover); }
+button.caption:active { background-color: var(--press); }
+button.caption.close:hover { background-color: var(--close-hover); }
+window.taskmgr.csd:not(.maximized):not(.maximized-look) button.caption.close { border-top-right-radius: 8px; }
+
+/* ------------------------------------------------------------- nav rail */
+.nav { min-width: 48px; padding: 6px 0 6px 0; }
+.nav.expanded { min-width: 240px; }
+button.nav-item {
+  min-height: 36px; min-width: 40px;
+  margin: 0 4px 4px 4px;
+  padding: 0;
+  border: none; border-radius: 4px; box-shadow: none;
+  background: none;
+  font-size: 14px;
+}
+button.nav-item:hover { background-color: var(--hover); }
+button.nav-item:active { background-color: var(--press); }
+button.nav-item.selected { background-color: var(--select); }
+.nav-pill { min-width: 3px; min-height: 16px; margin-left: 0; border-radius: 2px; background: none; }
+button.nav-item.selected .nav-pill { background-color: var(--accent); }
+.nav-icon { margin-left: 7px; }
+.nav-label { margin-left: 14px; font-size: 14px; }
+button.nav-item.nav-settings { margin-bottom: 0; }
+
+/* ------------------------------------------------------------- panel */
+.panel {
+  background-color: var(--panel);
+  border-top: 1px solid var(--panel-edge);
+  border-left: 1px solid var(--panel-edge);
+  border-top-left-radius: 8px;
+}
+.page-toolbar {
+  min-height: 49px;
+  padding: 0 4px 0 16px;
+  border-bottom: 1px solid var(--toolbar-line);
+  box-shadow: 0 1px var(--bg);
+  margin-bottom: 1px;
+}
+.page-title { font-size: 14px; font-weight: 600; }
+button.tool-button {
+  min-height: 32px;
+  padding: 0 11px;
+  margin: 0 2px;
+  border: none; border-radius: 4px; box-shadow: none;
+  background: none;
+  font-size: 12px;
+}
+button.tool-button:hover { background-color: var(--hover); }
+button.tool-button:active { background-color: var(--press); }
+button.tool-button:disabled { color: var(--fg3); background: none; }
+button.tool-button.more-button { min-width: 40px; padding: 0; margin-right: 4px; margin-left: 0; }
+.tool-sep { min-width: 1px; min-height: 32px; background-color: var(--line); margin: 0 1px; }
+.page { margin-left: 1px; }
+
+/* ------------------------------------------------------------- scrollbars */
+scrollbar { background: none; border: none; }
+scrollbar slider {
+  min-width: 2px; min-height: 2px;
+  border-radius: 2px;
+  background-color: #959595;
+  border: none;
+}
+scrollbar.vertical slider { min-height: 40px; }
+scrollbar.horizontal slider { min-width: 40px; }
+scrollbar:hover slider { min-width: 6px; min-height: 6px; }
+
+/* ------------------------------------------------------------- menus */
+popover.fluent-menu > contents {
+  background-color: var(--popover);
+  border: 1px solid var(--popover-border);
+  border-radius: 8px;
+  padding: 4px 0;
+  box-shadow: 0 8px 16px var(--shadow);
+}
+popover.fluent-menu button.menu-item {
+  min-height: 30px; min-width: 200px;
+  padding: 0 12px;
+  margin: 1px 4px;
+  border: none; border-radius: 4px; box-shadow: none;
+  background: none;
+  font-size: 14px;
+}
+popover.fluent-menu button.menu-item:hover { background-color: var(--hover); }
+popover.fluent-menu button.menu-item:disabled { color: var(--fg3); }
+.menu-shortcut { color: var(--fg2); font-size: 12px; }
+.menu-sep { min-height: 1px; background-color: var(--line); margin: 4px 0; }
+
+/* ------------------------------------------------------------- dialogs */
+.smoke { background-color: var(--smoke); }
+.dialog-card {
+  background-color: var(--dialog);
+  border: 1px solid var(--popover-border);
+  border-radius: 8px;
+  box-shadow: 0 16px 32px var(--shadow);
+}
+.dialog-top { padding: 24px; }
+.dialog-title { font-size: 20px; font-weight: 600; }
+.dialog-body { font-size: 14px; }
+.dialog-key { font-size: 14px; color: var(--fg2); }
+.dialog-error { font-size: 12px; color: #ff99a4; }
+.dialog-foot {
+  padding: 24px;
+  background-color: var(--dialog-foot);
+  border-top: 1px solid var(--card-line);
+  border-radius: 0 0 8px 8px;
+}
+button.accent-button, button.std-button {
+  min-height: 32px; border-radius: 4px; border: none; box-shadow: none; font-size: 14px;
+}
+button.accent-button { background-color: var(--accent); color: var(--accent-fg); }
+button.accent-button:hover { opacity: 0.9; }
+button.std-button { background-color: var(--ctl); border: 1px solid var(--search-border); }
+button.std-button:hover { background-color: var(--ctl-hover); }
+entry.fluent-entry {
+  min-height: 32px; border-radius: 4px; padding: 0 10px;
+  background-color: var(--search); border: 1px solid var(--search-border); box-shadow: none;
+  font-size: 14px; color: var(--fg); caret-color: var(--fg);
+}
+entry.fluent-entry:focus-within { border-bottom: 2px solid var(--accent); }
+checkbutton.fluent-check { font-size: 14px; }
+checkbutton check, checkbutton.fluent-check check {
+  min-width: 18px; min-height: 18px; border-radius: 4px; margin-right: 10px;
+  border: 1px solid var(--check-border); background: none; box-shadow: none;
+}
+checkbutton check:checked {
+  background-color: var(--accent); border-color: var(--accent); color: var(--accent-fg);
+  -gtk-icon-source: -gtk-icontheme("tm-check-symbolic"); -gtk-icon-size: 14px;
+}
+
+/* ------------------------------------------------------------- performance */
+.perf-list { padding: 7px 4px 8px 3px; }
+button.perf-item {
+  padding: 10px 10px 10px 10px; margin: 0 0 0 0;
+  border: none; border-radius: 4px; box-shadow: none; background: none;
+}
+button.perf-item:hover { background-color: var(--hover); }
+button.perf-item.selected { background-color: var(--item-sel); }
+.perf-item-title { font-size: 15px; margin-top: -4px; margin-bottom: -1px; }
+.perf-item-sub { font-size: 12px; color: var(--fg); margin-bottom: -1px; }
+.perf-detail { padding: 12px 24px 21px 26px; }
+.perf-head { margin-bottom: 3px; }
+.perf-title { font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", sans-serif; font-size: 28px; font-weight: 300; }
+.perf-model { font-size: 16px; }
+.perf-axis { font-size: 11px; color: var(--fg2); }
+.stat-key { font-size: 12px; color: var(--fg2); margin-top: 4px; }
+.stat-value { font-size: 20px; margin-bottom: 3px; }
+.stat-side-key { font-size: 12px; color: var(--fg2); }
+.stat-side-value { font-size: 12px; }
+
+/* ------------------------------------------------------------- misc pages */
+.info-line { font-size: 12px; }
+.link { color: var(--link); font-size: 12px; }
+.link:hover { text-decoration: underline; }
+.bios-time { font-size: 12px; }
+
+/* ------------------------------------------------------------- settings page */
+.settings-page { padding: 0 0 24px 0; }
+.settings-column { min-width: 400px; }
+.settings-title { font-size: 20px; font-weight: 600; margin: 6px 0 10px 0; }
+.settings-section { font-size: 14px; font-weight: 600; margin: 14px 0 11px 0; }
+.card {
+  background-color: var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 4px;
+  min-height: 66px;
+  padding: 0 32px 0 20px;
+  margin-bottom: 8px;
+}
+.card.expander-head { border-radius: 4px 4px 0 0; margin-bottom: 0; }
+.card.expander-head.collapsed { border-radius: 4px; margin-bottom: 8px; }
+.card.sub { min-height: 48px; border-radius: 0; border-top: none; margin-bottom: 0; padding-left: 64px; }
+.card.sub.last { border-radius: 0 0 4px 4px; margin-bottom: 8px; }
+.card-title { font-size: 14px; }
+.card-sub { font-size: 12px; color: var(--fg2); }
+.card-icon { margin-right: 18px; }
+button.combo {
+  min-height: 32px; min-width: 110px;
+  padding: 0 10px 0 12px;
+  border-radius: 4px; border: 1px solid var(--search-border); box-shadow: none;
+  background-color: var(--ctl);
+  font-size: 14px;
+}
+button.combo:hover { background-color: var(--ctl-hover); }
+button.flat-icon { min-width: 32px; min-height: 32px; padding: 0; border: none; background: none; box-shadow: none; border-radius: 4px; }
+button.flat-icon:hover { background-color: var(--hover); }
+
+/* Windows keeps an 8px resize border inside the title bar of restored windows */
+window.taskmgr:not(.maximized):not(.maximized-look):not(.fullscreen) .titlebar { min-height: 52px; }
+.apphistory-info { padding: 12px 16px 13px 16px; }
+.bios-row { padding: 14px 18px 19px 16px; }
+checkbutton check:not(:checked) { -gtk-icon-source: none; background-image: none; }

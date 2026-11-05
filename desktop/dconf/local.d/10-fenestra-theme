@@ -36,3 +36,12 @@ logout=@as []
 # priority through rtkit by default ("Thread 'KMS thread' will be using high
 # priority scheduling"); the old 'rt-scheduler' experimental feature no longer
 # exists, so nothing needs to be added to org.gnome.mutter experimental-features.
+
+# Ctrl+Shift+Esc opens Task Manager, like Windows (the binding is free in GNOME).
+[org/gnome/settings-daemon/plugins/media-keys]
+custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/fenestra-taskmgr/']
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/fenestra-taskmgr]
+name='Task Manager'
+command='fenestra-taskmgr'
+binding='<Control><Shift>Escape'

@@ -34,6 +34,7 @@ class Proc:
         self.arch = "64 bit"
         self.fds = 0
         self.efficiency = False
+        self.desc = None
 
 
 class Snapshot:

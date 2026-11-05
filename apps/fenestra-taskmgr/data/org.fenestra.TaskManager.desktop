@@ -1,0 +1,31 @@
+[Desktop Entry]
+Type=Application
+Name=Task Manager
+Name[es]=Administrador de tareas
+GenericName=Task Manager
+GenericName[es]=Administrador de tareas
+Comment=See running apps and processes, system performance and services
+Comment[es]=Ver las aplicaciones y procesos en ejecución, el rendimiento del sistema y los servicios
+Exec=fenestra-taskmgr
+Icon=org.fenestra.TaskManager
+Terminal=false
+StartupNotify=true
+StartupWMClass=org.fenestra.TaskManager
+Categories=GTK;System;Monitor;
+Keywords=system monitor;processes;task manager;performance;cpu;memory;kill;services;startup;monitor del sistema;procesos;administrador de tareas;rendimiento;
+Actions=Performance;Details;Services;
+
+[Desktop Action Performance]
+Name=Performance
+Name[es]=Rendimiento
+Exec=fenestra-taskmgr --page performance
+
+[Desktop Action Details]
+Name=Details
+Name[es]=Detalles
+Exec=fenestra-taskmgr --page details
+
+[Desktop Action Services]
+Name=Services
+Name[es]=Servicios
+Exec=fenestra-taskmgr --page services

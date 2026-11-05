@@ -62,6 +62,8 @@ def main():
     for name, src in ICONS.items():
         path = os.path.join(SRC, src + ".svg")
         if not os.path.exists(path):
+            path = os.path.join(SRC, src + ".svg")
+        if not os.path.exists(path):
             print("missing", src)
             continue
         svg = open(path).read()
