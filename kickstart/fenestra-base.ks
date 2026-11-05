@@ -23,6 +23,8 @@ python3-gobject
 python3-pillow
 python3-fonttools
 python3-cairo
+# Fenestra OOBE icon-pack mini browser (WebKitGTK 6 GI typelib).
+webkitgtk6.0
 icoutils
 cascadia-mono-fonts
 cascadia-code-fonts

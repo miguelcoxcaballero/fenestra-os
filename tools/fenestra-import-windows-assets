@@ -16,17 +16,27 @@ tool copies those originals *for your user only*:
       -> ~/.local/share/icons/hicolor/{256x256,48x48,32x32,scalable}/apps/fenestra-settings.*
 
 Nothing is uploaded anywhere and the Windows partition is only read.
+
+It can also install a Fenestra icon pack (.zip, see docs/ICON-PACK-FORMAT.md),
+e.g. one exported on a Windows PC with Fenestra Icon Extractor, or a plain
+freedesktop icon theme zip (anything containing an index.theme):
+
 Usage: fenestra-import-windows-assets [--windows /path/to/C:] [--dry-run] [--no-cursors]
+       fenestra-import-windows-assets --pack FILE.zip [--dry-run] [--inspect] [--no-apply]
 """
 import argparse
 import glob
 import io
+import json
 import os
+import re
 import shutil
+import stat
 import struct
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 HOME = Path.home()
@@ -38,7 +48,25 @@ FONTS = ['segoeui.ttf', 'segoeuib.ttf', 'segoeuii.ttf', 'segoeuiz.ttf', 'segoeui
 
 
 def log(msg):
-    print(f'fenestra-import: {msg}')
+    print(f'fenestra-import: {msg}', flush=True)
+
+
+# When False (--no-apply, tests) nothing outside XDG_DATA_HOME is touched:
+# no gsettings writes, no font/icon cache refresh.
+APPLY = True
+
+
+def gsettings_set(schema, key, value):
+    if APPLY:
+        subprocess.run(['gsettings', 'set', schema, key, value], check=False)
+
+
+def schema_has_key(schema, key):
+    try:
+        r = subprocess.run(['gsettings', 'list-keys', schema], capture_output=True, text=True)
+    except OSError:
+        return False
+    return r.returncode == 0 and key in r.stdout.split()
 
 
 def mount_windows_partitions():
@@ -105,7 +133,7 @@ def import_fonts(win, dry):
             if not dry:
                 dest.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dest / name)
-    if copied and not dry:
+    if copied and not dry and APPLY:
         subprocess.run(['fc-cache', '-f', str(dest)], check=False)
     log(f'fonts: {copied} files')
 
@@ -194,12 +222,17 @@ ALIASES = {'default': 'left_ptr', 'arrow': 'left_ptr', 'top_left_arrow': 'left_p
 
 
 def import_cursors(win, dry):
-    from PIL import Image
     cdir = ci(win / 'Windows' / 'Cursors')
     if not cdir:
         log('cursors: not found')
         return False
-    out = DATA / 'icons' / 'Fenestra-Windows-Cursors'
+    return build_cursor_theme(cdir, 'Fenestra-Windows-Cursors', dry)
+
+
+def build_cursor_theme(cdir, theme, dry, comment='Cursors imported from your own Windows installation'):
+    """Convert Windows .cur/.ani files in ``cdir`` to an Xcursor theme."""
+    cdir = Path(cdir)
+    out = DATA / 'icons' / theme
     if dry:
         log(f'cursors: would build from {cdir}')
         return True
@@ -234,9 +267,10 @@ def import_cursors(win, dry):
             p.unlink()
         if (cd / target).exists():
             p.symlink_to(target)
-    (out / 'index.theme').write_text('[Icon Theme]\nName=Fenestra-Windows-Cursors\n'
-                                     'Comment=Cursors imported from your own Windows installation\nInherits=Bibata-Original-Classic\n')
-    subprocess.run(['gsettings', 'set', 'org.gnome.desktop.interface', 'cursor-theme', 'Fenestra-Windows-Cursors'], check=False)
+    (out / 'index.theme').write_text(f'[Icon Theme]\nName={theme}\n'
+                                     f'Comment={comment}\nInherits=Bibata-Original-Classic\n')
+    if built:
+        gsettings_set('org.gnome.desktop.interface', 'cursor-theme', theme)
     log(f'cursors: {built} built')
     return True
 
@@ -253,6 +287,11 @@ def import_battery(win, dry):
     if not src:
         log('battery: Sysbatt.ttf not found')
         return
+    build_battery(src, dry)
+
+
+def build_battery(src, dry):
+    """Compose the 99 taskbar battery SVGs from the glyphs of Sysbatt.ttf."""
     if dry:
         log(f'battery: would compose from {src}')
         return
@@ -343,19 +382,29 @@ def import_taskbar_icons(win, dry):
         dest = ASSETS / 'branding' / 'start-button.svg'
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(logo, dest)
-        subprocess.run(['gsettings', 'set', 'org.gnome.shell.extensions.arcmenu', 'menu-button-icon', str(dest)], check=False)
+        apply_start_logo(dest)
     if search:
         dest = ASSETS / 'search' / 'search.png'
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(search, dest)
-        src_desktop = Path('/usr/share/applications/fenestra-search.desktop')
-        if src_desktop.exists():
-            apps = DATA / 'applications'
-            apps.mkdir(parents=True, exist_ok=True)
-            text = src_desktop.read_text()
-            text = '\n'.join(f'Icon={dest}' if l.startswith('Icon=') else l for l in text.splitlines()) + '\n'
-            (apps / 'fenestra-search.desktop').write_text(text)
+        apply_search_icon(dest)
     log(f'taskbar: start logo {"imported" if logo else "not found"}, search icon {"imported" if search else "not found"}')
+
+
+def apply_start_logo(path):
+    """Use ``path`` as the taskbar Start button (ArcMenu menu button icon)."""
+    gsettings_set('org.gnome.shell.extensions.arcmenu', 'menu-button-icon', str(path))
+
+
+def apply_search_icon(path):
+    """User copy of fenestra-search.desktop pointing at ``path``."""
+    src_desktop = Path('/usr/share/applications/fenestra-search.desktop')
+    if src_desktop.exists():
+        apps = DATA / 'applications'
+        apps.mkdir(parents=True, exist_ok=True)
+        text = src_desktop.read_text()
+        text = '\n'.join(f'Icon={path}' if l.startswith('Icon=') else l for l in text.splitlines()) + '\n'
+        (apps / 'fenestra-search.desktop').write_text(text)
 
 
 def import_settings_icon(win, dry):
@@ -384,6 +433,12 @@ def import_settings_icon(win, dry):
     if dry:
         log(f'settings icon: would use {src}')
         return
+    install_settings_icon(src, images)
+
+
+def install_settings_icon(src, images=None):
+    """Install ``src`` (PNG) as the user's fenestra-settings icon."""
+    src = Path(src)
     icons = DATA / 'icons' / 'hicolor'
     try:
         from PIL import Image
@@ -393,8 +448,8 @@ def import_settings_icon(win, dry):
     for size in (256, 48, 32):
         dest = icons / f'{size}x{size}' / 'apps' / 'fenestra-settings.png'
         dest.parent.mkdir(parents=True, exist_ok=True)
-        exact = images / f'logo.targetsize-{size}_altform-unplated.png'
-        if exact.exists():
+        exact = images / f'logo.targetsize-{size}_altform-unplated.png' if images else None
+        if exact is not None and exact.exists():
             shutil.copyfile(exact, dest)
         elif Image is not None:
             with Image.open(src) as im:
@@ -417,8 +472,245 @@ def import_settings_icon(win, dry):
     index = icons / 'index.theme'
     if not index.exists() and Path('/usr/share/icons/hicolor/index.theme').exists():
         shutil.copyfile('/usr/share/icons/hicolor/index.theme', index)
-    subprocess.run(['gtk-update-icon-cache', '-q', '-f', '-t', str(icons)], check=False)
+    if APPLY:
+        subprocess.run(['gtk-update-icon-cache', '-q', '-f', '-t', str(icons)], check=False)
     log(f'settings icon: imported {src.name} ({len(written)} sizes + scalable)')
+
+
+# ------------------------------------------------------------ icon packs ---
+# docs/ICON-PACK-FORMAT.md (v1). Keep in sync with fenestra_oobe/iconpack.py.
+PACK_FORMAT = 'fenestra-icon-pack'
+PACK_VERSION = 1
+MAX_PACK_BYTES = 1 << 30          # 1 GB uncompressed
+MAX_PACK_FILES = 100_000
+_ID_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$')
+_THEME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9 ._+-]{0,63}$')
+
+
+class PackError(Exception):
+    pass
+
+
+def _safe_member(name):
+    """Normalise a zip member name; refuse absolute paths and '..'."""
+    if not name or '\x00' in name:
+        raise PackError('empty or invalid file name in pack')
+    n = name.replace('\\', '/')
+    if n.startswith('/') or re.match(r'^[A-Za-z]:', n):
+        raise PackError(f'absolute path in pack: {name}')
+    parts = [p for p in n.split('/') if p not in ('', '.')]
+    if '..' in parts:
+        raise PackError(f'path traversal in pack: {name}')
+    return '/'.join(parts)
+
+
+def _read_index_name(zf, member, fallback):
+    try:
+        text = zf.read(member).decode('utf-8', 'replace')
+    except (KeyError, zipfile.BadZipFile):
+        return fallback
+    m = re.search(r'^Name\s*=\s*(.+)$', text, re.M)
+    name = (m.group(1).strip() if m else '') or fallback
+    name = re.sub(r'[^A-Za-z0-9 ._+-]', '-', name).strip(' .-')[:64]
+    return name if _THEME_RE.match(name or '') else fallback
+
+
+def inspect_pack(path, max_bytes=MAX_PACK_BYTES):
+    """Validate a pack zip without extracting it.
+
+    Returns {'kind': 'fenestra'|'theme', 'manifest': dict, 'prefix': str,
+    'names': [...], 'total': int, ...}; raises PackError with a readable reason.
+    """
+    try:
+        zf = zipfile.ZipFile(path)
+    except (zipfile.BadZipFile, OSError) as exc:
+        raise PackError(f'not a valid zip file ({exc})') from None
+    with zf:
+        infos = zf.infolist()
+        if len(infos) > MAX_PACK_FILES:
+            raise PackError('pack contains too many files')
+        names, total = [], 0
+        for info in infos:
+            n = _safe_member(info.filename)
+            if stat.S_ISLNK(info.external_attr >> 16):
+                raise PackError(f'symbolic link in pack: {info.filename}')
+            total += info.file_size
+            if total > max_bytes:
+                raise PackError('pack is too large (over 1 GB uncompressed)')
+            if n and not info.is_dir():
+                names.append(n)
+        manifests = sorted((n for n in names if n.rsplit('/', 1)[-1] == 'fenestra-pack.json'
+                            and n.count('/') <= 1), key=lambda n: n.count('/'))
+        if manifests:
+            member = manifests[0]
+            prefix = member[:-len('fenestra-pack.json')]
+            try:
+                data = json.loads(zf.read(member).decode('utf-8'))
+            except (ValueError, UnicodeDecodeError):
+                raise PackError('fenestra-pack.json is not valid JSON') from None
+            if not isinstance(data, dict):
+                raise PackError('fenestra-pack.json must contain a JSON object')
+            if data.get('format') != PACK_FORMAT:
+                raise PackError(f'not a Fenestra icon pack (format is {data.get("format")!r})')
+            version = data.get('version')
+            if not isinstance(version, int) or isinstance(version, bool) or version != PACK_VERSION:
+                raise PackError(f'unsupported pack version {version!r} (supported: {PACK_VERSION})')
+            if not isinstance(data.get('id'), str) or not _ID_RE.match(data['id']):
+                raise PackError('fenestra-pack.json has a missing or invalid "id"')
+            for key in ('icon_theme', 'cursor_theme'):
+                if key in data and (not isinstance(data[key], str) or not _THEME_RE.match(data[key])):
+                    raise PackError(f'fenestra-pack.json has an invalid "{key}"')
+            if not isinstance(data.get('name'), str) or not data['name'].strip():
+                data['name'] = data['id']
+            return {'kind': 'fenestra', 'manifest': data, 'prefix': prefix, 'names': names, 'total': total}
+        themes = sorted((n for n in names if n.rsplit('/', 1)[-1] == 'index.theme'),
+                        key=lambda n: n.count('/'))
+        if themes:
+            member = themes[0]
+            theme_dir = member[:-len('index.theme')]
+            fallback = (theme_dir.rstrip('/').rsplit('/', 1)[-1] or Path(path).stem)
+            fallback = re.sub(r'[^A-Za-z0-9 ._+-]', '-', fallback).strip(' .-')[:64] or 'Imported-Icons'
+            name = _read_index_name(zf, member, fallback)
+            return {'kind': 'theme', 'manifest': {'name': name, 'id': name}, 'prefix': theme_dir,
+                    'theme_name': name, 'names': names, 'total': total}
+        raise PackError('missing fenestra-pack.json (and no index.theme): this is not an icon pack')
+
+
+def safe_extract(path, dest, max_bytes=MAX_PACK_BYTES):
+    """Extract a validated pack into ``dest`` counting real decompressed bytes."""
+    dest = Path(dest).resolve()
+    written = 0
+    with zipfile.ZipFile(path) as zf:
+        for info in zf.infolist():
+            n = _safe_member(info.filename)
+            if not n or stat.S_ISLNK(info.external_attr >> 16):
+                continue
+            target = (dest / n).resolve()
+            if dest not in target.parents and target != dest:
+                raise PackError(f'path traversal in pack: {info.filename}')
+            if info.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info) as src, open(target, 'wb') as out:
+                while chunk := src.read(1 << 16):
+                    written += len(chunk)
+                    if written > max_bytes:
+                        raise PackError('pack is too large (over 1 GB uncompressed)')
+                    out.write(chunk)
+    return written
+
+
+def _find_ci(base, *names):
+    for name in names:
+        hit = ci(Path(base) / name)
+        if hit and hit.exists():
+            return hit
+    return None
+
+
+def install_icon_theme(src, name, inherit_fenestra=True):
+    """Copy an icon theme directory to ~/.local/share/icons/<name>."""
+    dest = DATA / 'icons' / name
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(src, dest, symlinks=False)
+    index = dest / 'index.theme'
+    if inherit_fenestra and index.exists():
+        text = index.read_text(errors='replace')
+        m = re.search(r'^Inherits\s*=\s*(.*)$', text, re.M)
+        inherits = [t.strip() for t in (m.group(1).split(',') if m else []) if t.strip()]
+        if 'Fenestra' not in inherits:
+            inherits = ['Fenestra'] + inherits
+            line = 'Inherits=' + ','.join(inherits)
+            text = (text[:m.start()] + line + text[m.end():]) if m else \
+                re.sub(r'^(\[Icon Theme\][^\n]*\n)', lambda mm: mm.group(1) + line + '\n', text, count=1, flags=re.M)
+            index.write_text(text)
+    if APPLY:
+        subprocess.run(['gtk-update-icon-cache', '-q', '-f', '-t', str(dest)], check=False)
+    return dest
+
+
+def import_pack(path, dry=False):
+    info = inspect_pack(path)
+    m = info['manifest']
+    src = m.get('source') if isinstance(m.get('source'), dict) else {}
+    log(f'pack: {m.get("name")} [{info["kind"]}]'
+        + (f' from {src.get("os", "?")} {src.get("build", "")}'.rstrip() if src else ''))
+    if dry:
+        log(f'pack: {len(info["names"])} files, {info["total"] // 1024} KiB — dry run, nothing installed')
+        return info
+    with tempfile.TemporaryDirectory(prefix='fenestra-pack-') as tmp:
+        safe_extract(path, tmp)
+        root = Path(tmp) / info['prefix']
+        if info['kind'] == 'theme':
+            install_icon_theme(root, info['theme_name'], inherit_fenestra=False)
+            gsettings_set('org.gnome.desktop.interface', 'icon-theme', info['theme_name'])
+            log(f'icons: installed theme {info["theme_name"]}')
+            return info
+        pack_id = m['id']
+        # fonts
+        fonts = [p for p in (root / 'fonts').glob('*') if p.suffix.lower() in ('.ttf', '.otf', '.ttc')] \
+            if (root / 'fonts').is_dir() else []
+        if fonts:
+            fdest = DATA / 'fonts' / 'fenestra-pack' / pack_id
+            fdest.mkdir(parents=True, exist_ok=True)
+            for f in fonts:
+                shutil.copyfile(f, fdest / f.name)
+            if APPLY:
+                subprocess.run(['fc-cache', '-f', str(fdest)], check=False)
+            log(f'fonts: {len(fonts)} files')
+        # cursors
+        cdir = root / 'cursors'
+        if cdir.is_dir() and any(p.suffix.lower() in ('.cur', '.ani') for p in cdir.iterdir()):
+            try:
+                build_cursor_theme(cdir, m.get('cursor_theme') or 'Fenestra-Pack-Cursors', False,
+                                   comment=f'Cursors from the icon pack {m.get("name")}')
+            except ImportError:
+                log('cursors: python3-pillow not installed, skipped')
+        # battery glyphs from the raw font
+        sysbatt = _find_ci(root, 'raw/Sysbatt.ttf')
+        if sysbatt:
+            build_battery(sysbatt, False)
+        # assets
+        adir = root / 'assets'
+        if adir.is_dir():
+            ASSETS.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(adir, ASSETS, symlinks=False, dirs_exist_ok=True)
+            logo = _find_ci(ASSETS, 'branding/start-button.svg', 'branding/start-button.png')
+            if logo and (adir / 'branding').is_dir():
+                apply_start_logo(logo)
+            search = _find_ci(ASSETS, 'search/search.png', 'search/search.svg')
+            if search and (adir / 'search').is_dir():
+                apply_search_icon(search)
+            settings_logo = _find_ci(adir, 'branding/settings.png', 'branding/settings-logo.png')
+            if settings_logo:
+                try:
+                    install_settings_icon(settings_logo)
+                except (OSError, ImportError) as exc:
+                    log(f'settings icon: skipped ({exc})')
+            log('assets: installed')
+        # icon themes
+        idir = root / 'icons'
+        themes = sorted(p for p in idir.iterdir() if (p / 'index.theme').is_file()) if idir.is_dir() else []
+        themes = [p for p in themes if _THEME_RE.match(p.name)]
+        for t in themes:
+            install_icon_theme(t, t.name, inherit_fenestra=True)
+        if themes:
+            wanted = m.get('icon_theme')
+            chosen = wanted if wanted in [t.name for t in themes] else themes[0].name
+            gsettings_set('org.gnome.desktop.interface', 'icon-theme', chosen)
+            log(f'icons: theme {chosen}')
+        # accent colour
+        accent = m.get('accent') or m.get('accent_color')
+        if isinstance(accent, str) and re.match(r'^#[0-9a-fA-F]{6}$', accent):
+            if APPLY and schema_has_key('org.fenestra.desktop', 'accent-color-custom'):
+                gsettings_set('org.fenestra.desktop', 'accent-color-custom', accent)
+                log(f'accent: {accent}')
+        ASSETS.mkdir(parents=True, exist_ok=True)
+        (ASSETS / '.imported-pack').write_text(json.dumps(
+            {'id': pack_id, 'name': m.get('name'), 'source': src, 'file': str(path)}) + '\n')
+    return info
 
 
 def main():
@@ -426,7 +718,26 @@ def main():
     ap.add_argument('--windows', help='path where the Windows partition is mounted')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--no-cursors', action='store_true')
+    ap.add_argument('--pack', metavar='FILE.zip', help='install a Fenestra icon pack or icon theme zip')
+    ap.add_argument('--inspect', action='store_true', help='with --pack: validate and print the manifest as JSON')
+    ap.add_argument('--no-apply', action='store_true',
+                    help='only write files under XDG_DATA_HOME (no gsettings, no cache refresh)')
     args = ap.parse_args()
+    global APPLY
+    APPLY = not args.no_apply
+    if args.pack:
+        try:
+            if args.inspect:
+                info = inspect_pack(args.pack)
+                print(json.dumps({'kind': info['kind'], 'manifest': info['manifest'],
+                                  'files': len(info['names']), 'bytes': info['total']}, indent=2))
+                return 0
+            import_pack(args.pack, args.dry_run)
+        except PackError as exc:
+            log(f'invalid pack: {exc}')
+            return 2
+        log('done — log out and back in to see everything')
+        return 0
     win = find_windows(args.windows)
     if not win:
         log('no Windows partition found (mount it first, read-only is fine)')

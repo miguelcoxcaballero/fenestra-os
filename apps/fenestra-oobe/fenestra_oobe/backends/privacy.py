@@ -5,12 +5,13 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 
 from gi.repository import Gio
 
 from . import log
-from ..paths import IMPORT_HELPER
+from .. import paths
 
 
 def _settings(schema_id: str):
@@ -150,19 +151,39 @@ class PrivacyBackend:
 
     @staticmethod
     def import_helper_available() -> bool:
-        return os.access(IMPORT_HELPER, os.X_OK)
+        return paths.importer() is not None
 
-    def run_import(self, root: str) -> str:
-        """Run the asset import helper; returns a short status string."""
+    def _run_helper(self, args, what):
+        helper = paths.importer()
         if self.demo:
             time.sleep(2.0)
-            log.info("[demo] would run %s %s", IMPORT_HELPER, root)
+            log.info("[demo] would run %s %s", helper or paths.IMPORT_HELPER, " ".join(args))
             return "ok"
-        if not self.import_helper_available():
-            log.warning("%s is not installed", IMPORT_HELPER)
+        if helper is None:
+            log.warning("%s is not installed", paths.IMPORT_HELPER)
             return "missing-helper"
-        env = dict(os.environ, FENESTRA_WINDOWS_ROOT=root)
-        res = subprocess.run([IMPORT_HELPER, "--windows", root], env=env, capture_output=True, text=True, timeout=600)
+        res = subprocess.run([sys.executable, helper, *args] if not os.access(helper, os.X_OK)
+                             else [helper, *args], capture_output=True, text=True, timeout=900)
+        log.info("%s: %s", what, res.stdout.strip())
         if res.returncode != 0:
-            raise RuntimeError(res.stderr.strip() or f"import helper exited with {res.returncode}")
+            lines = (res.stdout + res.stderr).strip().splitlines()
+            raise RuntimeError(lines[-1] if lines else f"import helper exited with {res.returncode}")
         return "ok"
+
+    def reset_icon_theme(self):
+        """Back to Fenestra's own icons (standalone --icons mode)."""
+        if self.demo:
+            log.info("[demo] would reset icon-theme to Fenestra")
+            return
+        s = _settings("org.gnome.desktop.interface")
+        if s is not None:
+            s.set_string("icon-theme", "Fenestra")
+            Gio.Settings.sync()
+
+    def run_import(self, root: str) -> str:
+        """Import fonts/cursors/glyphs from a Windows partition mounted at ``root``."""
+        return self._run_helper(["--windows", root], "windows import")
+
+    def run_pack_import(self, zip_path: str) -> str:
+        """Install an icon pack zip for the current user."""
+        return self._run_helper(["--pack", zip_path], "icon pack import")

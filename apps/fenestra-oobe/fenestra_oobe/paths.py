@@ -45,3 +45,25 @@ def fenestra_state_file() -> str:
 HANDOFF_RELPATH = os.path.join(".config", "fenestra", "oobe-system.json")
 
 IMPORT_HELPER = "/usr/bin/fenestra-import-windows-assets"
+_IMPORTER_CANDIDATES = [
+    os.environ.get("FENESTRA_IMPORTER", ""),
+    IMPORT_HELPER,
+    "/usr/libexec/fenestra-import-windows-assets",
+    # source checkout: apps/fenestra-oobe/../../tools/
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(_HERE))), "tools",
+                 "fenestra-import-windows-assets"),
+]
+
+
+def importer() -> str | None:
+    """Path of fenestra-import-windows-assets (installed or in the repo)."""
+    for cand in _IMPORTER_CANDIDATES:
+        if cand and os.path.isfile(cand):
+            return cand
+    return None
+
+
+def downloads_dir() -> str:
+    from gi.repository import GLib
+    d = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD)
+    return d or os.path.join(os.path.expanduser("~"), "Downloads")

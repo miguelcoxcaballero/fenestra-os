@@ -44,6 +44,14 @@ install -d "$DESTDIR$PKGDATADIR/illustrations"
 for svg in "$SRC"/data/illustrations/*.svg; do
     install -m 0644 "$svg" "$DESTDIR$PKGDATADIR/illustrations/"
 done
+install -d "$DESTDIR$PKGDATADIR/icons" "$DESTDIR$PKGDATADIR/help"
+for svg in "$SRC"/data/icons/*.svg; do
+    install -m 0644 "$svg" "$DESTDIR$PKGDATADIR/icons/"
+done
+# Local help page shown by the icon pack mini browser.
+for html in "$SRC"/data/help/*.html; do
+    install -m 0644 "$html" "$DESTDIR$PKGDATADIR/help/"
+done
 
 # Launcher.
 sed "s|@PKGDATADIR@|$PKGDATADIR|g" "$SRC/bin/fenestra-oobe" > "$DESTDIR$LIBEXECDIR/fenestra-oobe"

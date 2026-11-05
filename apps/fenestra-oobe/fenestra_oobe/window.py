@@ -11,7 +11,8 @@ from .i18n import _
 from .pages.account import (AccountNamePage, ApplyingPage, ConfirmPasswordPage, DeviceNamePage,
                             HintPage, PasswordPage)
 from .pages.network import NetworkPage, OfflinePage, UpdatesPage
-from .pages.personal import CustomizePage, ImportPage, PrivacyPage
+from .pages.icons import IconBrowserPage, IconPackPage, IconsPage
+from .pages.personal import CustomizePage, PrivacyPage
 from .pages.region import KeyboardPage, PickSecondKeyboardPage, RegionPage, SecondKeyboardPage
 from .widgets.background import GradientBackground
 from .widgets.corner import CornerControls
@@ -24,15 +25,18 @@ log = logging.getLogger("fenestra-oobe")
 PAGE_CLASSES = {cls.page_id: cls for cls in (
     RegionPage, KeyboardPage, SecondKeyboardPage, PickSecondKeyboardPage, NetworkPage, OfflinePage,
     UpdatesPage, DeviceNamePage, AccountNamePage, PasswordPage, ConfirmPasswordPage, HintPage,
-    ApplyingPage, PrivacyPage, CustomizePage, ImportPage,
+    ApplyingPage, PrivacyPage, CustomizePage, IconsPage, IconPackPage, IconBrowserPage,
 )}
 
 SYSTEM_PAGES = ["region", "keyboard", "keyboard-second", "keyboard-pick", "network", "network-offline",
                 "updates", "device-name", "account-name", "account-password", "account-confirm",
                 "account-hint", "applying"]
-EXISTING_PAGES = ["privacy", "customize", "import"]
+EXISTING_PAGES = ["privacy", "icons", "icons-browser", "icons-pack", "customize"]
+ICON_PAGES = ["icons", "icons-browser", "icons-pack"]  # standalone --icons mode (from Settings)
 FINALE_IDS = ["finale-1", "finale-2", "finale-3", "finale-4"]
-ALL_PAGE_IDS = SYSTEM_PAGES + EXISTING_PAGES + FINALE_IDS
+# Screenshot-only states: page id -> (real page, state name)
+PSEUDO_PAGES = {"icons-download": ("icons-browser", "download"), "icons-applying": ("icons-pack", "applying")}
+ALL_PAGE_IDS = SYSTEM_PAGES + EXISTING_PAGES + list(PSEUDO_PAGES) + FINALE_IDS
 
 
 class OobeWindow(Gtk.ApplicationWindow):
@@ -42,8 +46,9 @@ class OobeWindow(Gtk.ApplicationWindow):
         self.state = state
         self.backends = backends
         self.screenshot_mode = screenshot
-        self.order = {"system": SYSTEM_PAGES, "existing": EXISTING_PAGES,
+        self.order = {"system": SYSTEM_PAGES, "existing": EXISTING_PAGES, "icons": ICON_PAGES,
                       "demo": SYSTEM_PAGES + EXISTING_PAGES}[mode]
+        self.pack_path = None
         self.pages = {}
         self.history = []
         self.current_page = None
@@ -64,7 +69,7 @@ class OobeWindow(Gtk.ApplicationWindow):
             backends.gdm.prepare()
         if screenshot:
             self.other_system_root = "/run/media/alex/OS"
-        elif mode in ("existing", "demo"):
+        elif mode in ("existing", "demo", "icons"):
             run_async(backends.privacy.find_other_system, callback=self._other_system_found)
 
     # -- construction ----------------------------------------------------
@@ -127,7 +132,7 @@ class OobeWindow(Gtk.ApplicationWindow):
     def _focus_in_wifi_row(self):
         w = self.get_focus()
         while w is not None:
-            if w.has_css_class("wifi-row") or isinstance(w, Gtk.Popover):
+            if w.has_css_class("wifi-row") or w.has_css_class("own-enter") or isinstance(w, Gtk.Popover):
                 return True
             w = w.get_parent()
         return False
@@ -171,6 +176,13 @@ class OobeWindow(Gtk.ApplicationWindow):
         return name
 
     def start(self, page_id=None):
+        state = None
+        if page_id in PSEUDO_PAGES:
+            page_id, state = PSEUDO_PAGES[page_id]
+        if self.screenshot_mode and page_id in ("icons-pack",) and not self.pack_path:
+            import os
+            from . import iconpack
+            self.pack_path = iconpack.make_demo_pack(os.path.join(GLib.get_tmp_dir(), "fenestra-demo-pack.zip"))
         if page_id is None:
             page_id = self._next_id(-1)
             if page_id is None:
@@ -183,6 +195,8 @@ class OobeWindow(Gtk.ApplicationWindow):
             if idx > 0:
                 self.history = [self.order[idx - 1]]
                 self.update_footer(self.current_page)
+        if state is not None and hasattr(self.current_page, "screenshot_state"):
+            self.current_page.screenshot_state(state)
 
     def _next_id(self, index):
         i = index + 1
@@ -209,6 +223,8 @@ class OobeWindow(Gtk.ApplicationWindow):
                 self.history.append(prev.page_id)
         self.current_page = page
         self.art_stack.set_visible_child_name(self._art(page.illustration))
+        # Wide pages (mini browser) use the whole card.
+        self.art_stack.set_visible(not getattr(page, "wide", False))
         self.host.set_page(page, direction, animate=animate and not self.screenshot_mode)
         page.on_enter(direction)
         self.update_footer(page)
@@ -224,6 +240,9 @@ class OobeWindow(Gtk.ApplicationWindow):
         nid = self._next_id(idx)
         if nid is None:
             if self.mode == "system":
+                return
+            if self.mode == "icons":
+                self.get_application().quit()
                 return
             self.finish()
             return
@@ -245,7 +264,8 @@ class OobeWindow(Gtk.ApplicationWindow):
             button.set_visible(bool(label))
             if label:
                 button.set_label(label)
-        self.footer.set_visible(any((page.primary_label, page.secondary_label, page.link_label)))
+        self.footer.set_visible(any((page.primary_label, page.secondary_label, page.link_label))
+                                and not page.busy)
         self.primary_button.set_sensitive(page.primary_sensitive and not page.busy)
         self.secondary_button.set_sensitive(not page.busy)
         self.link_button.set_sensitive(not page.busy)

@@ -152,8 +152,10 @@ class TranslationTests(unittest.TestCase):
                     if node.args[0].value not in MESSAGES:
                         missing.append(node.args[0].value)
         from fenestra_oobe.pages.account import HOSTNAME_ERRORS
+        from fenestra_oobe.iconpack import PREVIEW_RULES, THEME_RULES
         from fenestra_oobe.pages.personal import INTERESTS
         extra = list(HOSTNAME_ERRORS.values()) + [t for i in INTERESTS for t in i[2:4]]
+        extra += [r[0] for r in PREVIEW_RULES + THEME_RULES]
         missing += [s for s in extra if s not in MESSAGES]
         self.assertEqual(missing, [])
 
@@ -161,9 +163,15 @@ class TranslationTests(unittest.TestCase):
         import glob
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         from fenestra_oobe.translations.es import MESSAGES
+        # "Windows" may only appear where the user's own Windows installation is
+        # meant (icon import step); never as Fenestra's own branding.
+        allowed = ("windows partition", "windows pc", "windows installation", "partición de windows",
+                   "pc con windows", "instalación de windows")
         for text in list(MESSAGES) + list(MESSAGES.values()):
-            self.assertNotIn("windows", text.lower())
-            self.assertNotIn("microsoft", text.lower())
+            low = text.lower()
+            self.assertNotIn("microsoft", low)
+            if "windows" in low:
+                self.assertTrue(any(a in low for a in allowed), text)
         for f in glob.glob(os.path.join(root, "data", "**", "*.svg"), recursive=True):
             with open(f, encoding="utf-8") as fh:
                 low = fh.read().lower()

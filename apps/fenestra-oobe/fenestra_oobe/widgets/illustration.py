@@ -18,11 +18,11 @@ except (ImportError, ValueError):  # pragma: no cover - fallback path
     cairo = None
 
 
-def render_svg(path: str, width: int, height: int):
-    """Return a Gdk.Texture for the SVG scaled to fit width x height."""
+def render_svg(path: str, width: int, height: int, data: bytes | None = None):
+    """Return a Gdk.Texture for the SVG (file or ``data``) scaled to fit width x height."""
     if Rsvg is not None and cairo is not None:
         try:
-            handle = Rsvg.Handle.new_from_file(path)
+            handle = Rsvg.Handle.new_from_data(data) if data is not None else Rsvg.Handle.new_from_file(path)
             surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
             cr = cairo.Context(surface)
             vp = Rsvg.Rectangle()
@@ -35,6 +35,8 @@ def render_svg(path: str, width: int, height: int):
         except Exception as exc:  # noqa: BLE001
             log.warning("rsvg failed for %s: %s", path, exc)
     try:
+        if data is not None:
+            return Gdk.Texture.new_from_bytes(GLib.Bytes.new(data))
         return Gdk.Texture.new_from_filename(path)
     except GLib.Error as exc:
         log.warning("could not load %s: %s", path, exc.message)

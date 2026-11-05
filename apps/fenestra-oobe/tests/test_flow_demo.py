@@ -80,8 +80,9 @@ class DemoFlowTest(unittest.TestCase):
                 win._primary()
             elif pid in ("applying", "updates"):
                 acted.discard(key)  # wait for it to finish
-            elif pid == "import":
-                page.on_secondary()
+            elif pid == "icons":
+                page.select("default")
+                page.on_primary()
             else:
                 win._primary()
             return True
@@ -94,7 +95,7 @@ class DemoFlowTest(unittest.TestCase):
         self.assertEqual(visited[:3], ["region", "keyboard", "keyboard-second"])
         for pid in ("keyboard-pick", "network", "network-offline", "device-name", "account-name",
                     "account-password", "account-confirm", "account-hint", "applying", "privacy",
-                    "customize", "import"):
+                    "icons", "customize"):
             self.assertIn(pid, visited)
         self.assertNotIn("updates", visited)  # offline: skipped
         self.assertTrue(state["finale"])

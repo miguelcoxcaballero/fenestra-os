@@ -52,8 +52,8 @@ the new user, full screen over the desktop.
 | # | page id | Title |
 |---|---------|-------|
 | 9 | `privacy` | Choose privacy settings for your device. Toggles for Location, Automatic time zone, Diagnostic data and Tailored experiences. |
-| 10 | `customize` | Let's customize your experience. Grid of interests, saved to `~/.config/fenestra/oobe.json`. |
-| 11 | `import` | Bring your fonts and pointers along. Shown only when another system's partition with `Windows/Fonts/segoeui.ttf` is found. The UI never names that system. |
+| 10a | `icons` (+ `icons-pack`, `icons-browser`) | Personalize your icons. Selectable options: **Fenestra default**; **Import from my Windows partition** (only when one with `Windows/Fonts/segoeui.ttf` is found; runs `fenestra-import-windows-assets --windows <mount>`); **Import an icon pack (.zip)** (a file chooser filtered to `*.zip`); **Download an icon pack from a link** (mini browser). A pack is validated and previewed before **Apply** runs `fenestra-import-windows-assets --pack FILE.zip`. |
+| 10b | `customize` | Let's customize your experience. Grid of interests, saved to `~/.config/fenestra/oobe.json`. |
 | 12 | `finale-1..4` | Full-screen sequence: "Hi" → "We're getting everything ready for you" → "This might take a few minutes / Don't turn off your PC" → "Let's start" (about 10 s), then it writes `~/.config/gnome-initial-setup-done` and exits. |
 
 Keyboard: **Enter** triggers the primary button and **Esc** goes back where
@@ -99,6 +99,40 @@ about 260 ms with ease-out, and illustrations crossfade.
    - On failure, or after a 25 s timeout, the app exits and GDM shows its
      normal login screen.
 
+## Icon packs
+
+- **Format.** The format is `docs/ICON-PACK-FORMAT.md` (v1): zips made by *Fenestra Icon Extractor*,
+  with `fenestra-pack.json`. A third-party zip that contains an `index.theme` is installed as a plain icon
+  theme.
+- **Validation.** It is done in one place, `tools/fenestra-import-windows-assets` (`inspect_pack`,
+  `safe_extract`). The OOBE loads that file as a module, so the OOBE, Settings and the command line agree.
+  It refuses:
+  - a missing or invalid manifest;
+  - any `format` other than `fenestra-icon-pack`, or any `version` other than `1`;
+  - a bad `id` or theme name;
+  - `..`, absolute paths and drive letters;
+  - symlinks;
+  - more than 1 GB uncompressed, counted again while extracting.
+- **What gets installed.** Everything goes into the user's own data directory:
+  - fonts → `~/.local/share/fonts/fenestra-pack/<id>`
+  - `.cur`/`.ani` cursors → an Xcursor theme
+  - `raw/Sysbatt.ttf` → battery SVGs
+  - `assets/*` → `~/.local/share/fenestra/assets`, then the Start logo goes to ArcMenu and the search
+    icon to a user copy of `fenestra-search.desktop`
+  - `icons/<theme>` → `~/.local/share/icons`, with `Inherits=Fenestra` added, and `icon-theme` is set
+- **Optional extras.** These go beyond the spec: an `accent` (`#rrggbb`) in the manifest sets
+  `org.fenestra.desktop accent-color-custom` when that key exists, and `assets/branding/settings.png`
+  becomes the Settings icon.
+- **Mini browser.** It uses WebKitGTK 6 (`webkitgtk6.0`) with an ephemeral session. The home page is a
+  local help page (`data/help/icon-packs.<lang>.html`) that links to the Fenestra releases page; no
+  remote URL is preloaded.
+  - Downloads are saved to `~/Downloads` (a temporary folder in `--demo`) and checked automatically.
+  - Direct `.zip` links are downloaded with libsoup without the web view.
+  - Without WebKit, the page shows a plain text explanation and the address bar, which then only
+    downloads.
+- **From Settings.** Settings › Personalization › Themes › *Icon pack* runs `fenestra-oobe --icons`,
+  which shows the same step in a window.
+
 ## Integration
 
 `install.sh` installs:
@@ -137,7 +171,7 @@ bin/fenestra-oobe --page network --screenshot out.png [--size 1920x1080] [--lang
 tools/screenshot-all.sh        # every page -> screenshots/<page>.png (uses fenestra-test)
 tools/screenshot-all.sh --es   # Spanish variants -> screenshots/<page>-es.png
 tools/compare.py               # side-by-side comparisons with tests/vm/shots/win11/*.png
-python3 -m unittest tests.test_backends tests.test_flow_demo
+~/.local/bin/fenestra-test-run python3 -m unittest tests.test_backends tests.test_iconpack tests.test_flow_demo
 ```
 
 - `--demo` mocks every write: account creation, hostname, localed/timedated,

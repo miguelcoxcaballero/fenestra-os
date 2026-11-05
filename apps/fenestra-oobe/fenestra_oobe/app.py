@@ -15,6 +15,7 @@ gi.require_version("Graphene", "1.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID, i18n, paths  # noqa: E402
+from .i18n import _  # noqa: E402
 
 log = logging.getLogger("fenestra-oobe")
 
@@ -23,6 +24,8 @@ def parse_args(argv):
     p = argparse.ArgumentParser(prog="fenestra-oobe", description="Fenestra first boot setup")
     p.add_argument("--existing-user", action="store_true",
                    help="first login of a new user (privacy, personalization, finale)")
+    p.add_argument("--icons", action="store_true",
+                   help="only the 'Personalize your icons' step, in a window (used by Fenestra Settings)")
     p.add_argument("--demo", action="store_true",
                    help="run the whole flow without changing the system")
     p.add_argument("--windowed", action="store_true", help="don't go full screen")
@@ -87,12 +90,18 @@ class OobeApp(Gtk.Application):
         mode = "demo" if demo and not args.existing_user else ("existing" if args.existing_user else "system")
         if demo and args.existing_user:
             mode = "demo"
+        if args.icons:
+            mode = "icons"
         state = build_state(args)
         backends = Backends(demo)
         win = OobeWindow(self, mode, state, backends, screenshot=bool(args.screenshot))
         self.window = win
         w, h = (int(x) for x in args.size.lower().split("x"))
-        if args.screenshot or args.windowed:
+        if args.icons and not args.screenshot:
+            # Opened from Settings: a normal window sized for the card.
+            win.set_default_size(1320, 900)
+            win.set_title(_("Personalize your icons"))
+        elif args.screenshot or args.windowed:
             win.set_default_size(w, h)
             win.set_decorated(not args.screenshot)
             if args.screenshot:
