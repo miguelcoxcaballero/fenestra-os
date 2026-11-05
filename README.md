@@ -65,28 +65,6 @@ familiar 48-colour accent palette (plus a custom colour), and the whole desktop 
 
 Screenshots use demo data only (user "Alex Morgan", device "FENESTRA-PC").
 
-### Windows 11 ↔ Fenestra
-
-Reference captures from a Windows 11 25H2 Enterprise Evaluation VM (left) next to Fenestra (right).
-Geometry, type sizes, colours and controls are matched; illustrations, icons and branding are
-Fenestra's own.
-
-**Ctrl+Alt+Del**
-
-![Ctrl+Alt+Del: Windows 11 vs Fenestra](docs/images/ctrl-alt-del-vs-windows.png)
-
-**OOBE: region and "checking for updates"**
-
-![OOBE region: Windows 11 vs Fenestra](apps/fenestra-oobe/screenshots/compare-region.png)
-![OOBE checking for updates: Windows 11 vs Fenestra](apps/fenestra-oobe/screenshots/compare-checking-for-updates.png)
-
-**Task Manager: Processes and Performance**
-
-![Task Manager Processes: Windows 11 vs Fenestra](apps/fenestra-taskmgr/screenshots/compare-processes.png)
-![Task Manager Performance: Windows 11 vs Fenestra](apps/fenestra-taskmgr/screenshots/compare-performance-cpu.png)
-
-More comparisons are in `apps/*/screenshots/compare-*.png`.
-
 ## What you get
 
 | Area | Windows 11 behaviour reproduced |

@@ -9,13 +9,11 @@ App history, Startup apps, Users, Details, Services and Settings.
 Python 3 + PyGObject + **GTK 4** (no libadwaita, no pip dependencies, psutil not needed).
 All data comes straight from `/proc` and `/sys`.
 
-| Windows 11 (left) vs Fenestra (right) |
-|---|
-| ![Processes](screenshots/compare-processes-windowed.png) |
-| ![Performance](screenshots/compare-performance-cpu.png) |
+| Processes | Performance |
+|---|---|
+| ![Processes](screenshots/processes-windowed.png) | ![Performance](screenshots/performance-cpu.png) |
 
-Every page is in [`screenshots/`](screenshots/) (`compare-*.png` = side by side with the
-Windows 11 captures in `tests/vm/shots/win11/`, the rest = Fenestra only).
+Every page is in [`screenshots/`](screenshots/).
 
 ## Running
 
@@ -80,7 +78,7 @@ of App history (always 0).
 ```sh
 WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland GSK_RENDERER=gl \
   python3 -m fenestra_taskmgr --screenshot out.png --page processes --size 1920x1032 --maximized
-tools/compare-all.sh          # regenerate every screenshot + side-by-side comparison
+tools/compare-all.sh          # regenerate every screenshot (side-by-side checks stay local)
 ```
 
 `--screenshot` implies `--demo-data` (neutral sample processes, no personal data) and

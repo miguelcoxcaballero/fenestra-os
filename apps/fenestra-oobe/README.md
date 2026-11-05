@@ -19,8 +19,8 @@ matched to reference captures of the familiar desktop OOBE (1920×1080):
   its popover also holds the volume slider;
 - progress pages show a 64 px ring and a 20 px caption.
 
-`tools/compare.py` renders the matching pages and writes side-by-side
-`screenshots/compare-*.png` images (reference left, Fenestra right). Measured
+`tools/compare.py` renders the matching pages for a local side-by-side check
+(the comparison images are not committed). Measured
 deviations are within about 2 px; the illustrations and branding are
 intentionally different.
 
@@ -205,8 +205,7 @@ included in `fenestra_oobe/translations/es.py`) or `--lang`.
 ## Screenshots
 
 See `screenshots/`: one PNG per page id (`region.png` … `finale-4.png`),
-Spanish variants (`*-es.png`), `privacy-1366x768.png` for small screens, and
-`compare-{region,keyboard,second-keyboard,checking-for-updates}.png`.
+Spanish variants (`*-es.png`), and `privacy-1366x768.png` for small screens.
 
 ## Known limitations
 

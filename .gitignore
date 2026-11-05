@@ -12,3 +12,6 @@ apps/fenestra-icon-extractor/bin/
 apps/fenestra-icon-extractor/obj/
 apps/fenestra-icon-extractor/out/
 *.zip
+
+# Side-by-side comparisons with the reference OS stay local
+**/compare-*.png
