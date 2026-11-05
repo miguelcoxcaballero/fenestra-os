@@ -22,6 +22,8 @@ bootloader --timeout=1
 %packages
 @^workstation-product-environment
 nautilus-python
+# ArcMenu (Start) needs the GMenu typelib.
+gnome-menus
 python3-gobject
 python3-pillow
 python3-fonttools
@@ -41,6 +43,8 @@ generic-logos
 generic-logos-httpd
 # Not part of the Windows-like experience.
 -gnome-tour
+-initial-setup
+-initial-setup-gui
 -gnome-shell-extension-background-logo
 %end
 
@@ -64,6 +68,14 @@ tar -xzf "$SRC/rootfs.tar.gz" -C /mnt/sysroot --no-same-owner
 
 %post --log=/root/fenestra-post.log
 set -x
+# The overlay was unpacked from the installer environment: give it the
+# target's SELinux labels (bin_t for /usr/libexec/fenestra-oobe etc.), or the
+# confined GDM/initial-setup session cannot execute it.
+restorecon -RF /usr /etc /var/lib/fenestra-spotlight || true
+# GDM skips initial setup when this is set (see the note on firstboot above); belt and braces.
+if [ -f /etc/sysconfig/anaconda ]; then
+    sed -i 's/^post_install_tools_disabled *=.*/post_install_tools_disabled = 0/' /etc/sysconfig/anaconda
+fi
 # Branding (Fenestra is a Fedora remix).
 rm -f /etc/os-release
 sed -e 's/^NAME=.*/NAME="Fenestra"/' \
@@ -74,6 +86,14 @@ sed -e 's/^NAME=.*/NAME="Fenestra"/' \
     -e 's/^VARIANT=.*/VARIANT="Fenestra Desktop"/' \
     /usr/lib/os-release > /etc/os-release
 install -Dm644 /usr/share/fenestra/assets/branding/fenestra-logo.svg /usr/share/icons/hicolor/scalable/apps/fenestra-logo.svg
+# Boot entries written before os-release changed still say "Fedora Linux";
+# later kernels take PRETTY_NAME from the new os-release.
+. /etc/os-release
+for e in /boot/loader/entries/*.conf; do
+    [ -f "$e" ] || continue
+    v=$(sed -n 's/^version //p' "$e")
+    sed -i "s|^title .*|title $PRETTY_NAME ($v)|" "$e"
+done
 
 # Files: Explorer layer (patched sidebar icons + UI overlay), launched via a wrapper.
 /usr/libexec/fenestra/fenestra-patch-nautilus

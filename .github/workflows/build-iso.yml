@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build dependencies
-        run: dnf -y install lorax xorriso isomd5sum git rsync glib2 gtk-update-icon-cache python3-pillow python3-numpy ImageMagick librsvg2-tools curl unzip
+        run: dnf -y install lorax xorriso isomd5sum git rsync glib2 gtk-update-icon-cache python3-pillow python3-numpy ImageMagick librsvg2-tools curl unzip cpio
       - name: Fedora netinstall ISO
         run: |
           mkdir -p ~/.local/share/fenestra-vm && cd ~/.local/share/fenestra-vm

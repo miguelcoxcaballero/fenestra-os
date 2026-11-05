@@ -22,7 +22,7 @@ export function installLockStatus(path) {
         if(file.query_exists(null))icon.gicon=new Gio.FileIcon({file});
     }
     function refresh() {
-        box.visible=Main.sessionMode.isGreeter || Main.screenShield.locked;
+        box.visible=Main.sessionMode.isGreeter || !!Main.screenShield?.locked;
         if(!box.visible)return;
         const monitor=Main.layoutManager.primaryMonitor;
         if(monitor)box.set_position(monitor.x+monitor.width-100,monitor.y+monitor.height-44);
@@ -36,7 +36,8 @@ export function installLockStatus(path) {
         battery.visible=power?.is_present??false;
         fileIcon(battery,`${charging?'charging':'normal'}-0-${percentage}`);
     }
-    watch(Main.screenShield,'locked-changed');
+    // screenShield is null when the session cannot lock (no logind).
+    if(Main.screenShield)watch(Main.screenShield,'locked-changed');
     watch(Main.sessionMode,'updated');
     watch(Main.layoutManager,'monitors-changed');
     watch(network,'notify');

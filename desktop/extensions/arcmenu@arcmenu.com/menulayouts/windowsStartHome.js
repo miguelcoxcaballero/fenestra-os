@@ -89,7 +89,7 @@ function buildHome(layout) {
         if(item.label){item.label.set_style('font-family: Segoe UI; font-size: 12px; font-weight: normal;');item.label.y_expand=false;item.label.y_align=Clutter.ActorAlign.START;}
         const icon=item._iconBin?.get_child();if(icon instanceof St.Icon)icon.icon_size=32;
     });
-    add(heading('Recent',button('Show all  ›',()=>{layout._hideNavigationButtons();layout.backButton.show();layout._loadRecentFiles();layout.displayRecentFiles();}),28,12));
+    add(heading('Recommended',button('Show all  ›',()=>{layout._hideNavigationButtons();layout.backButton.show();layout._loadRecentFiles();layout.displayRecentFiles();}),28,12));
     const recents=add(new St.Widget({layout_manager:new Clutter.GridLayout(),x_expand:true,style:'margin: 9px 24px 8px 50px;'}));
     const empty=label('Your recent files will appear here.',`font-size: 12px; color: ${pick('#bcbcbc', '#5f5f5f')}; padding: 12px 0px;`);
     recents.layout_manager.attach(empty,0,0,3,1);

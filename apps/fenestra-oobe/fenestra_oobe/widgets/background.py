@@ -5,6 +5,7 @@ No bitmap is involved: a base linear gradient plus a few large radial
 """
 
 import math
+import os
 
 from gi.repository import Gdk, Graphene, Gsk, Gtk
 
@@ -61,13 +62,24 @@ class GradientBackground(Gtk.Widget):
         self._phase = 0.0
         self._speed = speed
         self._start = None
-        if animate:
+        self._last = None
+        self._slow = 0
+        if animate and not os.environ.get("FENESTRA_OOBE_NO_ANIMATION"):
             self.add_tick_callback(self._tick)
 
     def _tick(self, _widget, clock):
         t = clock.get_frame_time() / 1_000_000
         if self._start is None:
             self._start = t
+        # Full-screen gradients every frame are cheap on a GPU but very slow
+        # with software rendering (VMs without 3D, basic drivers): there the
+        # rest of the page would never get drawn. Stay still after a few slow
+        # frames.
+        if self._last is not None and t - self._last > 0.1:
+            self._slow += 1
+            if self._slow >= 3:
+                return False
+        self._last = t
         self._phase = (t - self._start) * 0.12 * self._speed
         self.queue_draw()
         return True

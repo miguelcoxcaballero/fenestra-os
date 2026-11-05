@@ -57,6 +57,25 @@ def build_state(args):
     return st
 
 
+def _software_gl() -> bool:
+    """True when GL is rendered on the CPU (llvmpipe/softpipe/swrast)."""
+    import ctypes
+    try:
+        ctx = Gdk.Display.get_default().create_gl_context()
+        ctx.realize()
+        ctx.make_current()
+        lib = ctypes.CDLL("libGLESv2.so.2" if ctx.get_use_es() else "libGL.so.1")
+        lib.glGetString.restype = ctypes.c_char_p
+        lib.glGetString.argtypes = [ctypes.c_uint]
+        renderer = (lib.glGetString(0x1F01) or b"").decode(errors="replace").lower()  # GL_RENDERER
+        Gdk.GLContext.clear_current()
+    except Exception as exc:  # noqa: BLE001 - no GL at all: GTK falls back by itself
+        log.debug("GL probe failed: %s", exc)
+        return False
+    log.debug("GL renderer: %s", renderer)
+    return any(k in renderer for k in ("llvmpipe", "softpipe", "swrast"))
+
+
 class OobeApp(Gtk.Application):
     def __init__(self, args):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.NON_UNIQUE)
@@ -66,6 +85,12 @@ class OobeApp(Gtk.Application):
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
+        # Without a GPU (many VMs, basic drivers) GTK's GL renderer runs on
+        # llvmpipe and is several times slower than the cairo renderer for
+        # this full-screen UI. Respect an explicit GSK_RENDERER.
+        if "GSK_RENDERER" not in os.environ and _software_gl():
+            os.environ["GSK_RENDERER"] = "cairo"
+            log.info("software GL detected: using the cairo renderer")
         settings = Gtk.Settings.get_default()
         settings.props.gtk_application_prefer_dark_theme = False
         # GTK >= 4.20 follows the desktop color scheme; the OOBE is always light.

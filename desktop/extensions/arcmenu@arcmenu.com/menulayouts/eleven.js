@@ -84,8 +84,10 @@ export class Layout extends BaseMenuLayout {
             ...getOrientationProp(false),
         });
         topBox.add_child(this.searchEntry);
-        // Windows 11: darker acrylic header band holding the search pill.
-        const headerStyle = () => `background-color: ${pick('rgba(0,0,0,0.21)', 'rgba(0,0,0,0.03)')}; border-bottom: 1px solid ${pick('rgba(0,0,0,0.2)', 'rgba(0,0,0,0.06)')}; padding: 8px 32px 15px;`;
+        // Windows 11: the search pill sits on the menu's own acrylic (no header
+        // band or separator, in light and dark mode; only the footer is tinted).
+        // Same 58 px height as before.
+        const headerStyle = () => 'background-color: transparent; padding: 16px 32px 8px;';
         topBox.style = headerStyle();
         onSchemeChanged(this, () => {
             topBox.style = headerStyle(); this.updateStyle(); this._homeDirty = true;
@@ -282,7 +284,8 @@ export class Layout extends BaseMenuLayout {
                        min-height: 58px; border-color: ${pick('rgba(0,0,0,0.2)', 'rgba(0,0,0,0.06)')}; border-top-width: 1px;`;
 
         this.actionsContainerBox.style = style + borderRadiusStyle;
-        this.arcMenu.box.style = 'padding-bottom: 0px; padding-left: 0px; padding-right: 0px; font-family: Segoe UI; font-size: 14px;';
+        // No top padding either: it left a strip of plain menu background above the search box.
+        this.arcMenu.box.style = 'padding: 0px; font-family: Segoe UI; font-size: 14px;';
     }
 
     setGridLayout(displayType, spacing, setStyle = true) {
