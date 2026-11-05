@@ -12,7 +12,8 @@ set -euo pipefail
 # Laptop has 16 GB: allow only one VM at a time and keep it inside fenestra-tests.slice.
 if [ "${1:-}" = install ] || [ "${1:-}" = boot ]; then
     if pgrep -f qemu-system-x86_64 >/dev/null; then echo "only one VM at a time: stop the running one first" >&2; exit 1; fi
-    if [ -z "${FENESTRA_IN_SLICE:-}" ] && command -v systemd-run >/dev/null; then
+    # (Skipped where there is no systemd user manager, e.g. containers.)
+    if [ -z "${FENESTRA_IN_SLICE:-}" ] && command -v systemd-run >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
         exec systemd-run --user --scope --quiet --slice=fenestra-tests.slice -E FENESTRA_IN_SLICE=1 "$0" "$@"
     fi
 fi
@@ -27,11 +28,12 @@ mkdir -p "$VM" "$SHOTS"
 qmp() { python3 "$HERE/qmp.py" "$QMP" "$@"; }
 
 # KVM when available; otherwise multi-threaded TCG (slow, but works in CI/containers).
+# FENESTRA_VM_GPU=VGA (bochs-drm) avoids mutter stalling on virtio-gpu under TCG.
 if [ -w /dev/kvm ]; then accel=(-enable-kvm -cpu host -smp "${FENESTRA_VM_CPUS:-6}")
 else accel=(-accel tcg,thread=multi,tb-size=1024 -cpu max -smp "${FENESTRA_VM_CPUS:-$(nproc)}"); fi
 common=("${accel[@]}" -m "${FENESTRA_VM_MEM:-3584}" -machine q35
         -drive "file=$DISK,if=virtio,format=qcow2"
-        -device virtio-vga,xres=$W,yres=$H -display none
+        -device "${FENESTRA_VM_GPU:-virtio-vga},xres=$W,yres=$H" -display none
         -device qemu-xhci -device usb-tablet -device usb-kbd
         -netdev user,id=n0,hostfwd=tcp:127.0.0.1:2222-:22 -device virtio-net-pci,netdev=n0
         -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0
