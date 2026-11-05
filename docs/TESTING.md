@@ -87,6 +87,7 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | OOBE unit tests (`tests.test_backends`) | OK |
 | OOBE demo flow (`tests.test_flow_demo`) | OK, except where the host has a real user called `alex`: the username derivation then (correctly) proposes `alexrivera` |
 | Settings pages in dark and light (`--demo-data`) | OK |
+| *System › Recovery › Reset this PC* (`fenestra-reset run`, both modes, on throw-away users in the Fedora 43 container) | OK: *Keep my files* leaves `~/Documents` and restores `~/.config` from `/etc/skel`; *Remove everything* deletes the users and their homes; the request file is consumed first, so it never runs twice. Not yet run on a real boot (polkit, `fenestra-reset.service` before GDM) |
 
 ### Build and packaging
 

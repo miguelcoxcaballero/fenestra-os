@@ -37,6 +37,10 @@ cp -a "$D/lib/folder-icons/folder_icons.py" "$OUT/usr/share/fenestra/lib/"
 install -m755 "$D/libexec/fenestra-patch-nautilus" "$D/libexec/fenestra-nautilus" "$OUT/usr/libexec/fenestra/"
 install -Dm755 "$REPO/tools/fenestra-import-windows-assets" "$OUT/usr/bin/fenestra-import-windows-assets"
 install -Dm644 "$D/systemd/fenestra-patch-nautilus.service" "$OUT/usr/lib/systemd/system/fenestra-patch-nautilus.service"
+# Settings > System > Recovery > Reset this PC (runs at the next boot, before GDM).
+install -m755 "$D/libexec/fenestra-reset" "$OUT/usr/libexec/fenestra/"
+install -Dm644 "$D/systemd/fenestra-reset.service" "$OUT/usr/lib/systemd/system/fenestra-reset.service"
+install -Dm644 "$D/polkit/org.fenestra.reset.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.reset.policy"
 install -d "$OUT/usr/lib/systemd/user"
 cp -a "$D/systemd/user/." "$OUT/usr/lib/systemd/user/"   # e.g. gnome-shell CPU/IO priority drop-in
 

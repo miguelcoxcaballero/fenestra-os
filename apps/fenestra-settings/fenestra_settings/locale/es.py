@@ -1237,4 +1237,15 @@ STRINGS = {
     'Weather at the left end of the taskbar': 'El tiempo en el extremo izquierdo de la barra de tareas',
     'search box icon label taskbar': 'buscar cuadro icono etiqueta barra de tareas',
     'weather widgets news': 'tiempo widgets noticias',
+    # Reset this PC
+    'Choose to keep or remove your personal files, then reset Fenestra without reinstalling': 'Elige si quieres conservar o quitar tus archivos personales y restablece Fenestra sin reinstalarlo',
+    'Reset PC': 'Restablecer PC',
+    'Resetting is not available on this system': 'El restablecimiento no está disponible en este sistema',
+    'Ready to reset this PC': 'Listo para restablecer este equipo',
+    'Resetting will:\n• Remove all apps you installed (Flatpak)\n• Change settings back to their defaults\n• Keep your personal files\n\nYour PC will restart. This might take a few minutes.': 'Al restablecer:\n• Se quitarán todas las aplicaciones que instalaste (Flatpak)\n• La configuración volverá a sus valores predeterminados\n• Se conservarán tus archivos personales\n\nEl equipo se reiniciará. Esto puede tardar unos minutos.',
+    "Resetting will:\n• Remove all user accounts and all personal files\n• Remove all apps you installed (Flatpak), saved Wi-Fi networks, fingerprints and face data\n• Change settings back to their defaults\n\nYour PC will restart and set up again as new. This can't be undone.": 'Al restablecer:\n• Se quitarán todas las cuentas de usuario y todos los archivos personales\n• Se quitarán las aplicaciones que instalaste (Flatpak), las redes Wi-Fi guardadas, las huellas y los datos faciales\n• La configuración volverá a sus valores predeterminados\n\nEl equipo se reiniciará y se configurará como nuevo. Esta acción no se puede deshacer.',
+    'Choose an option': 'Elige una opción',
+    'Keep my files: removes apps and settings, but keeps your personal files.\n\nRemove everything: removes all of your personal files, apps, and settings.': 'Conservar mis archivos: quita las aplicaciones y la configuración, pero conserva tus archivos personales.\n\nQuitar todo: quita todos tus archivos personales, aplicaciones y configuración.',
+    'Keep my files': 'Conservar mis archivos',
+    'Remove everything': 'Quitar todo',
 }

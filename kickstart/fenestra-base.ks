@@ -100,6 +100,7 @@ done
 # Files: Explorer layer (patched sidebar icons + UI overlay), launched via a wrapper.
 /usr/libexec/fenestra/fenestra-patch-nautilus
 systemctl enable fenestra-patch-nautilus.service
+systemctl enable fenestra-reset.service
 install -d /usr/local/share/applications
 sed -e 's|^Exec=nautilus|Exec=/usr/libexec/fenestra/fenestra-nautilus|' \
     -e 's|^Exec=/usr/bin/nautilus|Exec=/usr/libexec/fenestra/fenestra-nautilus|' \
