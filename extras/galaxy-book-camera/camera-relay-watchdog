@@ -1,0 +1,27 @@
+#!/bin/bash
+# Restarts camera-relay-login.service when an app has the loopback camera open
+# but the relay never starts the libcamera pipeline (v4l2loopback event bug
+# after a quick open/close cycle, e.g. Brave/Meet probing the camera).
+DEV=${CAMERA_RELAY_DEVICE:-/dev/video0}
+UNIT=camera-relay-login.service
+stuck=0
+while sleep 2; do
+    rdev=$(stat -Lc '%t:%T' "$DEV" 2>/dev/null) || continue
+    relay_pids=" $(pgrep -d ' ' -f 'camera-relay-monitor|camera-relay start|gst-launch-1.0.*libcamerasrc') "
+    clients=0
+    for fd in /proc/[0-9]*/fd/*; do
+        [ "$(readlink "$fd" 2>/dev/null)" = "$DEV" ] || continue
+        pid=${fd#/proc/}; pid=${pid%%/*}
+        [[ "$relay_pids" == *" $pid "* ]] && continue
+        clients=$((clients+1)); break
+    done
+    if [ "$clients" -gt 0 ] && ! pgrep -f 'gst-launch-1.0.*libcamerasrc' >/dev/null; then
+        stuck=$((stuck+1))
+    else
+        stuck=0
+    fi
+    if [ "$stuck" -ge 3 ]; then
+        echo "camera-relay-watchdog: client waiting ${stuck}x2s with no pipeline, restarting $UNIT"
+        systemctl restart "$UNIT"; stuck=0; sleep 8
+    fi
+done
