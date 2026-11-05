@@ -76,6 +76,8 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | Search home on a new account | **Fixed**: added "Top apps" (was empty apart from "Your recent searches will appear here") |
 | Search results with preview pane, filter chips | OK |
 | Quick settings, notification centre, calendar | OK (Wi‑Fi/volume tiles need NetworkManager/PipeWire) |
+| Taskbar weather (`org.fenestra.desktop taskbar-widgets`) | OK with a city set in `org.gnome.shell.weather locations` (GWeather/met.no): icon, "9°C", "Clear sky"; symbolic icon in light mode. Hiding it without a location or with a left-aligned taskbar is implemented but not tested |
+| Taskbar Search (`taskbar-search`: hide / icon / icon-label / box) | OK, all four modes switch live, dark and light |
 | Extension errors in the journal | ArcMenu needed `gnome-menus` (now in the package list); `fenestra-spotlight` assumed a screen shield (now optional) |
 
 ### Apps (headless mutter)

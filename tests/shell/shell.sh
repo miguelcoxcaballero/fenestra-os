@@ -24,12 +24,15 @@ gcall() { as_user gdbus call --session --dest org.gnome.Shell "$@"; }
 case "${1:-}" in
   start)
     [ -n "${2:-}" ] && U="$2"
-    [ -S /run/dbus/system_bus_socket ] || { mkdir -p /run/dbus; dbus-daemon --system --fork; }
+    # Sockets can outlive their daemons (container restarts): check the process.
+    if ! pgrep -x -u root dbus-daemon >/dev/null || [ ! -S /run/dbus/system_bus_socket ]; then
+        rm -f /run/dbus/system_bus_socket /run/dbus/pid; mkdir -p /run/dbus; dbus-daemon --system --fork
+    fi
     r="/run/user/$(uid)"; install -d -m700 -o "$U" "$r"
     ext="$(runuser -u "$U" -- sh -c 'echo $HOME')/.local/share/gnome-shell/extensions"
     runuser -u "$U" -- mkdir -p "$ext"
     runuser -u "$U" -- cp -r "$HERE/unsafe-mode@fenestra-tests" "$ext/"
-    pgrep -u "$U" -x dbus-daemon >/dev/null || as_user dbus-daemon --session --address="unix:path=$r/bus" --fork
+    pgrep -u "$U" -x dbus-daemon >/dev/null || { rm -f "$r/bus"; as_user dbus-daemon --session --address="unix:path=$r/bus" --fork; }
     as_user dconf write /org/gnome/shell/disable-user-extensions false
     cur="$(as_user gsettings get org.gnome.shell enabled-extensions)"
     case "$cur" in *unsafe-mode@fenestra-tests*) ;; *)

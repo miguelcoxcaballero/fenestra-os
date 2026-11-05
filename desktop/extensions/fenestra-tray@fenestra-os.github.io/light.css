@@ -250,3 +250,14 @@
 #uiGroup.fenestra-light .windows-calendar-menu .datemenu-popover {
     background-color: transparent !important; border: 0 !important; box-shadow: none !important;
 }
+
+/* Taskbar weather and search in light mode. */
+#uiGroup.fenestra-light .fenestra-weather:hover, #uiGroup.fenestra-light .fenestra-weather:focus { background-color: rgba(0,0,0,0.05); }
+#uiGroup.fenestra-light .fenestra-weather-temp { color: #1a1a1a; }
+#uiGroup.fenestra-light .fenestra-weather-icon { color: #1a1a1a; }
+#uiGroup.fenestra-light .fenestra-weather-cond { color: #5c5c5c; }
+#uiGroup.fenestra-light .fenestra-taskbar-search-icon-label .fenestra-taskbar-search-label { color: #1a1a1a; }
+#uiGroup.fenestra-light .fenestra-taskbar-search-icon-label:hover, #uiGroup.fenestra-light .fenestra-taskbar-search-icon-label:focus { background-color: rgba(0,0,0,0.05); }
+#uiGroup.fenestra-light .fenestra-taskbar-search-box { background-color: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.08); }
+#uiGroup.fenestra-light .fenestra-taskbar-search-box .fenestra-taskbar-search-label { color: #5c5c5c; }
+#uiGroup.fenestra-light .fenestra-taskbar-search-box:hover, #uiGroup.fenestra-light .fenestra-taskbar-search-box:focus { background-color: rgba(255,255,255,0.85); }

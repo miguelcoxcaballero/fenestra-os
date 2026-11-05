@@ -6,7 +6,6 @@ from gi.repository import Gio, GLib, Gtk
 from .. import util
 from ..backends import accounts, hello
 from ..i18n import N_, _
-from ..nav import Avatar
 from ..widgets import ExpanderRow, SettingRow, ToggleSwitch, button, confirm, label, show_dialog, toast, value_label
 from .base import Page, register
 
@@ -25,6 +24,7 @@ class AccountsPage(Page):
         u = accounts.current_user()
         hero = Gtk.Box(spacing=20)
         hero.add_css_class("hero")
+        from ..nav import Avatar  # here, not at import time: nav imports the page registry
         av = Avatar(96)
         av.set_user(u)
         hero.append(av)
@@ -55,6 +55,7 @@ class YourInfoPage(Page):
         u = accounts.current_user()
         hero = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, halign=Gtk.Align.CENTER)
         hero.add_css_class("hero")
+        from ..nav import Avatar
         self.av = Avatar(160)
         self.av.set_user(u)
         hero.append(self.av)

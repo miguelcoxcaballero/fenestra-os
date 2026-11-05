@@ -613,13 +613,32 @@ class TaskbarPage(Page):
     parent = "personalization"
     title = "Taskbar"
     keywords = "panel dock dash to panel clock tray alignment position size transparency autohide"
-    index = [("tb-align", "Taskbar alignment", "center left"),
+    index = [("tb-search", "Search", "search box icon label taskbar"),
+             ("tb-widgets", "Widgets", "weather widgets news"),
+             ("tb-align", "Taskbar alignment", "center left"),
              ("tb-position", "Taskbar position on screen", "bottom top"),
              ("tb-autohide", "Automatically hide the taskbar", "intellihide"),
              ("weekday", "Show the day of the week in the clock", "clock"),
              ("seconds", "Show seconds in system tray clock", "clock seconds")]
 
     def build(self, box):
+        # Taskbar items: Search and Widgets (weather), like the reference page.
+        gi_ = self.group(_("Taskbar items"))
+        search = gsetting_dropdown("org.fenestra.desktop", "taskbar-search",
+                                   [("hide", _("Hide")), ("icon", _("Search icon only")),
+                                    ("icon-label", _("Search icon and label")), ("box", _("Search box"))])
+        if search:
+            r = SettingRow(_("Search"), None, "fs-search-symbolic", control=search, key="tb-search")
+            self.remember("tb-search", r)
+            gi_.add(r)
+        widgets = gsetting_toggle("org.fenestra.desktop", "taskbar-widgets")
+        if widgets:
+            r = SettingRow(_("Widgets"), _("Weather at the left end of the taskbar"), "fs-weather-sunny-symbolic",
+                           control=widgets, key="tb-widgets")
+            self.remember("tb-widgets", r)
+            gi_.add(r)
+        if not search and not widgets:
+            gi_.add(not_available_row(_("Taskbar items")))
         g = self.group(_("Taskbar behaviors"))
         if util.settings(DTP) is None:
             r = not_available_row(_("Taskbar behaviors"), _("The taskbar extension is not installed"),

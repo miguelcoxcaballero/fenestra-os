@@ -1226,4 +1226,13 @@ STRINGS = {
     'Top': 'Arriba',
     'Choose a keyboard layout': 'Elige una distribución de teclado',
     'Add': 'Agregar',
+    # Taskbar items (Search, Widgets)
+    'Hide': 'Ocultar',
+    'Search icon only': 'Solo icono de búsqueda',
+    'Search icon and label': 'Icono y etiqueta de búsqueda',
+    'Search box': 'Cuadro de búsqueda',
+    'Widgets': 'Widgets',
+    'Weather at the left end of the taskbar': 'El tiempo en el extremo izquierdo de la barra de tareas',
+    'search box icon label taskbar': 'buscar cuadro icono etiqueta barra de tareas',
+    'weather widgets news': 'tiempo widgets noticias',
 }

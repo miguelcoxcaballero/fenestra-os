@@ -13,6 +13,8 @@ import {installOsdStyle} from './osdStyle.js';
 import {installPrivacyIcons} from './privacyIcons.js';
 import {SecurityScreen} from './securityScreen.js';
 import {Appearance} from './appearance.js';
+import {installWeatherWidget} from './weatherWidget.js';
+import {installTaskbarSearch} from './taskbarSearch.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -49,6 +51,13 @@ export default class WindowsTrayTypography extends Extension {
         this._stopOsd=installOsdStyle(this._injections,fenestraAsset,this._appearance);
         try{this._stopPrivacy=installPrivacyIcons(fenestraAsset,this._appearance);}catch(e){logError(e,'Fenestra privacy icons');}
         try{this._security=new SecurityScreen(this.getSettings('org.gnome.shell.extensions.fenestra-tray'),fenestraAsset);}catch(e){logError(e,'Fenestra security screen');}
+        // Taskbar weather and Search entry (org.fenestra.desktop taskbar-widgets / taskbar-search).
+        try{
+            const src=Gio.SettingsSchemaSource.get_default();
+            this._desktop=src.lookup('org.fenestra.desktop',true)?new Gio.Settings({schema_id:'org.fenestra.desktop'}):this.getSettings('org.fenestra.desktop');
+            this._stopSearch=installTaskbarSearch(this._desktop);
+            this._stopWeather=installWeatherWidget(this._desktop);
+        }catch(e){logError(e,'Fenestra taskbar weather/search');}
         this._power(Main.panel.statusArea.quickSettings?._system);
         this._timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,60,()=>{
             this._date(Main.panel.statusArea.dateMenu);
@@ -102,6 +111,8 @@ export default class WindowsTrayTypography extends Extension {
         indicator._percentageLabel.set_style('font-family: "Fenestra Taskbar Text"; font-size: 12px; font-weight: 400; min-width: 36px; text-align: right;');
     }
     disable() {
+        this._stopWeather?.();this._stopWeather=null;
+        this._stopSearch?.();this._stopSearch=null;this._desktop=null;
         this._security?.destroy();this._security=null;
         this._stopPrivacy?.();this._stopPrivacy=null;
         this._stopOsd?.();this._stopOsd=null;
