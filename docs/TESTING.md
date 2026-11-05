@@ -57,7 +57,7 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | Check | Result |
 |---|---|
 | Unattended install from the test ISO, packages over plain HTTP | **OK** (Anaconda reports "anaconda 43.44 for **Fenestra** 43", so the updates image is applied) |
-| `/etc/sysconfig/anaconda` | **OK**: `post_install_tools_disabled = 0` (was `1` with `firstboot --disable`) |
+| `/etc/sysconfig/anaconda` | **OK**: `post_install_tools_disabled = 0` (was `1` with `firstboot --disable`; the kickstart now says `firstboot --enable`, the same fix as on `main`) |
 | GDM starts the `gnome-initial-setup` session on first boot | **OK** (session `c1`, class `greeter`) |
 | `gnome-initial-setup.service` runs Fenestra's drop-in | **OK**: Main PID is `/usr/libexec/fenestra-oobe` |
 | SELinux label of `/usr/libexec/fenestra-oobe` | **OK**: `bin_t` (after the `%post` `restorecon`); no AVC denials for the OOBE |
@@ -71,7 +71,7 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | Check | Result |
 |---|---|
 | Desktop, centred taskbar, tray, clock | OK |
-| Start opens on a new account | **Fixed**: with no `recently-used.xbel`, a one-argument `GLib.Error.matches()` threw and the Start layout was never built |
+| Start opens on a new account | **Fixed** (also fixed independently on `main`): with no `recently-used.xbel`, a one-argument `GLib.Error.matches()` threw and the Start layout was never built |
 | Start: band above/behind the search box | **Fixed**: removed (top padding and tinted header); section renamed "Recommended" |
 | Search home on a new account | **Fixed**: added "Top apps" (was empty apart from "Your recent searches will appear here") |
 | Search results with preview pane, filter chips | OK |
