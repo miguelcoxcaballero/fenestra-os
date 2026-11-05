@@ -106,7 +106,7 @@ force-light-text=false
 override-background=false
 override-background-dynamically=false
 pipeline='pipeline_windows_taskbar'
-static-blur=false
+static-blur=true
 unblur-in-overview=false
 
 [org/gnome/shell/extensions/blur-my-shell/popup]
@@ -461,3 +461,7 @@ screen-reader-enabled=false
 
 [org/gnome/desktop/privacy]
 report-technical-problems=true
+
+[org/freedesktop/tracker3/miner/files]
+# Battery: index on AC only (first full crawl still allowed), like Windows Search.
+index-on-battery=false

@@ -42,7 +42,16 @@ export class SecurityScreen {
         this._grab = null;
         this._menu = null;
         this._pendingConfirm = null;
-        this._build();
+        this._root = null;
+        // Built once, but off the enable()/unlock critical path: the shell
+        // re-enables user extensions on every unlock, so building ~30 actors here
+        // delayed the desktop. A low-priority idle builds it right after; open()
+        // builds synchronously if the shortcut arrives first.
+        this._buildId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+            this._buildId = 0;
+            this._ensureBuilt();
+            return GLib.SOURCE_REMOVE;
+        });
         this._session = null;
         // Async proxy so enable() never blocks on D-Bus.
         GnomeSession.SessionManager((proxy, error) => { if (!error) this._session = proxy; });
@@ -133,9 +142,16 @@ export class SecurityScreen {
         this._layout();
     }
 
+    _ensureBuilt() {
+        if (this._root) return;
+        if (this._buildId) GLib.source_remove(this._buildId);
+        this._buildId = 0;
+        this._build();
+    }
+
     _layout() {
         const m = Main.layoutManager.primaryMonitor;
-        if (!m) return;
+        if (!m || !this._root) return;
         const s = St.ThemeContext.get_for_stage(global.stage).scale_factor;
         this._root.set_position(0, 0);
         this._root.set_size(global.stage.width, global.stage.height);
@@ -176,7 +192,8 @@ export class SecurityScreen {
     open() {
         if (this._grab || Main.sessionMode.isLocked || Main.sessionMode.isGreeter)
             return;
-        // Nothing expensive here: everything already exists.
+        // Nothing expensive here: everything already exists (built at idle).
+        this._ensureBuilt();
         this._closeMenu();
         global.stage.set_child_above_sibling(this._root, null);
         this._root.opacity = 255;
@@ -195,11 +212,11 @@ export class SecurityScreen {
             Main.popModal(this._grab);
             this._grab = null;
         }
-        this._root.hide();
+        this._root?.hide();
     }
 
     get visible() {
-        return this._root.visible;
+        return this._root?.visible ?? false;
     }
 
     _activate(run) {
@@ -429,6 +446,9 @@ export class SecurityScreen {
             if (this._ownOpen) Main.endSessionDialog.OpenAsync = this._origOpen;
             else delete Main.endSessionDialog.OpenAsync;
         }
-        this._root.destroy();
+        if (this._buildId) GLib.source_remove(this._buildId);
+        this._buildId = 0;
+        this._root?.destroy();
+        this._root = null;
     }
 }

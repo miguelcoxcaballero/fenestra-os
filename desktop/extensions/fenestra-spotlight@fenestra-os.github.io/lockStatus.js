@@ -43,7 +43,12 @@ export function installLockStatus(path) {
     if(power)watch(power,'notify');
     // AP strength notifications belong to replaceable AP objects. A visible-only
     // refresh also follows replacement after roaming, without retaining old APs.
-    const timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,5,()=>{if(box.visible)refresh();return GLib.SOURCE_CONTINUE;});
-    refresh();
-    return ()=>{GLib.source_remove(timer);for(const [o,id] of connections)o.disconnect(id);box.destroy();};
+    // Only tick while the lock/login screen shows the status (no 5 s wakeups on the desktop).
+    let timer=0;
+    const tick=()=>{
+        if(box.visible&&!timer)timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,5,()=>{refresh();if(box.visible)return GLib.SOURCE_CONTINUE;timer=0;return GLib.SOURCE_REMOVE;});
+    };
+    connections.push([box,box.connect('notify::visible',tick)]);
+    refresh();tick();
+    return ()=>{if(timer)GLib.source_remove(timer);for(const [o,id] of connections)o.disconnect(id);box.destroy();};
 }

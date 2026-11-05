@@ -17,11 +17,25 @@ export function installPreviewStyle() {
         }
         return GLib.SOURCE_CONTINUE;
     };
-    apply();
-    // Dash to Panel builds (and rebuilds) its panels asynchronously.
-    const timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, apply);
+    // Dash to Panel builds (and rebuilds) its panels asynchronously and emits
+    // 'panels-created'; hook that signal (re-hooking if Dash to Panel itself is
+    // re-enabled) instead of polling every 2 s.
+    let emitter = null, emitterId = 0;
+    const hook = () => {
+        const dtp = global.dashToPanel ?? null;
+        if (dtp !== emitter) {
+            try { if (emitter && emitterId) emitter.disconnect(emitterId); } catch {}
+            emitter = dtp;
+            emitterId = dtp?.connect?.('panels-created', () => GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => { apply(); return GLib.SOURCE_REMOVE; })) ?? 0;
+        }
+        apply();
+        return GLib.SOURCE_CONTINUE;
+    };
+    hook();
+    const timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 30, hook);
     return () => {
         GLib.source_remove(timer);
+        try { if (emitter && emitterId) emitter.disconnect(emitterId); } catch {}
         for (const menu of done) { menu.remove_effect_by_name('windows-acrylic'); menu.margin_bottom = 0; }
         done.clear();
     };

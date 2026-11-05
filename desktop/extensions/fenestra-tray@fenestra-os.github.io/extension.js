@@ -48,7 +48,7 @@ export default class WindowsTrayTypography extends Extension {
         this._stopOsd=installOsdStyle(this._injections,fenestraAsset,this._appearance);
         try{this._security=new SecurityScreen(this.getSettings('org.gnome.shell.extensions.fenestra-tray'),fenestraAsset);}catch(e){logError(e,'Fenestra security screen');}
         this._power(Main.panel.statusArea.quickSettings?._system);
-        this._timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,15,()=>{
+        this._timer=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,60,()=>{
             this._date(Main.panel.statusArea.dateMenu);
             this._power(Main.panel.statusArea.quickSettings?._system);
             for(const menu of this._dates.keys())this._updateDate(menu);

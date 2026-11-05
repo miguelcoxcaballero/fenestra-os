@@ -1,5 +1,7 @@
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
+import {ShellUserVerifier} from 'resource:///org/gnome/shell/gdm/util.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {UnlockDialog} from 'resource:///org/gnome/shell/ui/unlockDialog.js';
@@ -22,6 +24,24 @@ export default class WindowsLockClock extends Extension {
             if(this._activePage===this._promptBox)return;
             this._activePage=this._promptBox;
             this._adjustment.ease(1,{duration:300,mode:Clutter.AnimationMode.EASE_OUT_CUBIC});
+        });
+        // Fast unlock: once a service has authenticated, GNOME still waits for the
+        // verifier's message queue to drain before hiding the lock screen. Each
+        // queued hint stays up for max(2 s, 48 ms/char), so a fingerprint prompt
+        // ("Place your finger…") or Howdy notice that happened to be on screen
+        // delayed the desktop by ~1.5 s. Drop those hints on success; keep only
+        // the succeeding service's short success messages (the 260 ms Hello tick).
+        this._injections.overrideMethod(ShellUserVerifier.prototype,'_onVerificationComplete',original=>function(client,serviceName){
+            try{
+                const queue=this._messageQueue??[];
+                const keep=queue.filter(m=>m.serviceName===serviceName&&m.text&&m.interval<=400);
+                if(keep.length!==queue.length){
+                    if(this._messageQueueTimeoutId){GLib.source_remove(this._messageQueueTimeoutId);this._messageQueueTimeoutId=0;}
+                    if(keep.length){this._messageQueue=keep;this._queueMessageTimeout();}
+                    else this.finishMessageQueue();
+                }
+            }catch(e){console.warn(`Fenestra fast unlock: ${e.message}`);}
+            return original.call(this,client,serviceName);
         });
         const dialog=Main.screenShield?._dialog;
         if(dialog?._clock)this._attach(dialog);
