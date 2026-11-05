@@ -16,6 +16,17 @@ def _allowed():
     return not (util.DEMO or util.READ_ONLY)
 
 
+def _test_sandbox_filter(pids, cgroup):
+    """When FENESTRA_TASKMGR_TEST_ALLOW_PIDS is set (automated tests), only those
+    PIDs may be signalled and whole-app cgroup kills are disabled, so a test run
+    against real /proc data can never end the user's real apps."""
+    allow = os.environ.get("FENESTRA_TASKMGR_TEST_ALLOW_PIDS")
+    if allow is None:
+        return pids, cgroup
+    allowed = {int(x) for x in allow.split(",") if x.strip().isdigit()}
+    return [p for p in pids if p in allowed], None
+
+
 def _pids_alive(pids):
     alive = []
     for p in pids:
@@ -43,6 +54,9 @@ def end_task(pids, cgroup=None, on_error=None):
     """SIGTERM, then SIGKILL after 3 s for whatever is still alive.  Uses the cgroup's
     cgroup.kill / systemd scope stop for whole apps when possible."""
     if not _allowed() or not pids:
+        return False
+    pids, cgroup = _test_sandbox_filter(pids, cgroup)
+    if not pids:
         return False
     denied = []
     for p in pids:

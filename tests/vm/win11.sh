@@ -2,6 +2,13 @@
 # Windows 11 (Enterprise Evaluation) reference VM for side-by-side comparison.
 #   tests/vm/win11.sh install ISO | boot | shot NAME | key ... | type TEXT | click X Y | stop
 set -euo pipefail
+# Laptop has 16 GB: allow only one VM at a time and keep it inside fenestra-tests.slice.
+if [ "${1:-}" = install ] || [ "${1:-}" = boot ]; then
+    if pgrep -f qemu-system-x86_64 >/dev/null; then echo "only one VM at a time: stop the running one first" >&2; exit 1; fi
+    if [ -z "${FENESTRA_IN_SLICE:-}" ] && command -v systemd-run >/dev/null; then
+        exec systemd-run --user --scope --quiet --slice=fenestra-tests.slice -E FENESTRA_IN_SLICE=1 "$0" "$@"
+    fi
+fi
 HERE="$(cd "$(dirname "$0")" && pwd)"
 VM="${FENESTRA_VM_DIR:-$HOME/.local/share/fenestra-vm}/win11"
 QMP="$VM/qmp.sock"; W=1920; H=1080
@@ -14,7 +21,7 @@ start_tpm() {
 }
 run() {
     start_tpm
-    exec qemu-system-x86_64 -enable-kvm -cpu host -smp 6 -m 6144 -machine q35,smm=on \
+    exec qemu-system-x86_64 -enable-kvm -cpu host -smp 6 -m 4096 -machine q35,smm=on \
         -global driver=cfi.pflash01,property=secure,value=on \
         -drive if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd \
         -drive if=pflash,format=raw,unit=1,file="$VM/OVMF_VARS.fd" \
