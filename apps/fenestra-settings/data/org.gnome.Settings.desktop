@@ -1,0 +1,17 @@
+[Desktop Entry]
+# Fenestra: anything that opens "Settings" (quick settings gear, app menus, notifications)
+# gets Fenestra Settings. GNOME Settings stays installed for "Advanced (GNOME Settings)".
+Name=Settings
+Name[es]=Configuración
+Comment=Change system settings
+Comment[es]=Cambiar la configuración del sistema
+Exec=fenestra-settings
+Icon=fenestra-settings
+Terminal=false
+Type=Application
+NoDisplay=true
+StartupNotify=true
+StartupWMClass=org.fenestra.Settings
+Categories=GTK;Settings;X-GNOME-Settings-Panel;
+OnlyShowIn=GNOME;
+X-GNOME-UsesNotifications=true

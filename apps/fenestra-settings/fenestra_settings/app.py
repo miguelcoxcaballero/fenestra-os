@@ -23,13 +23,17 @@ ALIASES = {
     "wlan": "wifi", "sound": "sound", "audio": "sound", "power": "power", "battery": "power",
     "display": "display", "displays": "display", "notifications": "notifications",
     "background": "background", "wallpaper": "background", "appearance": "colors",
-    "users": "accounts", "user-accounts": "accounts", "online-accounts": "accounts",
+    "users": "accounts", "user-accounts": "accounts",
     "datetime": "datetime", "date-time": "datetime", "region": "language", "keyboard": "typing",
-    "mouse": "mouse", "touchpad": "touchpad", "printers": "devices", "privacy": "privacy",
+    "mouse": "mouse", "touchpad": "touchpad", "privacy": "privacy",
     "location": "location", "camera": "camera", "microphone": "microphone",
     "universal-access": "accessibility", "a11y": "accessibility", "applications": "apps",
     "default-apps": "defaultapps", "info-overview": "about", "info": "about", "system": "system",
-    "updates": "update", "multitasking": "multitasking", "sharing": "nearby",
+    "updates": "update", "multitasking": "multitasking", "sharing": "fx-sharing",
+    "search": "fx-search", "printers": "fx-hardware", "color": "fx-hardware", "wacom": "fx-hardware",
+    "wwan": "network", "about": "about", "remote-desktop": "fx-sharing", "extensions": "fx-extensions",
+    "shortcuts": "fx-shortcuts", "keyboard-shortcuts": "fx-shortcuts", "workspaces": "fx-workspaces",
+    "online-accounts": "fx-online-accounts", "fenestra": "fenestra", "linux": "fenestra",
 }
 
 
@@ -58,6 +62,8 @@ def parse_args(argv):
     p.add_argument("--hello-demo", default=None,
                    help="(screenshot) show a Fenestra Hello wizard state: welcome, welcome-finger, face-1, face-2, "
                         "face-done, finger-1, finger-2, finger-edges, finger-done, error")
+    p.add_argument("--resolve-page", default=None, metavar="NAME",
+                   help="print the page id for a page id / GNOME panel name and exit (1 if unknown)")
     p.add_argument("--list-pages", action="store_true", help="print page ids and exit")
     p.add_argument("page_pos", nargs="?", default=None, help=argparse.SUPPRESS)
     return p.parse_args(argv[1:])
@@ -182,6 +188,13 @@ def main(argv=None):
     argv = argv or sys.argv
     opts = parse_args(argv)
     i18n.init(opts.lang)
+    if opts.resolve_page is not None:
+        from . import pages  # noqa: F401
+        pid = resolve_page(opts.resolve_page) if opts.resolve_page else "home"
+        if pid:
+            print(pid)
+            return 0
+        return 1
     if opts.list_pages:
         from . import pages  # noqa: F401
         from .pages.base import PAGES

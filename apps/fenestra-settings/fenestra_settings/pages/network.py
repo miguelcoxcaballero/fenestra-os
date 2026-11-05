@@ -72,8 +72,8 @@ class NetworkPage(Page):
                      ["gnome-control-center", "wifi"])
         r, self.air_toggle = _airplane_row(self)
         g.add(r)
-        self.ext_row(g, _("Proxy"), _("Proxy server for Wi-Fi and Ethernet connections"), "fs-globe-symbolic",
-                     ["gnome-control-center", "network"], key="proxy")
+        self.nav_row(g, "proxy", _("Proxy"), _("Proxy server for Wi-Fi and Ethernet connections"),
+                     "fs-globe-symbolic", key="proxy")
         self.ext_row(g, _("Advanced network settings"), _("View all network adapters, network reset"),
                      "fs-network-check-symbolic", ["nm-connection-editor"] if util.have("nm-connection-editor")
                      else ["gnome-control-center", "network"], key="advanced-net")
@@ -257,3 +257,75 @@ class EthernetPage(Page):
                      ("GENERAL.DRIVER", _("Driver"))):
             if info.get(k):
                 g.add(SettingRow(t, None, None, control=label(info[k], "row-value", selectable=True)))
+
+
+PROXY = "org.gnome.system.proxy"
+
+
+@register
+class ProxyPage(Page):
+    id = "proxy"
+    parent = "network"
+    title = "Proxy"
+    keywords = "proxy http https socks pac automatic configuration"
+
+    def build(self, box):
+        from .common import gsetting_dropdown
+        g = self.group(_("Proxy setup"))
+        if not util.has_key(PROXY, "mode"):
+            g.add(not_available_row(_("Proxy")))
+            return
+        dd = gsetting_dropdown(PROXY, "mode", [("none", _("Off")), ("auto", _("Use setup script")),
+                                               ("manual", _("Use a proxy server"))])
+        g.add(SettingRow(_("Proxy mode"), None, "fs-globe-symbolic", control=dd))
+        self.auto_g = self.group(_("Automatic proxy setup"))
+        self.auto_g.add(SettingRow(_("Script address"), None, None, control=self._entry(PROXY, "autoconfig-url", 300)))
+        self.man_g = self.group(_("Manual proxy setup"))
+        for proto, title in (("http", "HTTP"), ("https", "HTTPS"), ("ftp", "FTP"), ("socks", "SOCKS")):
+            schema = f"{PROXY}.{proto}"
+            if not util.has_key(schema, "host"):
+                continue
+            ctrl = Gtk.Box(spacing=8)
+            ctrl.append(self._entry(schema, "host", 220))
+            ctrl.append(self._entry(schema, "port", 80, is_int=True))
+            self.man_g.add(SettingRow(title, _("Address and port"), None, control=ctrl))
+        self.man_g.add(SettingRow(_("Don't use the proxy server for these addresses"), _("Separate entries with commas"),
+                                  None, control=self._entry(PROXY, "ignore-hosts", 260, is_list=True)))
+        util.gconnect(PROXY, "mode", self._vis)
+        self._vis()
+
+    def _vis(self):
+        mode = util.gget(PROXY, "mode", "none")
+        self.auto_g.set_visible(mode == "auto")
+        self.man_g.set_visible(mode == "manual")
+
+    def _entry(self, schema, key, width, is_int=False, is_list=False):
+        e = Gtk.Entry()
+        e.add_css_class("fluent-entry")
+        e.set_size_request(width, -1)
+        e.set_valign(Gtk.Align.CENTER)
+
+        def load():
+            v = util.gget(schema, key)
+            txt = ", ".join(v) if is_list else ("" if (is_int and not v) else str(v if v is not None else ""))
+            if e.get_text() != txt and not e.has_focus():
+                e.set_text(txt)
+
+        def save(*_a):
+            t = e.get_text().strip()
+            if is_int:
+                val = int(t) if t.isdigit() else 0
+            elif is_list:
+                val = [x.strip() for x in t.split(",") if x.strip()]
+            else:
+                val = t
+            if util.gget(schema, key) != val and not util.gset(schema, key, val):
+                toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
+                      else _("The change was not applied"))
+        load()
+        e.connect("activate", save)
+        fc = Gtk.EventControllerFocus()
+        fc.connect("leave", save)
+        e.add_controller(fc)
+        util.gconnect(schema, key, load)
+        return e

@@ -11,6 +11,22 @@ from gi.repository import Gio, GLib
 READ_ONLY = False
 # When True every backend returns neutral sample data (see backends/demo.py).
 DEMO = False
+# Test sandbox (tests/control_audit.py): GSettings writes go to an isolated keyfile backend and
+# are allowed; every other system change (D-Bus, commands, launches) is recorded and refused.
+SANDBOX = False
+CALLS: list[tuple] = []
+
+
+def record(*call):
+    CALLS.append(call)
+
+
+def _blocked(kind, what):
+    """True when a mutating action must not run (read-only mode or test sandbox)."""
+    if SANDBOX:
+        record(kind, what)
+        return True
+    return READ_ONLY
 
 APP_ID = "org.fenestra.Settings"
 PKG_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +46,14 @@ def data_dir() -> str:
     return cands[1]
 
 
+def app_icon_name() -> str:
+    """Icon for our own title bars. Demo/screenshot mode always uses the bundled original
+    icon so published screenshots never show a user-imported (third-party) icon."""
+    if DEMO:
+        return os.path.join(data_dir(), "icons", "hicolor", "scalable", "apps", "fenestra-settings.svg")
+    return "fenestra-settings"
+
+
 def log(*args):
     if os.environ.get("FENESTRA_SETTINGS_DEBUG"):
         print("[fenestra-settings]", *args, file=sys.stderr)
@@ -46,7 +70,7 @@ def run_async(argv, callback=None, mutating=False, stdin_text=None):
 
     mutating commands are refused in READ_ONLY mode.
     """
-    if mutating and READ_ONLY:
+    if mutating and _blocked("command", " ".join(argv)):
         log("read-only: refused", argv)
         if callback:
             GLib.idle_add(lambda: (callback(False, "", "read-only mode"), False)[1])
@@ -96,17 +120,29 @@ def run_sync(argv, timeout_ok=True) -> str:
 
 
 def launch(argv):
-    """Launch an external program detached (allowed even in read-only? no)."""
-    if READ_ONLY:
+    """Launch an external program detached (refused in read-only mode)."""
+    if _blocked("launch", " ".join(argv)):
         log("read-only: not launching", argv)
         return False
+    if argv[0] == "gnome-control-center":
+        argv = [real_control_center() or "gnome-control-center"] + list(argv[1:])
     if not have(argv[0]):
         return False
     try:
-        Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE)
+        launcher = Gio.SubprocessLauncher.new(Gio.SubprocessFlags.NONE)
+        # our gnome-control-center wrapper must not bounce the call back to us
+        launcher.setenv("FENESTRA_REAL_GCC", "1", True)
+        launcher.spawnv(argv)
         return True
     except GLib.Error:
         return False
+
+
+def real_control_center():
+    for p in ("/usr/bin/gnome-control-center", "/bin/gnome-control-center"):
+        if os.path.exists(p):
+            return p
+    return None
 
 
 def open_control_center(panel: str):
@@ -134,8 +170,56 @@ def settings(schema_id: str) -> Gio.Settings | None:
     s = None
     if src and src.lookup(schema_id, True):
         s = Gio.Settings.new(schema_id)
+    else:
+        schema = _extension_schema(schema_id, src)
+        if schema is not None:
+            s = Gio.Settings.new_full(schema, None, None)
     _settings_cache[schema_id] = s
     return s
+
+
+EXTENSION_DIRS = [os.path.join(GLib.get_user_data_dir(), "gnome-shell", "extensions"),
+                  "/usr/local/share/gnome-shell/extensions", "/usr/share/gnome-shell/extensions"]
+
+
+def _extension_schema(schema_id, default_src):
+    """Shell extensions (Dash to Panel, ArcMenu, DING) ship their schemas in their own folder."""
+    for base in EXTENSION_DIRS:
+        if not os.path.isdir(base):
+            continue
+        for ext in sorted(os.listdir(base)):
+            d = os.path.join(base, ext, "schemas")
+            if not os.path.isfile(os.path.join(d, "gschemas.compiled")):
+                continue
+            try:
+                src = Gio.SettingsSchemaSource.new_from_directory(d, default_src, False)
+            except GLib.Error:
+                continue
+            schema = src.lookup(schema_id, False)
+            if schema is not None:
+                return schema
+    return None
+
+
+def key_choices(schema_id, key):
+    """Allowed values of an enum key, or []."""
+    s = settings(schema_id)
+    if not s or not s.props.settings_schema.has_key(key):
+        return []
+    rng = s.props.settings_schema.get_key(key).get_range().unpack()
+    return list(rng[1]) if rng[0] == "enum" else []
+
+
+def greset(schema_id, key):
+    if SANDBOX:
+        record("gsettings-reset", f"{schema_id} {key}", None)
+    elif READ_ONLY:
+        return False
+    s = settings(schema_id)
+    if s and s.props.settings_schema.has_key(key):
+        s.reset(key)
+        return True
+    return False
 
 
 def has_key(schema_id: str, key: str) -> bool:
@@ -151,7 +235,9 @@ def gget(schema_id: str, key: str, default=None):
 
 
 def gset(schema_id: str, key: str, value) -> bool:
-    if READ_ONLY:
+    if SANDBOX:
+        record("gsettings", f"{schema_id} {key}", value)
+    elif READ_ONLY:
         log("read-only: gset", schema_id, key, value)
         return False
     s = settings(schema_id)
@@ -203,7 +289,8 @@ def prop(proxy, name, default=None):
 
 def dbus_call(bus_type, name, path, iface, method, args: GLib.Variant | None,
               callback=None, mutating=True, interactive=True, reply_type=None):
-    if mutating and READ_ONLY:
+    if mutating and _blocked("dbus", f"{name} {iface}.{method}" + (
+            f" {args.unpack()[1]}" if method == "Set" and args is not None else "")):
         log("read-only: dbus", method)
         if callback:
             GLib.idle_add(lambda: (callback(False, None), False)[1])

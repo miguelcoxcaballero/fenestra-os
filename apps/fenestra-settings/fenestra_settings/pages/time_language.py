@@ -211,26 +211,14 @@ class TypingPage(Page):
 
     def build(self, box):
         g = self.group(_("Keyboard layouts"))
-        sources = util.gget(INPUT, "sources")
-        if util.DEMO:
-            from ..backends import demo
-            sources = demo.INPUT_SOURCES
         exp = ExpanderRow(_("Keyboard layouts"), _("Installed layouts, switch with Super+Space"),
                           "fs-keyboard-symbolic", key="layouts", expanded=True)
         self.remember("layouts", exp)
         g.add(exp)
-        if sources is None:
-            exp.add(SettingRow(_("Not available"), None, None))
-        else:
-            names = _xkb_names()
-            for i, (kind, ident) in enumerate(sources):
-                desc = names.get(ident, ident)
-                ctrl = None
-                if len(sources) > 1:
-                    ctrl = button(_("Remove"), lambda i=i: self._remove(i), css="small")
-                exp.add(SettingRow(desc, f"{kind}: {ident}", None, control=ctrl))
-            exp.add(SettingRow(_("Add a keyboard"), None, None,
-                               control=button(_("Add a keyboard"), lambda: util.open_control_center("keyboard"))))
+        self.exp = exp
+        self.names = _xkb_names()
+        self._fill()
+        util.gconnect(INPUT, "sources", self._fill)
         pw = gsetting_toggle(INPUT, "per-window")
         if pw:
             r = SettingRow(_("Let me use a different input method for each app window"), None,
@@ -238,9 +226,47 @@ class TypingPage(Page):
             self.remember("per-window", r)
             g.add(r)
         g2 = self.group(_("Related settings"))
-        self.ext_row(g2, _("Keyboard shortcuts"), None, "fs-keyboard-symbolic", ["gnome-control-center", "keyboard"])
+        g2.add(SettingRow(_("Keyboard shortcuts"), None, "fs-keyboard-symbolic", chevron=True,
+                          on_click=lambda: self.go("fx-shortcuts")))
         g2.add(SettingRow(_("On-screen keyboard"), None, "fs-keyboard-symbolic", chevron=True,
                           on_click=lambda: self.go("a11y-keyboard")))
+
+    def _fill(self):
+        exp = self.exp
+        exp.clear()
+        sources = util.gget(INPUT, "sources")
+        if util.DEMO:
+            from ..backends import demo
+            sources = demo.INPUT_SOURCES
+        if sources is None:
+            exp.add(SettingRow(_("Not available"), None, None))
+            return
+        for i, (kind, ident) in enumerate(sources):
+            ctrl = button(_("Remove"), lambda i=i: self._remove(i), css="small") if len(sources) > 1 else None
+            exp.add(SettingRow(self.names.get(ident, ident), f"{kind}: {ident}", None, control=ctrl))
+        exp.add(SettingRow(_("Add a keyboard"), None, None, control=button(_("Add a keyboard"), self._add)))
+
+    def _add(self):
+        have = {i for _k, i in (util.gget(INPUT, "sources") or [])}
+        opts = sorted(((k, v) for k, v in self.names.items() if k not in have), key=lambda kv: kv[1].lower())
+        if not opts:
+            return
+        dd = Dropdown(opts, opts[0][0], None, width=380)
+        dd.set_enable_search(True)
+        dd.set_expression(Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"))
+
+        def resp(r):
+            if r != "primary":
+                return
+            ident = dd.selected_id()
+            src = list(util.gget(INPUT, "sources") or [])
+            if ident and ("xkb", ident) not in src:
+                src.append(("xkb", ident))
+                if not util.gset(INPUT, "sources", src):
+                    toast(self.box, _("This action is disabled in read-only mode"))
+        from ..widgets import ContentDialog, show_dialog
+        show_dialog(self.box, ContentDialog(_("Add a keyboard"), _("Choose a keyboard layout"), primary=_("Add"),
+                                            close=_("Cancel"), on_response=resp, extra=dd))
 
     def _remove(self, i):
         src = list(util.gget(INPUT, "sources") or [])

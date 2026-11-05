@@ -81,10 +81,19 @@ sed -e 's|^Exec=nautilus|Exec=/usr/libexec/fenestra/fenestra-nautilus|' \
 # Settings: anything that opens "Settings" (quick settings gear, app menus) gets
 # Fenestra Settings; GNOME Settings stays installed for the "Advanced" buttons.
 if [ -f /usr/share/applications/fenestra-settings.desktop ]; then
-    install -d /usr/local/share/applications
-    sed -e 's|^Exec=.*|Exec=fenestra-settings|' -e 's|^NoDisplay=.*||' -e '/^DBusActivatable/d' \
-        -e '/^\[Desktop Action/,$d' /usr/share/applications/org.gnome.Settings.desktop > /usr/local/share/applications/org.gnome.Settings.desktop
-    echo 'NoDisplay=true' >> /usr/local/share/applications/org.gnome.Settings.desktop
+    install -d /usr/local/share/applications /usr/local/bin
+    if [ -f /usr/share/fenestra-settings/data/org.gnome.Settings.desktop ]; then
+        install -m644 /usr/share/fenestra-settings/data/org.gnome.Settings.desktop /usr/local/share/applications/org.gnome.Settings.desktop
+    else
+        sed -e 's|^Exec=.*|Exec=fenestra-settings|' -e 's|^NoDisplay=.*||' -e '/^DBusActivatable/d' \
+            -e '/^\[Desktop Action/,$d' /usr/share/applications/org.gnome.Settings.desktop > /usr/local/share/applications/org.gnome.Settings.desktop
+        echo 'NoDisplay=true' >> /usr/local/share/applications/org.gnome.Settings.desktop
+    fi
+    # "gnome-control-center <panel>" (quick settings, notifications, other apps) -> Fenestra Settings;
+    # /usr/local/bin comes before /usr/bin, the real binary stays for "Advanced (GNOME Settings)".
+    if [ -f /usr/share/fenestra-settings/bin/gnome-control-center ]; then
+        install -m755 /usr/share/fenestra-settings/bin/gnome-control-center /usr/local/bin/gnome-control-center
+    fi
 fi
 
 # Task Manager: Fenestra Task Manager replaces GNOME System Monitor in menus/search.

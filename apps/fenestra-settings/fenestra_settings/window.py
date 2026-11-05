@@ -49,7 +49,7 @@ class SettingsWindow(Gtk.ApplicationWindow):
         self.menu_btn.set_visible(False)
         self.menu_btn.connect("clicked", lambda *_: self._toggle_flyout())
         tbox.append(self.menu_btn)
-        app_icon = icon("fenestra-settings", 16)
+        app_icon = icon(util.app_icon_name(), 16)
         app_icon.add_css_class("title-icon")
         tbox.append(app_icon)
         tbox.append(label(_("Settings"), "title-label"))

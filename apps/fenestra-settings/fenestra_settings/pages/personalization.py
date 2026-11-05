@@ -7,7 +7,8 @@ from gi.repository import Gio, GLib, Gtk, Pango
 
 from .. import theme, util
 from ..i18n import N_, _
-from ..widgets import (Dropdown, ExpanderRow, SettingRow, button, label, not_available_row, toast)
+from ..widgets import (Dropdown, ExpanderRow, SettingRow, Slider, ToggleSwitch, button, label,
+                       not_available_row, toast)
 from .base import Page, register
 from .common import Thumb, gsetting_dropdown, gsetting_toggle, theme_preview, wallpaper_thumb
 
@@ -446,32 +447,136 @@ def _extension_installed(uuid):
     return False
 
 
+ARCMENU = "org.gnome.shell.extensions.arcmenu"
+DTP = "org.gnome.shell.extensions.dash-to-panel"
+
+START_LAYOUTS = [("11", N_("Fenestra (centered, recommended)")), ("windows", N_("Classic")),
+                 ("redmond", N_("Classic with places")), ("insider", N_("Insider")), ("plasma", N_("Plasma")),
+                 ("arcmenu", N_("ArcMenu")), ("gnome-menu", N_("GNOME menu")), ("runner", N_("Runner (search only)"))]
+
+
 @register
 class StartPage(Page):
     id = "start"
     parent = "personalization"
     title = "Start"
-    keywords = "start menu arcmenu pinned recent apps"
-    index = [("recent-items", "Show recommended files in Start", "recent documents")]
+    keywords = "start menu arcmenu pinned recent apps layout recommended"
+    index = [("recent-items", "Show recommended files in Start", "recent documents"),
+             ("start-layout", "Layout", "start menu style"),
+             ("pinned-reset", "Pinned apps", "reset pins")]
 
     def build(self, box):
         g = self.group()
-        uuid = "arcmenu@arcmenu.com"
-        if _extension_installed(uuid):
-            self.ext_row(g, _("Start menu layout"), _("Pinned apps, layout, menu style"), "fs-grid-symbolic",
-                         ["gnome-extensions", "prefs", uuid])
-        else:
-            g.add(not_available_row(_("Start menu layout"), _("The Start menu extension is not installed"),
+        if util.settings(ARCMENU) is None:
+            g.add(not_available_row(_("Start menu"), _("The Start menu extension is not installed"),
                                     "fs-grid-symbolic"))
+        else:
+            cur = util.gget(ARCMENU, "menu-layout")
+            opts = [(k, _(v)) for k, v in START_LAYOUTS]
+            if cur not in [o[0] for o in opts]:
+                opts.append((cur, str(cur)))
+            r = SettingRow(_("Layout"), _("Choose how the Start menu looks"), "fs-grid-symbolic",
+                           control=gsetting_dropdown(ARCMENU, "menu-layout", opts), key="start-layout")
+            self.remember("start-layout", r)
+            g.add(r)
+            for key, title, sub in (("eleven-show-frequent-apps", _("Show most used apps"), None),
+                                    ("show-recently-installed-apps", _("Show recently added apps"), None),
+                                    ("show-user-avatar", _("Show my account picture"), None)):
+                t = gsetting_toggle(ARCMENU, key)
+                if t:
+                    g.add(SettingRow(title, sub, "fs-apps-symbolic", control=t))
         t = gsetting_toggle(PRIVACY, "remember-recent-files")
         if t:
             r = SettingRow(_("Show recommended files in Start and recent files in the file manager"),
                            None, "fs-document-symbolic", control=t, key="recent-items")
             self.remember("recent-items", r)
             g.add(r)
+        if util.settings(ARCMENU) is not None:
+            n = len(util.gget(ARCMENU, "pinned-apps", []) or [])
+            self.pin_row = SettingRow(_("Pinned apps"), _("{0} apps pinned to Start").format(n), "fs-star-symbolic",
+                                      control=button(_("Reset"), self._reset_pins), key="pinned-reset")
+            self.remember("pinned-reset", self.pin_row)
+            g.add(self.pin_row)
         g2 = self.group(_("Related settings"))
         g2.add(SettingRow(_("Installed apps"), None, "fs-apps-list-symbolic", chevron=True,
                           on_click=lambda: self.go("installed")))
+
+    def _reset_pins(self):
+        def go():
+            if not util.greset(ARCMENU, "pinned-apps"):
+                toast(self.box, _("This action is disabled in read-only mode"))
+                return
+            n = len(util.gget(ARCMENU, "pinned-apps", []) or [])
+            self.pin_row.set_subtitle(_("{0} apps pinned to Start").format(n))
+        from ..widgets import confirm
+        confirm(self.box, _("Reset pinned apps?"), _("Start will go back to the default set of pinned apps."),
+                _("Reset"), go)
+
+
+def _dtp_json(key):
+    import json
+    try:
+        return json.loads(util.gget(DTP, key, "{}") or "{}")
+    except ValueError:
+        return {}
+
+
+def _dtp_set_all(key, value):
+    """Per-monitor JSON keys: apply the value to every known monitor."""
+    import json
+    d = _dtp_json(key) or {"0": value}
+    for mon in d:
+        d[mon] = value
+    return util.gset(DTP, key, json.dumps(d))
+
+
+def _dtp_first(key, default):
+    d = _dtp_json(key)
+    return next(iter(d.values()), default) if d else default
+
+
+DTP_DEFAULT_ELEMENTS = [
+    {"element": "showAppsButton", "visible": False, "position": "stackedTL"},
+    {"element": "activitiesButton", "visible": False, "position": "stackedTL"},
+    {"element": "leftBox", "visible": True, "position": "stackedTL"},
+    {"element": "taskbar", "visible": True, "position": "stackedTL"},
+    {"element": "centerBox", "visible": True, "position": "stackedBR"},
+    {"element": "rightBox", "visible": True, "position": "stackedBR"},
+    {"element": "dateMenu", "visible": True, "position": "stackedBR"},
+    {"element": "systemMenu", "visible": True, "position": "stackedBR"},
+    {"element": "desktopButton", "visible": True, "position": "stackedBR"},
+]
+
+
+def _dtp_elements():
+    """Per-monitor element layout; synthesised from Dash to Panel's defaults when unset."""
+    import copy
+    d = _dtp_json("panel-element-positions")
+    if not d:
+        mons = list(_dtp_json("panel-positions")) or ["0"]
+        d = {m: copy.deepcopy(DTP_DEFAULT_ELEMENTS) for m in mons}
+    return d
+
+
+def _dtp_element(name):
+    for mon in _dtp_elements().values():
+        for e in mon:
+            if e.get("element") == name:
+                return e
+    return None
+
+
+def _dtp_update_element(names, **changes):
+    import json
+    names = [names] if isinstance(names, str) else names
+    d = _dtp_elements()
+    if not d:
+        return False
+    for mon in d.values():
+        for e in mon:
+            if e.get("element") in names:
+                e.update(changes)
+    return util.gset(DTP, "panel-element-positions", json.dumps(d))
 
 
 @register
@@ -479,22 +584,69 @@ class TaskbarPage(Page):
     id = "taskbar"
     parent = "personalization"
     title = "Taskbar"
-    keywords = "panel dock dash to panel clock tray"
-    index = [("taskbar-prefs", "Taskbar behaviors", "alignment autohide"),
+    keywords = "panel dock dash to panel clock tray alignment position size transparency autohide"
+    index = [("tb-align", "Taskbar alignment", "center left"),
+             ("tb-position", "Taskbar position on screen", "bottom top"),
+             ("tb-autohide", "Automatically hide the taskbar", "intellihide"),
              ("weekday", "Show the day of the week in the clock", "clock"),
              ("seconds", "Show seconds in system tray clock", "clock seconds")]
 
     def build(self, box):
-        g = self.group(_("Taskbar items"))
-        uuid = "dash-to-panel@jderose9.github.com"
-        if _extension_installed(uuid):
-            self.ext_row(g, _("Taskbar behaviors"), _("Taskbar alignment, badging, automatically hide, and multiple displays"),
-                         "fs-panel-bottom-symbolic", ["gnome-extensions", "prefs", uuid], key="taskbar-prefs")
-        else:
+        g = self.group(_("Taskbar behaviors"))
+        if util.settings(DTP) is None:
             r = not_available_row(_("Taskbar behaviors"), _("The taskbar extension is not installed"),
                                   "fs-panel-bottom-symbolic")
-            r.key = "taskbar-prefs"
             g.add(r)
+        else:
+            tb = _dtp_element("taskbar") or {}
+            align = "center" if tb.get("position", "centerMonitor").startswith("center") else "left"
+
+            def set_align(v):
+                pos = "centerMonitor" if v == "center" else "stackedTL"
+                ok = _dtp_update_element(["taskbar", "leftBox"], position=pos)
+                if not ok:
+                    toast(self.box, _("This action is disabled in read-only mode"))
+            r = SettingRow(_("Taskbar alignment"), None, "fs-panel-bottom-symbolic",
+                           control=Dropdown([("center", _("Center")), ("left", _("Left"))], align, set_align),
+                           key="tb-align")
+            self.remember("tb-align", r)
+            g.add(r)
+            pos = _dtp_first("panel-positions", "BOTTOM")
+            r = SettingRow(_("Taskbar position on screen"), None, "fs-panel-bottom-symbolic",
+                           control=Dropdown([("BOTTOM", _("Bottom")), ("TOP", _("Top")), ("LEFT", _("Left")),
+                                             ("RIGHT", _("Right"))], pos,
+                                            lambda v: _dtp_set_all("panel-positions", v)), key="tb-position")
+            self.remember("tb-position", r)
+            g.add(r)
+            size = _dtp_first("panel-sizes", 48)
+            opts = [(40, _("Small")), (48, _("Medium")), (56, _("Large")), (64, _("Extra large"))]
+            if size not in [o[0] for o in opts]:
+                opts.append((size, f"{size} px"))
+            g.add(SettingRow(_("Taskbar size"), None, "fs-zoom-fit-symbolic",
+                             control=Dropdown(opts, size, lambda v: _dtp_set_all("panel-sizes", int(v)))))
+            ah = gsetting_toggle(DTP, "intellihide")
+            if ah:
+                r = SettingRow(_("Automatically hide the taskbar"), None, "fs-panel-bottom-symbolic", control=ah,
+                               key="tb-autohide")
+                self.remember("tb-autohide", r)
+                g.add(r)
+            grp = gsetting_toggle(DTP, "group-apps")
+            if grp:
+                g.add(SettingRow(_("Combine taskbar buttons"), None, "fs-apps-symbolic", control=grp))
+            desk = _dtp_element("desktopButton")
+            if desk is not None:
+                g.add(SettingRow(_("Select the far corner of the taskbar to show the desktop"), None,
+                                 "fs-desktop-symbolic",
+                                 control=ToggleSwitch(bool(desk.get("visible", True)),
+                                                      lambda v: _dtp_update_element("desktopButton", visible=v))))
+            tr = gsetting_toggle(DTP, "trans-use-custom-opacity")
+            if tr:
+                g.add(SettingRow(_("Taskbar transparency"), None, "fs-circle-half-fill-symbolic", control=tr))
+                op = util.gget(DTP, "trans-panel-opacity", 0.8)
+                g.add(SettingRow(_("Taskbar opacity"), None, "fs-circle-half-fill-symbolic",
+                                 control=Slider(0, 100, round(op * 100),
+                                                lambda v: util.gset(DTP, "trans-panel-opacity", round(v) / 100.0),
+                                                fmt="{:.0f}%", width=200)))
         g2 = self.group(_("Clock"))
         for key, sk, t in (("weekday", "clock-show-weekday", _("Show the day of the week in the clock")),
                            ("date", "clock-show-date", _("Show the date in the clock")),

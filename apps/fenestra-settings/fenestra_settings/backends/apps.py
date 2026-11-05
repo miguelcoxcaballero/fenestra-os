@@ -145,6 +145,7 @@ def candidates_for(mime):
 def set_default(info: Gio.AppInfo, mimes):
     if util.READ_ONLY:
         return False
+    util.record("mimeapps", f"{info.get_id()} -> {', '.join(mimes)}") if util.SANDBOX else None
     ok = True
     for m in mimes:
         try:
@@ -234,6 +235,7 @@ def startup_entries():
 def set_startup_enabled(entry: StartupEntry, enabled: bool) -> bool:
     if util.READ_ONLY:
         return False
+    util.record("autostart", f"{entry.fname} enabled={enabled}") if util.SANDBOX else None
     os.makedirs(autostart_dir(), exist_ok=True)
     dest = os.path.join(autostart_dir(), entry.fname)
     kf = GLib.KeyFile()

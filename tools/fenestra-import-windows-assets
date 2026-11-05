@@ -12,6 +12,8 @@ tool copies those originals *for your user only*:
   * Explorer empty/full folder icons          -> ~/.local/share/fenestra/assets/folders
   * Start button logo and colour Search icon  -> ~/.local/share/fenestra/assets/{branding,search}
     (the taskbar Start button and Search launcher are switched to them)
+  * Settings app icon (ImmersiveControlPanel logo)
+      -> ~/.local/share/icons/hicolor/{256x256,48x48,32x32,scalable}/apps/fenestra-settings.*
 
 Nothing is uploaded anywhere and the Windows partition is only read.
 Usage: fenestra-import-windows-assets [--windows /path/to/C:] [--dry-run] [--no-cursors]
@@ -356,6 +358,69 @@ def import_taskbar_icons(win, dry):
     log(f'taskbar: start logo {"imported" if logo else "not found"}, search icon {"imported" if search else "not found"}')
 
 
+def import_settings_icon(win, dry):
+    """Settings logo -> user hicolor theme, overriding Fenestra's own gear icon for this user."""
+    images = ci(win / 'Windows/ImmersiveControlPanel/images')
+    if not images:
+        log('settings icon: ImmersiveControlPanel/images not found')
+        return
+    cands = [p for p in images.glob('logo*.png') if 'contrast' not in p.name.lower()]
+    # Prefer the unplated (transparent) large target sizes, then the scaled tiles.
+    def rank(p):
+        n = p.name.lower()
+        size = 0
+        try:
+            from PIL import Image
+            with Image.open(p) as im:
+                size = im.size[0]
+        except Exception:  # noqa: BLE001 - Pillow missing or unreadable file
+            pass
+        return ('unplated' in n, 'targetsize' in n, size)
+    cands.sort(key=rank, reverse=True)
+    if not cands:
+        log('settings icon: no logo*.png found')
+        return
+    src = cands[0]
+    if dry:
+        log(f'settings icon: would use {src}')
+        return
+    icons = DATA / 'icons' / 'hicolor'
+    try:
+        from PIL import Image
+    except ImportError:
+        Image = None
+    written = []
+    for size in (256, 48, 32):
+        dest = icons / f'{size}x{size}' / 'apps' / 'fenestra-settings.png'
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        exact = images / f'logo.targetsize-{size}_altform-unplated.png'
+        if exact.exists():
+            shutil.copyfile(exact, dest)
+        elif Image is not None:
+            with Image.open(src) as im:
+                im.convert('RGBA').resize((size, size), Image.LANCZOS).save(dest)
+        elif size == 256:
+            shutil.copyfile(src, dest)
+        else:
+            continue
+        written.append(dest)
+    # A scalable entry always wins over fixed sizes in icon lookup, so replace Fenestra's own
+    # scalable gear (if installed for this user) with an SVG that embeds the imported PNG.
+    import base64
+    png = (icons / '256x256' / 'apps' / 'fenestra-settings.png').read_bytes()
+    svg = icons / 'scalable' / 'apps' / 'fenestra-settings.svg'
+    svg.parent.mkdir(parents=True, exist_ok=True)
+    svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+                   'width="256" height="256" viewBox="0 0 256 256"><!-- fenestra-imported-icon -->'
+                   '<image width="256" height="256" xlink:href="data:image/png;base64,'
+                   + base64.b64encode(png).decode() + '"/></svg>\n')
+    index = icons / 'index.theme'
+    if not index.exists() and Path('/usr/share/icons/hicolor/index.theme').exists():
+        shutil.copyfile('/usr/share/icons/hicolor/index.theme', index)
+    subprocess.run(['gtk-update-icon-cache', '-q', '-f', '-t', str(icons)], check=False)
+    log(f'settings icon: imported {src.name} ({len(written)} sizes + scalable)')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--windows', help='path where the Windows partition is mounted')
@@ -373,6 +438,7 @@ def main():
     import_battery(win, args.dry_run)
     import_folders(win, args.dry_run)
     import_taskbar_icons(win, args.dry_run)
+    import_settings_icon(win, args.dry_run)
     if not args.dry_run:
         (ASSETS / '.imported').parent.mkdir(parents=True, exist_ok=True)
         (ASSETS / '.imported').write_text(str(win) + '\n')

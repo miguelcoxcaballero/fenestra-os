@@ -161,8 +161,10 @@ class SignInPage(Page):
         self.remember("password", pw)
         g.add(pw)
         g2 = self.group(_("Additional settings"))
+        u = accounts.current_user()
         auto = SettingRow(_("Automatic login"), _("Sign in to this account without a password at startup"),
-                          "fs-person-key-symbolic", control=button(_("Manage"), lambda: self._cc()), key="autologin")
+                          "fs-person-key-symbolic", control=ToggleSwitch(u.automatic_login, self._autologin),
+                          key="autologin")
         self.remember("autologin", auto)
         g2.add(auto)
         g2.add(SettingRow(_("Lock screen"), _("Require sign-in after the screen turns off"),
@@ -270,6 +272,17 @@ class SignInPage(Page):
         from ..hello_wizard import HelloWizard
         wiz = HelloWizard(kind, on_finish=lambda changed: self.refresh(), improve=improve)
         show_dialog(self.box, wiz)
+
+    def _autologin(self, on):
+        u = accounts.current_user()
+
+        def done(ok, _r):
+            if not ok:
+                toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
+                      else _("The change was not applied"))
+            u._load()
+            self._rows["autologin"].control.set_active(u.automatic_login)
+        u.set_automatic_login(on, done)
 
     def _cc(self):
         if not util.open_control_center("users"):

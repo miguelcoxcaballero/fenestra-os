@@ -11,7 +11,7 @@ PAGES: dict[str, type["Page"]] = {}
 
 # Top level navigation order.
 NAV_ORDER = ["home", "system", "devices", "network", "personalization", "apps", "accounts",
-             "time", "gaming", "accessibility", "privacy", "update"]
+             "time", "gaming", "accessibility", "privacy", "update", "fenestra"]
 
 
 def register(cls):

@@ -1,0 +1,32 @@
+#!/bin/sh
+# Fenestra: route "gnome-control-center <panel>" to Fenestra Settings.
+# Panels Fenestra Settings doesn't implement fall back to the real GNOME Settings.
+#   gnome-control-center --real [args]      always run GNOME Settings
+#   FENESTRA_REAL_GCC=1 gnome-control-center  same (used by Fenestra Settings itself)
+REAL=/usr/bin/gnome-control-center
+[ -x "$REAL" ] || REAL=/bin/gnome-control-center
+
+if [ "${1:-}" = "--real" ]; then
+    shift
+    exec "$REAL" "$@"
+fi
+if [ -n "${FENESTRA_REAL_GCC:-}" ] || ! command -v fenestra-settings >/dev/null 2>&1; then
+    exec "$REAL" "$@"
+fi
+
+panel=""
+for a in "$@"; do
+    case "$a" in
+        --version|-h|--help|--list|-l|--search|-s) exec "$REAL" "$@" ;;
+        -*) ;;
+        *) panel="$a"; break ;;
+    esac
+done
+
+if [ -z "$panel" ]; then
+    exec fenestra-settings
+fi
+if page=$(fenestra-settings --resolve-page "$panel" 2>/dev/null) && [ -n "$page" ]; then
+    exec fenestra-settings --page "$page"
+fi
+exec "$REAL" "$@"

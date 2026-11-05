@@ -75,7 +75,9 @@ class NotificationsPage(Page):
             if s is None:
                 continue
             t = ToggleSwitch(s.get_boolean("enable"),
-                             lambda v, st=s: util.READ_ONLY or st.set_boolean("enable", v))
+                             lambda v, st=s: util.READ_ONLY or (util.record("gsettings", f"{APP_SCHEMA} enable", v)
+                                                                   if util.SANDBOX else None,
+                                                                   st.set_boolean("enable", v)))
             sub = _("Banners, Sounds") if s.get_boolean("show-banners") else _("Off")
             img = Gtk.Image.new_from_gicon(info.get_icon()) if info.get_icon() else icon("fs-app-generic-symbolic")
             img.set_pixel_size(24)

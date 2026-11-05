@@ -260,4 +260,7 @@ def gsetting_dropdown(schema, key, options, cast=None):
     ids = [o[0] for o in options]
     if cur not in ids:
         options = options + [(cur, str(cur))]
-    return Dropdown(options, cur, lambda v: util.gset(schema, key, cast(v) if cast else v))
+    dd = Dropdown(options, cur, lambda v: util.gset(schema, key, cast(v) if cast else v))
+    # follow external changes (other apps, gsettings, dconf-editor)
+    util.gconnect(schema, key, lambda: dd.select(util.gget(schema, key)))
+    return dd

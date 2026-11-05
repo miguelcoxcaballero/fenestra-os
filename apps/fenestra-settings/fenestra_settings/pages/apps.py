@@ -73,9 +73,11 @@ class InstalledAppsPage(Page):
         bar2.append(label(_("Sort by:"), "caption"))
         self.sort = Dropdown([(k, _(v)) for k, v in self.SORTS], "name", lambda _v: self._fill())
         self.sort.add_css_class("flat")
+        self.sort.ui_only = "sorts the list (not a setting)"
         bar2.append(self.sort)
         bar2.append(label(_("Filter by:"), "caption"))
         self.filt = Dropdown([(k, _(v)) for k, v in self.FILTERS], "all", lambda _v: self._fill())
+        self.filt.ui_only = "filters the list (not a setting)"
         bar2.append(self.filt)
         box.append(bar2)
         self.count = label("", "caption")

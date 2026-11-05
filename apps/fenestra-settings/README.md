@@ -54,6 +54,30 @@ into the search box before capturing.
 Tip: run tests against a nested/headless compositor, e.g.
 `WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland python3 -m fenestra_settings --screenshot …`.
 
+## Replacing GNOME Settings
+
+`install.sh` also installs (unless `REPLACE_GNOME_SETTINGS=0`):
+
+* `gnome-control-center` wrapper (in `$PREFIX/bin`, or `/usr/local/bin` for `PREFIX=/usr`, both
+  ahead of `/usr/bin` in `PATH`): `gnome-control-center <panel>` opens the matching Fenestra page
+  (`fenestra-settings --resolve-page <panel>`); unknown panels, `--real` or `FENESTRA_REAL_GCC=1`
+  run the real GNOME Settings.
+* `org.gnome.Settings.desktop` override (`Exec=fenestra-settings`, `NoDisplay=true`, no
+  `DBusActivatable`), so the quick-settings gear, Start menu pins and notification links open
+  Fenestra Settings.
+
+The app icon defaults to Fenestra's own gear. `tools/fenestra-import-windows-assets` can copy the
+user's own Settings logo from a Windows partition into `~/.local/share/icons/hicolor` (never into
+the repo); screenshot/demo mode always uses the bundled icon.
+
+## Tests
+
+```sh
+# every toggle/dropdown/slider on every page, isolated keyfile GSettings, D-Bus sandboxed
+WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland python3 tests/control_audit.py --out /tmp/audit.md
+python3 tests/check_translations.py   # every UI string has a Spanish translation
+```
+
 ## Installing
 
 ```sh
@@ -116,6 +140,15 @@ or async D-Bus; missing backends show a "Not available" row instead of failing):
   Flatpak), update list, Download & install (`pkcon update --only-download` +
   `pkcon offline-trigger`), Restart now, last-checked time, Advanced options, history
   (`dnf history`).
+- **Fenestra** (last item in the navigation) – Linux-only settings, rendered natively:
+  Workspaces, Window behavior (focus mode, title-bar actions/buttons), Desktop icons (DING),
+  Extensions (enable/disable via `org.gnome.Shell.Extensions`, open their settings), Search
+  providers (enable/disable/order), Online accounts (GOA list/remove; "Add account" opens GNOME's
+  sign-in dialog), Sharing (RDP via `grdctl`, file sharing via `gnome-user-share`), Keyboard
+  shortcuts (editable), Printers/tablets/color (read-only info) and "Advanced (GNOME Settings)".
+- **Personalization › Start / Taskbar** – native ArcMenu (layout, recommended items, pinned apps
+  reset) and Dash to Panel (alignment, position, size, auto-hide, combine buttons, show-desktop
+  corner, transparency) controls; extension schemas are loaded from the extension folders.
 - **Search** – every page and indexed row (title + English and translated keywords);
   picking a result navigates there, expands the containing card and highlights the row.
 

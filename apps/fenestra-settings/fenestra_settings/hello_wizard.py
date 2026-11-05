@@ -332,7 +332,7 @@ class HelloWizard(Gtk.Box):
 
         bar = Gtk.Box()
         bar.add_css_class("hello-titlebar")
-        bar.append(icon("fenestra-settings", 16))
+        bar.append(icon(util.app_icon_name(), 16))
         bar.append(label(_("Fenestra Hello setup"), "hello-caption"))
         bar.append(Gtk.Box(hexpand=True))
         x = Gtk.Button()

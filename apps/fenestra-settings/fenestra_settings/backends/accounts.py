@@ -21,6 +21,7 @@ class CurrentUser:
         self.icon_file = None
         self.account_type = 0
         self.email = ""
+        self.automatic_login = False
         self.path = None
         self.proxy = None
         if util.DEMO:
@@ -49,6 +50,7 @@ class CurrentUser:
                 self.icon_file = ic
             self.account_type = util.prop(self.proxy, "AccountType", 0)
             self.email = util.prop(self.proxy, "Email", "") or ""
+            self.automatic_login = bool(util.prop(self.proxy, "AutomaticLogin", False))
         if not self.icon_file:
             face = os.path.expanduser("~/.face")
             if os.path.isfile(face):
@@ -73,6 +75,14 @@ class CurrentUser:
             return
         util.dbus_call(Gio.BusType.SYSTEM, ACC, self.path, ACC + ".User", "SetIconFile",
                        GLib.Variant("(s)", (path,)), callback)
+
+    def set_automatic_login(self, on, callback=None):
+        if not self.path:
+            if callback:
+                callback(False, "AccountsService unavailable")
+            return
+        util.dbus_call(Gio.BusType.SYSTEM, ACC, self.path, ACC + ".User", "SetAutomaticLogin",
+                       GLib.Variant("(b)", (on,)), callback)
 
     def set_real_name(self, name, callback=None):
         if not self.path:

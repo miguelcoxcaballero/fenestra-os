@@ -1,15 +1,17 @@
 """System › Display."""
 from __future__ import annotations
 
-from gi.repository import Gdk
+from gi.repository import Gdk, GLib
 
 from .. import util
+from ..backends import display as displayb
 from ..backends import power
 from ..i18n import _
-from ..widgets import (Dropdown, ExpanderRow, SettingRow, Slider, button, label,
+from ..widgets import (ContentDialog, Dropdown, ExpanderRow, SettingRow, Slider, button, label, show_dialog,
+                       spinner, toast,
                        not_available_row, value_label)
 from .base import Page, register
-from .common import gsetting_toggle
+from .common import gsetting_dropdown, gsetting_toggle
 
 COLOR = "org.gnome.settings-daemon.plugins.color"
 IFACE = "org.gnome.desktop.interface"
@@ -59,8 +61,13 @@ class DisplayPage(Page):
                 exp.add(SettingRow(_("Schedule night light"), None, None, control=sched))
                 f = util.gget(COLOR, "night-light-schedule-from", 20.0)
                 t = util.gget(COLOR, "night-light-schedule-to", 6.0)
-                exp.add(SettingRow(_("Turn on"), None, None, control=value_label(_fmt_hour(f))))
-                exp.add(SettingRow(_("Turn off"), None, None, control=value_label(_fmt_hour(t))))
+                hours = [(h / 2.0, _fmt_hour(h / 2.0)) for h in range(48)]
+                for key, title, cur in (("night-light-schedule-from", _("Turn on"), f),
+                                        ("night-light-schedule-to", _("Turn off"), t)):
+                    opts = list(hours)
+                    if cur not in [o[0] for o in opts]:
+                        opts.append((cur, _fmt_hour(cur)))
+                    exp.add(SettingRow(title, None, None, control=gsetting_dropdown(COLOR, key, opts, cast=float)))
             g.add(exp)
         else:
             g.add(not_available_row(_("Night light")))
@@ -70,33 +77,22 @@ class DisplayPage(Page):
         g.add(hdr)
 
         g2 = self.group(_("Scale & layout"))
-        mon = self._primary_monitor()
-        scale_now = mon.get_scale() if mon else 1.0
-        scales = [1.0, 1.25, 1.5, 1.75, 2.0]
-        opts = [(str(s), f"{int(s * 100)}%" + (_(" (Recommended)") if s == 1.0 else "")) for s in scales]
-        cur = min(scales, key=lambda s: abs(s - scale_now))
-        sd = Dropdown(opts, str(cur), lambda _v: util.open_control_center("display"))
-        r = SettingRow(_("Scale"), _("Change the size of text, apps, and other items"),
-                       "fs-zoom-fit-symbolic", control=sd, key="scale")
-        self.remember("scale", r)
-        g2.add(r)
-        res = "—"
-        if mon:
-            geo = mon.get_geometry()
-            res = f"{int(geo.width * mon.get_scale())} × {int(geo.height * mon.get_scale())}"
-        rd = Dropdown([("cur", res + _(" (Recommended)"))], "cur",
-                      lambda _v: util.open_control_center("display"))
-        rr = SettingRow(_("Display resolution"), _("Adjust the resolution to fit your connected display"),
-                        "fs-resize-symbolic", control=rd, key="resolution")
-        self.remember("resolution", rr)
-        g2.add(rr)
-        od = Dropdown([("l", _("Landscape")), ("p", _("Portrait")), ("lf", _("Landscape (flipped)")),
-                       ("pf", _("Portrait (flipped)"))], "l",
-                      lambda _v: util.open_control_center("display"))
-        ro = SettingRow(_("Display orientation"), None, "fs-phone-laptop-symbolic", control=od,
-                        key="orientation")
-        self.remember("orientation", ro)
-        g2.add(ro)
+        self.scale_row = SettingRow(_("Scale"), _("Change the size of text, apps, and other items"),
+                                    "fs-zoom-fit-symbolic", control=spinner(), key="scale")
+        self.remember("scale", self.scale_row)
+        g2.add(self.scale_row)
+        self.res_row = SettingRow(_("Display resolution"), _("Adjust the resolution to fit your connected display"),
+                                  "fs-resize-symbolic", control=spinner(), key="resolution")
+        self.remember("resolution", self.res_row)
+        g2.add(self.res_row)
+        self.orient_row = SettingRow(_("Display orientation"), None, "fs-phone-laptop-symbolic", control=spinner(),
+                                     key="orientation")
+        self.remember("orientation", self.orient_row)
+        g2.add(self.orient_row)
+        self.rate_row = SettingRow(_("Refresh rate"), _("A higher rate gives smoother motion, but uses more power"),
+                                   "fs-desktop-symbolic", control=spinner(), key="refresh")
+        self.remember("refresh", self.rate_row)
+        g2.add(self.rate_row)
 
         monitors = Gdk.Display.get_default().get_monitors()
         n = monitors.get_n_items()
@@ -106,6 +102,7 @@ class DisplayPage(Page):
                         on_click=lambda: util.open_control_center("display"), key="multiple")
         self.remember("multiple", mr)
         g2.add(mr)
+        displayb.get_state(self._got_state)
 
         g3 = self.group(_("Related settings"))
         adv = ExpanderRow(_("Advanced display"), _("Display information, refresh rate"),
@@ -127,6 +124,88 @@ class DisplayPage(Page):
                      ["gnome-control-center", "display"])
         g3.add(SettingRow(_("Text size"), _("Change the size of text that appears throughout the system"),
                           "fs-text-font-size-symbolic", chevron=True, on_click=lambda: self.go("textsize")))
+
+    # ------------------------------------------------------------------ mutter display config
+    def _got_state(self, st):
+        self.state = st
+        if st is None or st.monitor() is None:
+            for r in (self.scale_row, self.res_row, self.orient_row, self.rate_row):
+                r.set_control(label(_("Not available"), "row-value"))
+            return
+        mon = st.monitor()
+        lm = st.logical_for(mon.connector)
+        cur = mon.current_mode
+        pref = mon.preferred_mode
+        scales = cur.scales if cur and cur.scales else [1.0, 2.0]
+        rec = pref.preferred_scale if pref else 1.0
+        opts = [(round(sc, 4), f"{round(sc * 100)}%" + (_(" (Recommended)") if abs(sc - rec) < 0.01 else ""))
+                for sc in scales]
+        now = min((o[0] for o in opts), key=lambda v: abs(v - (lm.scale if lm else 1.0)))
+        self.scale_row.set_control(Dropdown(opts, now, lambda v: self._apply(scale=float(v))))
+        res = displayb.resolutions(mon)
+        ropts = [(mid, lab + (_(" (Recommended)") if pref and (m.width, m.height) == (pref.width, pref.height)
+                              else "")) for mid, lab, m in res]
+        cur_id = next((mid for mid, _l, m in res if cur and (m.width, m.height) == (cur.width, cur.height)), None)
+        self.res_row.set_control(Dropdown(ropts, cur_id, lambda v: self._apply(mode_id=v), width=240))
+        tr = {0: "landscape", 1: "portrait", 2: "landscape-flipped", 3: "portrait-flipped"}.get(
+            lm.transform if lm else 0, "landscape")
+        self.orient_row.set_control(Dropdown(
+            [("landscape", _("Landscape")), ("portrait", _("Portrait")), ("landscape-flipped", _("Landscape (flipped)")),
+             ("portrait-flipped", _("Portrait (flipped)"))], tr,
+            lambda v: self._apply(transform=displayb.TRANSFORMS[v])))
+        rates = displayb.refresh_rates(mon)
+        self.rate_row.set_control(Dropdown([(m.id, f"{m.refresh:.2f} Hz" + (" (VRR)" if "+vrr" in m.id else ""))
+                                            for m in rates], cur.id if cur else None,
+                                           lambda v: self._apply(mode_id=v)))
+
+    def _apply(self, **changes):
+        st = self.state
+        if st is None:
+            return
+        if util.READ_ONLY:
+            toast(self.box, _("This action is disabled in read-only mode"))
+            return
+        mon = st.monitor()
+
+        def done(ok, err):
+            if not ok:
+                toast(self.box, _("The change was not applied"))
+                displayb.get_state(self._got_state)
+                return
+            self._keep_dialog(st)
+        displayb.apply(st, mon.connector, done, **changes)
+
+    def _keep_dialog(self, old_state):
+        secs = [15]
+        body = label("", wrap=True)
+
+        def upd():
+            body.set_label(_("Reverting to the previous display settings in {0} seconds.").format(secs[0]))
+        upd()
+
+        def revert():
+            displayb.restore(old_state, lambda *_: displayb.get_state(self._got_state))
+
+        def resp(r):
+            GLib.source_remove(timer[0]) if timer[0] else None
+            timer[0] = 0
+            if r == "primary":
+                displayb.get_state(self._got_state)
+            else:
+                revert()
+        dlg = ContentDialog(_("Keep these display settings?"), None, primary=_("Keep changes"),
+                            close=_("Revert"), on_response=resp, extra=body)
+
+        def tick():
+            secs[0] -= 1
+            if secs[0] <= 0:
+                timer[0] = 0
+                dlg.respond("close")
+                return False
+            upd()
+            return True
+        timer = [GLib.timeout_add_seconds(1, tick)]
+        show_dialog(self.box, dlg)
 
     def _primary_monitor(self):
         mons = Gdk.Display.get_default().get_monitors()

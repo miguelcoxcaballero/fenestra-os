@@ -73,6 +73,7 @@ class TextSizePage(Page):
         sl = Slider(100, 225, round(cur * 100), None, step=5, width=280, fmt="{:.0f}%")
         sl.scale.connect("value-changed", lambda s: self._preview(s.get_value()))
         apply = button(_("Apply"), lambda: util.gset(IFACE, "text-scaling-factor", round(sl.get_value()) / 100.0))
+        sl.apply_button = apply  # like the reference UI, the size is applied with "Apply"
         ctrl = Gtk.Box(spacing=12)
         ctrl.append(sl)
         ctrl.append(apply)
