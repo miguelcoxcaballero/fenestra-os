@@ -60,12 +60,18 @@ fi
 MKKSISO_ARGS=(--ks "$WORK/ks.cfg" --add "$WORK/add/fenestra" --updates "$WORK/fenestra-updates.img" --rm rd.live.check
     -R 'Install Fedora 43' 'Install Fenestra 43'
     -R 'Test this media & install Fedora 43' 'Test this media & install Fenestra 43'
+    -R 'Rescue a Fedora system' 'Rescue a Fenestra system'
     -R 'set default="1"' 'set default="0"' -R 'set timeout=60' 'set timeout=5')
 [ -n "$EXTRA_ARGS" ] && MKKSISO_ARGS+=(-c "$EXTRA_ARGS")
 # Rebuilding the EFI boot image needs loop devices (root). Rootless local builds
 # skip it: the kickstart then boots via BIOS only (fine for tests/vm).
 # FENESTRA_SKIP_MKEFIBOOT=1 forces this (containers where loop mounts fail).
-if [ "${FENESTRA_SKIP_MKEFIBOOT:-}" = 1 ] || [ "$(id -u)" != 0 ] || ! losetup -f >/dev/null 2>&1; then MKKSISO_ARGS+=(--skip-mkefiboot); fi
+if [ "${FENESTRA_SKIP_MKEFIBOOT:-}" = 1 ] || [ "$(id -u)" != 0 ] || ! losetup -f >/dev/null 2>&1; then MKKSISO_ARGS+=(--skip-mkefiboot)
+else
+    # Own volume label (Fedora remix branding). Only when the EFI image is
+    # rebuilt: its GRUB finds the ISO by label.
+    MKKSISO_ARGS+=(-V "Fenestra-43-x86_64")
+fi
 
 if [ "${FENESTRA_NO_CONTAINER:-}" = 1 ]; then
     mkksiso "${MKKSISO_ARGS[@]}" "$FEDORA_ISO" "$OUT_ISO"

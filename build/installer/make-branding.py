@@ -47,13 +47,13 @@ def bloom(im, blobs):
 
 
 def font(size):
-    for path in (os.path.expanduser("~/.cache/fenestra-build/selawk.ttf"),
+    for path in (os.path.join(REPO, "build/out/rootfs/usr/share/fonts/selawik/selawk.ttf"),  # build-overlay.sh
                  "/usr/share/fonts/selawik/selawk.ttf",
                  "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
                  "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
         if os.path.exists(path):
             return ImageFont.truetype(path, size)
-    return ImageFont.load_default()
+    return ImageFont.load_default(size)
 
 
 def logo_png(size):
