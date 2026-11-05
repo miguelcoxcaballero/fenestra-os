@@ -27,7 +27,7 @@ button-layout='appmenu:minimize,maximize,close'
 # Accent colour (Settings > Personalization > Colors). '' follows GNOME's
 # accent-color enum; fenestra-tray applies it to the shell, GTK and taskbar.
 [org/fenestra/desktop]
-accent-color-custom='#647C64'
+accent-color-custom='#0078D4'
 accent-from-wallpaper=false
 
 [org/gnome/shell/extensions/arcmenu]
