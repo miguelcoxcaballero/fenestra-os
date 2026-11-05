@@ -130,6 +130,8 @@ submenu-corner-radius=8
 pipeline='pipeline_default'
 
 [org/gnome/shell/extensions/dash-to-panel]
+# Same as metadata.json "version": no "Dash to Panel has been updated!" toast on first login.
+extension-version=74
 animate-appicon-hover=true
 animate-appicon-hover-animation-convexity={'RIPPLE': 2.0, 'PLANK': 1.0, 'SIMPLE': 0.0}
 animate-appicon-hover-animation-extent={'RIPPLE': 4, 'PLANK': 4, 'SIMPLE': 1}

@@ -112,5 +112,10 @@ install -d "$OUT/usr/share/licenses/fenestra"
 cp -a "$REPO/LICENSE" "$REPO/THIRD-PARTY.md" "$OUT/usr/share/licenses/fenestra/" 2>/dev/null || true
 cp -a "$REPO/assets/LICENSES/." "$OUT/usr/share/licenses/fenestra/" 2>/dev/null || true
 
+# cp -a keeps the working tree's modes; some vendored files (e.g. third-party
+# extensions' metadata.json) are 0600 there, which would make them unreadable for
+# every user on the installed system. Everything in the overlay is world-readable.
+chmod -R u+rwX,go+rX,go-w "$OUT"
+
 du -sh "$OUT"
 log "Overlay ready: $OUT"

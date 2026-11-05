@@ -12,9 +12,10 @@ network --bootproto=dhcp --activate --hostname=fenestra
 rootpw --lock
 selinux --enforcing
 firewall --enabled --service=mdns
-# No "firstboot --disable": Anaconda would then write post_install_tools_disabled=1
-# to /etc/sysconfig/anaconda, and GDM skips the initial-setup session (fenestra-oobe)
-# whenever that key is set. Anaconda's own initial-setup tool is left out below.
+# Must stay enabled: "--disable" makes Anaconda write post_install_tools_disabled=1
+# to /etc/sysconfig/anaconda, and Fedora's GDM then never starts the initial-setup
+# session, so the OOBE never appears (straight to the login screen, no users).
+firstboot --enable
 xconfig --startxonboot
 bootloader --timeout=1
 
@@ -71,7 +72,7 @@ set -x
 # target's SELinux labels (bin_t for /usr/libexec/fenestra-oobe etc.), or the
 # confined GDM/initial-setup session cannot execute it.
 restorecon -RF /usr /etc /var/lib/fenestra-spotlight || true
-# GDM skips initial setup when this is set (see the note on firstboot above).
+# GDM skips initial setup when this is set (see the note on firstboot above); belt and braces.
 if [ -f /etc/sysconfig/anaconda ]; then
     sed -i 's/^post_install_tools_disabled *=.*/post_install_tools_disabled = 0/' /etc/sysconfig/anaconda
 fi

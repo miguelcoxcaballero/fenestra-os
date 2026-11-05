@@ -790,6 +790,10 @@ export const ArcMenu = class ArcMenuArcMenu extends PopupMenu.PopupMenu {
     }
 
     setDimmed(dim) {
+        // The menu (and its dim effect) can already be destroyed when a stale
+        // layout rebuild closes its submenus.
+        if (!this.dimEffect || !this._boxPointer?.get_effect('dim'))
+            return;
         const DIM_BRIGHTNESS = -0.4;
         const ANIMATION_TIME = 150;
 
