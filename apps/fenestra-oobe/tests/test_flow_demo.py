@@ -55,7 +55,10 @@ class DemoFlowTest(unittest.TestCase):
             if pid == "keyboard-second":
                 page.on_secondary()  # Add layout
             elif pid == "keyboard-pick":
-                page.picker.select("us")
+                # A layout different from the first one (which depends on the
+                # guessed country), so that two layouts are kept.
+                first_layout = win.state.layouts[0][0]
+                page.picker.select("fr" if first_layout != "fr" else "de")
                 page.on_primary()
             elif pid == "network":
                 page.on_link()  # I don't have internet

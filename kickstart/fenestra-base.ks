@@ -12,7 +12,9 @@ network --bootproto=dhcp --activate --hostname=fenestra
 rootpw --lock
 selinux --enforcing
 firewall --enabled --service=mdns
-firstboot --disable
+# No "firstboot --disable": Anaconda would then write post_install_tools_disabled=1
+# to /etc/sysconfig/anaconda, and GDM skips the initial-setup session (fenestra-oobe)
+# whenever that key is set. Anaconda's own initial-setup tool is left out below.
 xconfig --startxonboot
 bootloader --timeout=1
 
@@ -36,6 +38,8 @@ generic-logos
 generic-logos-httpd
 # Not part of the Windows-like experience.
 -gnome-tour
+-initial-setup
+-initial-setup-gui
 -gnome-shell-extension-background-logo
 %end
 
@@ -59,6 +63,14 @@ tar -xzf "$SRC/rootfs.tar.gz" -C /mnt/sysroot --no-same-owner
 
 %post --log=/root/fenestra-post.log
 set -x
+# The overlay was unpacked from the installer environment: give it the
+# target's SELinux labels (bin_t for /usr/libexec/fenestra-oobe etc.), or the
+# confined GDM/initial-setup session cannot execute it.
+restorecon -RF /usr /etc /var/lib/fenestra-spotlight || true
+# GDM skips initial setup when this is set (see the note on firstboot above).
+if [ -f /etc/sysconfig/anaconda ]; then
+    sed -i 's/^post_install_tools_disabled *=.*/post_install_tools_disabled = 0/' /etc/sysconfig/anaconda
+fi
 # Branding (Fenestra is a Fedora remix).
 rm -f /etc/os-release
 sed -e 's/^NAME=.*/NAME="Fenestra"/' \
