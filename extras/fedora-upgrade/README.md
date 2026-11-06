@@ -75,3 +75,9 @@ manual equivalent and stay for recovery.
 
 - Lock screen / GDM on GNOME 51: the unlock itself (password, Hello, fingerprint and the fast-unlock
   timing) can only be checked on the real machine.
+
+## Login screen after the upgrade
+
+See `docs/login-safety.md`: why Fedora 45 showed a black screen, how to restore the
+Fenestra login (`restore-login-extensions.sh`, `fix-local-services.sh`) and the safety net
+(compatibility matrix, linter, greeter bench, Fenestra Update gate, greeter guard).

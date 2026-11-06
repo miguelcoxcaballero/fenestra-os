@@ -39,6 +39,19 @@ fenestra-lock-clock lo usan en `face.js` para dibujar el fondo. El arreglo está
    `wip/fedora45-notepad-paint` (revisa antes que `face.js` ya no usa `set_file`). Después vuelve a habilitarlas.
    Solo cuando funcionen, propón al usuario borrar las carpetas `disabled-fenestra-*`.
 
+## Estado (2026-11-06, rama fix/fedora45-login)
+Causa confirmada y reproducida en el banco `tests/greeter/bench.sh` (GNOME 51, contenedor fedora:45).
+La explicación completa, lo probado y lo que falta están en `docs/login-safety.md`.
+
+**Para volver al login de Fenestra** (pasos separados, ninguno reinicia GDM):
+1. `sudo bash extras/fedora-upgrade/fix-local-services.sh --dry-run` y después sin `--dry-run`
+   (howdy-preload, galaxy-book-guard y Howdy en el login de GDM 51).
+2. `sudo bash extras/fedora-upgrade/restore-login-extensions.sh`: instala el guardián del login y
+   las copias corregidas, y activa solo windows-spotlight. Comprueba el bloqueo (Super+L) y la
+   pantalla de inicio de sesión.
+3. `sudo bash extras/fedora-upgrade/restore-login-extensions.sh --enable-login`: el reloj de Fenestra.
+4. Si algo falla: Ctrl+Alt+F3, inicia sesión y ejecuta `sudo bash extras/fedora-upgrade/restore-login-extensions.sh --rollback`.
+
 ## Reglas
 - No borres ni reinstales nada. Si cambias algo, que sea reversible (mover o renombrar) y deja constancia en el log.
 - No toques la EFI, GRUB, el disco 1 ni las particiones de Windows/D:.
