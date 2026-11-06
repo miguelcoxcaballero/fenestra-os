@@ -286,6 +286,96 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     check windows-after-restart wait_for 'awk "/FENESTRA_SHELL_READY/{r++} r==2 && /FENESTRA_SHELL_WINDOWS count=3/{f=1} END{exit !f}" /out/shell.log' 40
     sleep 2
     check screenshot-after-restart shot 08-after-restart
+    # ---- Q04: snipping overlay (Super+Shift+S / Print), in Spanish ----
+    # KWin's ScreenShot2 needs OpenGL: the shell takes the frozen screen from FENESTRA_SHELL_SNIP_IMAGE,
+    # the composed shell surfaces with frames where the app windows are (snip-source.py).
+    kill $SHELL_PID; sleep 1
+    FENESTRA_SHELL_SNIP_IMAGE=/tmp/snip-source.png LANG=es_ES.UTF-8 fenestra-shell >> /out/shell.log 2>&1 & SHELL_PID=$!
+    check Q04-snip-shell-es wait_for '[ "$(ready_count)" -ge 3 ] && is "$(probe "Strings.es")" true' 40
+    sleep 2
+    sn() { echo "screensView.objectAt(${2:-0}).snip.$1"; }
+    snip_source() { # without banners: the frames of the app windows go under the TOP layer
+        probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+        wait_for 'is "$(probe "Notifications.popups.length")" 0' 10; sleep 1
+        shot "$1" && python3 /src/tests/shell-kwin/snip-source.py "/out/$1" /tmp/snip-source.png >>/out/probe.log 2>&1
+    }
+    pngs() { ls ~/Pictures/Screenshots/*.png 2>/dev/null | wc -l; }
+    newest_png_is() { python3 -c "
+import glob, os, sys
+from PIL import Image
+f = max(glob.glob(os.path.expanduser('~/Pictures/Screenshots/*.png')), key=os.path.getmtime)
+im = Image.open(f); print(f, im.size, im.mode); sys.exit(im.size != ($1, $2))" >>/out/probe.log 2>&1; }
+    check Q04-snip-source snip_source 29-snip-source
+    # Rows follow the mapping order seen by this shell instance.
+    X11ROW=$(probe "(() => { for (let i = 0; i < WindowsModel.count; ++i) if (WindowsModel.data(WindowsModel.index(i, 0), 257) === 'X11 client') return i; return -1 })()" | tr -dc 0-9)
+    # The Super+Shift+S action, triggered as KWin does when the keys are pressed.
+    gdbus call --session -d org.kde.kglobalaccel -o /component/fenestra_shell -m org.kde.kglobalaccel.Component.invokeShortcut snip >>/out/probe.log 2>&1 ||
+        probe "Snip.start()" >/dev/null
+    check Q04-snip-shortcut bash -c 'grep -q "^snip=Meta+Shift+S" ~/.config/kglobalshortcutsrc'
+    check Q04-snip-opens wait_for 'is "$(probe "Snip.active")" true' 10
+    sleep 1
+    check Q04-snip-overlay-per-output bash -c 'shot 30-snip-open && python3 -c "
+import json, sys
+s = [x for x in json.load(open(\"/out/30-snip-open/surfaces.json\")) if x[\"scope\"] == \"fenestra-snip\"]
+sys.exit(len(s) != ${OUTPUTS:-1} or any(x[\"layer\"] != 3 or x[\"anchors\"] != 15 for x in s))"'
+    # Rectangle selection in progress (with the first button's tooltip), then window mode hovering
+    # the snapped X11 window (left half, active, top of the stacking order).
+    probe "$(sn 'testSelect(560, 300, 800, 450, false)'); $(sn 'toolbar.tipIndex = 0')" >/dev/null; sleep 0.5
+    check Q04-snip-rectangle-dark shot_with fenestra-snip 31-snip-rectangle-dark
+    # Its output (W px wide each) and a point in its middle, in that overlay's coordinates.
+    X11X=$(probe "WindowsModel.data(WindowsModel.index($X11ROW, 0), 266).x" | tr -dc 0-9)
+    X11S=$((X11X / W))
+    HOVER=$(sn "testHover($((X11X - X11S * W + 480)), 500)" $X11S)
+    check Q04-snip-window-hover wait_for 'is "$(probe "$HOVER")" "$X11ROW"' 5
+    sleep 0.5; check Q04-snip-window-dark shot_with fenestra-snip 32-snip-window-dark
+    N=$(pngs)
+    probe "$(sn 'testClickWindow()' $X11S)" >/dev/null
+    check Q04-snip-window-saved wait_for '[ "$(pngs)" -gt "$N" ] && newest_png_is 960 1032' 10
+    check Q04-snip-closes-after-capture wait_for 'is "$(probe "Snip.active")" false' 5
+    check Q04-snip-toast wait_for 'probe "Notifications.popups.map(p => p.summary).join()" | grep -q "Captura de pantalla copiada en el portapapeles"' 5
+    # Rectangle: 640 × 360 from the frozen picture.
+    probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+    probe "Snip.start()" >/dev/null; wait_for 'is "$(probe "Snip.active")" true' 10
+    N=$(pngs)
+    probe "$(sn 'testSelect(100, 120, 640, 360, true)')" >/dev/null
+    check Q04-snip-rectangle-saved wait_for '[ "$(pngs)" -gt "$N" ] && newest_png_is 640 360' 10
+    # Rectangle content = the frozen picture at that place (what you see is what you get).
+    check Q04-snip-rectangle-pixels python3 -c "
+import glob, os, sys
+from PIL import Image, ImageChops
+f = max(glob.glob(os.path.expanduser('~/Pictures/Screenshots/*.png')), key=os.path.getmtime)
+src = Image.open('/tmp/snip-source.png').convert('RGB').crop((100, 120, 740, 480))
+sys.exit(ImageChops.difference(src, Image.open(f).convert('RGB')).getbbox() is not None)"
+    # Freeform: a triangle, transparent outside the lasso.
+    probe "Snip.start()" >/dev/null; wait_for 'is "$(probe "Snip.active")" true' 10
+    N=$(pngs)
+    probe "$(sn 'testLasso([[100, 100], [500, 100], [300, 400]], true)')" >/dev/null
+    check Q04-snip-freeform-mask wait_for '[ "$(pngs)" -gt "$N" ] && python3 -c "
+import glob, os, sys
+from PIL import Image
+f = max(glob.glob(os.path.expanduser(\"~/Pictures/Screenshots/*.png\")), key=os.path.getmtime)
+im = Image.open(f).convert(\"RGBA\"); w, h = im.size
+sys.exit(not (399 <= w <= 401 and 299 <= h <= 301 and im.getpixel((2, h - 3))[3] == 0 and im.getpixel((w // 2, h // 3))[3] == 255))"' 10
+    # Full screen: the output clicked.
+    probe "Snip.start()" >/dev/null; wait_for 'is "$(probe "Snip.active")" true' 10
+    N=$(pngs)
+    probe "Snip.captureScreen(Qt.application.screens[0].name)" >/dev/null
+    check Q04-snip-screen-saved wait_for '[ "$(pngs)" -gt "$N" ] && newest_png_is '"$W $H" 10
+    # Cancel (what Esc and × do): nothing saved, overlay gone.
+    probe "Snip.start()" >/dev/null; wait_for 'is "$(probe "Snip.active")" true' 10
+    N=$(pngs); probe "Snip.cancel()" >/dev/null
+    check Q04-snip-cancel wait_for 'is "$(probe "Snip.active")" false && [ "$(pngs)" = "$N" ] && ! probe "screensView.objectAt(0).snip.visible" | grep -q true' 5
+    # Light mode: the same two states.
+    probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+    conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' '[Appearance]' 'ColorScheme=light' 'Wallpaper=/usr/share/backgrounds/fenestra/fenestra-bloom-light.jpg'
+    snip_source 33-snip-source-light
+    probe "Snip.start()" >/dev/null; wait_for 'is "$(probe "Snip.active")" true' 10; sleep 0.5
+    probe "$(sn 'testSelect(560, 300, 800, 450, false)'); $(sn 'toolbar.tipIndex = 0')" >/dev/null; sleep 0.5
+    check Q04-snip-rectangle-light shot_with fenestra-snip 34-snip-rectangle-light
+    probe "$HOVER; $(sn 'toolbar.tipIndex = 1')" >/dev/null; sleep 0.5
+    check Q04-snip-window-light shot_with fenestra-snip 35-snip-window-light
+    probe "Snip.cancel()" >/dev/null
+    conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
     if [ -n "${PERF:-}" ]; then
         kill $SHELL_PID 2>/dev/null; sleep 1
         bash /src/tests/perf/shell-idle.sh "${PERF_SECONDS:-30}" "${PERF_RUNS:-3}" > /out/perf.jsonl 2>/out/perf.err
@@ -297,7 +387,7 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
 export -f probe bar role conf is
 export -f session log check shot shot_with ready_count wait_for
 export W H
-timeout "${TIMEOUT:-180}" dbus-run-session -- bash -c 'FAILS=0; session; exit $FAILS'
+timeout "${TIMEOUT:-240}" dbus-run-session -- bash -c 'FAILS=0; session; exit $FAILS'
 rc=$?
 FAILS=$(grep -c "FAIL$" /out/checks.txt)
 if [ "$rc" = 0 ] && [ "$FAILS" = 0 ]; then echo "QA_RESULT PASS" | tee /out/result.txt; else echo "QA_RESULT FAIL ($FAILS failed checks, rc=$rc)" | tee /out/result.txt; exit 1; fi

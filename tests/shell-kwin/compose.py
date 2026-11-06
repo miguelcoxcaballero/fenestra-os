@@ -23,7 +23,9 @@ def place(start, size, span, anchored_a, anchored_b, margin_a, margin_b):
     return start + (span - size) // 2
 
 
-def main(src, out):
+def main(src, out, below_top=None):
+    """below_top(canvas, x0, y0, dpr): draws between the BACKGROUND/BOTTOM layers and TOP/OVERLAY,
+    where app windows are (snip-source.py)."""
     surfaces = json.load(open(f"{src}/surfaces.json"))
     if not surfaces:
         sys.exit("no surfaces")
@@ -39,7 +41,11 @@ def main(src, out):
         return sum(o["exclusionZone"] for o in surfaces if o["screen"] == screen and o["exclusionZone"] > 0
                    and o["anchors"] & edge and bin(o["anchors"]).count("1") in (1, 3))
 
+    drew_windows = below_top is None
     for s in sorted(surfaces, key=lambda s: s["layer"]):
+        if not drew_windows and s["layer"] >= 2:  # LayerShellQt::Window::LayerTop
+            below_top(canvas, x0, y0, dpr)
+            drew_windows = True
         img = Image.open(s["file"]).convert("RGBA")
         sx, sy, sw, sh = s["screen"]
         ml, mt, mr, mb = s["margins"]
@@ -50,6 +56,8 @@ def main(src, out):
         x = place(sx - x0, s["width"], sw, a & LEFT, a & RIGHT, ml, mr)
         y = place(sy - y0, s["height"], sh, a & TOP, a & BOTTOM, mt, mb)
         canvas.alpha_composite(img, (round(x * dpr), round(y * dpr)))
+    if not drew_windows:
+        below_top(canvas, x0, y0, dpr)
     canvas.convert("RGB").save(out)
     print(out, canvas.size)
 
