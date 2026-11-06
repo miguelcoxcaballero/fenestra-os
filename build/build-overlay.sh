@@ -101,27 +101,44 @@ install -d "$OUT/usr/share/themes"
 cp -a "$D/themes/Fenestra-Dark" "$D/themes/Fenestra-Light" "$OUT/usr/share/themes/"
 
 log "Icon theme (Win11 by yeyushengfan258 + Fenestra aliases)"
-if [ ! -d "$CACHE/Win11-icon-theme/.git" ]; then
-    git clone -q https://github.com/yeyushengfan258/Win11-icon-theme.git "$CACHE/Win11-icon-theme"
+# Downloads are pinned; a file only reaches the cache once it is complete, so an
+# interrupted download (Fenestra Update on a flaky network) is retried next time.
+fetch() {  # URL FILE
+    [ -f "$2" ] && return 0
+    curl -fsSL --retry 3 --connect-timeout 20 -o "$2.part" "$1"
+    mv -f "$2.part" "$2"
+}
+if command -v git >/dev/null; then
+    ICONS_SRC="$CACHE/Win11-icon-theme"
+    if [ ! -d "$ICONS_SRC/.git" ]; then
+        rm -rf "$ICONS_SRC"
+        git clone -q https://github.com/yeyushengfan258/Win11-icon-theme.git "$ICONS_SRC"
+    fi
+    git -C "$ICONS_SRC" fetch -q --depth 1 origin "$WIN11_ICONS_COMMIT" 2>/dev/null || true
+    git -C "$ICONS_SRC" checkout -q "$WIN11_ICONS_COMMIT"
+else
+    # No git (Fedora Workstation does not ship git-core; installs from older images
+    # lack it): the same pinned commit as a tarball.
+    ICONS_SRC="$CACHE/Win11-icon-theme-$WIN11_ICONS_COMMIT"
+    if [ ! -x "$ICONS_SRC/install.sh" ]; then
+        fetch "https://codeload.github.com/yeyushengfan258/Win11-icon-theme/tar.gz/$WIN11_ICONS_COMMIT" "$ICONS_SRC.tar.gz"
+        rm -rf "$ICONS_SRC" && mkdir -p "$ICONS_SRC"
+        tar -xzf "$ICONS_SRC.tar.gz" -C "$ICONS_SRC" --strip-components=1 --no-same-owner
+        rm -f "$ICONS_SRC.tar.gz"
+    fi
 fi
-git -C "$CACHE/Win11-icon-theme" fetch -q --depth 1 origin "$WIN11_ICONS_COMMIT" 2>/dev/null || true
-git -C "$CACHE/Win11-icon-theme" checkout -q "$WIN11_ICONS_COMMIT"
 install -d "$OUT/usr/share/icons"
-(cd "$CACHE/Win11-icon-theme" && ./install.sh -d "$OUT/usr/share/icons" -t default >/dev/null)
+(cd "$ICONS_SRC" && ./install.sh -d "$OUT/usr/share/icons" -t default >/dev/null)
 python3 "$REPO/tools/build-fenestra-icons.py" "$OUT/usr/share/icons"
 
 log "Cursor theme (Bibata Original Classic)"
-if [ ! -f "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz" ]; then
-    curl -sSL -o "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz" \
-        "https://github.com/ful1e5/Bibata_Cursor/releases/download/$BIBATA_VERSION/Bibata-Original-Classic.tar.xz"
-fi
+fetch "https://github.com/ful1e5/Bibata_Cursor/releases/download/$BIBATA_VERSION/Bibata-Original-Classic.tar.xz" \
+    "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz"
 tar -xJf "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz" -C "$OUT/usr/share/icons"
 
 log "Fonts (Selawik, OFL)"
-if [ ! -f "$CACHE/Selawik-$SELAWIK_VERSION.zip" ]; then
-    curl -sSL -o "$CACHE/Selawik-$SELAWIK_VERSION.zip" \
-        "https://github.com/microsoft/Selawik/releases/download/$SELAWIK_VERSION/Selawik_Release.zip"
-fi
+fetch "https://github.com/microsoft/Selawik/releases/download/$SELAWIK_VERSION/Selawik_Release.zip" \
+    "$CACHE/Selawik-$SELAWIK_VERSION.zip"
 install -d "$OUT/usr/share/fonts/selawik"
 python3 - "$CACHE/Selawik-$SELAWIK_VERSION.zip" "$OUT/usr/share/fonts/selawik" <<'PY'
 import sys, zipfile, os
