@@ -73,15 +73,11 @@ class HomePage(Page):
         c = self._card(_("Accessibility preferences"), _("Optimize your settings for a better experience"))
         body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         body.append(label(C_("home", "Text size"), "home-card-label"))
-        flow = Gtk.FlowBox()
+        flow = Gtk.Grid()
         flow.add_css_class("text-size-tiles")
-        flow.set_selection_mode(Gtk.SelectionMode.NONE)
-        flow.set_homogeneous(True)
-        flow.set_min_children_per_line(3)
-        flow.set_max_children_per_line(3)
-        flow.set_halign(Gtk.Align.START)
+        flow.set_column_homogeneous(True)
         flow.set_row_spacing(4)
-        flow.set_column_spacing(0)
+        flow.set_halign(Gtk.Align.START)
         try:
             cur = float(appearance.text_scale())
         except Exception:  # noqa: BLE001 - no backend in this session
@@ -103,7 +99,12 @@ class HomePage(Page):
             inner.append(label(C_("home", name), "text-size-name", xalign=0.5))
             b.set_child(inner)
             b.connect("clicked", lambda _b, f=factor: self._set_text_size(f))
-            flow.append(b)
+            cell = Gtk.Box()
+            cell.set_size_request(122, -1)
+            cell.append(b)
+            b.set_hexpand(True)
+            b.set_halign(Gtk.Align.CENTER)
+            flow.attach(cell, i % 3, i // 3, 1, 1)
             self.size_tiles.append((b, factor))
         body.append(flow)
         c.append(self._section(body, "home-card-body"))
@@ -119,11 +120,11 @@ class HomePage(Page):
     def _personalize(self):
         c = self._card(_("Personalize your device"))
         from .personalization import find_backgrounds
-        grid = Gtk.Grid()
-        grid.set_row_spacing(8)
-        grid.set_column_spacing(8)
+        grid = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         grid.add_css_class("home-theme-grid")
-        grid.set_halign(Gtk.Align.START)
+        rows = [Gtk.Box(spacing=8, halign=Gtk.Align.START) for _r in range(2)]
+        for r in rows:
+            grid.append(r)
         paths = find_backgrounds(6) or [system_info.wallpaper_path(theme.get().dark)]
         acc = theme.get().accent_hex
         for i in range(6):
@@ -131,6 +132,8 @@ class HomePage(Page):
             dark = i % 3 == 1 or i >= 3
             b = Gtk.Button()
             b.add_css_class("home-theme-tile")
+            b.set_halign(Gtk.Align.START)
+            b.set_valign(Gtk.Align.START)
             ov = Gtk.Overlay()
             ov.set_child(Thumb(path, 112, 90, "thumb-picture"))
             mw = MiniWindow(dark, acc(dark=dark), 41, 40)
@@ -142,17 +145,19 @@ class HomePage(Page):
             b.set_child(ov)
             b.set_tooltip_text(_("Dark") if dark else _("Light"))
             b.connect("clicked", lambda _b, p=path, d=dark: self._apply_theme(p, d))
-            grid.attach(b, i % 3, i // 3, 1, 1)
-        c.append(self._section(grid, "home-card-body"))
+            rows[i // 3].append(b)
+        c.append(grid)
         dark_now = theme.get().dark
         mode = Dropdown([("light", _("Light")), ("dark", _("Dark"))], "dark" if dark_now else "light",
                         appearance.set_color_scheme)
         mode.set_size_request(130, -1)
         r = SettingRow(_("Color mode"), None, "fs-color-symbolic", control=mode)
         c.append(self._section(r, "home-card-row"))
+        r.add_css_class("tall")
         more = SettingRow(_("Browse more backgrounds, colors, and themes"), None, None, chevron=True,
                           on_click=lambda: self.go("personalization"))
         c.append(self._section(more, "home-card-row"))
+        more.add_css_class("tall")
         return c
 
     def _apply_theme(self, path, dark):
@@ -166,7 +171,7 @@ class HomePage(Page):
         info = system_info.os_info()
         grid = Gtk.Grid()
         grid.set_column_homogeneous(True)
-        grid.set_column_spacing(16)
+        grid.set_column_spacing(12)
         grid.set_row_spacing(16)
         cells = [(_("Processor"), system_info.cpu()), (_("Installed RAM"), system_info.ram_usable_str()),
                  (_("Edition"), info.get("edition", "")), (_("OS version"), info.get("version", ""))]

@@ -21,6 +21,9 @@ class Thumb(Gtk.Box):
 
     def __init__(self, path, width, height, css="thumb"):
         super().__init__()
+        # Without a layout manager GTK calls do_measure/do_size_allocate below, so the
+        # thumb keeps its fixed size instead of growing to the picture's natural size.
+        self.set_layout_manager(None)
         self.w, self.h = width, height
         self.set_size_request(width, height)
         self.set_overflow(Gtk.Overflow.HIDDEN)
