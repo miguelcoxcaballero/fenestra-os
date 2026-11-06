@@ -5,6 +5,7 @@ import math
 import random
 import time
 
+from .i18n import _
 from .procdata import Proc, Snapshot
 
 GB = 1024 ** 3
@@ -12,7 +13,7 @@ MB = 1024 ** 2
 
 
 class DemoStatic:
-    cpu_model = "Intel(R) Core(TM) Ultra 5 125H"
+    cpu_model = "Virtual x86-64 CPU @ 3.00GHz"  # invented, no host data
     sockets = 1
     cores = 6
     logical = 6
@@ -227,9 +228,10 @@ class DemoCollector:
             procs[p.pid] = p
             return p
 
-        mk("Task Manager", "app", 41.2, "app-gnome-org.fenestra.TaskManager-1.scope", cpu=5.0,
+        tm = _("Task Manager")
+        mk(tm, "app", 41.2, "app-gnome-org.fenestra.TaskManager-1.scope", cpu=5.0,
            disk=0.1 * MB, app="org.fenestra.TaskManager")
-        s.apps = {"org.fenestra.TaskManager": ("Task Manager", "org.fenestra.TaskManager", True, "")}
+        s.apps = {"org.fenestra.TaskManager": (tm, "org.fenestra.TaskManager", True, "")}
         for i, (name, icon, mem, kids, status) in enumerate(BACKGROUND):
             unit = f"bg{i}.service"
             if kids:

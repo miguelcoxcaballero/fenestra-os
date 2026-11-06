@@ -35,7 +35,7 @@ class ToolButton(Gtk.Button):
     def __init__(self, icon_name, text, cb=None, tooltip=None):
         super().__init__()
         self.add_css_class("tool-button")
-        box = Gtk.Box(spacing=8)
+        box = Gtk.Box(spacing=6)
         box.append(icon(icon_name, 20))
         if text:
             # ellipsizing labels keep the command bar's minimum width small, so a narrow

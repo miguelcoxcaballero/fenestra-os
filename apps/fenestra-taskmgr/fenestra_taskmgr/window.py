@@ -117,14 +117,14 @@ class TitleBar(Gtk.Widget):
         c = self.center
         if c is not None and c.get_visible():
             mn, _nat, _a, _b = c.measure(Gtk.Orientation.HORIZONTAL, -1)
-            want = int(min(600, max(200, w * 0.34)))
+            want = round(min(600, max(200, w * 0.34)))
             avail_l, avail_r = left + 12, w - right - 12
             cw = max(0, min(want, avail_r - avail_l))
             if cw < max(mn, 120):
                 c.set_child_visible(False)
                 return
             c.set_child_visible(True)
-            x = int(w / 2 - 15 - cw / 2)
+            x = int(w / 2 + 13 - cw / 2)  # measured: 265 px at 764 px
             x = max(avail_l, min(x, avail_r - cw))
             ch = min(h, c.measure(Gtk.Orientation.VERTICAL, cw)[1])
             tr = Gsk.Transform().translate(_pt(x, int((h - ch) / 2)))
@@ -235,7 +235,7 @@ class TaskWindow(Gtk.ApplicationWindow):
         self.more_btn = Gtk.Button()
         self.more_btn.add_css_class("tool-button")
         self.more_btn.add_css_class("more-button")
-        self.more_btn.set_child(icon("tm-more-symbolic", 20))
+        self.more_btn.set_child(icon("tm-more-symbolic", 24))
         self.more_btn.set_tooltip_text(_("See more"))
         self.more_btn.connect("clicked", self._more)
         self.toolbar.append(self.more_btn)
@@ -277,9 +277,9 @@ class TaskWindow(Gtk.ApplicationWindow):
         c = theme.get().c["fg"]
         cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
         cr.set_line_width(1.0)
-        cx, cy = int(w / 2), int(h / 2) - 2
+        cx, cy = int(w / 2), int(h / 2) - 1
         if name == "minimize":
-            cr.rectangle(cx - 5, cy + 0, 10, 1)
+            cr.rectangle(cx - 4, cy + 0, 10, 1)
             cr.fill()
         elif name == "maximize":
             if self.is_maximized():
@@ -293,10 +293,10 @@ class TaskWindow(Gtk.ApplicationWindow):
                 cr.rectangle(cx - 4.5, cy - 4.5, 9, 9)
                 cr.stroke()
         else:
-            cr.move_to(cx - 5, cy - 5)
-            cr.line_to(cx + 5, cy + 5)
-            cr.move_to(cx + 5, cy - 5)
-            cr.line_to(cx - 5, cy + 5)
+            cr.move_to(cx - 4, cy - 5)
+            cr.line_to(cx + 6, cy + 5)
+            cr.move_to(cx + 6, cy - 5)
+            cr.line_to(cx - 4, cy + 5)
             cr.stroke()
 
     def set_expanded(self, on):

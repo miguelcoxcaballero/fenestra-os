@@ -171,7 +171,7 @@ class PerformancePage(Page):
         self.detail_stack = Gtk.Stack()
         self.detail_stack.set_hhomogeneous(False)
         self.detail_stack.set_vhomogeneous(False)
-        self.detail_stack.set_size_request(560, 420)
+        self.detail_stack.set_size_request(380, 420)
         self.rsw.set_child(self.detail_stack)
         self.append(self.rsw)
         self.devices: dict[str, Device] = {}

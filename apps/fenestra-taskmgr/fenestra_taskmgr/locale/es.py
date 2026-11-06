@@ -2,7 +2,7 @@
 STRINGS = {
     "decimal_sep": ",",
     "Task Manager": "Administrador de tareas",
-    "Type a name, publisher, or PID to search": "Escribe un nombre, un editor o un PID para buscar",
+    "Type a name, publisher, or PID to search": "Busque un nombre, publicador o PID",
     "Navigation": "Navegación",
     "See more": "Ver más",
     "Processes": "Procesos",

@@ -112,7 +112,7 @@ def sort_entries(entries, key, desc):
 
 def proc_columns():
     return [
-        Column("name", _("Name"), 233),
+        Column("name", _("Name"), 234),
         Column("status", _("Status"), 120),
         Column("cpu", _("CPU"), 73, "right", heat=True, desc_first=True),
         Column("memory", _("Memory"), 73, "right", heat=True, desc_first=True),

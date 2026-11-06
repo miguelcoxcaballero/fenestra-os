@@ -8,6 +8,7 @@ live inside a Gtk.ScrolledWindow (overlay scrollbars, kinetic scrolling).
 from __future__ import annotations
 
 import bisect
+import math
 
 from gi.repository import Gdk, Gio, GObject, Graphene, Gsk, Gtk, Pango
 
@@ -398,6 +399,10 @@ class Table(Gtk.Widget, Gtk.Scrollable):
         if lay is None:
             lay = Pango.Layout.new(self.get_pango_context())
             lay.set_font_description(desc)
+            if desc is self.f_head:  # header labels run ~2 % wider than Selawik
+                attrs = Pango.AttrList()
+                attrs.insert(Pango.attr_letter_spacing_new(123))
+                lay.set_attributes(attrs)
             lay.set_text(text, -1)
             if width is not None:
                 lay.set_width(max(1, int(width)) * Pango.SCALE)
@@ -414,7 +419,7 @@ class Table(Gtk.Widget, Gtk.Scrollable):
         elif align == "center":
             x = x - tw / 2
         snap.save()
-        snap.translate(P(round(x), round(y_center - logical.height / 2)))
+        snap.translate(P(math.floor(x + 0.5), math.floor(y_center - logical.height / 2 + 0.5)))
         snap.append_layout(lay, color)
         snap.restore()
         return tw
@@ -511,8 +516,9 @@ class Table(Gtk.Widget, Gtk.Scrollable):
             rh = self._ys[i + 1] - self._ys[i]
             if row.kind == "group":
                 gtxt = row.cells.get(cols[0].key, "")
-                self._text(snap, gtxt, self.f_group, cols[0].x - sx + self.name_pad, y + rh / 2 + 3,
-                           c["fg"], width=last_x)
+                gx = cols[0].x - sx + self.name_pad
+                self._text(snap, gtxt, self.f_group, gx, y + rh - 17, c["fg"],
+                           width=cols[0].x - sx + cols[0].w - gx - 6)
             else:
                 for col in cols:
                     if col.heat and col.key in row.heat and row.heat[col.key] is not None:
@@ -539,11 +545,11 @@ class Table(Gtk.Widget, Gtk.Scrollable):
                         if self.icon_col:
                             if row.expandable:
                                 d = "down" if row.key in self.expanded else "right"
-                                self._chevron(snap, base + 5, y + rh / 2, d, c["fg2"])
+                                self._chevron(snap, base + 6.5, y + rh / 2 - 0.5, d, c["fg2"], s=4)
                             ix = base + self.chev_w
                             if row.icon is not None:
                                 self._icon(snap, row.icon, ix, y + (rh - 16) / 2)
-                            tx = ix + 22
+                            tx = ix + 21
                         self._text(snap, txt, self.f_text, tx, y + rh / 2, fg, width=x + col.w - tx - 6)
                     elif col.key == "status" and row.status:
                         st = row.status
@@ -555,7 +561,7 @@ class Table(Gtk.Widget, Gtk.Scrollable):
                             self._text(snap, txt, self.f_text, x + 6, y + rh / 2, fg, width=col.w - 36)
                     elif txt:
                         if col.align == "right":
-                            self._text(snap, txt, self.f_text, x + col.w - 7, y + rh / 2, fg,
+                            self._text(snap, txt, self.f_text, x + col.w - 6, y + rh / 2 - 0.5, fg,
                                        width=None, align="right")
                         else:
                             self._text(snap, txt, self.f_text, x + 6, y + rh / 2, fg, width=col.w - 12)
@@ -582,7 +588,7 @@ class Table(Gtk.Widget, Gtk.Scrollable):
                 fgc = c["fg"]
                 snap.append_border(b, [1, 1, 1, 1], [fgc, fgc, fgc, fgc])
             pad = self.name_pad if ci == 0 else 6
-            label_y = hh - 12 if self.two_line else hh / 2
+            label_y = hh - 12.5 if self.two_line else hh / 2
             if col.align == "right":
                 tl = self._layout(col.title, self.f_head, col.w - 10)
                 tw = min(tl.get_pixel_extents()[1].width, col.w - 10)

@@ -20,7 +20,7 @@ DARK = {
     "bg": "#202020", "panel": "#191919", "panel-edge": "#1d1d1d", "fg": "#ffffff", "fg2": "#cdcdcd",
     "fg3": "#6d6d6d", "line": "#2d2d2d", "toolbar-line": "#2c2c2c", "hover": "rgba(255,255,255,0.061)",
     "press": "rgba(255,255,255,0.042)", "select": "#2d2d2d", "header-sel": "#272727",
-    "search": "#2d2d2d", "search-border": "#353535", "search-focus": "#1f1f1f", "item-sel": "#272727",
+    "search": "#2d2d2d", "search-border": "#353535", "search-edge": "#303030", "search-bottom": "#303030", "search-focus": "#1f1f1f", "item-sel": "#272727",
     "card": "#2b2b2b", "card-line": "#1d1d1d", "ctl": "#373737", "ctl-hover": "#3c3c3c",
     "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.35)", "shadow": "rgba(0,0,0,0.30)",
     "close-hover": "#c42b1c", "dialog": "#202020", "dialog-foot": "#2b2b2b", "smoke": "rgba(0,0,0,0.3)",
@@ -28,10 +28,10 @@ DARK = {
     "link": "#99ebff", "warn": "#fce100", "leaf": "#6ccb5f",
 }
 LIGHT = {
-    "bg": "#f3f3f3", "panel": "#f9f9f9", "panel-edge": "#e5e5e5", "fg": "#1b1b1b", "fg2": "#5d5d5d",
-    "fg3": "#a0a0a0", "line": "#e5e5e5", "toolbar-line": "#e5e5e5", "hover": "rgba(0,0,0,0.037)",
+    "bg": "#f3f3f3", "panel": "#ffffff", "panel-edge": "#e5e5e5", "fg": "#1b1b1b", "fg2": "#5d5d5d",
+    "fg3": "#a0a0a0", "line": "#e9e9e9", "toolbar-line": "#f0f0f0", "hover": "rgba(0,0,0,0.037)",
     "press": "rgba(0,0,0,0.024)", "select": "#e9e9e9", "header-sel": "#ededed",
-    "search": "#ffffff", "search-border": "#e5e5e5", "search-focus": "#ffffff", "item-sel": "#ededed",
+    "search": "#fbfbfb", "search-border": "#e5e5e5", "search-edge": "#e5e5e5", "search-bottom": "#cccccc", "search-focus": "#ffffff", "item-sel": "#ededed",
     "card": "#ffffff", "card-line": "#e5e5e5", "ctl": "#fbfbfb", "ctl-hover": "#f6f6f6",
     "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.12)", "shadow": "rgba(0,0,0,0.14)",
     "close-hover": "#c42b1c", "dialog": "#f3f3f3", "dialog-foot": "#ffffff", "smoke": "rgba(0,0,0,0.3)",
@@ -41,7 +41,7 @@ LIGHT = {
 
 # heat-map levels (lowest .. hot); dark tones sampled from Windows 11 Task Manager
 HEAT_DARK = ["#11243e", "#08336e", "#0b4a96", "#1460b8", "#1c78d6", "#9a3a12"]
-HEAT_LIGHT = ["#fff4c4", "#f9eca8", "#ffe08a", "#ffd27a", "#ffb64a", "#f7a4a4"]
+HEAT_LIGHT = ["#d6f1ff", "#9cddff", "#79cfff", "#56c0fb", "#36aef3", "#f7a4a4"]  # first two sampled
 
 # graph colours: (line, fill) per resource
 GRAPH_DARK = {"cpu": ("#39b8e3", "#0f313b"), "mem": ("#5c9efa", "#0f1d34"), "disk": ("#84c718", "#2d3e0f"),
@@ -122,7 +122,7 @@ class Theme:
             hue = colorsys.rgb_to_hls(*(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)))[0]
             heat = [_rehue(x, hue) for x in heat[:-1]] + [heat[-1]]
         self.heat = [rgba(x) for x in heat]
-        self.heat_line = rgba("rgba(255,255,255,0.09)" if dark else "rgba(0,0,0,0.06)")
+        self.heat_line = rgba("#29323f" if dark else "#d5e3e9")  # sampled over the lowest heat level
         g = GRAPH_DARK if dark else GRAPH_LIGHT
         self.graph = {k: (rgba(a), rgba(b)) for k, (a, b) in g.items()}
         css = ":root {\n" + "".join(f"  --{k}: {v};\n" for k, v in pal.items()) + "}\n"
