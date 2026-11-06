@@ -151,7 +151,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
             c.parse("#ffffff")
         cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
         cr.set_line_width(1.0)
-        cx, cy = int(w / 2), int(h / 2)
+        cx, cy = int(w / 2) - 1, int(h / 2)     # glyph boxes measured on the reference: x 16..25
         if name == "minimize":
             cr.rectangle(cx - 5, cy, 10, 1)
             cr.fill()
@@ -167,10 +167,11 @@ class NotepadWindow(Gtk.ApplicationWindow):
                 cr.rectangle(cx - 4.5, cy - 4.5, 9, 9)
                 cr.stroke()
         else:
-            cr.move_to(cx - 5, cy - 5)
-            cr.line_to(cx + 5, cy + 5)
-            cr.move_to(cx + 5, cy - 5)
-            cr.line_to(cx - 5, cy + 5)
+            # 10x10 px cross at x 17..26, y 9..18 (anti-aliased, no overshoot)
+            cr.move_to(cx - 3.5, cy - 4.5)
+            cr.line_to(cx + 5.5, cy + 4.5)
+            cr.move_to(cx + 5.5, cy - 4.5)
+            cr.line_to(cx - 3.5, cy + 4.5)
             cr.stroke()
 
     def _menubar(self):
@@ -508,7 +509,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         view.add_css_class("editor")
         view.set_left_margin(16)
         view.set_right_margin(16)
-        view.set_top_margin(18)
+        view.set_top_margin(16)
         view.set_bottom_margin(16)
         view.set_pixels_below_lines(0)
         view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR if s["word_wrap"] else Gtk.WrapMode.NONE)
@@ -735,7 +736,9 @@ class NotepadWindow(Gtk.ApplicationWindow):
 
     def _update_toolbar(self):
         d = self.doc
-        on = bool(d and d.markdown and util.settings()["formatting"]
+        # like Windows: the toolbar is there whenever formatting is on; using it on a plain-text
+        # tab turns the tab into a Markdown one (see _md)
+        on = bool(d and util.settings()["formatting"]
                   and self.main_stack.get_visible_child_name() == "editor")
         self.toolbar.set_visible(on)
         if on:
@@ -972,6 +975,8 @@ class NotepadWindow(Gtk.ApplicationWindow):
         d = self.doc
         if d is None:
             return
+        if not d.markdown:
+            d.set_markdown(True)
         fn(d.buffer, *args)
         self._update_toolbar()
         self.focus_editor()
@@ -995,6 +1000,8 @@ class NotepadWindow(Gtk.ApplicationWindow):
             url = u.get_text().strip()
             if not url:
                 return True
+            if not self.doc.markdown:
+                self.doc.set_markdown(True)
             markdown.insert_link(buf, t.get_text().strip(), url)
             self.focus_editor()
         d = ContentDialog(self, _("Insert link"), box,

@@ -19,7 +19,10 @@ from gi.repository import Gio, GLib, Graphene, Gsk, Gtk, GtkSource  # noqa: E402
 
 from . import i18n, session, theme, util  # noqa: E402
 
-DEMO_TEXT = "Hello from Fenestra. This is a sample line of text.\nSecond line 1234567890"
+# demo documents of the reference captures (pasted, unsaved)
+DEMO_TEXT = ("Lista de la compra (demo)\n\n- Pan integral\n- Leche semidesnatada\n- Manzanas\n\n"
+             "Recordatorio: revisar el informe trimestral antes del viernes.")
+DEMO_NOTES = ("Notas de la reunión (demo)\n\n- Revisar el presupuesto\n- Preparar la presentación\n")
 DEMO_MD = ("# Fenestra Notepad\n\nNotepad keeps **plain text** plain, and gives *Markdown* files a "
            "formatting toolbar.\n\n- Tabs and sessions\n- Find and replace\n- ~~Nothing to install~~\n\n"
            "[Project website](https://github.com/miguelcoxcaballero/fenestra-os)\n")
@@ -31,9 +34,9 @@ def parse_args(argv):
     p.add_argument("--new-window", action="store_true", help="open the files in a new window")
     p.add_argument("--screenshot", metavar="OUT.png", help="render the window to a PNG and quit")
     p.add_argument("--size", default="1428x746", help="window size WxH (screenshot mode)")
-    p.add_argument("--shot", default="main", help="screenshot state: main, menu-file, menu-edit, menu-view, "
+    p.add_argument("--shot", default="main", help="screenshot state: main (= text), empty, menu-file, menu-edit, menu-view, "
                    "menu-recent, menu-zoom, context, find, replace, settings, settings-font, goto, save, markdown, "
-                   "tabs, dialog-error")
+                   "tabs, find-typed, find-options")
     p.add_argument("--dark", action="store_true")
     p.add_argument("--light", action="store_true")
     p.add_argument("--lang", default=None)
@@ -258,6 +261,7 @@ class App(Gtk.Application):
         w.set_default_size(ww, hh)
         w.set_resizable(False)
         shot = o.shot
+        empty = shot in ("empty", "tabs", "settings", "settings-font") or shot.startswith("menu-")
         if shot in ("markdown",):
             d = Document(markdown=True)
             w.add_document(d)
@@ -265,18 +269,19 @@ class App(Gtk.Application):
             d.path = "/home/user/Documents/Notes.md"
             d.buffer.set_modified(False)
             d.emit("changed-meta")
+        elif shot == "tabs":
+            for text in (DEMO_TEXT, DEMO_NOTES):
+                e = Document()
+                w.add_document(e)
+                e.fill(text, modified=True)
+                e.encoding, e.eol = "utf-8", "crlf"
+            d = w.new_tab()
         else:
             d = Document()
             w.add_document(d)
-            d.fill(DEMO_TEXT, modified=True)
+            if not empty:
+                d.fill(DEMO_TEXT, modified=True)
             d.encoding, d.eol = "utf-8", "crlf"
-        if shot == "tabs":
-            for name, text in (("todo.txt", "Buy milk\n"), ("notes.md", "# Notes\n")):
-                e = Document(markdown=name.endswith(".md"))
-                w.add_document(e, activate=False)
-                e.fill(text)
-                e.path = "/home/user/Documents/" + name
-                e.emit("changed-meta")
         w.present()
         GLib.timeout_add(300, self._shot_state, w, d, shot)
 
@@ -308,11 +313,21 @@ class App(Gtk.Application):
             buf.place_cursor(it)
             w._update_status()
             w._context_menu(w.current.view, 400, 18)
-        elif shot in ("find", "replace"):
-            it = buf.get_iter_at_line_offset(0, 41)
+        elif shot in ("find", "find-typed", "find-options", "replace"):
+            it = buf.get_iter_at_line(0)
             it = it[1] if isinstance(it, tuple) else it
+            it.forward_to_line_end()
             buf.place_cursor(it)
+            w._update_status()
             w.show_find(shot == "replace")
+            if shot != "find":
+                w.find.entry.set_text("compra")
+                w.find.entry.set_position(-1)
+                buf.place_cursor(it)
+            if shot == "replace":
+                w.find.toggle.grab_focus()
+            elif shot == "find-options":
+                w.find.opt_btn.emit("clicked")
         elif shot == "settings":
             w.open_settings()
         elif shot == "settings-font":
@@ -360,8 +375,24 @@ class App(Gtk.Application):
             c = c.get_next_sibling()
         return out
 
+    def _dump(self, win, widget):
+        """FENESTRA_SHOT_DEBUG: print the window-relative boxes of the styled widgets."""
+        c = widget.get_first_child()
+        while c is not None:
+            if c.get_mapped():
+                cls = [x for x in c.get_css_classes() if x not in ("text-button", "image-button", "flat")]
+                if cls and c.get_width() > 0:
+                    ok, b = c.compute_bounds(win)
+                    if ok:
+                        print("box", ".".join(cls), int(b.get_x()), int(b.get_y()),
+                              int(b.get_x() + b.get_width()) - 1, int(b.get_y() + b.get_height()) - 1)
+                self._dump(win, c)
+            c = c.get_next_sibling()
+
     def _shoot(self, win):
         w, h = win.get_width(), win.get_height()
+        if os.environ.get("FENESTRA_SHOT_DEBUG"):
+            self._dump(win, win)
         snap = Gtk.Snapshot()
         Gtk.WidgetPaintable.new(win).snapshot(snap, w, h)
         wx, wy = win.get_surface_transform()

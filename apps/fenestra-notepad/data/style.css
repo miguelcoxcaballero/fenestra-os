@@ -21,7 +21,7 @@ windowhandle.titlebar, .titlebar {
   min-height: 0; padding: 0; margin: 0; border: none; box-shadow: none; background-color: var(--strip);
 }
 .titlebar-row { min-height: 41px; background-color: var(--strip); }
-.title-icon { margin: 9px 6px 0 17px; }
+.title-icon { margin: 9px 8px 0 15px; }
 .settings-titlebar { min-height: 41px; }
 button.title-back {
   min-width: 40px; min-height: 32px; margin: 4px 0 0 4px; padding: 0;
@@ -34,22 +34,22 @@ button.title-back image { -gtk-icon-size: 16px; }
 
 .tab-scroller, .tab-scroller > viewport { background: none; }
 .tab-scroller scrollbar { opacity: 0; min-height: 0; }
-.tabs { padding: 0 8px; }
+.tabs { padding: 0 0 0 8px; }
 .tab {
   min-height: 32px; margin-top: 9px;
-  padding-left: 9px;
   background: none;
 }
-.tab-title { font-size: 12px; color: var(--fg); }
+.tab-title { font-size: 12px; color: var(--fg2); margin-left: 9px; }
+.tab.active .tab-title { color: var(--fg); font-weight: 600; }
 button.tab-close {
-  min-width: 24px; min-height: 24px; padding: 0; margin: 0 10px 0 4px;
+  min-width: 32px; min-height: 24px; padding: 0; margin: 0 6px 0 4px;
   border: none; border-radius: 4px; background: none; box-shadow: none;
 }
 button.tab-close:hover { background-color: var(--hover); }
 button.tab-close image { color: var(--fg); }
 .tab-dot { min-width: 6px; min-height: 6px; border-radius: 3px; background-color: var(--dot); }
 button.tab-new {
-  min-width: 28px; min-height: 28px; padding: 0; margin: 0 0 2px 0;
+  min-width: 32px; min-height: 24px; padding: 0; margin: 0 0 2px 6px;
   border: none; border-radius: 4px; background: none; box-shadow: none;
 }
 button.tab-new:hover { background-color: var(--hover); }
@@ -73,28 +73,30 @@ button.caption.close:hover { background-color: var(--close-hover); }
 }
 .menubar-items { padding-left: 4px; }
 button.menubar-item {
-  min-width: 0; min-height: 31px; padding: 0 11px; margin: 0 6px 1px 0;
+  min-width: 0; min-height: 32px; padding: 0 10px; margin: 0 8px 0 0;
   border: none; border-radius: 4px; background: none; box-shadow: none;
   font-size: 14px; font-weight: normal; color: var(--fg);
 }
 button.menubar-item > label, button.st-btn > label, button.tool-btn > label { min-width: 0; }
 button.menubar-item:hover, button.menubar-item:checked { background-color: var(--hover); }
 button.menubar-item:active { background-color: var(--press); }
-.menubar-right { padding-right: 7px; }
+.menubar-right { padding-right: 8px; }
+.menubar-right button.tool-btn { min-width: 30px; }
 button.tool-btn, button.flat-btn {
-  min-width: 32px; min-height: 30px; padding: 0; margin: 0 0 1px 0;
+  min-width: 32px; min-height: 32px; padding: 0; margin: 0;
   border: none; border-radius: 4px; background: none; box-shadow: none; color: var(--fg);
 }
 button.tool-btn:hover, button.flat-btn:hover { background-color: var(--hover); }
 button.tool-btn:active, button.flat-btn:active { background-color: var(--press); }
-button.tool-btn.tool-drop { padding: 0 7px 0 9px; margin-right: 8px; }
+button.tool-btn.tool-drop { padding: 0 11px 0 10px; }
 .tool-text { font-size: 14px; }
-.tool-chevron { margin-left: 8px; color: var(--fg2); }
+.tool-chevron { margin-left: 7px; color: var(--fg2); }
+.tool-text + .tool-chevron { margin-left: 5px; }
 .format-toolbar { }
 
 /* ------------------------------------------------------------------ editor */
 .editor-stack, scrolledwindow.editor-scroller { background-color: var(--editor); }
-textview.editor { line-height: 1.27; }
+textview.editor { line-height: 1.04; }
 textview.editor, textview.editor > text {
   background-color: var(--editor);
   color: var(--text);
@@ -115,7 +117,7 @@ textview.editor > border { background-color: var(--editor); }
   color: var(--fg2);
 }
 .st-text, window.notepad label.st-text { font-size: 12px; color: var(--fg2); }
-.st-sep { min-width: 1px; min-height: 16px; background-color: var(--line); }
+.st-sep { min-width: 1px; min-height: 16px; background-color: var(--st-sep); }
 .st-seg { padding-left: 11px; }
 .st-pos { padding-left: 22px; min-width: 74px; }
 .st-chars { padding-left: 8px; min-width: 199px; }
@@ -265,7 +267,7 @@ image.combo-chevron { color: var(--fg2); margin-left: 8px; }
 .dialog-foot {
   padding: 24px;
   background-color: var(--dialog-foot);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--dlg-line);
   border-radius: 0 0 8px 8px;
 }
 

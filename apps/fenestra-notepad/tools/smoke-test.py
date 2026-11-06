@@ -129,7 +129,7 @@ def phase1(a):
     check(w.st_chars.get_label() == f"{len(SAMPLE)} characters", f"status chars {w.st_chars.get_label()!r}")
     check(w.st_eol_lbl.get_label() == "LF", "status eol")
     check(w.st_enc_lbl.get_label() == "UTF-8", "status encoding")
-    check(not w.toolbar.get_visible(), "toolbar hidden for plain text")
+    check(w.toolbar.get_visible(), "toolbar shown for plain text (formatting on)")
 
     # ---- edit + save every encoding, verify bytes on disk
     for n, (enc, eol) in EXPECT.items():
@@ -292,7 +292,7 @@ def phase1(a):
     yield 50
     w.open_menu.popdown()
     w.set_markdown(False)
-    check(not w.toolbar.get_visible(), "toolbar hidden after switching to plain text")
+    check(w.toolbar.get_visible() and not md.markdown, "toolbar stays after switching to plain text")
 
     # ---- settings page
     w.open_settings()

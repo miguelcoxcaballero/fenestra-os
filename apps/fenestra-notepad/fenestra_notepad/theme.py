@@ -21,7 +21,7 @@ ACCENTS = {  # GNOME accent-color -> (light-mode accent, dark-mode accent)
 }
 
 LIGHT = {
-    "strip": "#e8e8e8", "layer": "#f8f8f8", "editor": "#f9f9f9", "line": "#eaeaea",
+    "strip": "#e8e8e8", "layer": "#f8f8f8", "editor": "#f9f9f9", "line": "#eaeaea", "st-sep": "#eaeaea", "dlg-line": "#eaeaea",
     "tab-border": "#dadada", "tab-hover": "rgba(0,0,0,0.037)", "tab-sep": "rgba(0,0,0,0.16)",
     "fg": "#1a1a1a", "text": "#000000", "fg2": "#5e5e5e", "fg3": "#9f9f9f", "glyph2": "#747474",
     "hover": "rgba(0,0,0,0.037)", "press": "rgba(0,0,0,0.024)",
@@ -37,7 +37,7 @@ LIGHT = {
     "link": "#003e92", "current-line": "rgba(0,0,0,0.0)", "match": "rgba(255,200,0,0.45)",
 }
 DARK = {
-    "strip": "#202020", "layer": "#282828", "editor": "#272727", "line": "#1d1d1d",
+    "strip": "#202020", "layer": "#2c2c2c", "editor": "#272727", "line": "#272727", "st-sep": "#3d3d3d", "dlg-line": "#1d1d1d",
     "tab-border": "#1c1c1c", "tab-hover": "rgba(255,255,255,0.061)", "tab-sep": "rgba(255,255,255,0.16)",
     "fg": "#ffffff", "text": "#ffffff", "fg2": "#cfcfcf", "fg3": "#787878", "glyph2": "#9a9a9a",
     "hover": "rgba(255,255,255,0.061)", "press": "rgba(255,255,255,0.042)",
