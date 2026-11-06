@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Pinned tile (80 px wide, icon 32, 12 px label) and Grid view cell.
+// Pinned tile and Grid view cell: a 96 × 84 cell (start.pinned.tile.*), 32 px icon 12 px from the
+// top, 12 px label below it on up to two lines (design/tokens.json).
 import QtQuick
 import Fenestra.Shell
 
@@ -9,33 +10,40 @@ Item {
     property string name
     property string icon
     property int tileWidth: Metrics.startTileWidth
+    property int tileHeight: Metrics.startTileHeight
     signal activated()
     signal contextRequested(real x, real y)
-    width: tileWidth + 8; height: 77
+    width: tileWidth; height: tileHeight
     Accessible.role: Accessible.Button
     Accessible.name: name
     Rectangle {
-        x: 4; width: tile.tileWidth; height: 69
+        anchors.fill: parent
+        anchors.margins: 2
         radius: Metrics.controlRadius
-        color: m.pressed ? Theme.pressed : m.containsMouse ? Theme.hover : "transparent"
+        color: m.pressed ? Theme.pressed : m.containsMouse ? Metrics.themed("start.hover") : "transparent"
     }
     Image {
         id: img
-        x: 4 + (tile.tileWidth - 32) / 2; y: 8
-        width: 32; height: 32
-        sourceSize: Qt.size(32 * Screen.devicePixelRatio, 32 * Screen.devicePixelRatio)
+        readonly property int size: Metrics.tok("start.pinned.icon", 32)
+        x: Math.round((tile.width - size) / 2); y: Metrics.tok("start.pinned.icon.top", 12)
+        width: size; height: size
+        sourceSize: Qt.size(size * Screen.devicePixelRatio, size * Screen.devicePixelRatio)
         source: "image://icon/" + tile.icon
         scale: m.pressed ? 0.9 : 1
         Behavior on scale { NumberAnimation { duration: 110 } }
     }
     Text {
-        x: 4; y: 46; width: tile.tileWidth
+        x: 4; y: Metrics.tok("start.pinned.label.top", 48); width: tile.width - 8
         horizontalAlignment: Text.AlignHCenter
         text: tile.name
+        wrapMode: Text.Wrap
+        maximumLineCount: 2
         elide: Text.ElideRight
+        lineHeightMode: Text.FixedHeight
+        lineHeight: 16
         color: Theme.text
         font.family: Metrics.fontFamily
-        font.pixelSize: 12
+        font.pixelSize: Metrics.fontCaption
     }
     MouseArea {
         id: m
