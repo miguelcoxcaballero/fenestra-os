@@ -1,0 +1,6 @@
+@scheme dark
+click 497 522
+wait 1500
+move 1900 30
+wait 600
+shot dark-folder-details-normal

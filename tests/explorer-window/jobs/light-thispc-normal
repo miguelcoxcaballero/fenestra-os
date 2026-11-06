@@ -1,0 +1,3 @@
+@scheme light
+@open computer:///
+shot light-thispc-normal

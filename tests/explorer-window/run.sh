@@ -9,6 +9,9 @@
 #   anything else            explorerqa@local script lines (see its extension.js)
 # The window is placed at the reference box: frame 408,206 1123x632, so the 1 px outline GTK draws outside the frame lands on the reference border (407,205 1125x634) unless the job says `win ...`.
 #   [LANGDIR=DIR] tests/explorer-window/run.sh OUT JOB...
+# jobs/ holds one job per reference state (reference-shots apps/*-100-40-explorer-*), named
+# after the screenshot it takes; the window's Documentos row is at (497, 522) here because the
+# navigation pane has no OneDrive row.
 # The image has no Spanish locale or translations (Nautilus' own strings come out in English);
 # LANGDIR may hold usr/share/locale/es and usr/lib/locale/es_ES.utf8 unpacked from Fedora's
 # glibc-langpack-es, nautilus, gtk4, libadwaita and glib2 packages, copied over the image's.

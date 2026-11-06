@@ -1,0 +1,8 @@
+@scheme dark
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+click 1000 650 3
+wait 1500
+shot dark-folder-menu-context-background

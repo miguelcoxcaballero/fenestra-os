@@ -1,0 +1,8 @@
+@scheme light
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+click 962 318
+wait 1200
+shot light-folder-menu-ver
