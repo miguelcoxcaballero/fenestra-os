@@ -15,9 +15,9 @@ run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin
 | B05 | Weather at the left (icon, temperature, condition) opens Weather; hidden when left-aligned or without data; Settings option | pending (VM) | CODE | libgweather service; needs a real location (VM) |
 | B06 | Search in four modes (hidden, icon, icon + label, box), live, light and dark | pending (VM) | PASS-CONTAINER | checks B06-icon-label, light-mode; screenshots 01, 05, 06, 07 |
 | B07 | Empty-area right click: Task Manager, Taskbar settings; no context menu on Start | pending (VM) | PASS-CONTAINER | check B07-taskbar-menu; Start has no menu |
-| B08 | Tray: overflow ^, language/keyboard, Wi-Fi, volume, battery, clock and date; mic/camera/location in use | pending (VM) | TODO | clock only; tray icons in H2 part 2 / H4 |
+| B08 | Tray: overflow ^, language/keyboard, Wi-Fi, volume, battery, clock and date; mic/camera/location in use | pending (VM) | PARTIAL | app tray (StatusNotifierItem host + dbusmenu) and keyboard layout: checks B08-*; Wi-Fi/volume/battery glyphs written (NetworkManagerQt, PulseAudioQt, UPower), need the VM; privacy glyphs in H4 |
 | B09 | Show desktop corner | pending (VM) | CODE | show_desktop request; not clicked in the bench yet |
-| B10 | Multi-monitor and scaling (taskbar per monitor, flyouts on the right monitor) | pending (VM) | TODO | one taskbar per screen in code; run with OUTPUTS=2 pending |
+| B10 | Multi-monitor and scaling (taskbar per monitor, flyouts on the right monitor) | pending (VM) | PASS-CONTAINER | OUTPUTS=2 bench: check B10-taskbar-per-output (one taskbar and wallpaper per output); scaling in the VM |
 | B11 | Every taskbar flyout 12 px above the taskbar and 13 px from the screen edge, no arrow | pending (VM) | PASS-CONTAINER | Flyout.qml margins 12/13 + layer-shell exclusive zone; screenshots 02–04 |
 | S01 | Start: search box, Pinned, Recommended, All apps (category, grid, list), account and power menus | pending (VM) | TODO |  |
 | S02 | Start open/close animation, acrylic, no strip above the search box, no accent underline on focus | pending (VM) | TODO |  |

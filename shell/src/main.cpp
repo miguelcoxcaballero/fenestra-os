@@ -9,6 +9,7 @@
 #include <QQuickWindow>
 
 #include "testprobe.h"
+#include "trayitems.h"
 
 namespace
 {
@@ -58,6 +59,8 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("icon"), new IconProvider);
+    engine.addImageProvider(QStringLiteral("sni"), new TrayImageProvider);
+    TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("Fenestra.Shell", "Main");

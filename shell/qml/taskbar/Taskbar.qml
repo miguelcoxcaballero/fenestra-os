@@ -9,10 +9,12 @@ Window {
     id: bar
     required property var targetScreen
 
-    screen: targetScreen
     height: Metrics.taskbarHeight
     color: "transparent"
-    visible: true
+    // Shown only once the screen is set: a layer surface binds to its output when it is created.
+    visible: false
+    Component.onCompleted: { ShellUtil.placeOnScreen(bar, targetScreen.name); visible = true }
+    LayerShell.Window.screenConfiguration: LayerShell.Window.ScreenFromQWindow
     LayerShell.Window.scope: "fenestra-taskbar"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft
@@ -109,11 +111,12 @@ Window {
     }
 
     // Tray area and clock (B08); the system icons and their flyouts come with H4.
-    Row {
+    Tray {
         id: tray
+        targetScreen: bar.targetScreen
         anchors { right: parent.right; rightMargin: 12; top: parent.top; bottom: parent.bottom }
-        spacing: 4
-        Clock { anchors.verticalCenter: parent.verticalCenter }
+        onQuickSettingsRequested: (x) => ShellState.toggleQuickSettings(bar.targetScreen, x)
+        onCalendarRequested: (x) => ShellState.toggleCalendar(bar.targetScreen, x)
     }
 
     // "Show desktop" corner (B09): the last pixels at the right end.
@@ -136,7 +139,9 @@ Window {
         preview.anchorX = b.mapToItem(null, b.width / 2, 0).x
         preview.open()
     }
-    function testCloseFlyouts() { preview.close(); appMenu.close(); barMenu.close() }
+    function testOverflow() { tray.testOverflow() }
+    function testMenuOfTray(row) { tray.testMenu(row) }
+    function testCloseFlyouts() { preview.close(); appMenu.close(); barMenu.close(); tray.testCloseFlyouts() }
 
     Timer {
         id: previewTimer

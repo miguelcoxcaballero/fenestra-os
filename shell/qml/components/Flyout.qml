@@ -19,13 +19,13 @@ Window {
 
     signal dismissed()
 
-    screen: targetScreen
     color: "transparent"
     flags: Qt.FramelessWindowHint
     width: body.childrenRect.width + 2 * padding
     height: body.childrenRect.height + 2 * padding
     visible: false
 
+    LayerShell.Window.screenConfiguration: LayerShell.Window.ScreenFromQWindow
     LayerShell.Window.scope: "fenestra-flyout"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
@@ -41,7 +41,7 @@ Window {
     LayerShell.Window.keyboardInteractivity: takesFocus ? LayerShell.Window.KeyboardInteractivityOnDemand
                                                        : LayerShell.Window.KeyboardInteractivityNone
 
-    function open() { visible = true; if (takesFocus) requestActivate() }
+    function open() { if (targetScreen) ShellUtil.placeOnScreen(flyout, targetScreen.name); visible = true; if (takesFocus) requestActivate() }
     function close() { if (visible) { visible = false; dismissed() } }
     function toggle() { visible ? close() : open() }
 

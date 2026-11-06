@@ -15,6 +15,7 @@ QtObject {
         "Close window": "Cerrar ventana",
         "Close all windows": "Cerrar todas las ventanas",
         "Show desktop": "Mostrar escritorio",
+        "Show hidden icons": "Mostrar iconos ocultos",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }
 }

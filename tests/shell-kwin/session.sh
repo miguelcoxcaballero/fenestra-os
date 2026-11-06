@@ -50,6 +50,8 @@ conf() { mkdir -p ~/.config/fenestra; printf '%s\n' "$@" > ~/.config/fenestra/sh
 
 session() {
     export WAYLAND_DISPLAY=wayland-fen
+    # Two keyboard layouts (KWin reads kxkbrc at start): the tray shows the layout indicator.
+    mkdir -p ~/.config; printf '[Layout]\nUse=true\nLayoutList=es,us\n' > ~/.config/kxkbrc
     kwin_wayland --virtual --xwayland --socket wayland-fen --width "$W" --height "$H" --output-count "${OUTPUTS:-1}" > /out/kwin.log 2>&1 &
     KWIN=$!
     wait_for '[ -S $XDG_RUNTIME_DIR/wayland-fen ]' 60 || { log "CHECK kwin-start FAIL"; return 1; }
@@ -71,7 +73,26 @@ import gi; gi.require_version('Gtk','3.0'); from gi.repository import Gtk
 w=Gtk.Window(title='X11 client'); w.set_default_size(520,320); w.connect('destroy',Gtk.main_quit); w.show_all(); Gtk.main()" >/out/x11.log 2>&1 &
     check B02-unpinned-app-button wait_for 'is "$(probe "TaskbarModel.rowCount()")" 3' 60
     sleep 2
+    # B08: an app's StatusNotifierItem shows in the overflow flyout; activation and its menu work.
+    python3 /src/tests/shell-kwin/sni-item.py > /out/sni.log 2>&1 &
+    check B08-tray-item wait_for 'is "$(probe "TrayItems.count")" 1' 20
+    check B08-keyboard-layouts wait_for 'is "$(probe "KeyboardStatus.count")" 2' 20
+    probe "TrayItems.activate(0, 10, 10)" >/dev/null
+    check B08-tray-activate wait_for 'grep -q SNI_ACTIVATE /out/sni.log' 10
+    probe "$(bar 'testOverflow()')" >/dev/null; sleep 1; check B08-overflow shot 01b-overflow
+    probe "$(bar 'testCloseFlyouts()')" >/dev/null
+    probe "screensView.objectAt(0).taskbar.children" >/dev/null
+    probe "$(bar 'testMenuOfTray(0)')" >/dev/null; sleep 1; check B08-item-menu shot 01c-item-menu
+    probe "TrayItems.triggerMenuItem(0, 2)" >/dev/null
+    check B08-menu-event wait_for 'grep -q "SNI_MENU_CLICKED 2" /out/sni.log' 10
+    probe "$(bar 'testCloseFlyouts()')" >/dev/null
     check screenshot shot 01-taskbar
+    # B10: one taskbar and one wallpaper on every output.
+    check B10-taskbar-per-output python3 -c "
+import json, sys
+s = json.load(open('/out/01-taskbar/surfaces.json'))
+bars = {tuple(x['screen']) for x in s if x['scope'] == 'fenestra-taskbar'}
+sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "$(bar 'testPreview(0)')" >/dev/null; sleep 1; check B03-preview shot 02-preview
     probe "$(bar 'testCloseFlyouts()')" >/dev/null
     probe "$(bar 'testButton(0).rightClicked()')" >/dev/null; sleep 1; check B02-app-menu shot 03-app-menu

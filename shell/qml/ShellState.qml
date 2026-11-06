@@ -6,6 +6,10 @@ import QtQuick
 QtObject {
     signal startRequested(var screen, real anchorX)
     signal searchRequested(var screen, real anchorX)
+    signal quickSettingsRequested(var screen, real anchorX)
+    signal calendarRequested(var screen, real anchorX)
+    function toggleQuickSettings(screen, x) { quickSettingsRequested(screen, x) }
+    function toggleCalendar(screen, x) { calendarRequested(screen, x) }
     function toggleStart(screen, x) { startRequested(screen, x) }
     function toggleSearch(screen, x) { searchRequested(screen, x) }
 }

@@ -15,6 +15,8 @@ find_package(ECM 6.0 REQUIRED NO_MODULE)
 find_package(KF6Service 6.10 REQUIRED)
 find_package(KF6KIO 6.10 REQUIRED)
 find_package(KF6WindowSystem 6.10 REQUIRED)
+find_package(KF6NetworkManagerQt 6.10 REQUIRED)
+find_package(KF6PulseAudioQt 1.5 REQUIRED)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${ECM_FIND_MODULE_DIR})
 find_package(WaylandScanner REQUIRED)
 find_package(QtWaylandScanner REQUIRED)
@@ -29,9 +31,12 @@ qt_add_executable(fenestra-shell
     src/core/testprobe.cpp src/core/testprobe.h
     src/core/shellsettings.cpp src/core/shellsettings.h
     src/core/theme.cpp src/core/theme.h
+    src/core/shellutil.h
     src/services/apps.cpp src/services/apps.h
     src/services/taskbarmodel.cpp src/services/taskbarmodel.h
     src/services/weather.cpp src/services/weather.h
+    src/services/status.cpp src/services/status.h
+    src/services/trayitems.cpp src/services/trayitems.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -65,6 +70,9 @@ qt_add_qml_module(fenestra-shell
         qml/taskbar/TaskPreview.qml
         qml/taskbar/Taskbar.qml
         qml/taskbar/WeatherButton.qml
+        qml/tray/SymbolicIcon.qml
+        qml/tray/Tray.qml
+        qml/tray/TrayButton.qml
 )
 
 target_include_directories(fenestra-shell PRIVATE src/core src/services ${CMAKE_CURRENT_BINARY_DIR})
@@ -73,7 +81,7 @@ target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJ
 target_link_libraries(fenestra-shell PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::DBus Qt6::WaylandClient Qt6::WaylandClientPrivate
     LayerShellQt::Interface Wayland::Client
-    KF6::Service KF6::KIOGui KF6::WindowSystem PkgConfig::GWEATHER)
+    KF6::Service KF6::KIOGui KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt PkgConfig::GWEATHER)
 
 install(TARGETS fenestra-shell RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.fenestra.Shell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
