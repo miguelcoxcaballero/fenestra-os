@@ -235,7 +235,7 @@ class Chooser:
     def commandbar(self):
         controls = by_id(self.window, 'view_controls')
         if controls:
-            controls.set_margin_end(55)  # the reference has Help (?) there; Nautilus has no help here
+            controls.set_margin_end(54)  # the reference has Help (?) there; Nautilus has no help here
             split = find(controls, lambda w: kind(w) == 'AdwSplitButton')
             main = split.get_first_child() if split else None
             if isinstance(main, Gtk.Button):
