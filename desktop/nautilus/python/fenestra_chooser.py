@@ -368,9 +368,22 @@ class Chooser:
         width, height = self.window.get_width(), self.window.get_height()
         if hidden:
             self._height = height
-            self.window.set_default_size(width, 1)
+            self._min = self.window.get_size_request()
+            self.window.set_size_request(self._min[0], -1)  # the template's 348 px minimum is for the folders
+            GLib.idle_add(self.fit_height)
         else:
+            self.window.set_size_request(*getattr(self, '_min', (-1, -1)))
             self.window.set_default_size(width, getattr(self, '_height', SIZE[1]))
+
+    def fit_height(self):
+        """With the folders hidden the dialog is its title bar over the name / type fields and buttons."""
+        width = self.window.get_width()
+        title = find(self.window, lambda w: w.has_css_class('win11-dialog-titlebar'))
+        bottom = by_id(self.window, 'bottom_toolbar')
+        if title and bottom:
+            height = title.measure(Gtk.Orientation.VERTICAL, width)[1] + bottom.measure(Gtk.Orientation.VERTICAL, width)[1]
+            self.window.set_default_size(width, height)
+        return GLib.SOURCE_REMOVE
 
     # -- slot: navigation pane, Details view ---------------------------------------------------
     def tick(self):

@@ -522,8 +522,8 @@ window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text { mi
 window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text { padding: 0 15px 0 14px; }
 window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:hover,
 window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:hover { background: #4d4d4d; }
+window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:checked { background: transparent; box-shadow: inset 0 0 0 1px #ffffff; }
 window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:active,
-window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:checked,
 window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:active { background: #666666; }
 window.win11-chooser.win11-explorer .win11-commandbar .win11-cmd-label { font-size: 12px; color: #ffffff; }
 window.win11-chooser.win11-explorer .win11-commandbar image.win11-cmd-chevron { margin: 0; opacity: 1; -gtk-icon-size: 16px; }
@@ -610,15 +610,15 @@ window.win11-chooser.win11-explorer .win11-chooser-open-row button.win11-dialog-
 window.win11-chooser.win11-explorer button.win11-dialog-button.default { border-color: #ffffff; border-bottom-color: #e5e5e5; }
 window.win11-chooser.win11-explorer button.win11-dialog-button:hover { background: #454545; }
 window.win11-chooser.win11-explorer button.win11-dialog-button:active { background: #666666; }
-/* Organize menu 185 px: rows 22 px from y 8, separators 9 px, highlight 6 px in. */
+/* Organize menu 185 px: rows 22 px from 2 px under its top border, separators 9 px, highlight 6 px in. */
 window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu { padding: 0; margin: 0; }
-window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu > contents { min-width: 183px; padding: 8px 0 6px 0; margin: 0; border: 1px solid #808080; border-radius: 0; background: #2b2b2b; box-shadow: none; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu > contents { min-width: 183px; padding: 2px 0 2px 0; margin: 0; border: 1px solid #808080; border-radius: 0; background: #2b2b2b; box-shadow: none; }
 window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton { min-height: 22px; padding: 0 8px 0 3px; margin: 0 5px; border-radius: 0; }
 window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton label { font-size: 12px; color: #ffffff; }
 window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:disabled label { color: #6d6d6d; }
 window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:disabled image { opacity: 0.45; }
 window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:hover { background: #353535; }
-window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton > image { margin-right: 12px; -gtk-icon-size: 16px; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton > image { margin-right: 13px; -gtk-icon-size: 16px; }
 window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { min-height: 1px; margin: 4px 6px 4px 8px; background: #3e3e3e; }
 @media (prefers-color-scheme: light) {
   window.win11-chooser.win11-explorer.csd { box-shadow: 0 0 0 1px #aeaeae, 0 4px 16px 2px rgba(0,0,0,0.18); }
@@ -640,8 +640,8 @@ window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { m
   window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:hover,
   window.win11-chooser.win11-explorer .win11-commandbar splitbutton > button:hover,
   window.win11-chooser.win11-explorer .win11-commandbar splitbutton > menubutton > button:hover { background: #dcebf4; box-shadow: inset 0 0 0 1px #0078d4; }
+  window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:checked { background: transparent; box-shadow: inset 0 0 0 1px #000000; }
   window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:active,
-  window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:checked,
   window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:active { background: #c3e1f0; }
   window.win11-chooser.win11-explorer .win11-commandbar .win11-cmd-label { color: #1e395b; }
   window.win11-chooser.win11-explorer overlay-split-view > .sidebar-pane { background: #ffffff; box-shadow: none; }
