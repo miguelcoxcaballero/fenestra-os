@@ -16,9 +16,9 @@ Branch `feature/fenestra-shell-kwin`. Tested only in the headless KWin bench
 | H6 windows | mostly done in the container | Fenestra decoration (Aurorae, loaded by KWin), Alt+Tab theme, Snap Layouts (window placed exactly), Task View (KWin Overview), first-login curtain. **Missing:** rounded window corners (needs a KWin effect; GL), Snap Layouts on hovering maximize |
 | H7 apps | in progress | session integration done (portals, autostart, mimeapps, search launcher); Fenestra Settings backends being split for the KWin session |
 | H8 lock | lock screen done (render test) | kscreenlocker look-and-feel `org.fenestra.desktop`; real PAM / Howdy / fingerprint unlock and the login screen: VM / laptop |
-| H9 migrator | backend done | `fenestra-migrate` phases tested in the container; the Settings page comes after the backend split |
+| H9 migrator | backend + delivery done in the container | `fenestra-migrate` ships in the Fenestra overlay (so Settings › Fenestra Update shows «Migrar a KDE» on a GNOME install); it downloads `fenestra-shell` from the rolling release `fenestra-shell-latest` (`.github/workflows/shell-rpm.yml`, one build per commit of `main`, `index.json` + `SHA256SUMS`), verifies it and installs it with dnf. check / dry run / run / boot test / update-shell / rollback tested in a Fedora 45 GNOME container against a local copy of the release. **Missing:** first published release (after the merge to main), the run on a real PC through pkexec |
 | H10 performance | protocol + container numbers | PERF.md; laptop comparison with GNOME pending |
-| H11 install | RPM + kickstart | `fenestra-shell` RPM builds; the ISO ships it; GNOME stays the default session until the VM checklist passes |
+| H11 install | RPM + kickstart + CI release | `fenestra-shell` RPM builds (Release `<commit date>.git<id>`); the ISO ships it; CI publishes it for every commit of `main`; GNOME stays the default session until the VM checklist passes |
 
 ## How to run the bench
 
@@ -36,3 +36,24 @@ without OpenGL (FEASIBILITY.md).
 
 - Acrylic: KWin blur plus a tint, instead of the GNOME layer's luminosity remap.
 - Live window thumbnails: not yet (window list with close buttons instead).
+
+## How «Migrar a KDE» gets the Fenestra session
+
+1. `.github/workflows/shell-rpm.yml` builds `packaging/fenestra-shell.spec` in a Fedora 45 container
+   for every push to `main` and uploads the RPM, `index.json` and `SHA256SUMS`
+   (`packaging/rpm-index.py`, newest 10 builds) to the pre-release `fenestra-shell-latest`.
+   Pull requests and other branches only build it (workflow artifact).
+2. Settings › Fenestra Update › «Migrar a KDE» runs `pkexec /usr/libexec/fenestra/fenestra-migrate`
+   (installed by `build/build-overlay.sh`, i.e. by every Fenestra install and update — not by the RPM,
+   so removing the RPM keeps it). `check` reads `index.json` and picks the build of the installed
+   commit (`/usr/share/fenestra/release.json`), else the newest one for the same Fedora version;
+   `download` fetches it to `/var/cache/fenestra/migrate`, compares its SHA-256 with `index.json`
+   and `SHA256SUMS` and its RPM header; `simulate`/`install` run dnf on the Fedora runtime packages
+   plus that local file. Errors (no build published, 404, no network, checksum) end in the state
+   file's `error`, shown by Settings; `rollback --remove-packages` removes what was installed and the cache.
+3. Later Fenestra updates (`fenestra-update`) run `fenestra-migrate update-shell` when
+   `fenestra-shell` is installed: the build of the new commit, boot-tested, and the previous build
+   put back with `dnf downgrade` if the test fails.
+
+Container test (no pkexec, so the source can be overridden): `FENESTRA_SHELL_RPM_BASE=http://127.0.0.1:8000/`
+(or `file:///dir/`) points to a directory with the same three kinds of files.

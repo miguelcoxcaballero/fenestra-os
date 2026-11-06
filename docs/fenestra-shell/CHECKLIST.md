@@ -58,7 +58,7 @@ run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin
 | C05 | Personalization: light/dark, 48 accents + custom (#0078D4 default) everywhere; backgrounds; taskbar (B01, B05, B06); Start; lock screen; icon pack import | pending (VM) | TODO |  |
 | C06 | Apps (installed, defaults, startup), Accounts (users, autologin, sign-in options with the Hello wizard) | pending (VM) | TODO |  |
 | C07 | Time and language, Gaming, Accessibility, Privacy and security | pending (VM) | TODO |  |
-| C08 | Fenestra Update: Fedora + Flatpak updates, Fenestra builds from GitHub with changelog, next Fedora release with checks and screens, «Migrar a KDE» | pending (VM) | PARTIAL | «Migrar a KDE» backend tested in the container; Settings page pending |
+| C08 | Fenestra Update: Fedora + Flatpak updates, Fenestra builds from GitHub with changelog, next Fedora release with checks and screens, «Migrar a KDE» | pending (VM) | PARTIAL | «Migrar a KDE»: overlay ships the migrator, so the section shows on GNOME; RPM from the CI rolling release, check / dry run / install / boot test / rollback tested in a Fedora 45 GNOME container; real PC (pkexec, GitHub download) pending |
 | C09 | Recovery: Reset this PC (keep files, remove everything) — VM only | pending (VM) | TODO |  |
 | C10 | «Fenestra» section with the former GNOME options | pending (VM) | TODO |  |
 | C11 | Read-only and demo modes; gnome-control-center <panel> opens the Fenestra Settings page | pending (VM) | TODO |  |
