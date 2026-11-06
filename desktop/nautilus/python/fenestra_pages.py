@@ -120,8 +120,8 @@ class Page:
 # ------------------------------------------------------------------ Home ---
 class HomePage(Page):
     PINNED = [(GLib.UserDirectory.DIRECTORY_DESKTOP, 'Desktop', 'user-desktop'),
-              (GLib.UserDirectory.DIRECTORY_DOCUMENTS, 'Documents', 'folder-documents'),
               (GLib.UserDirectory.DIRECTORY_DOWNLOAD, 'Downloads', 'folder-download'),
+              (GLib.UserDirectory.DIRECTORY_DOCUMENTS, 'Documents', 'folder-documents'),
               (GLib.UserDirectory.DIRECTORY_PICTURES, 'Pictures', 'folder-pictures'),
               (GLib.UserDirectory.DIRECTORY_MUSIC, 'Music', 'folder-music'),
               (GLib.UserDirectory.DIRECTORY_VIDEOS, 'Videos', 'folder-videos')]

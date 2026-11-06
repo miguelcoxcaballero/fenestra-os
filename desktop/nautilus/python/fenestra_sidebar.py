@@ -50,7 +50,7 @@ class FenestraSidebar:
         self.home=Path.home()
         U=GLib.UserDirectory
         ensure_gallery()
-        names=[(U.DIRECTORY_DESKTOP,'Desktop','user-desktop'),(U.DIRECTORY_DOCUMENTS,'Documents','folder-documents'),(U.DIRECTORY_DOWNLOAD,'Downloads','folder-download'),(U.DIRECTORY_PICTURES,'Pictures','folder-pictures'),(U.DIRECTORY_MUSIC,'Music','folder-music'),(U.DIRECTORY_VIDEOS,'Videos','folder-videos')]
+        names=[(U.DIRECTORY_DESKTOP,'Desktop','user-desktop'),(U.DIRECTORY_DOWNLOAD,'Downloads','folder-download'),(U.DIRECTORY_DOCUMENTS,'Documents','folder-documents'),(U.DIRECTORY_PICTURES,'Pictures','folder-pictures'),(U.DIRECTORY_MUSIC,'Music','folder-music'),(U.DIRECTORY_VIDEOS,'Videos','folder-videos')]
         self.entries={}
         for i,(kind,label,icon) in enumerate(names):
             path=GLib.get_user_special_dir(kind)

@@ -17,7 +17,7 @@ XDG_MUSIC_DIR="$HOME/Música"
 XDG_PICTURES_DIR="$HOME/Imágenes"
 XDG_VIDEOS_DIR="$HOME/Vídeos"
 DIRS
-mkdir -p ~/.config/gtk-3.0; for d in Documentos Música Imágenes Vídeos Descargas; do echo "file://$HOME/$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' $d)"; done > ~/.config/gtk-3.0/bookmarks
+mkdir -p ~/.config/gtk-3.0; for d in Escritorio Documentos Música Imágenes Vídeos Descargas; do echo "file://$HOME/$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' $d)"; done > ~/.config/gtk-3.0/bookmarks
 # Same contents as the reference VM: Documentos has a text file (extension hidden there) and a .md.
 printf 'Informe trimestral\n' > "Documentos/Informe trimestral.txt"
 printf '# Notas\n' > "Documentos/Notas de la reunión.md"

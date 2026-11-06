@@ -44,6 +44,30 @@ KEEP = re.compile(r'#c42b1c|#a51c28|#b3261e', re.I)
 TOKEN = re.compile(r'#[0-9a-fA-F]{3,6}\b|rgba?\([^)]*\)|\bwhite\b|\bblack\b')
 
 
+LIGHT_MEDIA = '@media (prefers-color-scheme: light)'
+
+
+def split_light(css):
+    """(css without its hand-written light blocks, the text of those blocks). Rules written for
+    light mode already carry light colours: they are not mapped again, and the generated
+    block leaves out the properties they set for the same selector (they win over it)."""
+    css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    rest, blocks, i = [], [], 0
+    while True:
+        j = css.find(LIGHT_MEDIA, i)
+        if j < 0:
+            rest.append(css[i:])
+            return ''.join(rest), ''.join(blocks)
+        rest.append(css[i:j])
+        k = css.index('{', j) + 1
+        depth = 1
+        while depth:
+            depth += {'{': 1, '}': -1}.get(css[k], 0)
+            k += 1
+        blocks.append(css[css.index('{', j) + 1:k - 1])
+        i = k
+
+
 def rules(css):
     css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
     for m in re.finditer(r'([^{}@;]+)\{([^{}]*)\}', css):
@@ -81,6 +105,8 @@ def dark_value(value):
 
 def generate(css):
     light, dark = [], []
+    css, hand = split_light(css)
+    handset = {(sel, d.split(':', 1)[0].strip()) for sel, body in rules(hand) for d in decls(body)}
     for sel, body in rules(css):
         if KEEP.search(body) or sel.startswith(HAND_WRITTEN):
             continue
@@ -91,7 +117,7 @@ def generate(css):
             if not TOKEN.search(value):
                 continue
             lv = light_value(prop, value, accent_rule)
-            if lv != value:
+            if lv != value and (sel, prop) not in handset:
                 ld.append(f'{prop}: {lv};')
             if accent_rule:
                 dv = dark_value(value)
