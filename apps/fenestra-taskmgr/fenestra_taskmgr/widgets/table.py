@@ -90,6 +90,7 @@ class Table(Gtk.Widget, Gtk.Scrollable):
         self.expanded: set[str] = set()
         self.selected: str | None = None
         self.hover = -1
+        self.hover_col = None
         self.sort_key = columns[0].key
         self.sort_desc = False
         self.header_focus = False
@@ -268,15 +269,18 @@ class Table(Gtk.Widget, Gtk.Scrollable):
     # ------------------------------------------------------------ events
     def _on_motion(self, _c, x, y):
         i = self.row_at(y)
-        if i != self.hover:
+        hc = self.col_at(x) if 0 <= y < self.header_h else None
+        if i != self.hover or hc is not self.hover_col:
             self.hover = i
+            self.hover_col = hc
             self.queue_draw()
         edge = self._edge_at(x, y)
         self.set_cursor_from_name("col-resize" if edge is not None else None)
 
     def _on_leave(self, *_):
-        if self.hover != -1:
+        if self.hover != -1 or self.hover_col is not None:
             self.hover = -1
+            self.hover_col = None
             self.queue_draw()
 
     def _edge_at(self, x, y):
@@ -584,6 +588,8 @@ class Table(Gtk.Widget, Gtk.Scrollable):
             if x > w or x + col.w < 0:
                 continue
             sorted_col = col.key == self.sort_key
+            if col is self.hover_col and not (sorted_col and self.header_focus):
+                snap.append_color(c["hover"], R(x, 0, col.w - 1, hh - 1))
             if sorted_col and self.header_focus:
                 snap.append_color(c["header-sel"], R(x, 0, col.w, hh - 1))
                 b = Gsk.RoundedRect()

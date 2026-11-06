@@ -83,7 +83,8 @@ tools/compare-all.sh          # regenerate every screenshot (side-by-side checks
 
 `--screenshot` implies `--demo-data` (neutral sample processes, no personal data) and
 read-only mode; `--expanded/--collapsed` choose the rail, `--perf cpu|memory|disk|ethernet`
-the performance device, `--light/--dark`, `--lang es`.  `--real-data` renders the real system
+the performance device, `--light/--dark`, `--lang es`, `--menu row|more|graph|combo1|combo2` opens a
+menu (drawn inside the window: a headless compositor cannot capture popups).  `--real-data` renders the real system
 (for testing only, do not publish).
 
 ### Reliability
