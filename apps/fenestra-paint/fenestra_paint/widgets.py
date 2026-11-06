@@ -297,9 +297,10 @@ def popup_at(win, menu, x, y):
 class Dialog(Gtk.Box):
     """Windows 11 content dialog shown over a smoke layer inside the window."""
 
-    def __init__(self, win, title, body=None, buttons=(), width=440, on_close=None):
+    def __init__(self, win, title, body=None, buttons=(), width=440, on_close=None, smoke=True):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.win = win
+        self.smoke = smoke
         self.on_close = on_close
         self.add_css_class("dialog-card")
         self.set_halign(Gtk.Align.CENTER)

@@ -210,10 +210,10 @@ window.paint image.zoom-chev { color: var(--fg2); }
   border: 1px solid var(--popover-line);
   border-radius: 8px;
   box-shadow: 0 8px 16px var(--shadow);
-  padding: 4px 0;
+  padding: 3px 0;
 }
 button.menu-item {
-  min-height: 31px; padding: 0 12px 0 0; margin: 1px 4px;
+  min-height: 30px; padding: 0 10px 0 0; margin: 1px 4px;
   border: none; border-radius: 4px; background: none; box-shadow: none;
   font-size: 14px;
 }
@@ -224,12 +224,12 @@ button.menu-item.selected { background-color: var(--active); }
 button.menu-item:disabled { color: var(--fg3); }
 .menu-pill { min-width: 3px; min-height: 16px; border-radius: 2px; margin-right: 0; }
 button.menu-item.selected .menu-pill { background-color: var(--accent); }
-.menu-icon { margin-right: 8px; margin-left: 6px; }
-.menu-icon-space { min-width: 20px; margin-right: 8px; margin-left: 6px; }
+.menu-icon { margin-right: 10px; margin-left: 6px; }
+.menu-icon-space { min-width: 20px; margin-right: 10px; margin-left: 6px; }
 window.paint label.menu-shortcut { color: var(--fg2); font-size: 12px; margin-left: 24px; }
 window.paint image.menu-chevron { color: var(--fg2); margin-left: 16px; }
-.menu-sep { min-height: 1px; background-color: var(--sep); margin: 3px 0; }
-.brush-menu .menu-icon-space { min-width: 0; margin-right: 6px; }
+.menu-sep { min-height: 1px; background-color: var(--menu-sep); margin: 1px 0; }
+.brush-menu .menu-icon-space { min-width: 0; margin: 0 0 0 5px; }
 .brush-preview { margin: 6px 0 6px 18px; }
 .brush-menu button.menu-item { min-height: 44px; }
 .menu-slider { padding: 8px 16px; }
@@ -238,8 +238,8 @@ window.paint image.menu-chevron { color: var(--fg2); margin-left: 16px; }
 /* ------------------------------------------------------------- dialogs */
 .smoke { background-color: var(--smoke); }
 .dialog-card {
-  background-color: var(--dialog); border: 1px solid var(--popover-line); border-radius: 8px;
-  box-shadow: 0 16px 32px var(--shadow);
+  background-color: var(--dialog); border: 1px solid var(--dialog-line); border-radius: 8px;
+  background-clip: padding-box; box-shadow: 0 16px 32px var(--shadow);
 }
 .dialog-top { padding: 24px 24px 22px 24px; }
 .dialog-title { font-size: 20px; font-weight: 600; }
@@ -247,7 +247,7 @@ window.paint image.menu-chevron { color: var(--fg2); margin-left: 16px; }
 .dialog-section { font-size: 14px; font-weight: 600; margin-top: 6px; }
 .dialog-label, .dialog-value, .dialog-unit, .dialog-hint { font-size: 14px; }
 window.paint label.dialog-hint { color: var(--fg2); font-size: 12px; }
-.dialog-foot { background-color: var(--dialog-foot); border-top: 1px solid var(--popover-line); padding: 24px; border-radius: 0 0 8px 8px; }
+.dialog-foot { background-color: var(--dialog-foot); border-top: 1px solid var(--dialog-sep); padding: 24px; border-radius: 0 0 8px 8px; }
 button.dialog-button {
   min-height: 32px; font-size: 14px; border-radius: 4px; box-shadow: none;
   background-color: var(--ctl); border: 1px solid var(--ctl-line); border-bottom-color: var(--ctl-bottom);
@@ -261,12 +261,13 @@ spinbutton.fluent-spin {
 }
 spinbutton.fluent-spin:focus-within { border-bottom: 2px solid var(--accent); }
 spinbutton.fluent-spin button { background: none; border: none; box-shadow: none; min-width: 24px; }
-checkbutton.fluent-radio, checkbutton.fluent-check { font-size: 14px; }
+checkbutton.fluent-radio, checkbutton.fluent-check { font-size: 14px; padding: 0; }
 checkbutton.fluent-radio radio, checkbutton.fluent-check check {
-  min-width: 18px; min-height: 18px; border: 1px solid var(--fg2); background-color: var(--input); margin-right: 8px;
+  min-width: 18px; min-height: 18px; padding: 0; border: 1px solid var(--radio-line); background-color: var(--radio-fill); margin-right: 4px;
+  -gtk-icon-size: 18px;
 }
 checkbutton.fluent-radio radio { border-radius: 50%; min-width: 18px; min-height: 18px; -gtk-icon-source: none; background-image: none; }
-checkbutton.fluent-radio radio:checked { border: 5px solid var(--accent); min-width: 10px; min-height: 10px; background-color: var(--accent-fg); }
+checkbutton.fluent-radio radio:checked { border: 5px solid var(--accent); min-width: 10px; min-height: 10px; -gtk-icon-size: 10px; background-color: var(--accent-fg); }
 checkbutton.fluent-check check:checked { background-color: var(--accent); border-color: var(--accent); color: var(--accent-fg); border-radius: 4px; }
 checkbutton.fluent-check check { border-radius: 4px; }
 dropdown.fluent-dropdown > button {
@@ -296,3 +297,26 @@ linkbutton.about-link, button.link.about-link {
   padding: 0; margin-top: 18px; font-size: 14px; background: none; border: none; box-shadow: none;
 }
 window.paint .about-link label, window.paint .about-link { color: var(--link); }
+
+/* ------------------------------------------------------------- resize and skew (measured) */
+.resize-dialog .dialog-top { padding: 26px 24px 0 24px; }
+.resize-dialog .dialog-foot { padding: 23px 24px 25px 24px; }
+.resize-dialog button.dialog-button { min-height: 30px; padding: 0 8px; }
+.resize-dialog label.rs-head { margin-top: 1px; }
+.resize-dialog label.rs-skew { margin-top: 17px; }
+.resize-dialog .rs-modes { margin: 23px 0 23px 0; }
+.resize-dialog label.rs-label { margin-bottom: 9px; }
+.resize-dialog .rs-grid:last-child { margin: 18px 0 46px 0; }
+entry.fluent-box {
+  min-height: 30px; padding: 0 10px; font-size: 14px; border-radius: 4px; box-shadow: none; outline: none;
+  background-color: var(--input); background-clip: padding-box;
+  border: 1px solid var(--ctl-line); border-bottom-color: var(--input-bottom);
+}
+entry.fluent-box:hover { background-color: var(--ctl-hover); }
+entry.fluent-box:focus-within { background-color: var(--input-focus); border-bottom: 2px solid var(--accent); padding-bottom: 0; min-height: 29px; }
+button.link-toggle {
+  min-width: 26px; min-height: 26px; padding: 0; border-radius: 4px; box-shadow: none; background-image: none;
+  background-color: var(--ctl); border: 1px solid var(--ctl-line); border-bottom-color: var(--ctl-bottom);
+}
+button.link-toggle:checked { background-color: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button.link-toggle:checked:hover { background-color: var(--accent-hover); }

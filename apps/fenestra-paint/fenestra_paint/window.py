@@ -523,7 +523,7 @@ class PaintWindow(Gtk.ApplicationWindow):
         b = self.menu_buttons[key]
         b.add_css_class("open")
         m = getattr(self, f"_{key}_menu")()
-        popup_menu(self, m, b, dy=-3)
+        popup_menu(self, m, b, dy=-2)
 
     def commit_tool_soft(self):
         pass
@@ -633,13 +633,15 @@ class PaintWindow(Gtk.ApplicationWindow):
         m.add(_("Rotate left 90°"), lambda: self.rotate("rot270"), "rotate-left")
         m.add(_("Rotate 180°"), lambda: self.rotate("rot180"), "rotate-180")
         m.add(_("Rotate custom"), self.rotate_custom_dialog, "rotate-custom")
-        popup_menu(self, m, anchor, dx=-80, dy=2)
+        # centred under the split button (icon + chevron), as in the reference
+        popup_menu(self, m, anchor.get_parent(), dy=2, align="center")
 
     def flip_menu(self, anchor):
         m = Menu(self, width=156)
         m.add(_("Flip vertical"), lambda: self.flip("flip_v"), "flip-v")
         m.add(_("Flip horizontal"), lambda: self.flip("flip_h"), "flip-h")
-        popup_menu(self, m, anchor, dx=-80, dy=2)
+        # centred under the split button (icon + chevron), as in the reference
+        popup_menu(self, m, anchor.get_parent(), dy=2, align="center")
 
     def brushes_menu(self, anchor):
         brushes_menu(self, anchor)
@@ -746,6 +748,8 @@ class PaintWindow(Gtk.ApplicationWindow):
             self.hide_dialog(self.dialog)
         self.dialog = d
         self.dialog_layer.append(d)
+        # Some dialogs (Resize and skew) leave the window undimmed, as in the reference.
+        (self.dialog_layer.add_css_class if getattr(d, "smoke", True) else self.dialog_layer.remove_css_class)("smoke")
         self.dialog_layer.set_visible(True)
         d.set_hexpand(True)
         d.set_vexpand(True)

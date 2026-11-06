@@ -408,10 +408,10 @@ def brushes_menu(win, anchor):
     for bid, text in brushes.BRUSHES:
         pic = surface_picture(brushes.preview_surface(bid, col))
         pic.add_css_class("brush-preview")
-        m.add(_(text), lambda bid=bid: win.set_brush(bid), extra=pic,
-              selected=(win.brush == bid and win.tool_name == "brush"))
+        # The reference highlights no entry here.
+        m.add(_(text), lambda bid=bid: win.set_brush(bid), extra=pic)
     m.add_css_class("brush-menu")
-    popup_menu(win, m, anchor, dy=2)
+    popup_menu(win, m, anchor, dx=-1, dy=4)
 
 
 def style_menu(win, anchor, items, current, cb):

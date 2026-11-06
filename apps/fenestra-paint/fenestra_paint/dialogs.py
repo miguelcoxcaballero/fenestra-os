@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import time
 
-from gi.repository import Gtk
+from gi.repository import GObject, Gtk
 
 from . import util
 from .i18n import N_, _
@@ -23,14 +23,89 @@ def _row(text, widget, unit=None):
     return b
 
 
+class NumberBox(Gtk.Entry):
+    """Fluent text box holding a number with an optional unit ("0°"); SpinButton-like API."""
+    __gsignals__ = {"value-changed": (GObject.SignalFlags.RUN_FIRST, None, ())}
+
+    def __init__(self, value, lo, hi, width, unit=""):
+        super().__init__()
+        self.lo, self.hi, self.unit = lo, hi, unit
+        self._value = value
+        self._busy = False
+        self.add_css_class("fluent-box")
+        self.set_size_request(width, -1)
+        self.set_width_chars(1)
+        self.set_max_width_chars(1)
+        self.set_hexpand(False)
+        self._show()
+        self.connect("changed", self._changed)
+        fc = Gtk.EventControllerFocus()
+        fc.connect("leave", lambda *_a: self._show())
+        self.add_controller(fc)
+        self.connect("activate", lambda *_a: self._show())
+
+    def _show(self):
+        self._busy = True
+        self.set_text(f"{self._value:g}{self.unit}")
+        self._busy = False
+
+    def _changed(self, *_a):
+        if self._busy:
+            return
+        t = self.get_text().replace(self.unit, "").replace(",", ".").strip()
+        try:
+            v = float(t)
+        except ValueError:
+            return
+        v = max(self.lo, min(self.hi, v))
+        if v != self._value:
+            self._value = v
+            self.emit("value-changed")
+
+    def get_value(self):
+        return self._value
+
+    def set_value(self, v):
+        v = max(self.lo, min(self.hi, v))
+        changed = v != self._value
+        self._value = v
+        self._show()
+        if changed:
+            self.emit("value-changed")
+
+    def set_range(self, lo, hi):
+        self.lo, self.hi = lo, hi
+
+
+def _link_glyph(cr, w, h, _th):
+    """Two linked chain loops (own drawing)."""
+    cr.set_line_width(1.2)
+    for x0 in (1.5, 7.5):
+        r = 2.5
+        x1, y0, y1 = x0 + 7, h / 2 - r, h / 2 + r
+        cr.new_sub_path()
+        cr.arc(x0 + r, h / 2, r, 0.5 * 3.14159, 1.5 * 3.14159)
+        cr.line_to(x1 - r, y0)
+        cr.arc(x1 - r, h / 2, r, -0.5 * 3.14159, 0.5 * 3.14159)
+        cr.close_path()
+    cr.stroke()
+
+
 def resize_skew(win, w, h, apply, title=None):
-    """apply(new_w, new_h, skew_x_deg, skew_y_deg)."""
-    body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-    body.append(label(_("Resize"), "dialog-section"))
+    """apply(new_w, new_h, skew_x_deg, skew_y_deg).  Layout measured on the reference dialog."""
+    from .widgets import Glyph
+    body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    body.add_css_class("resize-body")
+    body.append(label(_("Resize"), "dialog-section", "rs-head"))
     state = {"mode": "percent", "busy": False}
-    hs = spin_entry(100, 1, 10000)
-    vs = spin_entry(100, 1, 10000)
-    keep = checkbox(_("Maintain aspect ratio"), True)
+    hs = NumberBox(100, 1, 10000, 115)
+    vs = NumberBox(100, 1, 10000, 115)
+    keep = Gtk.ToggleButton()
+    keep.add_css_class("link-toggle")
+    keep.set_child(Glyph(_link_glyph, 16, 16))
+    keep.set_tooltip_text(_("Maintain aspect ratio"))
+    keep.set_active(True)
+    keep.set_valign(Gtk.Align.CENTER)
 
     def set_mode(m):
         if m == state["mode"]:
@@ -51,8 +126,10 @@ def resize_skew(win, w, h, apply, title=None):
         state["busy"] = False
     modes = radio_group([("percent", _("Percentage")), ("pixels", _("Pixels"))], "percent", set_mode)
     modes.set_orientation(Gtk.Orientation.HORIZONTAL)
-    modes.set_spacing(24)
-    body.append(_row(_("By:"), modes))
+    modes.set_spacing(0)
+    modes.add_css_class("rs-modes")
+    modes.btns["percent"].set_size_request(130, -1)
+    body.append(modes)
 
     def sync(src, dst, sw, dw):
         if state["busy"] or not keep.get_active():
@@ -65,14 +142,22 @@ def resize_skew(win, w, h, apply, title=None):
         state["busy"] = False
     hs.connect("value-changed", lambda *_a: sync(hs, vs, w, h))
     vs.connect("value-changed", lambda *_a: sync(vs, hs, h, w))
-    body.append(_row(_("Horizontal:"), hs))
-    body.append(_row(_("Vertical:"), vs))
-    body.append(keep)
-    body.append(label(_("Skew (degrees)"), "dialog-section"))
-    sx = spin_entry(0, -89, 89)
-    sy = spin_entry(0, -89, 89)
-    body.append(_row(_("Horizontal:"), sx, "°"))
-    body.append(_row(_("Vertical:"), sy, "°"))
+
+    def pair_grid(a, b, mid=None, spacing=8):
+        g = Gtk.Grid(column_spacing=spacing, row_spacing=0)
+        g.add_css_class("rs-grid")
+        g.attach(label(_("Horizontal"), "dialog-label", "rs-label"), 0, 0, 1, 1)
+        g.attach(label(_("Vertical"), "dialog-label", "rs-label"), 2 if mid else 1, 0, 1, 1)
+        g.attach(a, 0, 1, 1, 1)
+        if mid:
+            g.attach(mid, 1, 1, 1, 1)
+        g.attach(b, 2 if mid else 1, 1, 1, 1)
+        return g
+    body.append(pair_grid(hs, vs, keep, 6))
+    body.append(label(_("Skew"), "dialog-section", "rs-head", "rs-skew"))
+    sx = NumberBox(0, -89, 89, 131, "°")
+    sy = NumberBox(0, -89, 89, 131, "°")
+    body.append(pair_grid(sx, sy))
 
     def ok():
         if state["mode"] == "percent":
@@ -81,9 +166,9 @@ def resize_skew(win, w, h, apply, title=None):
             nw, nh = hs.get_value(), vs.get_value()
         apply(max(1, round(nw)), max(1, round(nh)), sx.get_value(), sy.get_value())
     d = Dialog(win, title or _("Resize and skew"), body,
-               [(_("OK"), ok, True), (_("Cancel"), None, False)], width=400)
+               [(_("OK"), ok, True), (_("Cancel"), None, False)], width=317, smoke=False)
+    d.add_css_class("resize-dialog")
     win.show_dialog(d)
-    hs.grab_focus()
     d.hs, d.vs, d.sx, d.sy, d.keep, d.modes = hs, vs, sx, sy, keep, modes
     return d
 
