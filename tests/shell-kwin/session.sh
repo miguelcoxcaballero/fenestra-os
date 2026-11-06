@@ -195,12 +195,17 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
             -m org.freedesktop.Notifications.Notify "${5:-Demo}" 0 "${6:-dialog-information}" "$1" "$2" "${3:-[]}" "${4:-{\}}" 5000
     }
     check N02-server-registered bash -c 'gdbus call --session -d org.freedesktop.Notifications -o /org/freedesktop/Notifications -m org.freedesktop.Notifications.GetServerInformation | grep -q Fenestra'
-    notify "Reunión en 10 minutos" "Sala Norte, planta 2" '["open", "Abrir", "snooze", "Posponer"]' >/dev/null
+    # Same texts as the reference captures (dark-100-17-toast, dark-100-15-notifications-2).
+    notify "Descarga completada (demo)" "playa-verano.jpg se ha guardado en Imágenes" >/dev/null
     check N02-banner wait_for 'is "$(probe "Notifications.popups.length")" 1' 10
     sleep 1; check N02-banner-shot shot_with fenestra-toasts 17-banner
-    notify "Captura de pantalla" "Demo" '[]' "{'image-path': <'$HOME/Pictures/playa-verano.jpg'>}" >/dev/null
+    notify "Recordatorio (demo)" "Reunión de equipo a las 10:00" >/dev/null
+    notify "Captura de pantalla" "Demo" '["open", "Abrir"]' "{'image-path': <'$HOME/Pictures/playa-verano.jpg'>}" >/dev/null
     sleep 1; check Q04-image-notification shot_with fenestra-toasts 18-image-toast
     probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+    probe "Notifications.dismiss(Notifications.data(Notifications.index(0, 0), 257))" >/dev/null
+    probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+    wait_for 'is "$(probe "Notifications.popups.length")" 0' 10
     probe "ShellState.toggleCalendar(null, -1)" >/dev/null; sleep 1
     check N01-center-and-calendar shot_with fenestra-flyout 19-center
     check N01-history wait_for 'is "$(probe "Notifications.count")" 2' 5
@@ -221,6 +226,10 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "Notifications.endFocus()" >/dev/null
     probe "Notifications.clearAll()" >/dev/null
     check N01-clear-all wait_for 'is "$(probe "Notifications.count")" 0' 3
+    sleep 0.5; check N01-center-empty shot_with fenestra-flyout 19b-center-empty
+    probe "screensView.objectAt(0).center.calendar.collapsed = true" >/dev/null; sleep 0.5
+    check N01-calendar-collapsed shot_with fenestra-flyout 19c-calendar-collapsed
+    probe "screensView.objectAt(0).center.calendar.collapsed = false" >/dev/null
     probe "ShellState.toggleCalendar(null, -1)" >/dev/null
     python3 /src/tests/shell-kwin/mpris-player.py > /out/mpris.log 2>&1 & MPRIS=$!
     check Q02-media-player wait_for 'is "$(probe "Media.title")" "\"Canción de prueba\""' 10
@@ -229,6 +238,21 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "Media.playPause()" >/dev/null
     check Q02-play-pause wait_for 'grep -q MPRIS_PLAYPAUSE /out/mpris.log' 5
     probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null
+    # The same flyouts in light mode (light-100-12-quick, -14-quick-media, -15-notifications-2, -17-toast).
+    conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' '[Appearance]' 'ColorScheme=light' 'Wallpaper=/usr/share/backgrounds/fenestra/fenestra-bloom-light.jpg'
+    probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null; sleep 1
+    check Q01-quick-settings-light shot_with fenestra-flyout 20b-quick-light
+    probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null
+    notify "Descarga completada (demo)" "playa-verano.jpg se ha guardado en Imágenes" >/dev/null
+    sleep 1; check N02-banner-light shot_with fenestra-toasts 17b-banner-light
+    notify "Recordatorio (demo)" "Reunión de equipo a las 10:00" >/dev/null; sleep 0.5
+    probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+    wait_for 'is "$(probe "Notifications.popups.length")" 0' 10
+    probe "ShellState.toggleCalendar(null, -1)" >/dev/null; sleep 1
+    check N01-center-light shot_with fenestra-flyout 19d-center-light
+    probe "ShellState.toggleCalendar(null, -1)" >/dev/null
+    probe "Notifications.clearAll()" >/dev/null
+    conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
     kill $MPRIS 2>/dev/null
     probe "screensView.objectAt(0).osd.show(\"volume\", 40)" >/dev/null; sleep 0.5
     check Q03-osd shot_with fenestra-osd 21-osd

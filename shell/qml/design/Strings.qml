@@ -38,7 +38,7 @@ QtObject {
         "Connected": "Conectado", "Secured": "Segura", "Open": "Abrir", "No networks found": "No se encontraron redes",
         "Paired": "Emparejado", "Add a device": "Agregar un dispositivo",
         "Notifications": "Notificaciones", "Clear all": "Borrar todo", "Do not disturb": "No molestar", "No new notifications": "No hay notificaciones nuevas",
-        "Close": "Cerrar", "mins": "min", "Focus": "Concentración", "End session": "Finalizar sesión",
+        "Close": "Cerrar", "mins": "mins", "Focus": "Concentración", "End session": "Finalizar sesión",
         "Microphone on": "Micrófono activado", "Microphone muted": "Micrófono silenciado",
         "Change a password": "Cambiar una contraseña", "Task Manager": "Administrador de tareas", "Cancel": "Cancelar",
         "Network": "Red", "No internet access": "Sin acceso a Internet", "Not connected": "No conectado", "On": "Activado", "Off": "Desactivado",
@@ -55,6 +55,9 @@ QtObject {
         "Display settings": "Configuración de pantalla", "Personalize": "Personalizar", "Cut": "Cortar", "Copy": "Copiar",
         "Rectangle mode": "Modo de rectángulo", "Window mode": "Modo de ventana",
         "Full screen mode": "Modo de pantalla completa", "Freeform mode": "Modo de forma libre",
+        "+ %1 notifications": "+ %1 de notificaciones", "More options": "Más opciones",
+        "Snipping area": "Área de recorte", "Rectangle": "Rectángulo", "Window": "Ventana", "Full screen": "Pantalla completa", "Freeform": "Forma libre",
+        "Close (Esc)": "Cerrar (Esc)",
         "Rename": "Cambiar nombre", "Delete": "Eliminar", "Copy as path": "Copiar como ruta de acceso", "Properties": "Propiedades",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }

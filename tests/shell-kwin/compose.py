@@ -23,6 +23,18 @@ def place(start, size, span, anchored_a, anchored_b, margin_a, margin_b):
     return start + (span - size) // 2
 
 
+def zone_edge(a):
+    """The edge an exclusive zone applies to: the only anchored edge, or of three anchored edges the
+    one whose opposite is free (a bottom taskbar anchored bottom|left|right reserves the bottom only)."""
+    if bin(a).count("1") == 1:
+        return a
+    if bin(a).count("1") == 3:
+        for edge, opposite in ((TOP, BOTTOM), (BOTTOM, TOP), (LEFT, RIGHT), (RIGHT, LEFT)):
+            if a & edge and not a & opposite:
+                return edge
+    return 0
+
+
 def main(src, out, below_top=None):
     """below_top(canvas, x0, y0, dpr): draws between the BACKGROUND/BOTTOM layers and TOP/OVERLAY,
     where app windows are (snip-source.py)."""
@@ -39,7 +51,7 @@ def main(src, out, below_top=None):
     # exclusive zones of the surfaces anchored to the same edge (the taskbar's 48 px).
     def zone(screen, edge):
         return sum(o["exclusionZone"] for o in surfaces if o["screen"] == screen and o["exclusionZone"] > 0
-                   and o["anchors"] & edge and bin(o["anchors"]).count("1") in (1, 3))
+                   and zone_edge(o["anchors"]) == edge)
 
     drew_windows = below_top is None
     for s in sorted(surfaces, key=lambda s: s["layer"]):

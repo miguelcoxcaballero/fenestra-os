@@ -67,4 +67,13 @@ QtObject {
     readonly property int fontBody: Tokens.px("font.body", 14)
     readonly property int fontCaption: Tokens.px("font.caption", 12)
     readonly property string assets: "file:///usr/share/fenestra/assets/"
+
+    // Measured colours of the shell's own surfaces: "<key>.dark" / "<key>.light" in tokens.json.
+    function col(key) { return Tokens.v(key + (Theme.dark ? ".dark" : ".light"), "#ff00ff") }
+    function n(key, fallback) { return Tokens.px(key, fallback) }
+    readonly property int quickHeight: Tokens.px("quick.height", 335)
+    readonly property int quickMediaHeight: Tokens.px("quick.media.height", 178)
+    readonly property int windowButtonWidth: Tokens.px("window.button.width", 45)
+    readonly property int windowButtonHeight: Tokens.px("window.button.height", 29)
+    readonly property int switcherThumbHeight: Tokens.px("switcher.thumbnail.height", 243)
 }

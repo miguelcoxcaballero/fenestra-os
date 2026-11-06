@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Quick settings (Q01) with the media card above it (Q02): two cards, 12 px apart, 12 px over the
-// taskbar and 13 px from the screen edge. Layout of quickPanel.js: 3 columns of 104 px tiles,
-// brightness then volume sliders, footer with battery, Edit and Settings.
+// Quick settings (Q01) with the media card above it (Q02): two separate cards, 12 px apart, 12 px
+// over the taskbar and 12 px from the screen edge, 360 px wide (dark-100-14-quick-media). Quick
+// settings: 3 columns of 96 × 48 tiles, a divider, the volume (and brightness) sliders and the
+// footer with battery and All settings. Card-relative positions come from quick.* tokens.
 import QtQuick
 import org.kde.bluezqt as BluezQt
 import Fenestra.Shell
@@ -13,60 +14,80 @@ Flyout {
     property string page: ""            // "" | "wifi" | "bluetooth" | "output"
     onDismissed: page = ""
 
+    component GlyphButton: Rectangle {
+        id: gb
+        property string glyph
+        property bool active: true
+        signal clicked()
+        width: 32; height: 32; radius: Metrics.controlRadius
+        color: gm.pressed ? Theme.pressed : gm.containsMouse ? Theme.hover : "transparent"
+        SymbolicIcon { anchors.centerIn: parent; name: gb.glyph; opacity: gb.active ? 1 : 0.4 }
+        MouseArea { id: gm; anchors.fill: parent; hoverEnabled: true; enabled: gb.active; onClicked: gb.clicked() }
+    }
+
+    // Opening: slides in (Motion.qml, measured on the reference).
+    onVisibleChanged: if (visible && !Motion.reduced) slideIn.restart()
+    NumberAnimation { id: slideIn; target: slide; property: "y"; from: Motion.quickOffset; to: 0; duration: Motion.quickOpen
+                      easing.type: Easing.Bezier; easing.bezierCurve: Motion.decelerate }
+
     Column {
-        spacing: 12
-        // ---- Media card (Q02, mediaPanel.js: 350 px, padding 22 24) ----
+        transform: Translate { id: slide }
+        spacing: Metrics.flyoutGap
+        // ---- Media card (Q02): app line, title / artist, art on the right, transport centred ----
         Card {
             visible: Media.available
-            width: Metrics.quickWidth; height: mediaRow.height + 44
-            Row {
-                id: mediaRow
-                x: 24; y: 22; spacing: 16; width: parent.width - 48
-                Rectangle {
-                    width: 64; height: 64; radius: 4; clip: true
-                    color: Theme.dark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.05)
-                    Image { anchors.fill: parent; source: Media.artUrl; fillMode: Image.PreserveAspectCrop; visible: Media.artUrl !== ""; asynchronous: true }
-                    Image { anchors.centerIn: parent; width: 32; height: 32; source: "image://icon/audio-x-generic"; visible: Media.artUrl === "" }
-                }
-                Column {
-                    width: parent.width - 80; spacing: 2
-                    Row { spacing: 6
-                        Image { width: 16; height: 16; source: "image://icon/" + Media.appIcon; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: Media.appName; color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: 13 } }
-                    Text { width: parent.width; elide: Text.ElideRight; text: Media.title || Strings.tr("Playing")
-                           color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 15; font.weight: Font.DemiBold }
-                    Text { width: parent.width; elide: Text.ElideRight; text: Media.artist; visible: text !== ""
-                           color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: 13 }
-                    Row {
-                        spacing: 24; topPadding: 8
-                        Repeater {
-                            model: [["media-skip-backward-symbolic", "Previous", () => Media.previous(), Media.canGoPrevious],
-                                    [Media.playing ? "media-playback-pause-symbolic" : "media-playback-start-symbolic", Media.playing ? "Pause" : "Play", () => Media.playPause(), true],
-                                    ["media-skip-forward-symbolic", "Next", () => Media.next(), Media.canGoNext]]
-                            delegate: Rectangle {
-                                required property var modelData
-                                width: 34; height: 34; radius: 4
-                                opacity: modelData[3] ? 1 : 0.4
-                                color: mm.containsMouse ? Theme.hover : "transparent"
-                                Accessible.name: Strings.tr(modelData[1])
-                                SymbolicIcon { anchors.centerIn: parent; name: modelData[0]; size: 22 }
-                                MouseArea { id: mm; anchors.fill: parent; hoverEnabled: true; enabled: modelData[3]; onClicked: modelData[2]() }
-                            }
-                        }
-                    }
+            width: Metrics.quickWidth; height: Metrics.quickMediaHeight
+            Image { x: 25; y: 18; width: 16; height: 16; sourceSize: Qt.size(32, 32); source: "image://icon/" + Media.appIcon }
+            Text { x: 50; y: 16; text: Media.appName; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+            Column {
+                x: 24; y: 58; width: 240; spacing: 2
+                Text { width: parent.width; elide: Text.ElideRight; text: Media.title || Strings.tr("Playing")
+                       color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold }
+                Text { width: parent.width; elide: Text.ElideRight; text: Media.artist; visible: text !== ""
+                       color: Metrics.col("panel.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
+            }
+            Rectangle {
+                readonly property int art: Metrics.n("quick.media.art", 58)
+                x: parent.width - 25 - art; y: 46; width: art; height: art; radius: 4; clip: true
+                color: Metrics.col("panel.control")
+                Image { anchors.fill: parent; source: Media.artUrl; fillMode: Image.PreserveAspectCrop; visible: Media.artUrl !== ""; asynchronous: true }
+                Image { anchors.centerIn: parent; width: 32; height: 32; source: "image://icon/" + Media.appIcon; visible: Media.artUrl === "" }
+            }
+            Repeater {
+                model: [["media-skip-backward-symbolic", "Previous", () => Media.previous(), Media.canGoPrevious],
+                        [Media.playing ? "media-playback-pause-symbolic" : "media-playback-start-symbolic", Media.playing ? "Pause" : "Play", () => Media.playPause(), true],
+                        ["media-skip-forward-symbolic", "Next", () => Media.next(), Media.canGoNext]]
+                delegate: GlyphButton {
+                    required property var modelData
+                    required property int index
+                    x: Metrics.quickWidth / 2 + (index - 1) * Metrics.n("quick.media.controls.pitch", 66) - width / 2
+                    y: Metrics.n("quick.media.controls.y", 137) - height / 2
+                    glyph: modelData[0]; active: modelData[3]
+                    Accessible.name: Strings.tr(modelData[1])
+                    onClicked: modelData[2]()
                 }
             }
         }
 
         // ---- Quick settings card ----
         Card {
-            width: Metrics.quickWidth; height: (qs.page === "" ? main.height : sub.height) + footer.height
-            Column {
+            id: card
+            width: Metrics.quickWidth
+            readonly property int footerH: Metrics.quickFooterHeight
+            height: (qs.page === "" ? main.height : sub.height) + footerH + 2
+            Item {
                 id: main
                 visible: qs.page === ""
                 width: parent.width
+                // a page holds two rows of tiles, as on the reference (quick.rows.min)
+                readonly property int rows: Math.max(Metrics.n("quick.rows.min", 2), Math.ceil(tiles.visibleCount / 3))
+                readonly property int dividerY: Metrics.n("quick.grid.y", 23) + rows * Metrics.n("quick.tile.pitch.y", 96) - 2
+                height: dividerY + 1 + sliders.height
                 Grid {
-                    x: 20; topPadding: 20; columns: 3; columnSpacing: 24; rowSpacing: 18
+                    id: tiles
+                    readonly property int visibleCount: { let n = 0; for (let i = 0; i < children.length; ++i) if (children[i].visible) ++n; return n }
+                    x: Metrics.n("quick.grid.x", 24); y: Metrics.n("quick.grid.y", 23)
+                    columns: 3; columnSpacing: Metrics.n("quick.tile.gap", 12); rowSpacing: 0
                     QuickTile {
                         visible: WifiNetworks.hasWifi
                         label: NetworkStatus.kind === "wifi" ? NetworkStatus.name : Strings.tr("Wi-Fi")
@@ -113,26 +134,38 @@ Flyout {
                         onToggled: { qs.close(); Apps.runCommand("fenestra-settings --page accessibility") }
                     }
                 }
-                // Sliders: brightness then volume (quickPanel.js), full width.
+                Rectangle { x: 1; y: main.dividerY; width: parent.width - 2; height: 1; color: Metrics.col("quick.separator") }
+                // Sliders: brightness then volume, 48 px rows; one row is centred at quick.slider.y.
                 Column {
-                    x: 20; width: parent.width - 40; topPadding: 22; bottomPadding: 20; spacing: 14
-                    Row {
+                    id: sliders
+                    y: main.dividerY + 1
+                    width: parent.width
+                    readonly property int rowH: 48
+                    topPadding: Metrics.n("quick.slider.y", 251) - Metrics.n("quick.separator.y", 213) - 1 - rowH / 2
+                    bottomPadding: 72 - topPadding - rowH
+                    Item {
                         visible: Brightness.available
-                        width: parent.width; spacing: 12
-                        SymbolicIcon { name: "display-brightness-symbolic"; anchors.verticalCenter: parent.verticalCenter }
-                        Slider { width: parent.width - 28; value: Brightness.percent; onMoved: (v) => Brightness.percent = v }
+                        width: parent.width; height: sliders.rowH
+                        SymbolicIcon { x: 25; anchors.verticalCenter: parent.verticalCenter; name: "display-brightness-symbolic" }
+                        Slider { x: Metrics.n("quick.slider.x", 57) - thumb / 2; width: Metrics.n("quick.slider.width", 244) + thumb
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 value: Brightness.percent; onMoved: (v) => Brightness.percent = v }
                     }
-                    Row {
-                        visible: AudioStatus.available
-                        width: parent.width; spacing: 12
-                        Item { width: 16; height: 16; anchors.verticalCenter: parent.verticalCenter
-                               SymbolicIcon { name: AudioStatus.iconName }
-                               MouseArea { anchors.fill: parent; onClicked: AudioStatus.muted = !AudioStatus.muted } }
-                        Slider { width: parent.width - 28 - 40; value: AudioStatus.volume; onMoved: (v) => AudioStatus.volume = v }
+                    // Volume: always there; without an output device it shows muted and disabled.
+                    Item {
+                        width: parent.width; height: sliders.rowH
+                        Item { x: 25; width: 16; height: 16; anchors.verticalCenter: parent.verticalCenter
+                               SymbolicIcon { name: AudioStatus.available ? AudioStatus.iconName : "audio-volume-muted-symbolic" }
+                               MouseArea { anchors.fill: parent; enabled: AudioStatus.available; onClicked: AudioStatus.muted = !AudioStatus.muted } }
+                        Slider { x: Metrics.n("quick.slider.x", 57) - thumb / 2; width: Metrics.n("quick.slider.width", 244) + thumb
+                                 anchors.verticalCenter: parent.verticalCenter; enabled_: AudioStatus.available; dimmed: !AudioStatus.available
+                                 value: AudioStatus.available ? AudioStatus.volume : 0; onMoved: (v) => AudioStatus.volume = v }
                         Rectangle {
-                            width: 28; height: 28; radius: 4; anchors.verticalCenter: parent.verticalCenter
-                            color: om.containsMouse ? Theme.hover : "transparent"
-                            Text { anchors.centerIn: parent; text: "›"; font.pixelSize: 16; color: Theme.text }
+                            x: 307; width: 34; height: 32; radius: Metrics.controlRadius; anchors.verticalCenter: parent.verticalCenter
+                            color: om.pressed ? Theme.pressed : om.containsMouse ? Theme.hover : "transparent"
+                            Row { anchors.centerIn: parent; spacing: 2
+                                  SymbolicIcon { name: "audio-card-symbolic"; anchors.verticalCenter: parent.verticalCenter }
+                                  SymbolicIcon { name: "go-next-symbolic"; size: 10; anchors.verticalCenter: parent.verticalCenter } }
                             Accessible.name: Strings.tr("Sound output")
                             MouseArea { id: om; anchors.fill: parent; hoverEnabled: true; onClicked: qs.page = "output" }
                         }
@@ -146,13 +179,10 @@ Flyout {
                 width: parent.width
                 Item {
                     width: parent.width; height: 56
-                    Rectangle { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 32; height: 32; radius: 4
-                                color: back.containsMouse ? Theme.hover : "transparent"
-                                Text { anchors.centerIn: parent; text: "‹"; font.pixelSize: 18; color: Theme.text }
-                                MouseArea { id: back; anchors.fill: parent; hoverEnabled: true; onClicked: qs.page = "" } }
+                    GlyphButton { x: 12; anchors.verticalCenter: parent.verticalCenter; glyph: "go-previous-symbolic"; onClicked: qs.page = "" }
                     Text { x: 52; anchors.verticalCenter: parent.verticalCenter
                            text: Strings.tr(qs.page === "wifi" ? "Wi-Fi" : qs.page === "bluetooth" ? "Bluetooth" : "Sound output")
-                           color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14; font.weight: Font.DemiBold }
+                           color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold }
                 }
                 Loader {
                     width: parent.width
@@ -160,28 +190,30 @@ Flyout {
                 }
                 Item { width: 1; height: 12 }
             }
-            // ---- Footer ----
+            // ---- Footer: divider, 47 px band, battery left, All settings right ----
+            Rectangle {
+                x: 1; y: parent.height - 1 - card.footerH - 1; width: parent.width - 2; height: 1
+                color: Metrics.col("panel.divider")
+            }
             Rectangle {
                 id: footer
-                anchors.bottom: parent.bottom
-                width: parent.width; height: Metrics.quickFooterHeight
-                bottomLeftRadius: Metrics.flyoutRadius; bottomRightRadius: Metrics.flyoutRadius
-                color: Theme.dark ? Qt.rgba(0, 0, 0, 0.14) : Qt.rgba(0, 0, 0, 0.03)
-                Rectangle { width: parent.width; height: 1; color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.06) }
+                x: 1; y: parent.height - 1 - card.footerH
+                width: parent.width - 2; height: card.footerH
+                bottomLeftRadius: Metrics.flyoutRadius - 1; bottomRightRadius: Metrics.flyoutRadius - 1
+                color: Metrics.col("panel.fill.alt")
                 Row {
-                    x: 20; anchors.verticalCenter: parent.verticalCenter; spacing: 8
+                    x: 19; anchors.verticalCenter: parent.verticalCenter; spacing: 8
                     visible: PowerStatus.hasBattery
                     SymbolicIcon { src: PowerStatus.iconSource; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: PowerStatus.percentage + " %"; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 12
+                    Text { text: PowerStatus.percentage + " %"; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
                            anchors.verticalCenter: parent.verticalCenter }
                 }
-                Rectangle {
-                    anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
-                    width: 28; height: 28; radius: 4
-                    color: sm.containsMouse ? Theme.hover : "transparent"
+                GlyphButton {
+                    // the gear's centre is 31 px from the card's right edge (dark-100-12-quick element 26)
+                    x: parent.width + 1 - 31 - width / 2; anchors.verticalCenter: parent.verticalCenter
+                    glyph: "emblem-system-symbolic"
                     Accessible.name: Strings.tr("All settings")
-                    SymbolicIcon { anchors.centerIn: parent; name: "emblem-system-symbolic" }
-                    MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; onClicked: { qs.close(); Apps.runCommand("fenestra-settings") } }
+                    onClicked: { qs.close(); Apps.runCommand("fenestra-settings") }
                 }
             }
         }
@@ -190,14 +222,14 @@ Flyout {
     Component {
         id: wifiPage
         Column {
-            width: 400
+            width: Metrics.quickWidth
             Repeater {
                 model: WifiNetworks
                 delegate: Rectangle {
                     required property int index
                     required property var model
                     property bool asking: false
-                    x: 8; width: 384; height: asking ? 96 : 48; radius: 4
+                    x: 8; width: Metrics.quickWidth - 16; height: asking ? 96 : 48; radius: 4
                     color: wm.containsMouse || asking ? Theme.hover : "transparent"
                     SymbolicIcon { x: 12; y: 16; name: "network-wireless-signal-" + ["none", "weak", "ok", "good", "excellent"][Math.min(4, Math.floor(model.signal / 20))] + "-symbolic" }
                     Column { x: 40; y: 8
@@ -225,13 +257,13 @@ Flyout {
     Component {
         id: btPage
         Column {
-            width: 400
+            width: Metrics.quickWidth
             Repeater {
                 model: BluezQt.DevicesModel { }
                 delegate: Rectangle {
                     required property var model
                     visible: model.Paired || model.Connected
-                    x: 8; width: 384; height: visible ? 48 : 0; radius: 4
+                    x: 8; width: Metrics.quickWidth - 16; height: visible ? 48 : 0; radius: 4
                     color: bm2.containsMouse ? Theme.hover : "transparent"
                     Image { x: 12; y: 12; width: 24; height: 24; source: "image://icon/" + (model.Icon || "bluetooth-active") }
                     Column { x: 48; y: 6
@@ -253,12 +285,12 @@ Flyout {
     Component {
         id: outputPage
         Column {
-            width: 400
+            width: Metrics.quickWidth
             Repeater {
                 model: AudioStatus.outputs
                 delegate: Rectangle {
                     required property var modelData
-                    x: 8; width: 384; height: 44; radius: 4
+                    x: 8; width: Metrics.quickWidth - 16; height: 44; radius: 4
                     color: om2.containsMouse ? Theme.hover : modelData.isDefault ? Theme.pressed : "transparent"
                     Rectangle { visible: modelData.isDefault; x: 0; anchors.verticalCenter: parent.verticalCenter; width: 3; height: 16; radius: 2; color: Theme.accentFill }
                     Text { x: 16; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 32; elide: Text.ElideRight
