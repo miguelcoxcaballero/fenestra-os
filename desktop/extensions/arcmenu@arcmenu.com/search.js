@@ -347,7 +347,7 @@ class AppSearchResults extends SearchResultsBase {
 
         this._resultDisplayBin.set_child(this._grid);
 
-        this._menuLayout.connectObject('notify::search-display-type', () => this._setResutlsDisplayType());
+        this._menuLayout.connectObject('notify::search-display-type', () => this._setResutlsDisplayType(), this);
         this._setResutlsDisplayType();
     }
 
