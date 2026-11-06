@@ -159,6 +159,8 @@ class SystemBackend:
                 from gi.repository import GLib
                 src = [("xkb", f"{l}+{v}" if v else l) for l, v in layouts]
                 s.set_value("sources", GLib.Variant("a(ss)", src))
+            # The Fenestra session (KWin) reads its layouts from kxkbrc, not from gsettings.
+            _write_kxkbrc(layouts)
         Gio.Settings.sync()
 
     def set_session_input_sources(self, layouts: list):
@@ -175,3 +177,21 @@ class SystemBackend:
         s.set_value("sources", GLib.Variant("a(ss)", src))
         s.set_value("current", GLib.Variant("u", 0))
         Gio.Settings.sync()
+
+
+def _write_kxkbrc(layouts: list) -> None:
+    """~/.config/kxkbrc [Layout] for KWin, unless the user already has layouts there."""
+    import os
+    path = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "kxkbrc")
+    try:
+        if os.path.exists(path) and "LayoutList=" in open(path, encoding="utf-8").read():
+            return
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("[Layout]\nUse=true\n")
+            f.write("LayoutList=" + ",".join(l for l, _v in layouts) + "\n")
+            f.write("VariantList=" + ",".join(v or "" for _l, v in layouts) + "\n")
+        os.replace(tmp, path)
+    except OSError as e:
+        log.warning("kxkbrc: %s", e)

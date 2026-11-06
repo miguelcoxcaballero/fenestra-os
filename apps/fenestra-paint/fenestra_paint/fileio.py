@@ -233,12 +233,59 @@ def wallpaper_dir():
     return os.path.join(base, "backgrounds")
 
 
+def _fenestra_session():
+    return "Fenestra" in os.environ.get("XDG_CURRENT_DESKTOP", "").split(":")
+
+
+def _shell_conf_set(section, key, value):
+    """Set one key of ~/.config/fenestra/shell.conf (Fenestra Shell watches the file).
+    Keeps every other line; replaces the file atomically."""
+    base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    path = os.path.join(base, "fenestra", "shell.conf")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    try:
+        lines = open(path, encoding="utf-8").read().splitlines()
+    except OSError:
+        lines = []
+    out, current, done = [], None, False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            if current == section and not done:
+                out.append(f"{key}={value}")
+                done = True
+            current = stripped[1:-1]
+        elif current == section and stripped.split("=", 1)[0].strip() == key:
+            if not done:
+                out.append(f"{key}={value}")
+                done = True
+            continue
+        out.append(line)
+    if not done:
+        if current != section:
+            if out and out[-1].strip():
+                out.append("")
+            out.append(f"[{section}]")
+        out.append(f"{key}={value}")
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(out) + "\n")
+    os.replace(tmp, path)
+    return True
+
+
 def set_wallpaper(path, option="zoom"):
-    """Point both light and dark GNOME backgrounds at path."""
+    """Point both light and dark backgrounds at path: GNOME's keys, and in the Fenestra
+    session (KWin) Fenestra Shell's shell.conf as well."""
     uri = Gio.File.new_for_path(path).get_uri()
     ok = util.gset("org.gnome.desktop.background", "picture-uri", uri)
     util.gset("org.gnome.desktop.background", "picture-uri-dark", uri)
     util.gset("org.gnome.desktop.background", "picture-options", option)
+    if _fenestra_session():
+        try:
+            ok = _shell_conf_set("Appearance", "Wallpaper", path)
+        except OSError:
+            ok = False
     return ok
 
 

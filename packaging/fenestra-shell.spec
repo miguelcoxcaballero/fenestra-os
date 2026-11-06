@@ -51,6 +51,7 @@ python3 tools/build-aurorae-theme.py
 %{_userunitdir}/fenestra-shell.service
 %{_userunitdir}/fenestra-shell-failed.service
 %{_userunitdir}/fenestra-release-upgrade-user.service
+%{_userunitdir}/fenestra-oobe-first-login.service
 %{_datadir}/aurorae/themes/Fenestra-Dark
 %{_datadir}/aurorae/themes/Fenestra-Light
 %{_datadir}/kwin/tabbox/fenestra

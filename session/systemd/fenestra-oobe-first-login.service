@@ -1,0 +1,12 @@
+[Unit]
+Description=Fenestra setup on the first sign-in (Fenestra session)
+# Same condition as GNOME's gnome-initial-setup-first-login.service (which the GNOME session
+# pulls in): the setup writes ~/.config/gnome-initial-setup-done when it finishes.
+ConditionPathExists=!%E/gnome-initial-setup-done
+ConditionPathExists=/usr/libexec/fenestra-oobe
+PartOf=fenestra-session.target
+After=fenestra-shell.service
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/fenestra-oobe --existing-user
