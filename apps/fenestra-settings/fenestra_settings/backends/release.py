@@ -18,17 +18,17 @@ USER_HELPER = os.path.join(GLib.get_home_dir(), ".local", "libexec", "fenestra",
 
 
 def helper():
-    for p in ROOT_HELPERS + (USER_HELPER,):
-        if os.access(p, os.X_OK):
-            return p
-    return None
+    """The newest copy: a per-user copy updated after the system one wins (it re-installs itself
+    as the root-owned copy when started through pkexec)."""
+    found = [p for p in ROOT_HELPERS + (USER_HELPER,) if os.access(p, os.X_OK)]
+    if not found:
+        return None
+    return max(found, key=lambda p: os.stat(p).st_mtime)
 
 
 def root_helper():
-    for p in ROOT_HELPERS:
-        if os.access(p, os.X_OK):
-            return p
-    return helper()
+    found = [p for p in ROOT_HELPERS if os.access(p, os.X_OK)]
+    return max(found, key=lambda p: os.stat(p).st_mtime) if found else helper()
 
 
 def kits():
