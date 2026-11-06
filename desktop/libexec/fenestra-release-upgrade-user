@@ -41,6 +41,9 @@ else
     gsettings set org.gnome.shell disable-extension-version-validation false
 fi
 rm -f "/run/user/$(id -u)/gnome-shell-disable-extensions"
+# GTK >= 4.20 follows the desktop color scheme; the old key only makes GTK 4.24 warn
+# and pins GTK 4 apps to dark (GTK 3 keeps it: no color-scheme support there).
+sed -i '/^gtk-application-prefer-dark-theme=/d' "$HOME/.config/gtk-4.0/settings.ini" 2>/dev/null || true
 find_tool() { for d in "$HOME/Projects/fenestra-os/extras/fedora-upgrade" /usr/share/fenestra/upgrade; do [ -f "$d/$1" ] && { echo "$d/$1"; return; }; done; }
 r=$(find_tool nautilus-user-refresh.sh); [ -n "$r" ] && bash "$r" >/dev/null 2>&1
 c=$(find_tool check.sh)

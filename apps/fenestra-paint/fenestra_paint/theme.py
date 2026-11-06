@@ -148,10 +148,11 @@ class Theme:
         self.vars.load_from_string(css)
         gs = Gtk.Settings.get_default()
         if gs is not None:
-            try:
+            # GTK >= 4.20: gtk-interface-color-scheme (the old property is deprecated, 4.24 warns).
+            if hasattr(Gtk, "InterfaceColorScheme") and gs.find_property("gtk-interface-color-scheme"):
                 gs.set_property("gtk-interface-color-scheme",
                                 Gtk.InterfaceColorScheme.DARK if dark else Gtk.InterfaceColorScheme.LIGHT)
-            except (TypeError, AttributeError):
+            else:
                 gs.set_property("gtk-application-prefer-dark-theme", dark)
             if gs.props.gtk_theme_name != "Default":
                 gs.props.gtk_theme_name = "Default"
