@@ -34,9 +34,11 @@ Item {
         property Toasts toasts: Toasts { targetScreen: Qt.application.screens[0] }
         property SecurityScreen security: SecurityScreen { targetScreen: Qt.application.screens[0] }
         property ConsentDialog consent: ConsentDialog { }
+        property SnapLayouts snap: SnapLayouts { targetScreen: Qt.application.screens[0] }
     }
     readonly property var toastsWindow: sessionSurfaces.toasts
     readonly property var securityScreen: sessionSurfaces.security
+    readonly property var snapLayouts: sessionSurfaces.snap
 
     // Start / Search for the screen that asked (taskbar button) or the first screen (Super, D-Bus).
     function screenObjects(screen) {
@@ -71,6 +73,7 @@ Item {
         function onNotificationCenterRequested() { ShellState.toggleCalendar(null, -1) }
         function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
         function onSearchRequested() { ShellState.toggleSearch(null, -1) }
+        function onSnapLayoutsRequested() { root.snapLayouts.open() }
     }
     Connections {
         target: ShellControl

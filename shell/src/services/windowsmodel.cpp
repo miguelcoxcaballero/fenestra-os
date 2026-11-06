@@ -48,6 +48,12 @@ void PlasmaWindow::org_kde_plasma_window_pid_changed(uint32_t p)
     Q_EMIT changed();
 }
 
+void PlasmaWindow::org_kde_plasma_window_geometry(int32_t x, int32_t y, uint32_t width, uint32_t height)
+{
+    geometry = QRect(x, y, int(width), int(height));
+    Q_EMIT changed();
+}
+
 void PlasmaWindow::org_kde_plasma_window_initial_state()
 {
     ready = true;
@@ -186,6 +192,8 @@ QVariant WindowsModel::data(const QModelIndex &index, int role) const
         return w->uuid;
     case PidRole:
         return w->pid;
+    case GeometryRole:
+        return w->geometry;
     }
     return {};
 }
@@ -194,7 +202,8 @@ QHash<int, QByteArray> WindowsModel::roleNames() const
 {
     return {{TitleRole, "title"}, {AppIdRole, "appId"}, {IconNameRole, "iconName"},
             {ActiveRole, "active"}, {MinimizedRole, "minimized"}, {MaximizedRole, "maximized"},
-            {DemandsAttentionRole, "demandsAttention"}, {UuidRole, "uuid"}, {PidRole, "pid"}};
+            {DemandsAttentionRole, "demandsAttention"}, {UuidRole, "uuid"}, {PidRole, "pid"},
+            {GeometryRole, "geometry"}};
 }
 
 void WindowsModel::setState(int row, quint32 flags, bool on)

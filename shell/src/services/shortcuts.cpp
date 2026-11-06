@@ -2,6 +2,7 @@
 #include "shortcuts.h"
 
 #include "apps.h"
+#include "kwinintegration.h"
 #include "notifications.h"
 #include "status.h"
 #include "system.h"
@@ -101,6 +102,10 @@ void Shortcuts::install()
             &QAction::triggered, this, &Shortcuts::quickSettingsRequested);
     connect(add(QStringLiteral("search"), QStringLiteral("Search"), {QKeySequence(Qt::META | Qt::Key_S)}),
             &QAction::triggered, this, &Shortcuts::searchRequested);
+    connect(add(QStringLiteral("snap-layouts"), QStringLiteral("Snap layouts"), {QKeySequence(Qt::META | Qt::Key_Z)}),
+            &QAction::triggered, this, &Shortcuts::snapLayoutsRequested);
+    connect(add(QStringLiteral("task-view"), QStringLiteral("Task View"), {QKeySequence(Qt::META | Qt::Key_Tab)}),
+            &QAction::triggered, this, [] { KWinIntegration::instance()->toggleOverview(); });
     connect(add(QStringLiteral("screenshot"), QStringLiteral("Take a screenshot"), {QKeySequence(Qt::Key_Print)}),
             &QAction::triggered, this, &Shortcuts::takeScreenshot);
 }

@@ -1,0 +1,10 @@
+{
+  "KPlugin": {
+    "Id": "Fenestra-Light",
+    "Name": "Fenestra (light)",
+    "Description": "Fenestra window decoration",
+    "License": "GPL-3.0-or-later",
+    "Version": "1.0"
+  },
+  "X-Plasma-API": "javascript"
+}

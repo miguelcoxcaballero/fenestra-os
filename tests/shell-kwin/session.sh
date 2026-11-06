@@ -252,6 +252,20 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' '[Appearance]' 'Wallpaper=spotlight'
     check D03-spotlight wait_for 'probe "WallpaperSource.image" | grep -q fenestra-spotlight/images' 5
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
+    # ---- H6: windows ----
+    check W01-decoration-config wait_for 'grep -q "theme=__aurorae__svg__Fenestra-" ~/.config/kwinrc' 10
+    check W04-switcher-config bash -c 'grep -q "LayoutName=fenestra" ~/.config/kwinrc'
+    gdbus call --session -d org.kde.KWin -o /KWin -m org.kde.KWin.supportInformation > /out/kwin-support.txt 2>&1
+    check W01-decoration-loaded bash -c 'grep -qi "Fenestra-Dark\|aurorae" /out/kwin-support.txt'
+    probe "root.snapLayouts.open()" >/dev/null; sleep 1
+    check W03-snap-layouts shot_with fenestra-snap 27-snap-layouts
+    probe "root.snapLayouts.visible = false" >/dev/null
+    # The X11 test window, active, into the left half of the work area (1920 × 1032).
+    X11ROW=$(probe "(() => { for (let i = 0; i < WindowsModel.count; ++i) if (WindowsModel.data(WindowsModel.index(i, 0), 257) === 'X11 client') return i; return -1 })()" | tr -dc 0-9)
+    probe "WindowsModel.activate($X11ROW)" >/dev/null; sleep 1
+    probe "KWinIntegration.placeActiveWindow(Qt.rect(0, 0, 0.5, 1))" >/dev/null
+    check W03-snap-left-half wait_for '[ "$(probe "(() => { const g = WindowsModel.data(WindowsModel.index('$X11ROW', 0), 266); return g.x + \",\" + g.width })()")" = "('"'"'[\"0,960\"]'"'"',)" ]' 10
+    log "snapped geometry: $(probe "JSON.stringify(WindowsModel.data(WindowsModel.index($X11ROW, 0), 266))")"
     # A shell crash must not take KWin or the windows down; a new shell picks the windows up again.
     kill -SEGV $SHELL_PID; sleep 2
     check kwin-survives-shell-crash kill -0 $KWIN

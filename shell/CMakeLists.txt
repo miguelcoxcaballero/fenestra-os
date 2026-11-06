@@ -49,6 +49,7 @@ qt_add_executable(fenestra-shell
     src/services/shortcuts.cpp src/services/shortcuts.h
     src/services/polkitagent.cpp src/services/polkitagent.h
     src/services/desktop.cpp src/services/desktop.h
+    src/services/kwinintegration.cpp src/services/kwinintegration.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -100,6 +101,7 @@ qt_add_qml_module(fenestra-shell
         qml/taskbar/TaskPreview.qml
         qml/taskbar/Taskbar.qml
         qml/taskbar/WeatherButton.qml
+        qml/taskview/SnapLayouts.qml
         qml/tray/Tray.qml
         qml/tray/TrayButton.qml
 )
@@ -134,3 +136,7 @@ if(FENESTRA_INSTALL_SESSION)
                   ${session_dir}/systemd/fenestra-shell-failed.service
             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
 endif()
+
+# KWin parts: Fenestra decoration (Aurorae SVG themes) and Alt+Tab switcher (../kwin).
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMAKE_INSTALL_DATADIR}/aurorae/themes)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)

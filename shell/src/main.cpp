@@ -10,6 +10,7 @@
 #include <QQuickImageProvider>
 #include <QQuickWindow>
 
+#include "kwinintegration.h"
 #include "notifications.h"
 #include "polkitagent.h"
 #include "shellcontrol.h"
@@ -103,6 +104,7 @@ int main(int argc, char *argv[])
     Notifications::instance()->registerOnBus();
     PolkitAgent::instance()->registerAgent();
     Shortcuts::instance()->install();
+    KWinIntegration::instance(); // Fenestra decoration and switcher in kwinrc
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }

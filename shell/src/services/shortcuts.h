@@ -27,6 +27,7 @@ Q_SIGNALS:
     void quickSettingsRequested();
     void searchRequested();
     void screenshotSaved(const QString &path);
+    void snapLayoutsRequested();
 
 private:
     explicit Shortcuts(QObject *parent = nullptr);
