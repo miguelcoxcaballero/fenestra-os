@@ -36,12 +36,18 @@ def parse_args(argv):
     p.add_argument("--demo-data", action="store_true",
                    help="deterministic sample catalogue; operations are simulated (implied by --screenshot)")
     p.add_argument("--read-only", action="store_true", help="never install, remove or change sources")
+    p.add_argument("--real-data", action="store_true",
+                   help="(screenshot) use the real backends instead of demo data; implies --read-only. Testing only:"
+                        " never publish such screenshots")
     p.add_argument("--list-backends", action="store_true", help="print the backends that would be used and exit")
     # GNOME Software compatible options, so a .desktop override / Settings link can point here later
     p.add_argument("--mode", default=None, help=argparse.SUPPRESS)          # updates | installed | overview
     p.add_argument("--details", default=None, help=argparse.SUPPRESS)       # app id
     p.add_argument("--search-text", dest="gs_search", default=None, help=argparse.SUPPRESS)
-    o, _rest = p.parse_known_args(argv[1:])
+    o, rest = p.parse_known_args(argv[1:])
+    for r in rest:  # appstream://ID or appstream:ID URIs (what GNOME Software is given by other apps)
+        if r.startswith("appstream:") and not o.app:
+            o.app = r.split(":", 1)[1].lstrip("/")
     if o.mode and not o.page:
         o.page = {"updates": "updates", "installed": "library", "updated": "library"}.get(o.mode, "home")
     if o.details and not o.app:
@@ -107,10 +113,13 @@ class App(Gtk.Application):
         self.store = Store(choose(util.DEMO))
         pid, arg = start_target(o)
         self.win = StoreWindow(self, self.store, pid, arg)
+        if not o.size:
+            self.win.preset_width(self.win.get_default_size()[0])
         if o.size:
             try:
                 w, h = (int(x) for x in o.size.lower().split("x"))
                 self.win.set_default_size(w, h)
+                self.win.preset_width(w)
                 if o.screenshot:
                     self.win.set_resizable(False)
             except ValueError:
@@ -172,16 +181,16 @@ def main(argv=None):
     argv = argv or sys.argv
     opts = parse_args(argv)
     i18n.init(opts.lang)
-    if opts.screenshot or opts.demo_data or os.environ.get("FENESTRA_STORE_DEMO"):
+    if (opts.screenshot and not opts.real_data) or opts.demo_data or os.environ.get("FENESTRA_STORE_DEMO"):
         util.DEMO = True
-    if opts.read_only or os.environ.get("FENESTRA_STORE_READ_ONLY"):
+    if opts.read_only or opts.real_data or os.environ.get("FENESTRA_STORE_READ_ONLY"):
         util.READ_ONLY = True
     if opts.list_backends:
         from .backends import choose
         for b in choose(util.DEMO):
             print(b.id, "-", b.label)
         return 0
-    if os.geteuid() == 0 and not util.DEMO:
+    if os.geteuid() == 0 and not (util.DEMO or util.READ_ONLY):
         print("fenestra-store: do not run as root; installs ask for permission through polkit.", file=sys.stderr)
         return 1
     app = App(opts)

@@ -39,7 +39,10 @@ class DetailsPage(Page):
         # ------------------------------------------------------------ header card
         head = Gtk.Box(spacing=24)
         head.add_css_class("app-head")
-        head.append(app_icon(app, 96))
+        self.head_icon = app_icon(app, 96)
+        self.head_icon.set_halign(Gtk.Align.START)
+        self.head_icon.set_valign(Gtk.Align.START)
+        head.append(self.head_icon)
         info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True, valign=Gtk.Align.CENTER)
         info.append(label(app.name, "app-title", wrap=True))
         if app.developer:

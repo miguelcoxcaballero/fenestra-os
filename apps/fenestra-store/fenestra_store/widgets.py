@@ -14,8 +14,8 @@ def icon(name: str | None, size: int = 16, css: str | None = None) -> Gtk.Image:
     if name:
         img.set_from_icon_name(name)
     img.set_pixel_size(size)
-    if css:
-        img.add_css_class(css)
+    for c in (css or "").split():
+        img.add_css_class(c)
     return img
 
 
@@ -28,9 +28,8 @@ def label(text: str = "", css=None, wrap=False, xalign=0.0, ellipsize=False, lin
         lb.set_ellipsize(Pango.EllipsizeMode.END)
     if lines:
         lb.set_lines(lines)
-    if css:
-        for c in ([css] if isinstance(css, str) else css):
-            lb.add_css_class(c)
+    for c in (css.split() if isinstance(css, str) else css or []):
+        lb.add_css_class(c)
     return lb
 
 

@@ -62,9 +62,12 @@ class HomePage(Page):
             tiles.append(b)
         self.box.append(tiles)
 
-        self._row(_("Popular apps"), st.popular(games=False), 8, lambda: self.win.navigate("apps"))
+        pop = st.has_popularity
+        self._row(_("Popular apps") if pop else _("Recommended apps"), st.popular(games=False), 8,
+                  lambda: self.win.navigate("apps"))
         self._row(_("New and updated"), st.new_and_updated(), 8, None)
-        self._row(_("Popular games"), st.popular(games=True), 4, lambda: self.win.navigate("games"))
+        self._row(_("Popular games") if pop else _("Recommended games"), st.popular(games=True), 4,
+                  lambda: self.win.navigate("games"))
         for key, title, _i in CATEGORIES:
             if key == "games":
                 continue

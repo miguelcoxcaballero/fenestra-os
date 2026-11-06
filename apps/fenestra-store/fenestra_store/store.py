@@ -39,6 +39,8 @@ class Store(GObject.Object):
         self.loaded = False
         self.loading = False
         self.load_errors: list[str] = []
+        self.has_popularity = False
+        self._hay: dict = {}
         self.checking = False
         self.last_checked: float | None = None
         self._sources: list[Source] = []
@@ -78,6 +80,13 @@ class Store(GObject.Object):
     def _loaded(self, res):
         apps, sources, errors = res
         self.apps = {a.uid: a for a in apps}
+        self._hay = {}
+        # Real catalogues carry no download counts: rank by how complete the listing is instead,
+        # and say "Recommended" rather than "Popular" (has_popularity).
+        self.has_popularity = any(a.popularity for a in apps)
+        if not self.has_popularity:
+            for a in apps:
+                a.popularity = self._quality(a)
         self._sources = sources
         self.load_errors = errors
         self.loaded = True
@@ -110,6 +119,14 @@ class Store(GObject.Object):
         return sorted(best.values(), key=lambda a: util.fold(a.name))
 
     @staticmethod
+    def _quality(a: App) -> int:
+        score = min(len(a.screenshots), 3) * 3 + (2 if a.developer else 0) + (2 if len(a.description) >= 2 else 0)
+        score += 2 if a.icon_path or a.icon_name else 0
+        score += 3 if a.released >= time.strftime("%Y-%m-%d", time.gmtime(time.time() - 180 * 86400)) else 0
+        score += 1 if a.installed else 0
+        return score
+
+    @staticmethod
     def _rank(a: App):
         return (0 if a.installed else 1, 0 if a.source == "flathub" else 1)
 
@@ -118,9 +135,15 @@ class Store(GObject.Object):
 
     def featured(self) -> list[App]:
         f = [a for a in self.catalogue() if a.featured]
-        if not f:  # real catalogues: newest popular apps with screenshots
-            f = sorted((a for a in self.catalogue() if a.screenshots), key=lambda a: -a.popularity)[:5]
-        return sorted(f, key=lambda a: (-a.popularity, a.name))
+        if f:
+            return sorted(f, key=lambda a: (-a.popularity, a.name))
+        # Real catalogues: five complete, recently released listings, a different set each day.
+        pool = sorted((a for a in self.catalogue() if len(a.screenshots) >= 2 and a.description and not a.installed),
+                      key=lambda a: (a.popularity, a.released), reverse=True)[:40]
+        if not pool:
+            return []
+        day = int(time.time() // 86400)
+        return [pool[(day * 7 + i * 8) % len(pool)] for i in range(min(5, len(pool)))]
 
     def popular(self, games=None, limit=None) -> list[App]:
         r = [a for a in self.catalogue() if games is None or a.is_game == games]
@@ -157,10 +180,7 @@ class Store(GObject.Object):
         for a in self.catalogue():
             if kind == "games" and not a.is_game or kind == "apps" and a.is_game:
                 continue
-            name = util.fold(a.name)
-            fields = [(util.fold(" ".join(a.keywords)), 6), (util.fold(a.summary), 4),
-                      (util.fold(a.developer), 3), (util.fold(a.app_id), 2),
-                      (util.fold(" ".join(a.description)), 1)]
+            name, fields = self._haystack(a)
             total = 0
             for w in words:
                 if name.startswith(w) or f" {w}" in f" {name}":
@@ -177,6 +197,15 @@ class Store(GObject.Object):
                 scored.append((total, a.popularity, a))
         scored.sort(key=lambda t: (-t[0], -t[1], util.fold(t[2].name)))
         return [t[2] for t in scored]
+
+    def _haystack(self, a: App):
+        """Folded search text of an app, computed once per catalogue load."""
+        h = self._hay.get(a.uid)
+        if h is None:
+            h = self._hay[a.uid] = (util.fold(a.name), [
+                (util.fold(" ".join(a.keywords)), 6), (util.fold(a.summary), 4), (util.fold(a.developer), 3),
+                (util.fold(a.app_id), 2), (util.fold(" ".join(a.description)), 1)])
+        return h
 
     def sources(self) -> list[Source]:
         return list(self._sources)

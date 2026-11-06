@@ -192,10 +192,18 @@ class StoreWindow(Gtk.ApplicationWindow):
         self._update_badge()
 
     # ----------------------------------------------------------------- layout
+    @staticmethod
+    def layout_for(w):
+        compact = w < COMPACT_WIDTH
+        return compact, w - (64 if compact else 232) < NARROW_CONTENT
+
+    def preset_width(self, w):
+        """Apply the layout for a known width before the first frame (no relayout flash)."""
+        self._apply_layout(*self.layout_for(w))
+
     def do_size_allocate(self, w, h, b):
         Gtk.ApplicationWindow.do_size_allocate(self, w, h, b)
-        compact = w < COMPACT_WIDTH
-        narrow = w - (64 if compact else 232) < NARROW_CONTENT
+        compact, narrow = self.layout_for(w)
         if compact != self._compact or narrow != self.narrow:
             GLib.idle_add(self._apply_layout, compact, narrow)
 

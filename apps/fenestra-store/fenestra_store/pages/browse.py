@@ -10,6 +10,7 @@ from ..widgets import clear, label
 from .base import Page
 
 SORTS = [("popular", N_("Most popular")), ("name", N_("Name")), ("recent", N_("Recently updated"))]
+SORTS_NO_STATS = [("popular", N_("Recommended")), ("name", N_("Name")), ("recent", N_("Recently updated"))]
 
 
 def sort_apps(apps, how):
@@ -50,7 +51,8 @@ class BrowsePage(Page):
         else:
             bar.append(Gtk.Box(hexpand=True))
         bar.append(label(_("Sort by"), "caption"))
-        model = Gtk.StringList.new([_(t) for _k, t in SORTS])
+        sorts = SORTS if self.store.has_popularity else SORTS_NO_STATS
+        model = Gtk.StringList.new([_(t) for _k, t in sorts])
         dd = Gtk.DropDown(model=model)
         dd.add_css_class("fluent-dropdown")
         dd.set_valign(Gtk.Align.CENTER)
