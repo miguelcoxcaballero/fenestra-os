@@ -16,7 +16,13 @@ mkdir -p "$BROKEN"
 for e in fenestra-login fenestra-spotlight fenestra-lock-clock; do
     (cd "$REPO" && git archive 3a03758^ "desktop/extensions/$e@fenestra-os.github.io") | tar -x -C "$BROKEN" --strip-components=2
 done
-ENGINE=$(command -v podman || command -v docker)
+# The engine that has the image (GitHub runners have both docker and podman); ENGINE overrides.
+if [ -z "${ENGINE:-}" ]; then
+    for e in docker podman; do
+        command -v $e >/dev/null && $e image inspect "$IMAGE" >/dev/null 2>&1 && { ENGINE=$e; break; }
+    done
+fi
+ENGINE=${ENGINE:-docker}
 fails=0
 run() {  # name expected env...
     local name=$1 want=$2; shift 2

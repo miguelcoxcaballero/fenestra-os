@@ -55,7 +55,7 @@ jobs:
       - name: Image (Fedora ${{ matrix.fedora }})
         run: docker build --build-arg FEDORA=${{ matrix.fedora }} -t fenestra-greeterlab -f tests/greeter/Containerfile tests/greeter
       - name: Greeter and lock-screen bench
-        run: OUT=$RUNNER_TEMP/bench bash tests/greeter/bench.sh fenestra-greeterlab
+        run: ENGINE=docker OUT=$RUNNER_TEMP/bench bash tests/greeter/bench.sh fenestra-greeterlab
       - name: Screenshots and logs
         if: always()
         uses: actions/upload-artifact@v4
