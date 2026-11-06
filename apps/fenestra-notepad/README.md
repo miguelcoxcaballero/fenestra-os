@@ -2,7 +2,7 @@
 
 A from-scratch **Notepad** for Fenestra (Fedora 43 / GNOME 49) that looks and behaves like
 the current Windows 11 Notepad: tabs in the title bar with the unsaved-changes dot, File /
-Edit / View menu bar, Markdown formatting toolbar for Markdown tabs, floating Find / Replace
+Edit / View menu bar, Markdown formatting toolbar, floating Find / Replace
 card, status bar (position, characters, format, zoom, line ending, encoding), Settings page
 and session restore. It replaces GNOME Text Editor as the default text editor.
 
@@ -60,7 +60,8 @@ the running window (or in a new window, see *Settings > Opening files*).
   the status bar) get the formatting toolbar: headings 1–6 / body text, bulleted and
   numbered lists, bold (Ctrl+B), italic (Ctrl+I), strikethrough, link (Ctrl+K), table picker,
   clear formatting. Markdown is shown as styled syntax (bold, italic, larger headings,
-  struck-through text, links). Plain-text tabs hide the toolbar.
+  struck-through text, links). As in Windows the toolbar is shown on every tab while
+  *Formatting* is on; using it on a plain-text tab turns that tab into a Markdown one.
 * **Settings** (gear) – App theme (Light / Dark / Use system setting), Font (family, style,
   size, preview), Word wrap, Formatting, Opening files (new tab / new window), When Notepad
   starts (continue previous session / start new session), Recent Files, About.
@@ -91,8 +92,10 @@ tools/screenshots.sh                 # regenerate screenshots/
 
 `--screenshot OUT.png [--shot STATE] [--dark|--light] [--lang es]` renders a state
 (`main`, `menu-file`, `menu-edit`, `menu-view`, `menu-zoom`, `menu-recent`, `context`, `find`,
-`replace`, `settings`, `settings-font`, `markdown`, `tabs`, `save`, `goto`) with demo text and
-never reads or writes the user's settings or session.
+`replace`, `settings`, `settings-font`, `markdown`, `tabs`, `save`, `goto`, plus the reference
+states `text`, `empty`, `find-typed`, `find-options`, `settings-theme`) with demo text and never reads
+or writes the user's settings or session. `FENESTRA_SHOT_DEBUG=1` also prints the window-relative
+box of every styled widget, for measuring against reference captures.
 
 ## Install
 
