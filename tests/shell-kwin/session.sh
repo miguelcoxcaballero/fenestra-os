@@ -265,7 +265,8 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     X11ROW=$(probe "(() => { for (let i = 0; i < WindowsModel.count; ++i) if (WindowsModel.data(WindowsModel.index(i, 0), 257) === 'X11 client') return i; return -1 })()" | tr -dc 0-9)
     probe "WindowsModel.activate($X11ROW)" >/dev/null; sleep 1
     probe "KWinIntegration.placeActiveWindow(Qt.rect(0, 0, 0.5, 1))" >/dev/null
-    check W03-snap-left-half wait_for '[ "$(probe "(() => { const g = WindowsModel.data(WindowsModel.index('$X11ROW', 0), 266); return g.x + \",\" + g.width })()")" = "('"'"'[\"0,960\"]'"'"',)" ]' 10
+    # Left half of the output the window is on (1920 px outputs): x is 0 or 1920, width 960.
+    check W03-snap-left-half wait_for '[[ "$(probe "(() => { const g = WindowsModel.data(WindowsModel.index('$X11ROW', 0), 266); return (g.x % 1920) + \",\" + g.width + \",\" + g.height })()")" == *\"0,960,1032\"* ]]' 10
     log "snapped geometry: $(probe "JSON.stringify(WindowsModel.data(WindowsModel.index($X11ROW, 0), 266))")"
     # L01: the lock screen gets the Fenestra look-and-feel and the current picture.
     check L01-lock-lnf bash -c 'grep -q "LookAndFeelPackage=org.fenestra.desktop" ~/.config/kdeglobals'
