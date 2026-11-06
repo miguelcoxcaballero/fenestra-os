@@ -267,6 +267,9 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "KWinIntegration.placeActiveWindow(Qt.rect(0, 0, 0.5, 1))" >/dev/null
     check W03-snap-left-half wait_for '[ "$(probe "(() => { const g = WindowsModel.data(WindowsModel.index('$X11ROW', 0), 266); return g.x + \",\" + g.width })()")" = "('"'"'[\"0,960\"]'"'"',)" ]' 10
     log "snapped geometry: $(probe "JSON.stringify(WindowsModel.data(WindowsModel.index($X11ROW, 0), 266))")"
+    # L01: the lock screen gets the Fenestra look-and-feel and the current picture.
+    check L01-lock-lnf bash -c 'grep -q "LookAndFeelPackage=org.fenestra.desktop" ~/.config/kdeglobals'
+    check L01-lock-background bash -c 'grep -q "Background=/" ~/.config/kscreenlockerrc'
     # W05: first login curtain (fresh state, no setup window): black first, then gone.
     rm -f ~/.config/gnome-initial-setup-done
     probe "root.sessionSurfaces.curtain.active = true; root.sessionSurfaces.curtain.visible = true" >/dev/null; sleep 1

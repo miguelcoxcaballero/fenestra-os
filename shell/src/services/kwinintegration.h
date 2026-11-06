@@ -22,5 +22,6 @@ public:
 private:
     explicit KWinIntegration(QObject *parent = nullptr);
     void applyTheme();
+    void applyLockScreen();
     void runScript(const QString &name, const QString &code);
 };

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kwinintegration.h"
 
+#include "desktop.h"
 #include "shellsettings.h"
+#include "status.h"
+
+#include <QUrl>
 
 #include <KConfigGroup>
 #include <KSharedConfig>
@@ -29,7 +33,11 @@ KWinIntegration::KWinIntegration(QObject *parent)
     : QObject(parent)
 {
     connect(ShellSettings::instance(), &ShellSettings::changed, this, &KWinIntegration::applyTheme);
+    connect(WallpaperSource::instance(), &WallpaperSource::changed, this, &KWinIntegration::applyLockScreen);
+    connect(NetworkStatus::instance(), &NetworkStatus::changed, this, &KWinIntegration::applyLockScreen);
+    connect(PowerStatus::instance(), &PowerStatus::changed, this, &KWinIntegration::applyLockScreen);
     applyTheme();
+    applyLockScreen();
 }
 
 void KWinIntegration::applyTheme()
@@ -104,4 +112,30 @@ void KWinIntegration::toggleOverview()
     QDBusConnection::sessionBus().asyncCall(QDBusMessage::createMethodCall(QStringLiteral("org.kde.kglobalaccel"), QStringLiteral("/component/kwin"),
                                                                            QStringLiteral("org.kde.kglobalaccel.Component"), QStringLiteral("invokeShortcut"))
                                             << QStringLiteral("Overview"));
+}
+
+void KWinIntegration::applyLockScreen()
+{
+    // KWin's screen locker (kscreenlocker) draws lnf/org.fenestra.desktop's LockScreen.qml; its
+    // [Greeter][LnF][General] values are the picture and the status shown on it (L01).
+    auto globals = KSharedConfig::openConfig(QStringLiteral("kdeglobals"));
+    KConfigGroup kde = globals->group(QStringLiteral("KDE"));
+    if (kde.readEntry("LookAndFeelPackage") != QLatin1String("org.fenestra.desktop")) {
+        kde.writeEntry("LookAndFeelPackage", QStringLiteral("org.fenestra.desktop"));
+        globals->sync();
+    }
+    auto locker = KSharedConfig::openConfig(QStringLiteral("kscreenlockerrc"));
+    KConfigGroup general = locker->group(QStringLiteral("Greeter")).group(QStringLiteral("LnF")).group(QStringLiteral("General"));
+    const QString image = QUrl(WallpaperSource::instance()->image()).toLocalFile();
+    auto *net = NetworkStatus::instance();
+    auto *power = PowerStatus::instance();
+    // Battery in steps of 5 %: the file is not rewritten on every percent.
+    const int battery = power->hasBattery() ? (power->percentage() / 5) * 5 : -1;
+    const QString network = net->connected() ? net->name() : QString();
+    if (general.readEntry("Background") == image && general.readEntry("Network") == network && general.readEntry("Battery", -2) == battery)
+        return;
+    general.writeEntry("Background", image);
+    general.writeEntry("Network", network);
+    general.writeEntry("Battery", battery);
+    locker->sync();
 }
