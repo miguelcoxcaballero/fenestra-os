@@ -187,7 +187,7 @@ Window {
         separatorMargin: 0
         itemHeight: Metrics.tok("menu.taskbar.item.height", 35)
         items: [
-            { text: Strings.tr("Task Manager"), iconSource: Metrics.assets + "menu-icons/win11-menu-tvmonitor.svg", action: () => Apps.runCommand("fenestra-taskmgr") },
+            { text: Strings.tr("Task Manager"), iconSource: Metrics.assets + "menu-icons/win11-menu-taskmanager.svg", action: () => Apps.runCommand("fenestra-taskmgr") },
             "-",
             { text: Strings.tr("Taskbar settings"), iconSource: Metrics.assets + "menu-icons/win11-menu-settings.svg", action: () => Apps.runCommand("fenestra-settings --page taskbar") },
         ]

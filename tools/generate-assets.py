@@ -301,7 +301,7 @@ MENU = {'cancel': 'dismiss_16_regular', 'commandprompt': 'window_console_20_regu
         'play': 'play_16_regular', 'redo': 'arrow_redo_16_regular', 'refresh': 'arrow_clockwise_16_regular',
         'rename': 'rename_16_regular', 'selectall': 'select_all_on_16_regular', 'settings': 'settings_16_regular',
         'share': 'share_16_regular', 'sort': 'arrow_sort_16_regular', 'stop': 'stop_16_regular',
-        'tvmonitor': 'desktop_16_regular', 'undo': 'arrow_undo_16_regular', 'viewall': 'grid_16_regular',
+        'tvmonitor': 'desktop_16_regular', 'taskmanager': 'desktop_16_regular', 'undo': 'arrow_undo_16_regular', 'viewall': 'grid_16_regular',
         'zipfolder': 'folder_zip_16_regular', 'view': 'grid_16_regular', 'groupby': 'text_bullet_list_ltr_16_regular',
         'new': 'add_circle_16_regular', 'properties': 'wrench_16_regular', 'copypath': 'clipboard_link_16_regular',
         'openwith': 'apps_16_regular', 'terminal': 'window_console_20_regular', 'pin': 'pin_16_regular',

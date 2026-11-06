@@ -715,10 +715,11 @@ _APP_NAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$')
 #   shell:NAME  icon name for Fenestra Shell only (the GTK meaning of the name differs)
 #   asset:REL   Fenestra Shell asset /usr/share/fenestra/assets/REL (menus, power, Ctrl+Alt+Del)
 #   snip:NAME   snipping toolbar glyph (shell/qml/snip/icons/NAME.svg)
-# Where one Fenestra file stands for two Windows glyphs (menu-icons/win11-menu-tvmonitor.svg is both
-# "Display settings" and the taskbar's "Task Manager"), the glyph of the first place listed in
-# icons.json wins and the other keeps Fenestra's artwork.
+# Each Windows glyph has its own Fenestra file, so a pack never puts one glyph in two places
+# (the taskbar's "Task Manager" has menu-icons/win11-menu-taskmanager.svg, Display settings
+# win11-menu-tvmonitor.svg).
 GLYPH_TARGETS = {
+    'utilities-system-monitor': ['asset:menu-icons/win11-menu-taskmanager.svg'],  # taskbar menu «Administrador de tareas»
     # taskbar, tray, notifications
     'pan-up': ['icon:pan-up-symbolic', 'shell:go-up-symbolic'],            # tray ^, calendar folded
     'pan-down': ['icon:pan-down-symbolic', 'shell:go-down-symbolic'],      # drop-downs, calendar fold
