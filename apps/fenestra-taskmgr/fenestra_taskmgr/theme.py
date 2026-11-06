@@ -30,12 +30,12 @@ DARK = {
 LIGHT = {
     "bg": "#f3f3f3", "panel": "#ffffff", "panel-edge": "#e5e5e5", "fg": "#1b1b1b", "fg2": "#5d5d5d",
     "fg3": "#a0a0a0", "line": "#e9e9e9", "toolbar-line": "#f0f0f0", "hover": "rgba(0,0,0,0.037)",
-    "press": "rgba(0,0,0,0.024)", "select": "#e9e9e9", "header-sel": "#ededed",
-    "search": "#fbfbfb", "search-border": "#e5e5e5", "search-edge": "#e5e5e5", "search-bottom": "#cccccc", "search-focus": "#ffffff", "item-sel": "#ededed",
+    "press": "rgba(0,0,0,0.024)", "select": "#eaeaea", "header-sel": "#ededed",
+    "search": "#fbfbfb", "search-border": "#e5e5e5", "search-edge": "#e5e5e5", "search-bottom": "#cccccc", "search-focus": "#ffffff", "item-sel": "#f6f6f6",
     "card": "#ffffff", "card-line": "#e5e5e5", "ctl": "#fbfbfb", "ctl-hover": "#f6f6f6",
     "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.12)", "shadow": "rgba(0,0,0,0.14)",
     "close-hover": "#c42b1c", "dialog": "#f3f3f3", "dialog-foot": "#ffffff", "smoke": "rgba(0,0,0,0.3)",
-    "check-border": "rgba(0,0,0,0.55)", "graph-border": "#8e8e8e", "mini-bg": "#ffffff", "grid": "#e6e6e6",
+    "check-border": "rgba(0,0,0,0.55)", "graph-border": "#757575", "mini-bg": "#ffffff", "grid": "#ebebeb",
     "link": "#003e92", "warn": "#9d5d00", "leaf": "#0f7b0f",
 }
 
@@ -46,8 +46,8 @@ HEAT_LIGHT = ["#d6f1ff", "#9cddff", "#79cfff", "#56c0fb", "#36aef3", "#f7a4a4"] 
 # graph colours: (line, fill) per resource
 GRAPH_DARK = {"cpu": ("#39b8e3", "#0f313b"), "mem": ("#5c9efa", "#0f1d34"), "disk": ("#84c718", "#2d3e0f"),
               "net": ("#f5628e", "#430f22"), "gpu": ("#39b8e3", "#0f313b")}
-GRAPH_LIGHT = {"cpu": ("#117dbb", "#f1f6fa"), "mem": ("#8b12ae", "#f4f2f4"), "disk": ("#4da60c", "#eff7ea"),
-               "net": ("#a74f01", "#fcf3eb"), "gpu": ("#117dbb", "#f1f6fa")}
+GRAPH_LIGHT = {"cpu": ("#006f91", "#c3ecfa"), "mem": ("#095bde", "#c9e1ff"), "disk": ("#4a7500", "#d8f4b5"),
+               "net": ("#c32559", "#fbd3de"), "gpu": ("#006f91", "#c3ecfa")}  # sampled
 
 
 def rgba(s) -> Gdk.RGBA:

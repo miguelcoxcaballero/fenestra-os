@@ -25,19 +25,26 @@ class StatBlock(Gtk.Box):
     """Big stats (label over value) on the left + key/value list on the right."""
 
     def __init__(self):
-        super().__init__(spacing=16)
+        super().__init__(spacing=12)
         self.add_css_class("stat-block")
         self.big = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.append(self.big)
-        self.side = Gtk.Grid(column_spacing=12, row_spacing=2)
-        self.side.set_margin_top(4)
+        self.side = Gtk.Grid(column_spacing=14, row_spacing=3)
+        self.side.set_margin_top(2)
         self.side.set_valign(Gtk.Align.START)
-        self.append(self.side)
+        # like Windows, a narrow window clips the key/value list instead of widening the page
+        clip = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.EXTERNAL,
+                                  vscrollbar_policy=Gtk.PolicyType.NEVER)
+        clip.set_propagate_natural_height(True)
+        clip.set_propagate_natural_width(True)
+        clip.set_hexpand(True)
+        clip.set_child(self.side)
+        self.append(clip)
         self.values = {}
         self.side_values = {}
 
     def add_row(self, keys, bar=None):
-        row = Gtk.Box(spacing=18)
+        row = Gtk.Box(spacing=19)
         for i, k in enumerate(keys):
             col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             col.append(label(k, "stat-key"))
@@ -132,8 +139,10 @@ class DetailView(Gtk.Box):
         self.append(head)
         self.stats = StatBlock()
 
-    def axis(self, left, right):
+    def axis(self, left, right, after_graph=False):
         b = Gtk.Box()
+        if after_graph:
+            b.set_margin_top(3)
         lft = label(left, "perf-axis")
         b.append(lft)
         r = label(right, "perf-axis", xalign=1.0)
@@ -258,7 +267,7 @@ class PerformancePage(Page):
         st = v.stats
         if d.kind == "cpu":
             v.title.set_text(_("CPU"))
-            v.axis(_("% Utilization"), "100%")
+            v.axis(_("% Utilization"), _("100%"))
             v.big_graph = v.graph("cpu")
             v.cores = Gtk.Grid(column_spacing=4, row_spacing=4, column_homogeneous=True,
                                row_homogeneous=True)
@@ -268,10 +277,11 @@ class PerformancePage(Page):
             mode = util.opts()["cpu_graph"]
             v.big_graph.set_visible(mode == "overall")
             v.cores.set_visible(mode == "logical")
-            v.axis(_("60 seconds"), "0")
+            v.axis(_("60 seconds"), "0", after_graph=True)
             st.add_row([_("Utilization"), _("Speed")])
             st.add_row([_("Processes"), _("Threads"), _("Handles")])
             st.add_row([_("Up time")])
+            st.big.get_last_child().set_margin_top(1)
             s = self.win.collector.static
             st.add_side(_("Base speed"))
             st.add_side(_("Sockets"))
@@ -291,12 +301,13 @@ class PerformancePage(Page):
             v.title.set_text(_("Memory"))
             v.axis(_("Memory usage"), "")
             v.big_graph = v.graph("mem")
-            v.axis(_("60 seconds"), "0")
+            v.axis(_("60 seconds"), "0", after_graph=True)
             sp = label(_("Memory composition"), "perf-axis")
-            sp.set_margin_top(8)
+            sp.set_margin_top(4)
             v.append(sp)
             v.comp = CompositionBar()
             v.comp.set_margin_top(4)
+            v.comp.set_margin_bottom(18)
             v.append(v.comp)
             st.add_row([_("In use (Compressed)"), _("Available")])
             st.add_row([_("Committed"), _("Cached")])
@@ -305,15 +316,15 @@ class PerformancePage(Page):
             st.add_side(_("Hardware reserved"))
         elif d.kind == "disk":
             v.title.set_text("")
-            v.axis(_("Active time"), "100%")
+            v.axis(_("Active time"), _("100%"))
             v.big_graph = v.graph("disk")
-            v.axis(_("60 seconds"), "0")
+            v.axis(_("60 seconds"), "0", after_graph=True)
             ax = v.axis(_("Disk transfer rate"), "")
             ax[0].set_margin_top(8)
             v.rate_label = ax[1]
             v.rate_graph = v.graph("disk", vexpand=False, min_h=66)
             v.rate_graph.rows = 6
-            v.axis(_("60 seconds"), "0")
+            v.axis(_("60 seconds"), "0", after_graph=True)
             st.add_row([_("Active time"), _("Average response time")])
             st.add_row([_("Read speed"), _("Write speed")], bar=[("disk", "dash"), ("disk", "solid")])
             for k in (_("Capacity"), _("Formatted"), _("System disk"), _("Page file"), _("Type")):
@@ -322,7 +333,7 @@ class PerformancePage(Page):
             v.axis(_("Throughput"), "")
             v.scale_label = v.model  # placeholder replaced below
             v.big_graph = v.graph("net")
-            v.axis(_("60 seconds"), "0")
+            v.axis(_("60 seconds"), "0", after_graph=True)
             st.add_row([_("Send")], bar=[("net", "dash")])
             st.add_row([_("Receive")], bar=[("net", "solid")])
             st.add_side(_("Adapter name"))
@@ -332,9 +343,9 @@ class PerformancePage(Page):
             st.add_side(_("IPv4 address"))
             st.add_side(_("IPv6 address"))
         else:  # gpu
-            v.axis(_("Utilization"), "100%")
+            v.axis(_("Utilization"), _("100%"))
             v.big_graph = v.graph("gpu")
-            v.axis(_("60 seconds"), "0")
+            v.axis(_("60 seconds"), "0", after_graph=True)
             st.add_row([_("Utilization")])
         # axis label boxes: the first axis row's right label shows the scale
         first_axis = v.get_first_child().get_next_sibling()
@@ -359,7 +370,7 @@ class PerformancePage(Page):
         mem = self._ensure("mem", "mem")
         mem.mini.set_data([(h.get("mem"), "fill")], 100, tick)
         gb = 1024 ** 3
-        mem.set_lines(_("Memory"), f"{m['used'] / gb:.1f}/{m['total'] / gb:.1f} GB "
+        mem.set_lines(_("Memory"), f"{util.num(m['used'] / gb, 1)}/{util.num(m['total'] / gb, 1)} GB "
                       f"({util.fmt_pct0(m['used'] / m['total'] * 100)})")
         for d in snap.disks:
             key = f"disk{d['index']}"
@@ -407,7 +418,7 @@ class PerformancePage(Page):
             st.set(_("Threads"), str(snap.n_threads))
             st.set(_("Handles"), str(snap.n_handles))
             st.set(_("Up time"), util.fmt_uptime(snap.uptime))
-            st.set(_("Base speed"), util.fmt_ghz(static.base_khz) if static.base_khz else "N/A")
+            st.set(_("Base speed"), util.fmt_ghz(static.base_khz) if static.base_khz else _("N/A"))
             st.set(_("Sockets"), str(static.sockets))
             st.set(_("Virtual processors"), str(static.logical))
             st.set(_("Virtual machine"), _("Yes"))
@@ -418,7 +429,7 @@ class PerformancePage(Page):
                 for lvl, size in static.caches.items():
                     st.set(_("L%s cache") % lvl, util.fmt_size(size))
             else:
-                st.set(_("L%s cache") % "1", "N/A")
+                st.set(_("L%s cache") % "1", _("N/A"))
         elif d.kind == "mem":
             total = m["total"]
             v.model.set_text(util.fmt_size(total + m.get("reserved", 0)))
@@ -428,11 +439,11 @@ class PerformancePage(Page):
             v.comp.set_parts(m["used"], m["modified"], standby, m["free"])
             st.set(_("In use (Compressed)"), f"{util.fmt_size(m['used'])} ({util.fmt_size(m['compressed'])})")
             st.set(_("Available"), util.fmt_size(m["avail"]))
-            st.set(_("Committed"), f"{m['committed'] / gb:.1f}/{m['commit_limit'] / gb:.1f} GB")
+            st.set(_("Committed"), f"{util.num(m['committed'] / gb, 1)}/{util.num(m['commit_limit'] / gb, 1)} GB")
             st.set(_("Cached"), util.fmt_size(m["cached"]))
             st.set(_("Paged pool"), util.fmt_size(m["paged"]))
             st.set(_("Non-paged pool"), util.fmt_size(m["nonpaged"]))
-            st.set(_("Slots used"), "N/A")
+            st.set(_("Slots used"), _("N/A"))
             st.set(_("Hardware reserved"), util.fmt_size(m.get("reserved", 0)))
         elif d.kind == "disk":
             dd = d.disk
@@ -445,7 +456,7 @@ class PerformancePage(Page):
             v.rate_label.set_text(util.fmt_scale_bytes(sc))
             v.rate_graph.set_data([(w_, "fill"), (r_, "dash")], sc, tick)
             st.set(_("Active time"), util.fmt_pct0(dd["active"]))
-            st.set(_("Average response time"), f"{dd['resp']:.1f} ms")
+            st.set(_("Average response time"), f"{util.num(dd['resp'], 1)} ms")
             st.set(_("Read speed"), util.fmt_bps_short(dd["read"]))
             st.set(_("Write speed"), util.fmt_bps_short(dd["write"]))
             st.set(_("Capacity"), util.fmt_size(dd["capacity"]))

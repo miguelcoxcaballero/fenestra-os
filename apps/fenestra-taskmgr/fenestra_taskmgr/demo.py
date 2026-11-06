@@ -183,7 +183,7 @@ class DemoCollector:
         s.mem = {"total": total, "avail": int(3.5 * GB), "used": used, "free": int(0.4 * GB),
                  "cached": int(3.4 * GB), "modified": 40 * MB, "committed": int(2.1 * GB),
                  "commit_limit": int(7.6 * GB), "swap_total": int(1.6 * GB), "swap_used": 0,
-                 "paged": 256 * MB, "nonpaged": 151 * MB, "compressed": int(33.4 * MB),
+                 "paged": 256 * MB, "nonpaged": 151 * MB, "compressed": int(122 * MB),
                  "zram_orig": 0, "reserved": int(38.3 * MB)}
         s.disks = [{"name": "sda", "index": 0, "model": "QEMU HARDDISK", "type": "HDD (SATA)",
                     "kind": "HDD", "capacity": 64 * GB, "formatted": 64 * GB, "label": "C:",

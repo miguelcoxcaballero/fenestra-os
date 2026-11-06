@@ -102,6 +102,11 @@ def _num(v: float, decimals: int) -> str:
     return s
 
 
+def num(v: float, decimals: int = 1) -> str:
+    """Number with the UI language's decimal separator."""
+    return _num(v, decimals)
+
+
 def fmt_cpu(pct: float) -> str:
     if pct < 0.05:
         return "0%"
