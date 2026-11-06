@@ -22,7 +22,7 @@ class FindCard(Gtk.Box):
 
         row1 = Gtk.Box()
         row1.add_css_class("find-row")
-        self.toggle = flat_button(icon("np-chevron-up-20-symbolic", 16), "find-btn find-toggle",
+        self.toggle = flat_button(icon("np-chevron-up-20-symbolic", 20), "find-btn find-toggle",
                                   _("Toggle replace"), lambda: self.set_replace(not self.replace_mode))
         row1.append(self.toggle)
         self.entry = Gtk.Entry()
@@ -35,14 +35,16 @@ class FindCard(Gtk.Box):
         self.entry.connect("changed", self._changed)
         self.entry.connect("activate", lambda *_: self.win.find_next())
         row1.append(self.entry)
-        self.next_btn = flat_button(icon("np-arrow-down-symbolic", 16), "find-btn",
+        self.next_btn = flat_button(icon("np-arrow-down-symbolic", 20), "find-btn",
                                     _("Find next") + " (F3)", lambda: self.win.find_next())
-        self.prev_btn = flat_button(icon("np-arrow-up-symbolic", 16), "find-btn",
+        self.prev_btn = flat_button(icon("np-arrow-up-symbolic", 20), "find-btn",
                                     _("Find previous") + " (" + _("Shift") + "+F3)", lambda: self.win.find_previous())
-        self.opt_btn = flat_button(icon("np-options-symbolic", 16), "find-btn", _("Options"), self._options)
-        self.close_btn = flat_button(icon("np-dismiss-20-symbolic", 16), "find-btn",
+        self.opt_btn = flat_button(icon("np-options-symbolic", 18), "find-btn", _("Options"), self._options)
+        self.close_btn = flat_button(icon("np-dismiss-20-symbolic", 18), "find-btn",
                                      _("Close") + " (Esc)", self.close_card)
+        self.toggle.set_valign(Gtk.Align.CENTER)
         for b in (self.next_btn, self.prev_btn, self.opt_btn, self.close_btn):
+            b.set_valign(Gtk.Align.CENTER)
             row1.append(b)
         self.append(row1)
 
@@ -89,16 +91,17 @@ class FindCard(Gtk.Box):
 
     def _options(self):
         s = util.settings()
-        m = Menu(self.opt_btn, checks=True)
+        m = Menu(self.opt_btn, checks=True, css="options-menu")
 
         def flip(k):
             s.set(k, not s[k])
             self._apply_settings()
             self.win.search_text_changed()
         m.add(_("Match case"), lambda: flip("match_case"), check=s["match_case"])
-        m.add(_("Match whole word"), lambda: flip("whole_word"), check=s["whole_word"])
         m.add(_("Wrap around"), lambda: flip("wrap_around"), check=s["wrap_around"])
-        m.set_position(Gtk.PositionType.BOTTOM)
+        # the reference opens it above the card, centred on the button
+        m.set_position(Gtk.PositionType.TOP)
+        m.set_offset(0, -6)
         m.on_closed = lambda: GLib.idle_add(lambda: (m.unparent() if m.get_parent() else None, False)[1], priority=GLib.PRIORITY_DEFAULT)
         m.popup()
         self.options_menu = m
@@ -130,7 +133,7 @@ class FindCard(Gtk.Box):
     def set_replace(self, on):
         self.replace_mode = on
         self.row2.set_visible(on)
-        self.toggle.set_child(icon("np-chevron-down-20-symbolic" if on else "np-chevron-up-20-symbolic", 16))
+        self.toggle.set_child(icon("np-chevron-down-20-symbolic" if on else "np-chevron-up-20-symbolic", 20))
 
     def open_card(self, replace=False, seed=None):
         self.set_replace(replace)

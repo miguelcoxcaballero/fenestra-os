@@ -45,7 +45,7 @@ the running window (or in a new window, see *Settings > Opening files*).
 * **View** – Zoom in / out / restore (Ctrl+Plus, Ctrl+Minus, Ctrl+0, Ctrl+wheel; per tab,
   10–500 %), Status bar, Word wrap.
 * **Find / Replace card** – incremental search, Enter / Shift+Enter, options: Match case,
-  Match whole word, Wrap around; Replace and Replace all (one undo step).
+  Wrap around; Replace and Replace all (one undo step).
 * **Context menu** – Cut / Copy / Paste / Select all / Delete row, Undo, and for Markdown
   tabs Insert table / Insert link. Menu key and Shift+F10 open it at the cursor.
 * **Encodings** – detected on open: UTF-8, UTF-8 with BOM, UTF-16 LE / BE (with or without

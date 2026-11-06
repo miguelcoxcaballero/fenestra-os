@@ -99,7 +99,8 @@ class Menu(Gtk.Popover):
         b.add_css_class("menu-item")
         box = Gtk.Box()
         if self.checks:
-            im = icon("np-check-symbolic", 16, "menu-check")
+            b.add_css_class("check-item")     # check menus have a 32 px pitch, others 33
+            im = icon("np-check-symbolic", 14, "menu-check")
             im.set_opacity(1.0 if check else 0.0)
             box.append(im)
         elif icon_name:

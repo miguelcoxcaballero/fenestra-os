@@ -80,7 +80,6 @@ STRINGS = {
     "Toggle replace": "Alternar reemplazo",
     "Options": "Opciones",
     "Match case": "Coincidir mayúsculas y minúsculas",
-    "Match whole word": "Solo palabras completas",
     "Wrap around": "Ajuste automático",
     # dialogs
     "Go to line": "Ir a la línea",

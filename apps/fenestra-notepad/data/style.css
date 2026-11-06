@@ -145,11 +145,13 @@ popover.fluent-menu > contents {
   box-shadow: 0 8px 16px var(--shadow);
 }
 popover.fluent-menu.combo-menu > contents { min-width: 120px; }
+popover.fluent-menu.options-menu > contents { min-width: 196px; }
 popover.fluent-menu button.menu-item {
   min-height: 29px; padding: 0 12px 0 11px; margin: 2px 4px;
   border: none; border-radius: 4px; box-shadow: none; background: none;
   font-size: 14px; font-weight: normal; color: var(--fg);
 }
+popover.fluent-menu button.menu-item.check-item { min-height: 28px; }
 popover.fluent-menu button.menu-item:hover, popover.fluent-menu button.menu-item:focus-visible {
   background-color: var(--hover);
 }
@@ -160,7 +162,7 @@ popover.fluent-menu button.menu-item:disabled, popover.fluent-menu button.menu-i
 .menu-label { font-size: 14px; }
 .menu-shortcut { font-size: 12px; color: var(--fg2); margin-left: 24px; }
 button.menu-item:disabled .menu-shortcut { color: var(--fg3); }
-.menu-check { margin-right: 12px; }
+.menu-check { margin: 2px 15px 0 -1px; }
 window.notepad image.menu-check, popover image.menu-check { color: var(--glyph2); }
 .menu-icon { margin-right: 12px; }
 .menu-chevron { margin-left: 24px; }
@@ -200,39 +202,39 @@ popover.table-picker > contents { min-width: 0; }
   margin-top: 12px;
   box-shadow: 0 8px 16px var(--shadow);
 }
-.find-row { padding: 7px 3px 7px 0; }
-.replace-row { padding: 0 8px 8px 48px; margin-top: -1px; }
+.find-row { padding: 8px; }
+.replace-row { padding: 0 8px 8px 49px; }
 button.find-btn {
-  min-width: 34px; min-height: 32px; padding: 0; margin: 0 0 0 6px;
+  min-width: 30px; min-height: 26px; padding: 0; margin: 0 0 0 10px;
   border: none; border-radius: 4px; background: none; box-shadow: none;
 }
 button.find-btn:hover { background-color: var(--hover); }
 button.find-btn:active { background-color: var(--press); }
-button.find-toggle { min-width: 36px; margin: 0 6px 0 5px; }
+button.find-toggle { margin: 0 10px 0 0; }
 entry.find-entry, entry.fluent-entry {
   min-height: 30px; padding: 0 10px 0 11px;
-  background-color: var(--input);
+  background-color: var(--input); background-clip: padding-box;
   border: 1px solid var(--input-border);
   border-bottom-color: var(--input-bottom);
   border-radius: 4px; box-shadow: none; outline: none;
   font-size: 14px; color: var(--fg); caret-color: var(--fg);
 }
-entry.find-entry > text > placeholder, entry.fluent-entry > text > placeholder { color: var(--fg2); }
+entry.find-entry > text > placeholder, entry.fluent-entry > text > placeholder { color: var(--fg2); opacity: 1; }
 entry.find-entry:focus-within, entry.fluent-entry:focus-within {
   background-color: var(--input-focus);
   border-bottom: 2px solid var(--accent);
   min-height: 29px;
 }
 entry.find-entry.no-match:focus-within, entry.find-entry.no-match { border-bottom: 2px solid #c42b1c; }
-entry.find-entry image { -gtk-icon-size: 12px; color: var(--fg2); margin-left: 8px; }
+entry.find-entry image { -gtk-icon-size: 14px; color: var(--fg2); margin-left: 8px; }
 entry selection { background-color: var(--selection); color: #ffffff; }
-button.replace-btn { margin-left: 12px; min-width: 64px; }
+button.replace-btn { margin-left: 10px; min-width: 66px; }
 
 /* ------------------------------------------------------------------ buttons */
 button.std-button, button.combo {
   min-height: 30px; padding: 0 11px;
-  background-color: var(--btn);
-  border: 1px solid var(--btn-border);
+  background-color: var(--btn); background-clip: padding-box;
+  border: 1px solid var(--btn-border); border-top-color: var(--btn-top);
   border-bottom-color: var(--btn-bottom);
   border-radius: 4px; box-shadow: none;
   font-size: 14px; font-weight: normal; color: var(--fg);
@@ -289,7 +291,7 @@ image.combo-chevron { color: var(--fg2); margin-left: 8px; }
   margin-bottom: 4px;
 }
 button.s-card { box-shadow: none; font-weight: normal; color: var(--fg); }
-button.s-card:hover { background-color: var(--btn-hover); }
+button.s-card:hover { background-color: var(--scard-hover); }
 .s-expander.open button.s-head { border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; }
 .s-body {
   background-color: var(--scard);
