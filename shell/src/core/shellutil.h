@@ -6,6 +6,9 @@
 #include <QGuiApplication>
 #include <QObject>
 #include <QQmlEngine>
+#include <QDateTime>
+#include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QScreen>
 #include <QStandardPaths>
@@ -35,6 +38,16 @@ public:
             }
         }
         return false;
+    }
+    // ~/.local/state/fenestra/session-ok: the Fenestra session worked for this user (the
+    // migrator offers it as the default only after that).
+    Q_INVOKABLE void markSessionOk() const
+    {
+        const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + QStringLiteral("/fenestra");
+        QDir().mkpath(dir);
+        QFile f(dir + QStringLiteral("/session-ok"));
+        if (f.open(QIODevice::WriteOnly))
+            f.write(QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8() + '\n');
     }
     Q_INVOKABLE bool configFileExists(const QString &name) const
     {

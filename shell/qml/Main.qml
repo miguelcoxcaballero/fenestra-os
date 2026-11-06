@@ -86,6 +86,8 @@ Item {
         // Marker for tests/shell-kwin and tests/perf: the first surfaces exist.
         console.info("FENESTRA_SHELL_READY screens=" + Qt.application.screens.length
                      + " windowManagement=" + WindowsModel.available)
+        // Not in the migrator's boot test (its HOME is a throwaway directory).
+        if (WindowsModel.available) ShellUtil.markSessionOk()
     }
 
     Connections {

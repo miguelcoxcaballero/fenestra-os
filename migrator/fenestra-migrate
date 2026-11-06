@@ -1,0 +1,275 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Fenestra «Migrar a KDE»: installs the Fenestra session (KWin + Fenestra Shell) next to GNOME.
+
+Runs as root through polkit (org.fenestra.migrate); Fenestra Settings never runs as root, it
+reads the progress from /var/lib/fenestra/migrate.json. Phases (persisted, resumable):
+  detect → check → backup → simulate → install → register → boottest → available
+The session is offered as the default only after a real sign-in to it succeeded (the session
+writes ~/.local/state/fenestra/session-ok); `set-default USER` does it. GNOME and GDM are never
+removed or changed: GNOME stays as the fallback session.
+
+  fenestra-migrate status              JSON state
+  fenestra-migrate check               phases detect + check only (no changes)
+  fenestra-migrate run [--dry-run]     all phases; --dry-run stops after the simulation
+  fenestra-migrate set-default USER    make Fenestra USER's session (only after session-ok)
+  fenestra-migrate rollback [--remove-packages]
+"""
+import datetime
+import json
+import os
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+
+STATE_DIR = "/var/lib/fenestra"
+STATE = os.path.join(STATE_DIR, "migrate.json")
+BACKUP_DIR = os.path.join(STATE_DIR, "migrate-backup")
+LOG = "/var/log/fenestra-migrate.log"
+SESSION_FILE = "/usr/share/wayland-sessions/fenestra.desktop"
+# Runtime packages of the Fenestra session (Fedora names). fenestra-shell / fenestra-session come
+# from Fenestra's own repository (Fenestra Update); the rest from Fedora.
+PACKAGES = [
+    "kwin", "xorg-x11-server-Xwayland", "layer-shell-qt", "kf6-kservice", "kf6-kio-gui", "kf6-kwindowsystem",
+    "kf6-networkmanager-qt", "kf6-bluez-qt", "pulseaudio-qt-qt6", "kf6-kglobalaccel", "kf6-kconfig",
+    "polkit-qt6-1", "libgweather", "qt6-qtdeclarative", "qt6-qtwayland", "qt6-qtsvg", "kscreenlocker", "kscreen",
+    "xdg-desktop-portal-kde", "xdg-desktop-portal-gtk", "fenestra-shell",
+]
+# Tests may replace the package list (FENESTRA_MIGRATE_PACKAGES="a b c").
+if os.environ.get("FENESTRA_MIGRATE_PACKAGES"):
+    PACKAGES = os.environ["FENESTRA_MIGRATE_PACKAGES"].split()
+PHASES = ["detect", "check", "backup", "simulate", "install", "register", "boottest", "available"]
+MIN_FREE_MB = 1500
+
+
+def log(msg):
+    line = f"{datetime.datetime.now().isoformat(timespec='seconds')} {msg}"
+    print(line, file=sys.stderr, flush=True)
+    try:
+        with open(LOG, "a") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def load():
+    try:
+        with open(STATE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"phase": None, "done": [], "status": "idle", "error": None, "progress": 0}
+
+
+def save(state):
+    os.makedirs(STATE_DIR, exist_ok=True)
+    tmp = STATE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(state, f, indent=1)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, STATE)
+
+
+def run(cmd, check=True, **kw):
+    log("$ " + " ".join(cmd))
+    r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    if r.returncode and check:
+        raise RuntimeError(f"{cmd[0]} failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-400:]}")
+    return r
+
+
+def phase_detect(state):
+    rel = dict(line.strip().split("=", 1) for line in open("/etc/os-release") if "=" in line)
+    state["fedora"] = rel.get("VERSION_ID", "").strip('"')
+    state["gnome_session"] = os.path.exists("/usr/share/wayland-sessions/gnome.desktop")
+    state["gdm"] = shutil.which("gdm") is not None or os.path.exists("/usr/sbin/gdm")
+    if not state["gdm"]:
+        raise RuntimeError("GDM is not installed; the Fenestra session is offered through GDM")
+
+
+def phase_check(state):
+    free = shutil.disk_usage("/").free // (1024 * 1024)
+    state["free_mb"] = free
+    if free < MIN_FREE_MB:
+        raise RuntimeError(f"Not enough free space: {free} MB free, {MIN_FREE_MB} MB needed")
+    missing = [p for p in PACKAGES if run(["rpm", "-q", p], check=False).returncode]
+    state["missing"] = missing
+
+
+def phase_backup(state):
+    os.makedirs(BACKUP_DIR, mode=0o700, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = os.path.join(BACKUP_DIR, f"{stamp}.tar.gz")
+    with tarfile.open(path, "w:gz") as tar:
+        for p in ("/etc/dconf", "/etc/gdm", "/etc/xdg", "/etc/pam.d", "/var/lib/AccountsService/users"):
+            if os.path.exists(p):
+                tar.add(p)
+    with open(os.path.join(BACKUP_DIR, f"{stamp}-packages.txt"), "w") as f:
+        f.write(run(["rpm", "-qa", "--qf", "%{NAME}\n"]).stdout)
+    state["backup"] = path
+
+
+def phase_simulate(state):
+    if not state.get("missing"):
+        state["download_mb"] = 0
+        return
+    r = run(["dnf", "install", "--assumeno", *state["missing"]], check=False)
+    out = r.stdout + r.stderr
+    m = re.search(r"Total size of inbound packages is ([\d.]+) ([KMG]i?B)", out) or re.search(r"Total download size: ([\d.]+) ([KMG])", out)
+    if m:
+        factor = {"K": 1 / 1024, "M": 1, "G": 1024}[m.group(2)[0]]
+        state["download_mb"] = round(float(m.group(1)) * factor)
+    if re.search(r"No match for argument|Problem: |nothing provides", out):
+        raise RuntimeError("The packages cannot be installed: " + out.strip()[-600:])
+
+
+def phase_install(state):
+    if state.get("missing"):
+        run(["dnf", "install", "-y", *state["missing"]])
+        state["installed"] = state["missing"]
+
+
+def phase_register(state):
+    if not os.path.exists(SESSION_FILE):
+        raise RuntimeError(f"{SESSION_FILE} is missing after installing fenestra-shell")
+
+
+def phase_boottest(state):
+    """Headless KWin + Fenestra Shell as an unprivileged user: the shell must report ready."""
+    user = state.get("user") or "nobody"
+    script = r"""
+export XDG_RUNTIME_DIR=$(mktemp -d) KWIN_COMPOSE=Q QT_QUICK_BACKEND=software QT_FORCE_STDERR_LOGGING=1
+export WAYLAND_DISPLAY=fenestra-boottest QT_QPA_PLATFORM=wayland HOME=$(mktemp -d)
+kwin_wayland --virtual --socket fenestra-boottest --width 1280 --height 800 >/dev/null 2>&1 & K=$!
+for i in $(seq 1 60); do [ -S $XDG_RUNTIME_DIR/fenestra-boottest ] && break; sleep 0.5; done
+timeout 30 fenestra-shell > $XDG_RUNTIME_DIR/shell.log 2>&1 & S=$!
+for i in $(seq 1 60); do grep -q FENESTRA_SHELL_READY $XDG_RUNTIME_DIR/shell.log && break; sleep 0.5; done
+grep -q FENESTRA_SHELL_READY $XDG_RUNTIME_DIR/shell.log && echo BOOTTEST_PASS || { echo BOOTTEST_FAIL; tail -20 $XDG_RUNTIME_DIR/shell.log; }
+kill $S $K 2>/dev/null; wait 2>/dev/null
+"""
+    r = run(["runuser", "-u", user, "--", "dbus-run-session", "--", "bash", "-c", script], check=False, timeout=120)
+    state["boottest"] = "PASS" if "BOOTTEST_PASS" in r.stdout else "FAIL"
+    if state["boottest"] != "PASS":
+        raise RuntimeError("Fenestra Shell did not start in the test session:\n" + r.stdout[-800:])
+
+
+def phase_available(state):
+    state["available"] = True  # GDM lists /usr/share/wayland-sessions; nothing is made default here
+
+
+def cmd_run(dry_run=False):
+    state = load()
+    state.update(status="running", error=None)
+    state.setdefault("done", [])
+    sudo_user = os.environ.get("PKEXEC_UID") or os.environ.get("SUDO_UID")
+    if sudo_user:
+        state["user"] = pwd.getpwuid(int(sudo_user)).pw_name
+    save(state)
+    for i, name in enumerate(PHASES):
+        if name in state["done"]:
+            continue
+        if dry_run and name == "install":
+            break
+        state["phase"], state["progress"] = name, int(100 * i / len(PHASES))
+        save(state)
+        log(f"phase {name}")
+        try:
+            globals()[f"phase_{name}"](state)
+        except Exception as e:  # noqa: BLE001 — reported to Settings as text
+            state.update(status="failed", error=str(e))
+            save(state)
+            log(f"FAILED in {name}: {e}")
+            return 1
+        state["done"].append(name)
+        save(state)
+    if dry_run:
+        # Nothing was installed: a real run starts again from the beginning.
+        state.update(status="dry-run-ok", phase=None, done=[])
+    else:
+        state.update(status="done", progress=100, phase=None)
+    save(state)
+    return 0
+
+
+def cmd_check():
+    state = load()
+    try:
+        phase_detect(state)
+        phase_check(state)
+        state["check"] = "ok"
+    except Exception as e:  # noqa: BLE001
+        state["check"] = str(e)
+    save(state)
+    print(json.dumps(state, indent=1))
+    return 0 if state["check"] == "ok" else 1
+
+
+def accounts_set_session(user, session):
+    uid = pwd.getpwnam(user).pw_uid
+    path = run(["busctl", "--system", "call", "org.freedesktop.Accounts", "/org/freedesktop/Accounts",
+                "org.freedesktop.Accounts", "FindUserById", "x", str(uid)]).stdout.split()[1].strip('"')
+    for method in ("SetSession", "SetXSession"):
+        run(["busctl", "--system", "call", "org.freedesktop.Accounts", path, "org.freedesktop.Accounts.User",
+             method, "s", session])
+
+
+def cmd_set_default(user):
+    home = pwd.getpwnam(user).pw_dir
+    marker = os.path.join(home, ".local/state/fenestra/session-ok")
+    if not os.path.exists(marker):
+        print("The Fenestra session has not been used successfully yet; not making it the default.", file=sys.stderr)
+        return 2
+    accounts_set_session(user, "fenestra")
+    state = load()
+    state.setdefault("default_for", [])
+    if user not in state["default_for"]:
+        state["default_for"].append(user)
+    save(state)
+    return 0
+
+
+def cmd_rollback(remove_packages):
+    state = load()
+    for user in state.get("default_for", []):
+        try:
+            accounts_set_session(user, "gnome")
+        except Exception as e:  # noqa: BLE001
+            log(f"could not set GNOME for {user}: {e}")
+    state["default_for"] = []
+    if remove_packages and state.get("installed"):
+        # Only what this tool installed; dnf keeps what other packages still need.
+        run(["dnf", "remove", "-y", *state["installed"]], check=False)
+        state["installed"] = []
+        state["done"] = [p for p in state.get("done", []) if p in ("detect", "check", "backup")]
+    state.update(status="rolled-back", phase=None)
+    save(state)
+    return 0
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
+    if argv[0] == "status":
+        print(json.dumps(load(), indent=1))
+        return 0
+    if os.geteuid() != 0:
+        print("fenestra-migrate must run as root (pkexec /usr/libexec/fenestra/fenestra-migrate …)", file=sys.stderr)
+        return 1
+    if argv[0] == "check":
+        return cmd_check()
+    if argv[0] == "run":
+        return cmd_run("--dry-run" in argv)
+    if argv[0] == "set-default" and len(argv) == 2:
+        return cmd_set_default(argv[1])
+    if argv[0] == "rollback":
+        return cmd_rollback("--remove-packages" in argv)
+    print(__doc__, file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
