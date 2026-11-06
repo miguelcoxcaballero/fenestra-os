@@ -17,5 +17,6 @@
   ],
   "url": "https://github.com/home-sweet-gnome/dash-to-panel",
   "uuid": "dash-to-panel@jderose9.github.com",
-  "version": 74
+  "version": 900000,
+  "fenestra-upstream-version": 74
 }

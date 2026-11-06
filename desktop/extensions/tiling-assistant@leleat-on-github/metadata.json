@@ -12,5 +12,6 @@
   ],
   "url": "https://github.com/ubuntu/Tiling-Assistant",
   "uuid": "tiling-assistant@leleat-on-github",
-  "version": 56
+  "version": 900000,
+  "fenestra-upstream-version": 56
 }

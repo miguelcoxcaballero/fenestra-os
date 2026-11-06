@@ -1,0 +1,127 @@
+#!/usr/bin/python3
+"""Keep Fenestra's copies of extensions.gnome.org extensions from being replaced by upstream.
+
+    fenestra-pin-extensions [--dir EXTENSIONS_DIR] [--stage SRC_DIR]...
+
+GNOME Shell checks extensions.gnome.org once a day for every per-user extension, sends the
+metadata "version" and downloads any newer upstream release into
+~/.local/share/gnome-shell/extension-updates/, which it installs at the next login. Fenestra
+ships modified copies (Windows-style desktop menu in Desktop Icons, ArcMenu layouts, ...),
+so an upstream update silently drops those changes (Desktop Icons 85 -> 103 after the
+Fedora 45 upgrade: the Windows right-click menu was gone).
+
+Pinning: every Fenestra copy that comes from extensions.gnome.org gets "version": PIN, which
+no upstream release reaches, and keeps the original in "fenestra-upstream-version". The
+"new version" notices that some extensions derive from that number are set to PIN too, so
+nothing pops up. Pending upstream downloads of pinned extensions are discarded.
+--stage SRC copies SRC (a Fenestra extension directory) into extension-updates/, so GNOME
+Shell puts it in place at the next login, before anything is loaded (safe while the
+running session still uses the old copy). Run as the user; safe to run again.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+PIN = 900000
+# uuid -> (gsettings schema, key) of the notice that compares against metadata.version
+NOTICES = {
+    'dash-to-panel@jderose9.github.com': ('org.gnome.shell.extensions.dash-to-panel', 'extension-version'),
+    'arcmenu@arcmenu.com': ('org.gnome.shell.extensions.arcmenu', 'update-notifier-project-version'),
+    'tiling-assistant@leleat-on-github': ('org.gnome.shell.extensions.tiling-assistant', 'last-version-installed'),
+}
+HOME = os.path.expanduser('~')
+EXT_DIR = os.path.join(HOME, '.local/share/gnome-shell/extensions')
+UPDATES = os.path.join(HOME, '.local/share/gnome-shell/extension-updates')
+
+
+def from_ego(meta):
+    """Extensions published on extensions.gnome.org have an integer version; Fenestra's own
+    (uuid@local / fenestra-os) are not looked up there."""
+    uuid = meta.get('uuid', '')
+    return not uuid.endswith('@local') and 'fenestra-os' not in uuid and \
+        isinstance(meta.get('version', meta.get('fenestra-upstream-version')), int)
+
+
+def pin_dir(path):
+    mf = os.path.join(path, 'metadata.json')
+    try:
+        meta = json.load(open(mf))
+    except (OSError, ValueError):
+        return None
+    if not from_ego(meta):
+        return None
+    if meta.get('version') != PIN:
+        meta.setdefault('fenestra-upstream-version', meta.get('version'))
+        meta['version'] = PIN
+        with open(mf + '.tmp', 'w') as f:
+            json.dump(meta, f, indent=2)
+            f.write('\n')
+        os.replace(mf + '.tmp', mf)
+    return meta['uuid']
+
+
+def schema_dir(uuid):
+    for base in (os.path.join(EXT_DIR, uuid), os.path.join('/usr/share/gnome-shell/extensions', uuid)):
+        if os.path.isdir(os.path.join(base, 'schemas')):
+            return os.path.join(base, 'schemas')
+    return None
+
+
+def set_notice(uuid):
+    if uuid not in NOTICES:
+        return
+    schema, key = NOTICES[uuid]
+    cmd = ['gsettings']
+    sd = schema_dir(uuid)
+    if sd:
+        cmd += ['--schemadir', sd]
+    subprocess.run(cmd + ['set', schema, key, str(PIN)], check=False,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def main():
+    args = sys.argv[1:]
+    ext_dir = EXT_DIR
+    stages = []
+    while args:
+        a = args.pop(0)
+        if a == '--dir':
+            ext_dir = args.pop(0)
+        elif a == '--stage':
+            stages.append(args.pop(0))
+        else:
+            print(__doc__.strip().splitlines()[2].strip())
+            return 1
+    pinned = []
+    for name in sorted(os.listdir(ext_dir)) if os.path.isdir(ext_dir) else []:
+        uuid = pin_dir(os.path.join(ext_dir, name))
+        if uuid:
+            pinned.append(uuid)
+    # Upstream downloads waiting for the next login would undo the pin.
+    for uuid in pinned:
+        pending = os.path.join(UPDATES, uuid)
+        if os.path.isdir(pending) and not os.path.exists(os.path.join(pending, '.fenestra-staged')):
+            shutil.rmtree(pending)
+            print(f'discarded pending upstream update of {uuid}')
+    for src in stages:
+        meta = json.load(open(os.path.join(src, 'metadata.json')))
+        dest = os.path.join(UPDATES, meta['uuid'])
+        if os.path.isdir(dest):
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest, symlinks=True)
+        pin_dir(dest)
+        open(os.path.join(dest, '.fenestra-staged'), 'w').close()
+        pinned.append(meta['uuid'])
+        print(f'staged {meta["uuid"]}: installed by GNOME Shell at the next login')
+    if ext_dir == EXT_DIR:
+        for uuid in sorted(set(pinned)):
+            set_notice(uuid)
+    for uuid in sorted(set(pinned)):
+        print(f'pinned {uuid}')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

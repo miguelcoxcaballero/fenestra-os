@@ -11,5 +11,6 @@
   ],
   "url": "https://github.com/flexagoon/rounded-window-corners",
   "uuid": "rounded-window-corners@fxgn",
-  "version": 18
+  "version": 900000,
+  "fenestra-upstream-version": 18
 }

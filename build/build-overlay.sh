@@ -35,7 +35,7 @@ install -d "$OUT/usr/share/fenestra/assets" "$OUT/usr/share/fenestra/lib" "$OUT/
 cp -a "$REPO/assets/generated/." "$OUT/usr/share/fenestra/assets/"
 cp -a "$D/lib/folder-icons/folder_icons.py" "$OUT/usr/share/fenestra/lib/"
 install -m755 "$D/libexec/fenestra-patch-nautilus" "$D/libexec/fenestra-nautilus" "$D/libexec/fenestra-release-upgrade" \
-    "$D/libexec/fenestra-release-upgrade-user" "$D/libexec/fenestra-plymouth-theme" "$OUT/usr/libexec/fenestra/"
+    "$D/libexec/fenestra-release-upgrade-user" "$D/libexec/fenestra-plymouth-theme" "$D/libexec/fenestra-pin-extensions" "$OUT/usr/libexec/fenestra/"
 # Re-run by the release upgrade after every upgrade (Python / GDM PAM paths of local services).
 install -m755 "$REPO/extras/fedora-upgrade/fix-local-services.sh" "$OUT/usr/libexec/fenestra/fenestra-fix-local-services"
 # Login screen safety net: compatibility matrix + greeter guard (see docs/login-safety.md).

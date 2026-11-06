@@ -25,5 +25,6 @@
   ],
   "url": "https://github.com/aunetx/blur-my-shell",
   "uuid": "blur-my-shell@aunetx",
-  "version": 77
+  "version": 900000,
+  "fenestra-upstream-version": 77
 }

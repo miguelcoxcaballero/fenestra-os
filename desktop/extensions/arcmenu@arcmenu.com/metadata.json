@@ -19,6 +19,7 @@
   ],
   "url": "https://gitlab.com/arcmenu/ArcMenu",
   "uuid": "arcmenu@arcmenu.com",
-  "version": 74,
-  "version-name": "70.0"
+  "version": 900000,
+  "version-name": "70.0",
+  "fenestra-upstream-version": 74
 }
