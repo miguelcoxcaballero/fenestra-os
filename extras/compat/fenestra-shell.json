@@ -1,0 +1,12 @@
+{
+  "_comment": [
+    "Versions of KWin and Qt the Fenestra session (KWin + Fenestra Shell) was validated with.",
+    "'bench' = tests/shell-kwin passed; 'real' = used on a real machine. Fenestra Update checks the",
+    "next Fedora release's KWin and Qt: if either major.minor is not listed, users whose default",
+    "session is Fenestra are switched to GNOME before the restart (recorded, so it can be undone",
+    "once a Fenestra update validates the new versions). Fenestra Shell uses Qt's private Wayland",
+    "client API, so it is rebuilt for every Qt minor version."
+  ],
+  "kwin": {"6.8": "bench"},
+  "qt": {"6.11": "bench"}
+}

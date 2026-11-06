@@ -211,6 +211,46 @@ def target_gnome(target, exact=False):
     return target + 6
 
 
+def compat_file(name):
+    here = os.path.dirname(os.path.realpath(sys.argv[0]))
+    return next((p for p in (f'{here}/../../extras/compat/{name}', f'/usr/share/fenestra/compat/{name}',
+                             f'/usr/local/share/fenestra/compat/{name}') if os.path.exists(p)), None)
+
+
+def fenestra_session_check(target):
+    """KWin / Qt of Fedora `target` not validated for the Fenestra session: list of 'kwin 6.9'… ."""
+    if not os.path.exists('/usr/share/wayland-sessions/fenestra.desktop'):
+        return []
+    path = compat_file('fenestra-shell.json')
+    try:
+        matrix = json.load(open(path)) if path else {}
+    except (OSError, ValueError):
+        matrix = {}
+    missing = []
+    for key, pkg in (('kwin', 'kwin'), ('qt', 'qt6-qtbase')):
+        p = sh(['dnf', '-q', 'repoquery', f'--releasever={target}', '--latest-limit', '1', '--qf', '%{version}\\n', pkg],
+               capture=True, check=False, log=False)
+        m = re.search(r'^(\d+\.\d+)', p.stdout or '', re.M)
+        if m and m.group(1) not in matrix.get(key, {}):
+            missing.append(f'{key} {m.group(1)}')
+    return missing
+
+
+def park_fenestra_session():
+    """Users whose session is Fenestra get GNOME for the next sign-in; returns them."""
+    parked = []
+    for f in glob.glob('/var/lib/AccountsService/users/*'):
+        try:
+            text = open(f).read()
+        except OSError:
+            continue
+        if re.search(r'^Session=fenestra$', text, re.M):
+            with open(f, 'w') as out:
+                out.write(re.sub(r'^Session=fenestra$', 'Session=gnome', text, flags=re.M))
+            parked.append(os.path.basename(f))
+    return parked
+
+
 def login_guard():
     here = os.path.dirname(os.path.realpath(sys.argv[0]))
     return next((p for p in (f'{here}/fenestra-login-guard', '/usr/libexec/fenestra/fenestra-login-guard',
@@ -528,6 +568,13 @@ def run(target, kits, user):
             save_state(login_guard=off, target_gnome=gnome)
         else:
             emit('WARN', 'fenestra-login-guard not found: login extensions were not checked for the new GNOME')
+        # Fenestra session (KWin): only kept as the default with validated KWin / Qt versions.
+        unvalidated = fenestra_session_check(target)
+        if unvalidated:
+            parked = park_fenestra_session()
+            emit('WARN', f'Fenestra session not yet validated with {", ".join(unvalidated)}: GNOME is used at the next '
+                         f'sign-in until a Fenestra update validates it' + (f' ({", ".join(parked)})' if parked else ''))
+            save_state(fenestra_session_parked=parked, fenestra_session_unvalidated=unvalidated)
         sh(['systemctl', 'enable', 'fenestra-post-upgrade.service'], check=False)
         save_state(status='ready-to-reboot', message='')
         step(100, 'Ready to restart')
