@@ -360,6 +360,24 @@ def install_plymouth():
             sh(['dracut', '-f', '--kver', k], check=False)
 
 
+def verify_download():
+    """Every package of the prepared offline transaction must be on disk."""
+    base = '/usr/lib/sysimage/libdnf5/offline'
+    try:
+        tx = json.load(open(f'{base}/transaction.json'))
+    except (OSError, ValueError):
+        raise RuntimeError('the downloaded upgrade is incomplete (no transaction)')
+    have = set(os.listdir(f'{base}/packages')) if os.path.isdir(f'{base}/packages') else set()
+    missing = []
+    for item in tx.get('rpms', []):
+        if item.get('action') in ('Install', 'Upgrade', 'Downgrade', 'Reinstall') and item.get('package_path'):
+            if os.path.basename(item['package_path']) not in have and not os.path.exists(item['package_path']):
+                missing.append(os.path.basename(item['package_path']))
+    if missing:
+        raise RuntimeError(f'{len(missing)} downloaded packages are missing (e.g. {missing[0]}); try again')
+    emit('LOG', f'offline transaction verified: {len(have)} packages')
+
+
 def run(target, kits, user):
     if os.geteuid() != 0:
         emit('ERROR', 'needs administrator rights')
@@ -400,13 +418,15 @@ def run(target, kits, user):
         bad = dkms_ok(k)
         if bad:
             raise RuntimeError(f'camera/speaker drivers do not build for kernel {k}: {", ".join(bad)}')
+        step(50, 'Getting ready to restart')
+        install_plymouth()     # may install packages: must run before the download (dnf cleans its cache)
         step(55, 'Downloading the new version')
         emit('LOG', f'download size: {size}')
         # Same rules as the dry run: packages Fedora dropped are removed (the dry run
         # already refused if any of them matters).
         sh(['dnf', '-y', 'system-upgrade', 'download', f'--releasever={target}', '--allowerasing'])
         step(93, 'Getting ready to restart')
-        install_plymouth()
+        verify_download()
         sh(['systemctl', 'enable', 'fenestra-post-upgrade.service'], check=False)
         save_state(status='ready-to-reboot', message='')
         step(100, 'Ready to restart')
@@ -426,7 +446,11 @@ def post_boot():
     if current_version() < int(st.get('target', 0)):
         # The offline upgrade did not happen (cancelled or failed): keep the request.
         if not os.path.exists('/system-update'):
-            save_state(status='failed', message='The upgrade did not run during the restart. Try again.')
+            why = sh(['journalctl', '-b', '-1', '-o', 'cat', '-u', 'dnf5-offline-transaction.service'],
+                     capture=True, check=False, log=False).stdout.strip().splitlines()
+            why = [l for l in why if 'Failed' in l or 'rror' in l]
+            save_state(status='failed', message='The upgrade did not install during the restart'
+                       + (f' ({why[0][:160]})' if why else '') + '. Nothing was changed; try again.')
         return 0
     k = os.uname().release
     msgs = []
