@@ -20,6 +20,32 @@ export default class QA extends Extension {
             GLib.file_set_contents(`/out/${n}.png`, st.steal_as_bytes().toArray());
         } catch (e) { print(`QA_FAIL cap ${e}`); }
     }
+    // Windows Hello feedback: feed Howdy's two notices through the real verifier queue and
+    // check that the face animation shows and plays (GNOME 51 'show-message' is one object).
+    async hello() {
+        const prompt = Main.screenShield?._dialog?._authPrompt;
+        const verifier = prompt?._userVerifier;
+        if (!verifier) { print('QA_HELLO no-verifier'); return; }
+        let MessageType;
+        try { ({MessageType} = await import('resource:///org/gnome/shell/gdm/userVerifier.js')); }
+        catch { ({MessageType} = await import('resource:///org/gnome/shell/gdm/util.js')); }
+        const box = prompt.get_children().find(c => c.width === 64 && c.height === 64 && c.get_n_children() > 4);
+        if (!box) { print('QA_HELLO no-box'); return; }
+        const shown = () => box.get_children().filter(c => c.visible).map(c => box.get_children().indexOf(c));
+        const send = text => verifier._queueMessage.length === 1 || verifier._queueMessage.length === 0
+            ? verifier._queueMessage({serviceName: 'gdm-password', message: text, messageType: MessageType.INFO, wiggle: false})
+            : verifier._queueMessage('gdm-password', text, MessageType.INFO);
+        send('Attempting facial authentication');
+        await wait(700); const a = shown(); await wait(400); const b = shown();
+        print(`QA_HELLO searching opacity=${box.opacity} frames=${JSON.stringify(a)}->${JSON.stringify(b)}`);
+        await this.cap('hello-searching');
+        send('Identified face as gdmtest');
+        await wait(700);
+        print(`QA_HELLO authenticated opacity=${box.opacity} frame=${JSON.stringify(shown())}`);
+        await this.cap('hello-ok');
+        const ok = box.opacity === 255 && a.length === 1 && b.length === 1 && a[0] !== b[0];
+        print(`QA_HELLO_RESULT ${ok ? 'PASS' : 'FAIL'}`);
+    }
     exts(tag) { for (const [u, e] of Main.extensionManager._extensions) print(`QA_EXT ${tag} ${u} state=${e.state}${e.error ? ` ERROR=${e.error}` : ''}`); }
     async run() {
         this.exts('desktop');
@@ -54,6 +80,7 @@ export default class QA extends Extension {
         Main.screenShield?._dialog?._showPrompt?.();
         await wait(1500);
         await this.cap('locked-prompt');
+        await this.hello();
         Main.screenShield?.deactivate(false);
         await wait(2500);
         print(`QA_UNLOCKED mode=${Main.sessionMode.currentMode} active=${Main.screenShield?.active}`);

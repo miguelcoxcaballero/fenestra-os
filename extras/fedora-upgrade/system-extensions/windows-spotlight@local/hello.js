@@ -103,8 +103,15 @@ export function installHelloFeedback(injections, path) {
             state.timeline=timeline;select(sequence.frames[0].file);timeline.start();
         }
         const connect=(signal,callback)=>state.signals.push(state.verifier.connect(signal,callback));
-        connect('show-message',(_v,service,message)=>{const mode=faceMessage(service,message);if(mode)play(mode);});
-        connect('ask-question',(_v,service)=>{if(service==='gdm-password')stop();});
+        // GNOME 51 emits one object ({message,type,...}, no service name: it is the current
+        // queued message's); 49/50 emit (serviceName, message, type).
+        const serviceOf=(a)=>a&&typeof a==='object'?(a.serviceName??state.verifier.currentMessage?.serviceName):a;
+        connect('show-message',(_v,a,b)=>{
+            const obj=a&&typeof a==='object';
+            const mode=faceMessage(obj?serviceOf(a):a,obj?a.message:b);
+            if(mode)play(mode);
+        });
+        connect('ask-question',(_v,a)=>{if(serviceOf(a)==='gdm-password')stop();});
         connect('verification-failed',()=>stop());
         connect('reset',()=>stop());
         connect('verification-complete',()=>{if(state.mode!=='authentication')stop();});
