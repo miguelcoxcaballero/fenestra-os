@@ -719,7 +719,9 @@ tooltip label { color: var(--fg); font-size: 12px; }
 
 .update-hero-icon { color: var(--accent); }
 
-.card.net-hero { padding: 16px 20px; margin-bottom: 4px; }
+.net-hero { margin: 2px 0 25px 0; }
+.net-hero-sub { font-size: 14px; color: var(--fg2); }
+.net-hero-status { margin-top: 4px; }
 .update-hero { padding: 4px 0 20px 0; }
 .preview-frame { background-color: #000000; padding: 8px; border-radius: 12px; }
 .preview-thumb { border-radius: 4px; background-color: #1f1f1f; }
