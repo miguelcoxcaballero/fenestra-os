@@ -4,7 +4,7 @@ from __future__ import annotations
 from gi.repository import Gio, GLib, Gtk
 
 from .. import util
-from ..backends import accounts, hello
+from ..backends import accounts, hello, session
 from ..i18n import N_, _
 from ..widgets import ExpanderRow, SettingRow, ToggleSwitch, button, confirm, label, show_dialog, toast, value_label
 from .base import Page, register
@@ -168,8 +168,8 @@ class SignInPage(Page):
                           key="autologin")
         self.remember("autologin", auto)
         g2.add(auto)
-        g2.add(SettingRow(_("Lock screen"), _("Require sign-in after the screen turns off"),
-                          "fs-lock-closed-symbolic", chevron=True, on_click=lambda: self.go("screenlock")))
+        self.nav_row(g2, "screenlock", _("Lock screen"), _("Require sign-in after the screen turns off"),
+                     "fs-lock-closed-symbolic")
         self.refresh()
 
     def on_show(self):
@@ -286,7 +286,7 @@ class SignInPage(Page):
         u.set_automatic_login(on, done)
 
     def _cc(self):
-        if not util.open_control_center("users"):
+        if not session.open_panel("users", self.window):
             toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
                   else _("Could not open {0}").format("gnome-control-center"))
 

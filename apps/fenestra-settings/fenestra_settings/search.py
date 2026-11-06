@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import unicodedata
 
+from .backends import session
 from .i18n import _
 from .pages.base import PAGES
 
@@ -37,13 +38,18 @@ def _crumb(cls):
 
 
 def build_index() -> list[Entry]:
+    """Every page shown in this session and its indexed rows; pages and rows hidden by
+    backends/session.py are left out (PAGES never contains hidden pages)."""
     out = []
     for pid, cls in PAGES.items():
+        hidden = session.hidden_rows(pid)
         icon = _root_icon(cls)
         crumb = _crumb(cls)
         hay = norm(" ".join([cls.title, _(cls.title), cls.keywords, _(cls.keywords) if cls.keywords else ""]))
         out.append(Entry(pid, None, _(cls.title), crumb, icon, hay))
         for key, title, kw in cls.index:
+            if key in hidden:
+                continue
             hay = norm(" ".join([title, _(title), kw, _(kw) if kw else ""]))
             out.append(Entry(pid, key, _(title), crumb, icon, hay))
     return out

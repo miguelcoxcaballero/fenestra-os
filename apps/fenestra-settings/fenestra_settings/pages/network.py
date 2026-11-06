@@ -4,7 +4,7 @@ from __future__ import annotations
 from gi.repository import GLib, Gtk
 
 from .. import util
-from ..backends import network
+from ..backends import network, session
 from ..i18n import _
 from ..widgets import (ContentDialog, ExpanderRow, SettingRow, ToggleSwitch, button, label,
                        not_available_row, show_dialog, spinner, toast)
@@ -139,8 +139,10 @@ class WifiPage(Page):
         g.add(self.avail)
         self.props_row = SettingRow(_("Hardware properties"), _("View and edit details for this adapter"),
                                     "fs-options-symbolic", chevron=True,
-                                    on_click=lambda: util.open_control_center("wifi"))
+                                    on_click=lambda: session.open_panel("wifi", self.window), key="hw-props")
         g.add(self.props_row)
+        if not session.panel_available("wifi"):
+            self._session_hide(self.props_row)
         self.known = ExpanderRow(_("Manage known networks"), _("Add, remove, edit networks"),
                                  "fs-history-symbolic", key="known")
         self.remember("known", self.known)

@@ -38,12 +38,17 @@ ALIASES = {
 
 
 def resolve_page(page):
-    from .pages.base import PAGES
+    """Page id for a page id, alias or GNOME panel name. A page that does not exist in this
+    session (backends/session.py) resolves to its nearest shown parent page."""
+    from .pages.base import HIDDEN_PAGES, PAGES, visible_ancestor
     if not page:
         return None
     if page in PAGES:
         return page
-    return ALIASES.get(page.lower())
+    if page in HIDDEN_PAGES:
+        return visible_ancestor(page)
+    target = ALIASES.get(page.lower())
+    return visible_ancestor(target) if target else None
 
 
 def parse_args(argv):

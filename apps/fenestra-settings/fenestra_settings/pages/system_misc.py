@@ -237,7 +237,7 @@ class ClipboardPage(Page):
         g = self.group()
         hist = SettingRow(_("Clipboard history"),
                           _("Save multiple items to the clipboard to use later"),
-                          "fs-clipboard-symbolic")
+                          "fs-clipboard-symbolic", key="history")
         if util.have("gnome-extensions"):
             hist.set_control(label(_("Managed by the clipboard extension"), "row-value"))
         g.add(hist)

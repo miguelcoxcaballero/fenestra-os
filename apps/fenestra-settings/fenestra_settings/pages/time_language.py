@@ -114,7 +114,8 @@ class DateTimePage(Page):
                           control=button(_("Sync now"), self._sync)))
         if util.has_key("org.gnome.desktop.calendar", "show-weekdate"):
             g2.add(SettingRow(_("Show week numbers in the calendar"), None, "fs-calendar-symbolic",
-                              control=gsetting_toggle("org.gnome.desktop.calendar", "show-weekdate")))
+                              control=gsetting_toggle("org.gnome.desktop.calendar", "show-weekdate"),
+                              key="week-numbers"))
 
     def _tick(self):
         now = GLib.DateTime.new_now_local()
@@ -174,8 +175,7 @@ class LanguagePage(Page):
         g2 = self.group(_("Related settings"))
         self.ext_row(g2, _("Administrative language settings"), _("Login screen and new user accounts"),
                      "fs-options-symbolic", ["gnome-control-center", "system", "region"])
-        g2.add(SettingRow(_("Typing"), None, "fs-keyboard-symbolic", chevron=True,
-                          on_click=lambda: self.go("typing")))
+        self.nav_row(g2, "typing", _("Typing"), None, "fs-keyboard-symbolic", key="typing-link")
 
     def _locales(self, items, cur):
         opts = [(x, f"{timedate.locale_label(x)} — {x}") for x in items if "utf" in x.lower() or "." not in x]
@@ -226,10 +226,8 @@ class TypingPage(Page):
             self.remember("per-window", r)
             g.add(r)
         g2 = self.group(_("Related settings"))
-        g2.add(SettingRow(_("Keyboard shortcuts"), None, "fs-keyboard-symbolic", chevron=True,
-                          on_click=lambda: self.go("fx-shortcuts")))
-        g2.add(SettingRow(_("On-screen keyboard"), None, "fs-keyboard-symbolic", chevron=True,
-                          on_click=lambda: self.go("a11y-keyboard")))
+        self.nav_row(g2, "fx-shortcuts", _("Keyboard shortcuts"), None, "fs-keyboard-symbolic")
+        self.nav_row(g2, "a11y-keyboard", _("On-screen keyboard"), None, "fs-keyboard-symbolic", focus="osk")
 
     def _fill(self):
         exp = self.exp
