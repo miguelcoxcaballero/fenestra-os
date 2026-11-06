@@ -12,16 +12,26 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Quick DBus WaylandClient Wayla
 find_package(LayerShellQt 6.2 REQUIRED)
 find_package(PlasmaWaylandProtocols 1.13 REQUIRED)
 find_package(ECM 6.0 REQUIRED NO_MODULE)
+find_package(KF6Service 6.10 REQUIRED)
+find_package(KF6KIO 6.10 REQUIRED)
+find_package(KF6WindowSystem 6.10 REQUIRED)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${ECM_FIND_MODULE_DIR})
 find_package(WaylandScanner REQUIRED)
 find_package(QtWaylandScanner REQUIRED)
 find_package(Wayland 1.15 REQUIRED COMPONENTS Client)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GWEATHER REQUIRED IMPORTED_TARGET gweather4 gio-2.0)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
 qt_add_executable(fenestra-shell
     src/main.cpp
     src/core/testprobe.cpp src/core/testprobe.h
+    src/core/shellsettings.cpp src/core/shellsettings.h
+    src/core/theme.cpp src/core/theme.h
+    src/services/apps.cpp src/services/apps.h
+    src/services/taskbarmodel.cpp src/services/taskbarmodel.h
+    src/services/weather.cpp src/services/weather.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -34,14 +44,27 @@ ecm_add_qtwayland_client_protocol(protocol_sources
     BASENAME plasma-window-management)
 target_sources(fenestra-shell PRIVATE ${protocol_sources})
 
+set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/ShellState.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 qt_add_qml_module(fenestra-shell
     URI Fenestra.Shell
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/ShellState.qml
+        qml/components/ContextMenu.qml
+        qml/components/Flyout.qml
+        qml/components/MenuRow.qml
+        qml/design/Metrics.qml
+        qml/design/Strings.qml
         qml/desktop/Wallpaper.qml
-        qml/taskbar/Taskbar.qml
+        qml/taskbar/Clock.qml
+        qml/taskbar/SearchButton.qml
         qml/taskbar/TaskButton.qml
+        qml/taskbar/TaskPreview.qml
+        qml/taskbar/Taskbar.qml
+        qml/taskbar/WeatherButton.qml
 )
 
 target_include_directories(fenestra-shell PRIVATE src/core src/services ${CMAKE_CURRENT_BINARY_DIR})
@@ -49,7 +72,8 @@ target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJ
 
 target_link_libraries(fenestra-shell PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::DBus Qt6::WaylandClient Qt6::WaylandClientPrivate
-    LayerShellQt::Interface Wayland::Client)
+    LayerShellQt::Interface Wayland::Client
+    KF6::Service KF6::KIOGui KF6::WindowSystem PkgConfig::GWEATHER)
 
 install(TARGETS fenestra-shell RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.fenestra.Shell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

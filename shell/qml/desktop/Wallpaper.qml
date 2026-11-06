@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import org.kde.layershell as LayerShell
+import Fenestra.Shell
 
 Window {
     id: win
     required property var targetScreen
-    property url source: "file:///usr/share/backgrounds/fenestra/fenestra-bloom-dark.jpg"
+    property url source: "file://" + ShellSettings.wallpaper
 
     screen: targetScreen
     color: "black"

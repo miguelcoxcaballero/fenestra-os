@@ -77,12 +77,26 @@ void WindowManagement::org_kde_plasma_window_management_show_desktop_changed(uin
     Q_EMIT showingDesktopChanged();
 }
 
+WindowsModel *WindowsModel::instance()
+{
+    static auto *m = new WindowsModel;
+    return m;
+}
+
+WindowsModel *WindowsModel::create(QQmlEngine *, QJSEngine *)
+{
+    QQmlEngine::setObjectOwnership(instance(), QQmlEngine::CppOwnership);
+    return instance();
+}
+
 WindowsModel::WindowsModel(QObject *parent)
     : QAbstractListModel(parent)
     , m_management(new WindowManagement(this))
 {
     connect(m_management, &WindowManagement::activeChanged, this, &WindowsModel::availableChanged);
     connect(m_management, &WindowManagement::showingDesktopChanged, this, &WindowsModel::showingDesktopChanged);
+    connect(this, &WindowsModel::countChanged, this, &WindowsModel::windowsChanged);
+    connect(this, &QAbstractItemModel::dataChanged, this, &WindowsModel::windowsChanged);
 }
 
 bool WindowsModel::available() const

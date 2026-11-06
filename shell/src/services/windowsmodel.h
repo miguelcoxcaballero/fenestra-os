@@ -71,7 +71,12 @@ public:
     enum Roles { TitleRole = Qt::UserRole + 1, AppIdRole, IconNameRole, ActiveRole, MinimizedRole,
                  MaximizedRole, DemandsAttentionRole, UuidRole, PidRole };
 
-    explicit WindowsModel(QObject *parent = nullptr);
+    static WindowsModel *instance();
+    static WindowsModel *create(QQmlEngine *, QJSEngine *);
+
+    // C++ access for TaskbarModel (grouping by app).
+    const QList<PlasmaWindow *> &windows() const { return m_windows; }
+    int rowOf(const PlasmaWindow *w) const { return m_windows.indexOf(const_cast<PlasmaWindow *>(w)); }
 
     int rowCount(const QModelIndex &parent = {}) const override;
     QVariant data(const QModelIndex &index, int role) const override;
@@ -92,8 +97,10 @@ Q_SIGNALS:
     void availableChanged();
     void showingDesktopChanged();
     void countChanged();
+    void windowsChanged(); // any window added, removed or changed
 
 private:
+    explicit WindowsModel(QObject *parent = nullptr);
     void windowReady(PlasmaWindow *w);
     void windowChanged(PlasmaWindow *w);
     void windowGone(PlasmaWindow *w);

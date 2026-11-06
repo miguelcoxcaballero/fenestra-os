@@ -8,14 +8,18 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
+#include <QQmlExpression>
 #include <QQuickWindow>
 #include <QScreen>
 
-void TestProbe::installIfRequested()
+void TestProbe::installIfRequested(QQmlApplicationEngine *engine)
 {
     if (qEnvironmentVariableIntValue("FENESTRA_SHELL_TEST") != 1)
         return;
     auto *probe = new TestProbe(qApp);
+    probe->m_engine = engine;
     auto bus = QDBusConnection::sessionBus();
     if (!bus.registerService(QStringLiteral("org.fenestra.Shell"))
         || !bus.registerObject(QStringLiteral("/org/fenestra/Shell/Test"), probe, QDBusConnection::ExportScriptableSlots))
@@ -25,6 +29,18 @@ void TestProbe::installIfRequested()
 QString TestProbe::Version()
 {
     return QCoreApplication::applicationVersion();
+}
+
+QString TestProbe::Eval(const QString &expression)
+{
+    if (!m_engine || m_engine->rootObjects().isEmpty())
+        return QStringLiteral("error: no root object");
+    QObject *root = m_engine->rootObjects().first();
+    QQmlExpression expr(qmlContext(root), root, expression);
+    const QVariant v = expr.evaluate();
+    if (expr.hasError())
+        return QStringLiteral("error: ") + expr.error().toString();
+    return QString::fromUtf8(QJsonDocument::fromVariant(QVariantList{v}).toJson(QJsonDocument::Compact));
 }
 
 QStringList TestProbe::Grab(const QString &dir)
@@ -49,6 +65,7 @@ QStringList TestProbe::Grab(const QString &dir)
             {QStringLiteral("scope"), scope},
             {QStringLiteral("layer"), layer ? int(layer->layer()) : -1},
             {QStringLiteral("anchors"), layer ? int(layer->anchors()) : 0},
+            {QStringLiteral("exclusionZone"), layer ? layer->exclusionZone() : 0},
             {QStringLiteral("width"), window->width()},
             {QStringLiteral("height"), window->height()},
             {QStringLiteral("margins"), QJsonArray{m.left(), m.top(), m.right(), m.bottom()}},

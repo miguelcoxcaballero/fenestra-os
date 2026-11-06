@@ -7,7 +7,10 @@ import Fenestra.Shell
 Item {
     id: root
 
+    // Per screen (B10); objects are reachable from the test probe as root.screensView.objectAt(i).
+    property alias screensView: perScreen
     Instantiator {
+        id: perScreen
         model: Qt.application.screens
         delegate: QtObject {
             required property var modelData
@@ -26,5 +29,9 @@ Item {
         target: WindowsModel
         function onCountChanged() { console.info("FENESTRA_SHELL_WINDOWS count=" + WindowsModel.count) }
         function onAvailableChanged() { console.info("FENESTRA_SHELL_WM available=" + WindowsModel.available) }
+    }
+    Connections {
+        target: TaskbarModel
+        function onModelReset() { console.info("FENESTRA_SHELL_TASKBAR buttons=" + TaskbarModel.rowCount()) }
     }
 }

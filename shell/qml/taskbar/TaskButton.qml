@@ -1,49 +1,60 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// One taskbar button: pinned launcher and/or a group of windows of one app (B02, B04).
 import QtQuick
+import Fenestra.Shell
 
 Item {
     id: button
     property url iconSource
     property string iconName
     property string label
-    property bool running: false
+    property int windowCount: 0
     property bool focused: false
+    property bool attention: false
+    readonly property bool hovered: mouse.containsMouse
     signal clicked()
+    signal rightClicked()
+    signal middleClicked()
 
-    width: 44; height: 44
-    anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+    width: Metrics.taskButton; height: Metrics.taskButton
     Accessible.role: Accessible.Button
     Accessible.name: label
 
     Rectangle {
         anchors.fill: parent
-        radius: 4
-        color: Qt.rgba(1, 1, 1, mouse.pressed ? 0.05 : (mouse.containsMouse || button.focused) ? 0.08 : 0)
+        radius: Metrics.controlRadius
+        color: mouse.pressed ? Theme.pressed : (mouse.containsMouse || button.focused) ? Theme.hover : "transparent"
+        border.width: button.focused ? 1 : 0
+        border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.05)
     }
     Image {
-        id: icon
         anchors.centerIn: parent
-        width: 24; height: 24
-        sourceSize: Qt.size(24 * Screen.devicePixelRatio, 24 * Screen.devicePixelRatio)
+        width: Metrics.taskIcon; height: Metrics.taskIcon
+        sourceSize: Qt.size(Metrics.taskIcon * Screen.devicePixelRatio, Metrics.taskIcon * Screen.devicePixelRatio)
         source: button.iconSource.toString() !== "" ? button.iconSource
                 : (button.iconName !== "" ? "image://icon/" + button.iconName : "")
         // Press animation (pressAnimation.js): the icon shrinks while pressed.
-        scale: mouse.pressed ? 0.8 : 1
-        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+        scale: mouse.pressed ? 0.82 : 1
+        Behavior on scale { NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
     }
-    // Running indicator: a dash when focused (16 px), a dot otherwise (taskbarStyle.js).
+    // Running indicator (taskbarStyle.js): accent dash when focused, short grey dash otherwise.
     Rectangle {
-        visible: button.running
-        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 1 }
+        visible: button.windowCount > 0
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 2 }
         height: 3; radius: 1.5
         width: button.focused ? 16 : 6
-        color: button.focused ? "#4cc2ff" : Qt.rgba(1, 1, 1, 0.55)
-        Behavior on width { NumberAnimation { duration: 150 } }
+        color: button.attention ? "#ffb900" : button.focused ? Theme.accentFill : Theme.textSecondary
+        Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
     }
     MouseArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
-        onClicked: button.clicked()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onClicked: (m) => {
+            if (m.button === Qt.RightButton) button.rightClicked()
+            else if (m.button === Qt.MiddleButton) button.middleClicked()
+            else button.clicked()
+        }
     }
 }

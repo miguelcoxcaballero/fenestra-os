@@ -33,11 +33,20 @@ def main(src, out):
     h = max(s["screen"][1] + s["screen"][3] for s in surfaces) - y0
     dpr = max(s["dpr"] for s in surfaces)
     canvas = Image.new("RGBA", (round(w * dpr), round(h * dpr)), (0, 0, 0, 255))
+    # wlr-layer-shell: a surface with exclusive_zone 0 is placed inside the area left by the
+    # exclusive zones of the surfaces anchored to the same edge (the taskbar's 48 px).
+    def zone(screen, edge):
+        return sum(o["exclusionZone"] for o in surfaces if o["screen"] == screen and o["exclusionZone"] > 0
+                   and o["anchors"] & edge and bin(o["anchors"]).count("1") in (1, 3))
+
     for s in sorted(surfaces, key=lambda s: s["layer"]):
         img = Image.open(s["file"]).convert("RGBA")
         sx, sy, sw, sh = s["screen"]
         ml, mt, mr, mb = s["margins"]
         a = s["anchors"]
+        if s["exclusionZone"] == 0:
+            mt, mb = mt + zone(s["screen"], TOP), mb + zone(s["screen"], BOTTOM)
+            ml, mr = ml + zone(s["screen"], LEFT), mr + zone(s["screen"], RIGHT)
         x = place(sx - x0, s["width"], sw, a & LEFT, a & RIGHT, ml, mr)
         y = place(sy - y0, s["height"], sh, a & TOP, a & BOTTOM, mt, mb)
         canvas.alpha_composite(img, (round(x * dpr), round(y * dpr)))
