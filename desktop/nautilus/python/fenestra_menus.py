@@ -4,6 +4,9 @@ opens centred under it like Explorer's, with 16px glyphs and a dot for the activ
 import os
 import time
 
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
 from gi.repository import Gdk, Gio, GLib, GObject, Gtk, Pango
 
 from fenestra_sidebar import _L, tr

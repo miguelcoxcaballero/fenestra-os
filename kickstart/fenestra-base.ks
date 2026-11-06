@@ -83,9 +83,11 @@ if [ -f /etc/sysconfig/anaconda ]; then
     sed -i 's/^post_install_tools_disabled *=.*/post_install_tools_disabled = 0/' /etc/sysconfig/anaconda
 fi
 # Branding (Fenestra is a Fedora remix).
+# (Release upgrades from Settings re-apply this for the new version: fenestra-release-upgrade.)
+FEDORA_VERSION=$(. /usr/lib/os-release && echo "$VERSION_ID")
 rm -f /etc/os-release
 sed -e 's/^NAME=.*/NAME="Fenestra"/' \
-    -e 's/^PRETTY_NAME=.*/PRETTY_NAME="Fenestra 43 (based on Fedora Linux)"/' \
+    -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Fenestra $FEDORA_VERSION (based on Fedora Linux)\"/" \
     -e 's/^ID=.*/ID=fenestra\nID_LIKE=fedora/' \
     -e 's|^HOME_URL=.*|HOME_URL="https://github.com/miguelcoxcaballero/fenestra-os"|' \
     -e 's/^LOGO=.*/LOGO=fenestra-logo/' \

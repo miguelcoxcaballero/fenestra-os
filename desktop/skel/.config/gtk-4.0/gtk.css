@@ -226,8 +226,11 @@ popover.menu modelbutton > image { margin-right: 10px; -gtk-icon-size: 16px; }
 
 .win11-explorer .win11-tabs .tab-close-button { min-width: 20px; min-height: 20px; padding: 0; margin: 0 4px; }
 .win11-explorer .win11-tabs .tab-close-button image { -gtk-icon-size: 10px; }
+/* After the regular-style rule below: GTK 4.24 drops "-symbolic" for regular icons and
+   would draw the icon theme's coloured window-close instead of the plain glyph. */
 .win11-explorer .win11-titlebar .win11-new-tab { min-width: 28px; min-height: 28px; padding: 0; margin: 2px 8px; }
 .win11-explorer .win11-tabs image { -gtk-icon-style: regular; -gtk-icon-size: 16px; }
+.win11-explorer .win11-tabs .tab-close-button image { -gtk-icon-style: symbolic; -gtk-icon-size: 10px; }
 popover.menu .windows-menu-icon { margin-right: 10px; -gtk-icon-style: regular; -gtk-icon-size: 16px; }
 
 /* AdwTab measures tabs independently from their title's natural width. Fill
@@ -313,6 +316,7 @@ window.win11-explorer {font-family:"Segoe UI"; font-size:13px; font-weight:400;}
 .win11-explorer .win11-commandbar image { -gtk-icon-style:regular; -gtk-icon-size:16px; }
 .win11-explorer placessidebar row {min-height:30px; padding:0 8px; margin:1px 4px; border-radius:3px;}
 .win11-explorer placessidebar row image {min-width:16px; -gtk-icon-size:16px; margin-right:8px; -gtk-icon-style:regular;}
+.win11-explorer placessidebar row button image { -gtk-icon-style: symbolic; } /* eject etc. (GTK 4.24) */
 .win11-explorer placessidebar row label {font-size:13px;font-weight:400;}
 .win11-explorer columnview header button {min-height:26px; padding:0 8px;font-weight:400;}
 .win11-explorer columnview row label {font-size:13px;font-weight:400;}
@@ -626,3 +630,7 @@ window.background.csd headerbar.header-bar.titlebar windowcontrols button.titleb
   .win11-explorer .win11-commandbar image, .win11-explorer .win11-navigation image, .win11-explorer image.fenestra-pin, .win11-explorer .win11-cmd-chevron { -gtk-icon-filter: invert(0.9); }
 }
 /* ---- end Fenestra light mode ---- */
+/* Nautilus 51 attaches sorters to the details columns; keep the 49 look (no arrow). */
+.win11-explorer columnview > header > button sort-indicator,
+.win11-explorer columnview > header > button sort-indicator.ascending,
+.win11-explorer columnview > header > button sort-indicator.descending { -gtk-icon-source: none; min-width: 0; min-height: 0; }

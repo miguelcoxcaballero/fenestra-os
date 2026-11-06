@@ -38,12 +38,15 @@ def kits():
 
 
 def current_version():
-    try:
-        for line in open("/etc/os-release"):
-            if line.startswith("VERSION_ID="):
-                return int(line.split("=", 1)[1].strip().strip('"'))
-    except (OSError, ValueError):
-        pass
+    # /usr/lib/os-release belongs to the installed fedora-release package; Fenestra's
+    # rebranded /etc/os-release can lag behind right after an upgrade.
+    for path in ("/usr/lib/os-release", "/etc/os-release"):
+        try:
+            for line in open(path):
+                if line.startswith("VERSION_ID="):
+                    return int(line.split("=", 1)[1].strip().strip('"'))
+        except (OSError, ValueError):
+            continue
     return 0
 
 

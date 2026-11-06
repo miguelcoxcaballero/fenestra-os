@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+import gi
+gi.require_version('Gtk', '4.0')
 from gi.repository import Gio,Gtk,GLib
 
 _LANG = (os.environ.get('LANGUAGE') or os.environ.get('LC_MESSAGES') or os.environ.get('LANG') or 'en').split(':')[0][:2]
