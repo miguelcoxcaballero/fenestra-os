@@ -8,7 +8,7 @@ from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk
 from . import theme, util
 from .i18n import _
 from .sampler import History
-from .widgets.common import Menu, icon, label
+from .widgets.common import Menu, ToolSlot, icon, label
 
 NAV = [
     ("processes", "tm-processes-symbolic", "Processes"),
@@ -225,11 +225,11 @@ class TaskWindow(Gtk.ApplicationWindow):
         self.panel.add_css_class("panel")
         self.toolbar = Gtk.Box()
         self.toolbar.add_css_class("page-toolbar")
-        self.page_title = label("", "page-title", ellipsize=True)
-        self.page_title.set_width_chars(3)
+        self.page_title = label("", "page-title")
         self.toolbar.append(self.page_title)
         self.toolbar.append(Gtk.Box(hexpand=True))
-        self.tool_slot = Gtk.Box()
+        self.tool_slot = ToolSlot()
+        self.tool_slot.set_hexpand(False)
         self.tool_slot.add_css_class("tool-slot")
         self.toolbar.append(self.tool_slot)
         self.more_btn = Gtk.Button()
@@ -353,6 +353,11 @@ class TaskWindow(Gtk.ApplicationWindow):
 
     def _more(self, btn):
         m = Menu(btn)
+        hidden = list(self.tool_slot.overflow)
+        for b in hidden:
+            m.add(b.text, lambda b=b: b.emit("clicked"), icon_name=b.icon_name, sensitive=b.get_sensitive())
+        if hidden:
+            m.add_separator()
         if self.current is not None:
             self.current.more_menu(m)
         m.add(_("Always on top"), lambda: self._toggle_opt("always_on_top"),

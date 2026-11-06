@@ -72,11 +72,13 @@ class Table(Gtk.Widget, Gtk.Scrollable):
     vscroll_policy = GObject.Property(type=Gtk.ScrollablePolicy, default=Gtk.ScrollablePolicy.MINIMUM)
 
     def __init__(self, columns, header_h=48, row_h=28, group_h=38, two_line=True, name_pad=16,
-                 icon_col=True, font_px=12, group_px=16, chev_w=21, right_pad=0):
+                 icon_col=True, font_px=12, group_px=16, chev_w=21, right_pad=0, classic=False):
         super().__init__()
         self.columns = columns
         self.header_h, self.row_h, self.group_h = header_h, row_h, group_h
         self.two_line, self.name_pad, self.icon_col = two_line, name_pad, icon_col
+        # classic = the Win32 list view of Details/Services: dark header text, no header rule
+        self.classic = classic
         self.chev_w, self.right_pad = chev_w, right_pad
         self.f_text = font(font_px)
         self.f_group = font(group_px)
@@ -549,7 +551,7 @@ class Table(Gtk.Widget, Gtk.Scrollable):
                             ix = base + self.chev_w
                             if row.icon is not None:
                                 self._icon(snap, row.icon, ix, y + (rh - 16) / 2)
-                            tx = ix + 21
+                            tx = ix + (22 if self.classic else 21)
                         self._text(snap, txt, self.f_text, tx, y + rh / 2, fg, width=x + col.w - tx - 6)
                     elif col.key == "status" and row.status:
                         st = row.status
@@ -570,7 +572,8 @@ class Table(Gtk.Widget, Gtk.Scrollable):
         for col in cols:
             x = col.x + col.w - 1 - sx
             if 0 <= x < w:
-                snap.append_color(th.heat_line if col.heat else c["line"], R(x, hh, 1, h - hh))
+                snap.append_color(th.heat_line if col.heat else c["list-sep"] if self.classic else c["line"],
+                                  R(x, hh, 1, h - hh))
         snap.pop()
 
         # ---------------- header
@@ -588,24 +591,29 @@ class Table(Gtk.Widget, Gtk.Scrollable):
                 fgc = c["fg"]
                 snap.append_border(b, [1, 1, 1, 1], [fgc, fgc, fgc, fgc])
             pad = self.name_pad if ci == 0 else 6
-            label_y = hh - 12.5 if self.two_line else hh / 2
+            label_y = hh - 12.5 if self.two_line else hh / 2 if self.classic else hh - 10.5
+            head_fg = c["fg"] if self.classic else c["fg2"]
+            if ci == 0 and self.classic:
+                pad += 4
             if col.align == "right":
                 tl = self._layout(col.title, self.f_head, col.w - 10)
                 tw = min(tl.get_pixel_extents()[1].width, col.w - 10)
-                self._text(snap, col.title, self.f_head, x + col.w - 7 - tw, label_y, c["fg2"],
+                self._text(snap, col.title, self.f_head, x + col.w - 7 - tw, label_y, head_fg,
                            width=col.w - 10)
                 if self.two_line and col.value:
                     self._text(snap, col.value, self.f_value, x + col.w - 7, 16, c["fg"], align="right")
             else:
-                self._text(snap, col.title, self.f_head, x + pad, label_y, c["fg2"], width=col.w - pad - 4)
+                self._text(snap, col.title, self.f_head, x + pad, label_y, head_fg, width=col.w - pad - 4)
             if sorted_col and col.sortable:
-                self._chevron(snap, x + col.w / 2, 9 if self.two_line else 4,
+                self._chevron(snap, x + col.w / 2 - (0 if self.classic else 5.5),
+                              9 if self.two_line else 4 if self.classic else 10.5,
                               "down" if self.sort_desc else "up", c["fg2"], s=3.2)
             if ci > 0 or not self.header_focus:
                 lx = x + col.w - 1
                 if not (sorted_col and self.header_focus):
-                    snap.append_color(c["line"], R(lx, 0, 1, hh))
-        snap.append_color(c["line"], R(0, hh - 1, w, 1))
+                    snap.append_color(c["head-sep"] if self.classic else c["line"], R(lx, 0, 1, hh))
+        if not self.classic:
+            snap.append_color(c["line"], R(0, hh - 1, w, 1))
         snap.pop()
         if has_focus and self.selected is None and not self.header_focus:
             pass

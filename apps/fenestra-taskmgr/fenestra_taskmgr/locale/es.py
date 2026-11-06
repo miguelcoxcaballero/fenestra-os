@@ -1,6 +1,7 @@
 """Spanish strings (Windows 11 es-ES Task Manager wording)."""
 STRINGS = {
     "decimal_sep": ",",
+    "date_fmt": "%d/%m/%Y",
     "Task Manager": "Administrador de tareas",
     "100%": "100 %",
     "N/A": "No disponible",
@@ -119,10 +120,10 @@ STRINGS = {
     "Not connected": "No conectado",
     "S: %s R: %s Kbps": "E: %s R: %s Kbps",
     "Resource usage since %s for current user and system accounts.":
-        "Uso de recursos desde el %s para el usuario actual y las cuentas del sistema.",
+        "Uso de recursos desde el %s para cuentas del sistema y del usuario actual.",
     "Delete usage history": "Eliminar historial de uso",
     "Notifications": "Notificaciones",
-    "Publisher": "Editor",
+    "Publisher": "Anunciante",
     "Startup impact": "Impacto de inicio",
     "Not measured": "No medido",
     "None": "Ninguno",
@@ -135,6 +136,9 @@ STRINGS = {
     "Disconnect": "Desconectar",
     "Manage user accounts": "Administrar cuentas de usuario",
     "Architecture": "Arquitectura",
+    "Platform": "Plataforma",
+    "64 bit": "64 bits",
+    "32 bit": "32 bits",
     "Memory (active private working set)": "Memoria (espacio de trabajo privado activo)",
     "Running": "En ejecución",
     "Suspended": "Suspendido",

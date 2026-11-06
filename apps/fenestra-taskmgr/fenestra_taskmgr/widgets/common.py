@@ -35,6 +35,7 @@ class ToolButton(Gtk.Button):
     def __init__(self, icon_name, text, cb=None, tooltip=None):
         super().__init__()
         self.add_css_class("tool-button")
+        self.icon_name, self.text = icon_name, text
         box = Gtk.Box(spacing=6)
         box.append(icon(icon_name, 20))
         if text:
@@ -52,7 +53,69 @@ class ToolButton(Gtk.Button):
             self.connect("clicked", lambda *_: cb())
 
     def set_text(self, text):
+        self.text = text
         self.lbl.set_text(text)
+
+
+class ToolSlot(Gtk.Widget):
+    """Command-bar primary commands, right-aligned.  Like the WinUI CommandBar, commands
+    that do not fit move (from the end) into the "See more" menu instead of forcing the
+    window wider."""
+    __gtype_name__ = "FenestraTaskToolSlot"
+    LEFT_RESERVE = 220
+
+    def __init__(self):
+        super().__init__()
+        self.overflow = []
+
+    def kids(self):
+        out, c = [], self.get_first_child()
+        while c is not None:
+            out.append(c)
+            c = c.get_next_sibling()
+        return out
+
+    def append(self, w):
+        w.set_parent(self)
+
+    def remove(self, w):
+        w.unparent()
+
+    def do_measure(self, orientation, for_size):
+        mn = nat = 0
+        for c in self.kids():
+            if not c.get_visible():
+                continue
+            a, b, _x, _y = c.measure(orientation, -1)
+            if orientation == Gtk.Orientation.HORIZONTAL:
+                nat += b
+            else:
+                mn, nat = max(mn, a), max(nat, b)
+        return (0 if orientation == Gtk.Orientation.HORIZONTAL else mn), nat, -1, -1
+
+    def do_size_allocate(self, w, h, baseline):
+        from gi.repository import Graphene, Gsk
+        kids = [c for c in self.kids() if c.get_visible()]
+        widths = [c.measure(Gtk.Orientation.HORIZONTAL, -1)[1] for c in kids]
+        n, total = len(kids), sum(widths)
+        # the command bar never reaches into the left ~220 px of the page header
+        # (measured: Services/Startup overflow their last command at 764 px)
+        par = self.get_parent()
+        limit = min(w, par.get_width() - self.LEFT_RESERVE) if par is not None and par.get_width() > 0 else w
+        while n > 0 and total > limit:
+            n -= 1
+            total -= widths[n]
+        self.overflow = [c for c in kids[n:] if isinstance(c, ToolButton)]
+        x = w - total
+        for i, c in enumerate(kids):
+            c.set_child_visible(i < n)
+            if i < n:
+                ch = min(h, c.measure(Gtk.Orientation.VERTICAL, widths[i])[1])
+                p = Graphene.Point()
+                p.x, p.y = x, (h - ch) // 2 if c.get_valign() == Gtk.Align.CENTER else 0
+                ch = ch if c.get_valign() == Gtk.Align.CENTER else h
+                c.allocate(widths[i], ch, -1, Gsk.Transform().translate(p))
+                x += widths[i]
 
 
 def separator():

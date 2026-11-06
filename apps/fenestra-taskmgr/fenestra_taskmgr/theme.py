@@ -25,7 +25,7 @@ DARK = {
     "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.35)", "shadow": "rgba(0,0,0,0.30)",
     "close-hover": "#c42b1c", "dialog": "#202020", "dialog-foot": "#2b2b2b", "smoke": "rgba(0,0,0,0.3)",
     "check-border": "rgba(255,255,255,0.55)", "graph-border": "#757575", "mini-bg": "#292929", "grid": "#2c2c2c",
-    "link": "#99ebff", "warn": "#fce100", "leaf": "#6ccb5f",
+    "link": "#99ebff", "head-sep": "#636363", "list-sep": "#1e1e1e", "warn": "#fce100", "leaf": "#6ccb5f",
 }
 LIGHT = {
     "bg": "#f3f3f3", "panel": "#ffffff", "panel-edge": "#e5e5e5", "fg": "#1b1b1b", "fg2": "#5d5d5d",
@@ -36,7 +36,7 @@ LIGHT = {
     "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.12)", "shadow": "rgba(0,0,0,0.14)",
     "close-hover": "#c42b1c", "dialog": "#f3f3f3", "dialog-foot": "#ffffff", "smoke": "rgba(0,0,0,0.3)",
     "check-border": "rgba(0,0,0,0.55)", "graph-border": "#757575", "mini-bg": "#ffffff", "grid": "#ebebeb",
-    "link": "#003e92", "warn": "#9d5d00", "leaf": "#0f7b0f",
+    "link": "#003e92", "head-sep": "#e5e5e5", "list-sep": "#f2f2f2", "warn": "#9d5d00", "leaf": "#0f7b0f",
 }
 
 # heat-map levels (lowest .. hot); dark tones sampled from Windows 11 Task Manager

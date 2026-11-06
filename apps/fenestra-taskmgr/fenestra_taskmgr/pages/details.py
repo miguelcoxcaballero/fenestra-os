@@ -19,15 +19,16 @@ class DetailsPage(Page):
     def __init__(self, win):
         super().__init__(win)
         self.table = Table([
-            Column("name", _("Name"), 143),
+            Column("name", _("Name"), 146),
             Column("pid", _("PID"), 50, desc_first=False),
             Column("status", _("Status"), 160, stretch=True),
             Column("user", _("User name"), 80),
             Column("cpu", _("CPU"), 40, "right", desc_first=True),
             Column("memory", _("Memory (active private working set)"), 50, "right", desc_first=True),
-            Column("arch", _("Architecture"), 60),
+            Column("arch", _("Platform"), 60),
             Column("desc", _("Description"), 100),
-        ], header_h=25, row_h=25, two_line=False, name_pad=6, group_h=25, chev_w=2, right_pad=19)
+        ], header_h=25, row_h=25, two_line=False, name_pad=6, group_h=25, chev_w=2, right_pad=17,
+           classic=True)
         self.table.sort_key = "name"
         self.table.connect("sort-changed", lambda *_: self.refresh())
         self.table.connect("selection-changed", lambda *_: self._sync())
@@ -79,7 +80,7 @@ class DetailsPage(Page):
             rows.append(Row(key, cells={
                 "name": name, "pid": str(p.pid), "status": _(st), "user": p.user,
                 "cpu": f"{int(round(min(p.cpu, 99))):02d}", "memory": util.fmt_kib(p.mem),
-                "arch": p.arch, "desc": apps.friendly(p.name) if p.kind != "kernel" else _("System")},
+                "arch": _(p.arch), "desc": apps.friendly(p.name) if p.kind != "kernel" else _("System")},
                 icon=proc_icon(p, snap), data=p))
         self.table.set_rows(rows)
 

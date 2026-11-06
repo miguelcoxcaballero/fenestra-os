@@ -7,7 +7,7 @@ import time
 
 from .. import util
 from ..i18n import _
-from ..widgets.common import ToolButton, label
+from ..widgets.common import ToolButton, label, separator
 from ..widgets.table import Column, Row, Table
 from .base import Page, scrolled
 from .processes import run_task_dialog
@@ -42,7 +42,7 @@ class AppHistoryPage(Page):
         info.append(link)
         self.append(info)
         self.table = Table([
-            Column("name", _("Name"), 197),
+            Column("name", _("Name"), 198),
             Column("cputime", _("CPU time"), 107, "right", heat=True, desc_first=True),
             Column("network", _("Network"), 107, "right", heat=True, desc_first=True),
             Column("notif", _("Notifications"), 107, "right", heat=True, desc_first=True),
@@ -54,7 +54,9 @@ class AppHistoryPage(Page):
         self._last_save = 0
 
     def tools(self):
-        return [self.run_btn]
+        if not hasattr(self, "_sep"):
+            self._sep = separator()
+        return [self.run_btn, self._sep]  # the reference shows a separator after it
 
     def more_menu(self, m):
         m.add(_("Delete usage history"), self.delete_history)
@@ -104,7 +106,8 @@ class AppHistoryPage(Page):
         self.refresh()
 
     def refresh(self):
-        day = time.strftime("%x", time.localtime(self.since))
+        fmt = _("date_fmt")
+        day = time.strftime("%m/%d/%Y" if fmt == "date_fmt" else fmt, time.localtime(self.since))
         self.info.set_text(_("Resource usage since %s for current user and system accounts.") % day)
         if util.DEMO:
             from ..demo import HISTORY_APPS

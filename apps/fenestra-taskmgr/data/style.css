@@ -236,8 +236,8 @@ button.flat-icon:hover { background-color: var(--hover); }
 
 /* Windows keeps an 8px resize border inside the title bar of restored windows */
 window.taskmgr:not(.maximized):not(.maximized-look):not(.fullscreen) .titlebar { min-height: 51px; }
-.apphistory-info { padding: 12px 16px 13px 16px; }
-.bios-row { padding: 14px 18px 19px 16px; }
+.apphistory-info { padding: 12px 16px 12px 15px; }
+.bios-row { padding: 16px 18px 15px 16px; }
 checkbutton check:not(:checked) { -gtk-icon-source: none; background-image: none; }
 
 /* Segoe UI Variable's small optical size runs ~2 % wider than Selawik at 12 px */

@@ -121,7 +121,7 @@ class StartupPage(Page):
         top.append(self.bios)
         self.append(top)
         self.table = Table([
-            Column("name", _("Name"), 214), Column("publisher", _("Publisher"), 150),
+            Column("name", _("Name"), 215), Column("publisher", _("Publisher"), 150),
             Column("status", _("Status"), 100), Column("impact", _("Startup impact"), 100),
         ], header_h=34, two_line=False)
         self.table.connect("sort-changed", lambda *_: self.refresh())

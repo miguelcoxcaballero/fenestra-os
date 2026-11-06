@@ -42,10 +42,11 @@ class ServicesPage(Page):
     def __init__(self, win):
         super().__init__(win)
         self.table = Table([
-            Column("name", _("Name"), 179), Column("pid", _("PID"), 50),
+            Column("name", _("Name"), 181), Column("pid", _("PID"), 50),
             Column("desc", _("Description"), 300, stretch=True),
             Column("status", _("Status"), 100), Column("group", _("Group"), 100),
-        ], header_h=25, row_h=25, two_line=False, name_pad=6, group_h=25, chev_w=2, right_pad=19)
+        ], header_h=25, row_h=25, two_line=False, name_pad=6, group_h=25, chev_w=2, right_pad=17,
+           classic=True)
         self.table.connect("sort-changed", lambda *_: self.refresh())
         self.table.connect("selection-changed", lambda *_: self._sync())
         self.table.connect("context-menu", self._context)
