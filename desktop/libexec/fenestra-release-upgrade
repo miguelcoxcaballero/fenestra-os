@@ -101,16 +101,63 @@ def sh(cmd, check=True, capture=False, log=True, env=None):
     return p
 
 
-def os_release():
+def os_release(path=None):
+    """The release this system runs. /usr/lib/os-release comes from the installed
+    fedora-release package; /etc/os-release is Fenestra's rebranded copy and can be
+    stale (or replaced by the package) right after an upgrade."""
     d = {}
-    for line in open('/etc/os-release'):
-        k, _, v = line.strip().partition('=')
-        d[k] = v.strip('"')
+    for f in ([path] if path else ['/usr/lib/os-release', '/etc/os-release']):
+        try:
+            for line in open(f):
+                k, _, v = line.strip().partition('=')
+                d.setdefault(k, v.strip('"'))
+        except OSError:
+            continue
     return d
 
 
 def current_version():
-    return int(os_release().get('VERSION_ID', '0'))
+    v = os_release().get('VERSION_ID', '0')
+    return int(v) if v.isdigit() else 0
+
+
+def rebrand():
+    """Fenestra's /etc/os-release for the release now installed (same rules as the
+    kickstart): name, PRETTY_NAME with the new version, logo; boot menu titles."""
+    base = os_release('/usr/lib/os-release')
+    if not base:
+        return
+    ver = base.get('VERSION_ID', '')
+    out = []
+    for line in open('/usr/lib/os-release'):
+        k = line.split('=', 1)[0]
+        line = {'NAME': 'NAME="Fenestra"\n',
+                'PRETTY_NAME': f'PRETTY_NAME="Fenestra {ver} (based on Fedora Linux)"\n',
+                'ID': 'ID=fenestra\nID_LIKE=fedora\n',
+                'HOME_URL': 'HOME_URL="https://github.com/miguelcoxcaballero/fenestra-os"\n',
+                'LOGO': 'LOGO=fenestra-logo\n',
+                'VARIANT': 'VARIANT="Fenestra Desktop"\n'}.get(k, line)
+        if k != 'ID_LIKE':
+            out.append(line)
+    tmp = '/etc/os-release.fenestra-new'
+    with open(tmp, 'w') as f:
+        f.writelines(out)
+    os.chmod(tmp, 0o644)
+    if os.path.islink('/etc/os-release') or os.path.exists('/etc/os-release'):
+        os.remove('/etc/os-release')
+    os.replace(tmp, '/etc/os-release')
+    sh(['restorecon', '/etc/os-release'], check=False, log=False)
+    pretty = f'Fenestra {ver} (based on Fedora Linux)'
+    for e in glob.glob('/boot/loader/entries/*.conf'):
+        try:
+            text = open(e).read()
+            m = re.search(r'^version (.+)$', text, re.M)
+            if m:
+                new = re.sub(r'^title .*$', f'title {pretty} ({m.group(1)})', text, flags=re.M)
+                if new != text:
+                    open(e, 'w').write(new)
+        except OSError:
+            pass
 
 
 def load_state():
@@ -375,7 +422,8 @@ def run(target, kits, user):
     except OSError:
         pass
     save_state(status='preparing', target=target, source=cur, started=time.time(), user=user,
-               previous_kernel=os.uname().release, kits=kits, message='')
+               previous_kernel=os.uname().release, kits=kits, message='',
+               branded=os_release('/etc/os-release').get('ID') == 'fenestra')
     try:
         step(2, 'Backing up system settings')
         bk = backup(target)
@@ -441,6 +489,8 @@ def post_boot():
     if hq.returncode == 0 and py not in hq.stdout:
         sh(['dnf', '-y', '--repo=fenestra-local', 'install', 'howdy', 'howdy-data', 'python3-dlib'], check=False)
     install_system_pieces(st.get('kits', []))
+    if st.get('branded'):  # installed Fenestra (not Fedora with Fenestra pieces)
+        rebrand()
     for m in ('ov02c10', 'ipu_bridge', 'snd_hda_scodec_max98390', 'snd_hda_scodec_max98390_i2c', 'v4l2loopback'):
         sh(['modprobe', m], check=False, log=False)
     bad = dkms_ok(k)
