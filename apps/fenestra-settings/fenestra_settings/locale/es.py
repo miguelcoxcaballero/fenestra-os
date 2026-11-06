@@ -1338,4 +1338,5 @@ STRINGS = {
     'home\x04Text size': 'Tamaño de texto',
     'home\x04Medium': 'Medio',
     'home\x04Extra large': 'Muy grande',
+    'Show all results': 'Mostrar todos los resultados',
 }
