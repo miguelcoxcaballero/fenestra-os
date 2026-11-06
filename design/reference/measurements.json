@@ -116370,5 +116370,365 @@
    "hover card pop-out animation and shadow",
    "window corners and shadow"
   ]
+ },
+ "app_notepad": {
+  "source": "reference-shots/apps/{light,dark}-100-41-notepad-*; window content box x84..1511 y79..824 (1428x746), 1px border outside; coordinates below are window-relative",
+  "titlebar": {
+   "height": 41,
+   "strip": {
+    "light": "#e8e8e8",
+    "dark": "#202020"
+   },
+   "app_icon_box": [
+    15,
+    9,
+    30,
+    24
+   ],
+   "tab": {
+    "pitch": 240,
+    "first_x": 47,
+    "y": [
+     9,
+     40
+    ],
+    "radius_top": 8,
+    "active_fill": {
+     "light": "#f8f8f8",
+     "dark": "#2c2c2c"
+    },
+    "active_title_weight": 600,
+    "inactive_title": {
+     "light": "#585858",
+     "dark": "#cccccc"
+    },
+    "separator": {
+     "x": "right edge",
+     "y": [
+      17,
+      33
+     ],
+     "light": "#e0e0e0",
+     "dark": "#2b2b2b"
+    },
+    "hover_plate": {
+     "x": [
+      2,
+      239
+     ],
+     "y": [
+      1,
+      31
+     ],
+     "light": "#dfdfdf",
+     "dark": "#2d2d2d"
+    },
+    "close_box": [
+     249,
+     13,
+     280,
+     36
+    ],
+    "dot_px": 6
+   },
+   "new_tab_box": [
+    293,
+    15,
+    324,
+    38
+   ],
+   "caption": {
+    "w": 45,
+    "h": 29,
+    "glyph_x": [
+     16,
+     25
+    ],
+    "close_glyph": [
+     17,
+     9,
+     26,
+     18
+    ]
+   }
+  },
+  "menubar": {
+   "y": [
+    41,
+    72
+   ],
+   "bottom_line_y": 73,
+   "bg": {
+    "light": "#f8f8f8",
+    "dark": "#2c2c2c"
+   },
+   "line": {
+    "light": "#eaeaea",
+    "dark": "#272727"
+   },
+   "items": {
+    "File": [
+     4,
+     44
+    ],
+    "Edit": [
+     53,
+     96
+    ],
+    "View": [
+     105,
+     154
+    ]
+   },
+   "item_padding": 10,
+   "hover": {
+    "light": "#efefef",
+    "dark": "#383838"
+   },
+   "toolbar": {
+    "x": [
+     550,
+     877
+    ],
+    "heading_drop": [
+     550,
+     605
+    ],
+    "list_drop": [
+     606,
+     661
+    ],
+    "buttons_32_x": [
+     662,
+     694,
+     726,
+     758
+    ],
+    "table_drop": [
+     790,
+     845
+    ],
+    "clear": [
+     846,
+     877
+    ]
+   },
+   "settings_btn": [
+    1390,
+    1419
+   ]
+  },
+  "editor": {
+   "bg": {
+    "light": "#f9f9f9",
+    "dark": "#272727"
+   },
+   "text_x": 16,
+   "first_baseline_y": 103,
+   "line_pitch": 18,
+   "font": "Consolas 11pt (Fenestra: Cascadia Mono, line-height 1.04)"
+  },
+  "statusbar": {
+   "y": [
+    714,
+    745
+   ],
+   "bg": {
+    "light": "#f8f8f8",
+    "dark": "#2c2c2c"
+   },
+   "separators_x": [
+    96,
+    304,
+    1048,
+    1116,
+    1284
+   ],
+   "sep": {
+    "light": "#eaeaea",
+    "dark": "#3d3d3d"
+   },
+   "sep_y": [
+    722,
+    737
+   ]
+  },
+  "menus": {
+   "file": {
+    "card": [
+     4,
+     73,
+     253,
+     512
+    ],
+    "label_x": 20,
+    "shortcut_col_x": 166,
+    "shortcuts": "left-aligned column 24px after widest label"
+   },
+   "edit": {
+    "card": [
+     53,
+     73,
+     284,
+     595
+    ],
+    "shortcuts": "right-aligned, 16px from card edge"
+   },
+   "item_pitch": {
+    "plain": "~32.9",
+    "check": 32
+   },
+   "bg": {
+    "light": "#f9f9f9",
+    "dark": "#2c2c2c"
+   },
+   "sep": {
+    "light": "#eaeaea",
+    "dark": "#3d3d3d"
+   }
+  },
+  "find": {
+   "card": [
+    284,
+    86,
+    1143,
+    135
+   ],
+   "replace_card_bottom": 175,
+   "inset": 8,
+   "toggle": [
+    293,
+    322
+   ],
+   "entry": [
+    333,
+    95,
+    974,
+    126
+   ],
+   "buttons": {
+    "w": 30,
+    "h": 26,
+    "x": [
+     985,
+     1025,
+     1065,
+     1105
+    ]
+   },
+   "replace_entry": [
+    334,
+    135,
+    934,
+    166
+   ],
+   "replace_btns": [
+    [
+     945,
+     1034
+    ],
+    [
+     1045,
+     1134
+    ]
+   ],
+   "card_border": {
+    "light": "#bbbbbb",
+    "dark": "#444444"
+   },
+   "card_bg": {
+    "light": "#f9f9f9",
+    "dark": "#282828"
+   },
+   "input": {
+    "fill": {
+     "light": "#fdfdfd",
+     "dark": "#353535"
+    },
+    "focus_fill": {
+     "light": "#ffffff",
+     "dark": "#212121"
+    },
+    "border": {
+     "light": "#eaeaea",
+     "dark": "#373737"
+    },
+    "bottom": {
+     "light": "#8a8a8a",
+     "dark": "#9d9d9d"
+    }
+   },
+   "options_flyout": {
+    "card": [
+     981,
+     22,
+     1178,
+     91
+    ],
+    "items": [
+     "Match case",
+     "Wrap around"
+    ]
+   }
+  },
+  "settings": {
+   "titlebar_bg": "page",
+   "back_btn": [
+    5,
+    10,
+    34,
+    31
+   ],
+   "page": {
+    "light": "#f3f3f3",
+    "dark": "#202020"
+   },
+   "title_ink_y": 83,
+   "cards_x": [
+    52,
+    1063
+   ],
+   "card_h": 68,
+   "card_gap": 4,
+   "card_bg": {
+    "light": "#fbfbfb",
+    "dark": "#2b2b2b"
+   },
+   "card_border": {
+    "light": "#e5e5e5",
+    "dark": "#1d1d1d"
+   },
+   "first_card_y": 178,
+   "section_weight": "regular",
+   "icon": {
+    "size": 20,
+    "x": 67
+   },
+   "title_x": 101,
+   "toggle_switch_x": [
+    979,
+    1018
+   ],
+   "on_label_x": 1031,
+   "dropdown": [
+    887,
+    563,
+    1050,
+    594
+   ],
+   "about_x": 1120,
+   "expander_body": {
+    "bg": {
+     "light": "#f4f4f4",
+     "dark": "#272727"
+    },
+    "row_h": 40,
+    "radio": {
+     "x": 101,
+     "d": 20,
+     "label_x": 130
+    }
+   }
+  }
  }
 }
