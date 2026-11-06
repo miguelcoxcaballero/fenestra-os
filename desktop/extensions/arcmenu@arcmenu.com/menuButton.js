@@ -818,12 +818,14 @@ export const ArcMenu = class ArcMenuArcMenu extends PopupMenu.PopupMenu {
 
     open(animate) {
         if (!this.isOpen) {
-            if (ShellVersion < 51) {
-                this._menuButton.arcMenu.actor._muteInput = false;
-                this._menuButton.arcMenu.actor._muteKeys = false;
-            } else {
-                this._menuButton.arcMenu.actor._muteInput.enabled = false;
-                this._menuButton.arcMenu.actor._muteKeys.enabled = false;
+            // GNOME 51 turned these into Clutter actions; older code may have left booleans.
+            const actor = this._menuButton.arcMenu.actor;
+            for (const key of ['_muteInput', '_muteKeys']) {
+                const v = actor[key];
+                if (v && typeof v === 'object' && 'enabled' in v)
+                    v.enabled = false;
+                else
+                    actor[key] = false;
             }
 
             this._menuButton?.setDefaultMenuView();

@@ -42,4 +42,8 @@ if [ -f "$css" ] && ! grep -q 'fenestra-gtk-4.24' "$css"; then
 .win11-explorer columnview > header > button sort-indicator.descending { -gtk-icon-source: none; min-width: 0; min-height: 0; }
 CSS
 fi
+# GTK 4.24's SVG renderer skips namespace-prefixed elements (<ns0:path>): window-control
+# icons converted with ElementTree came out blank (no maximize/close buttons).
+grep -rlZ --include='*.svg' '<ns0:' "$HOME/.local/share/icons" 2>/dev/null |
+    xargs -0 -r sed -i -E 's#<ns0:([a-z]+) xmlns:ns0="http://www.w3.org/2000/svg"#<\1#g; s#<(/?)ns0:#<\1#g'
 echo "Explorer layer rebuilt for Nautilus $ver."
