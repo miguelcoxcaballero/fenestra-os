@@ -1,0 +1,11 @@
+[Unit]
+Description=Fenestra Update: finish a release upgrade for this user
+# The GNOME session ran this as an autostart entry (desktop/autostart, gnome-session phases);
+# in the Fenestra session it is a user unit of the session.
+PartOf=fenestra-session.target
+After=fenestra-shell.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/sleep 10
+ExecStart=/usr/libexec/fenestra/fenestra-release-upgrade-user

@@ -84,6 +84,22 @@ if [ -x /usr/bin/fenestra-notepad ]; then
     } > /usr/share/applications/fenestra-mimeapps.list
     install -d /etc/xdg
     cp /usr/share/applications/fenestra-mimeapps.list /etc/xdg/gnome-mimeapps.list
+    # Fenestra session (XDG_CURRENT_DESKTOP=Fenestra): the distribution's GNOME defaults
+    # (browser, viewers, PDF…) plus the Fenestra lines, which win for the types they list.
+    python3 - /usr/share/applications/gnome-mimeapps.list /usr/share/applications/fenestra-mimeapps.list \
+        > /etc/xdg/fenestra-mimeapps.list <<'PY' || cp /usr/share/applications/fenestra-mimeapps.list /etc/xdg/fenestra-mimeapps.list
+import configparser, sys
+merged = configparser.RawConfigParser(); merged.optionxform = str
+for path in sys.argv[1:]:
+    part = configparser.RawConfigParser(); part.optionxform = str
+    part.read(path)
+    for section in part.sections():
+        if not merged.has_section(section):
+            merged.add_section(section)
+        for key, value in part.items(section):
+            merged.set(section, key, value)
+merged.write(sys.stdout, space_around_delimiters=False)
+PY
     update-desktop-database -q /usr/share/applications || true
 fi
 

@@ -134,8 +134,9 @@ if(FENESTRA_INSTALL_SESSION)
                      ${session_dir}/libexec/fenestra-shell-crashlog ${session_dir}/libexec/fenestra-shell-failed
             DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
     install(FILES ${session_dir}/systemd/fenestra-session.target ${session_dir}/systemd/fenestra-shell.service
-                  ${session_dir}/systemd/fenestra-shell-failed.service
+                  ${session_dir}/systemd/fenestra-shell-failed.service ${session_dir}/systemd/fenestra-release-upgrade-user.service
             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
+    install(FILES ${session_dir}/portals/fenestra-portals.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/xdg-desktop-portal)
 endif()
 
 # KWin parts: Fenestra decoration (Aurorae SVG themes) and Alt+Tab switcher (../kwin).

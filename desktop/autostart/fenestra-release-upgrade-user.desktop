@@ -5,3 +5,5 @@ Exec=/usr/libexec/fenestra/fenestra-release-upgrade-user
 NoDisplay=true
 X-GNOME-Autostart-Phase=Application
 X-GNOME-Autostart-Delay=10
+# GNOME session only; the Fenestra session runs fenestra-release-upgrade-user.service.
+OnlyShowIn=GNOME;

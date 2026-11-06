@@ -39,7 +39,7 @@ install -m755 "$D/libexec/fenestra-patch-nautilus" "$D/libexec/fenestra-nautilus
 # Re-run by the release upgrade after every upgrade (Python / GDM PAM paths of local services).
 install -m755 "$REPO/extras/fedora-upgrade/fix-local-services.sh" "$OUT/usr/libexec/fenestra/fenestra-fix-local-services"
 # Login screen safety net: compatibility matrix + greeter guard (see docs/login-safety.md).
-install -m755 "$D/libexec/fenestra-login-guard" "$OUT/usr/libexec/fenestra/"
+install -m755 "$D/libexec/fenestra-login-guard" "$D/libexec/fenestra-search" "$OUT/usr/libexec/fenestra/"
 install -Dm644 "$D/systemd/fenestra-greeter-guard.service" "$OUT/usr/lib/systemd/system/fenestra-greeter-guard.service"
 install -Dm644 "$REPO/extras/compat/login-extensions.json" "$OUT/usr/share/fenestra/compat/login-extensions.json"
 install -Dm644 "$D/systemd/fenestra-post-upgrade.service" "$OUT/usr/lib/systemd/system/fenestra-post-upgrade.service"
