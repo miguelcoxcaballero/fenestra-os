@@ -49,6 +49,8 @@ python3-gobject
 python3-pillow
 python3-fonttools
 python3-cairo
+# Fenestra print dialog (xdg-desktop-portal-fenestra): document preview.
+poppler-glib
 # Fenestra OOBE icon-pack mini browser (WebKitGTK 6 GI typelib).
 webkitgtk6.0
 icoutils

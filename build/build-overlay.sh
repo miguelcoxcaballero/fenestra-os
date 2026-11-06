@@ -142,6 +142,11 @@ for app in "$REPO"/apps/*/; do
     fi
 done
 
+log "Portal backend (print dialog)"
+# xdg-desktop-portal-fenestra: org.freedesktop.impl.portal.Print for both sessions;
+# session/portals/*.conf route Print to it.
+(cd "$D/portal" && DESTDIR="$OUT" PREFIX=/usr ./install.sh >/dev/null)
+
 log "Release stamp"
 # Which Fenestra build this is; Settings > Fenestra Update compares it with GitHub.
 COMMIT="${FENESTRA_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo unknown)}"
