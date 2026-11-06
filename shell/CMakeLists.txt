@@ -148,9 +148,16 @@ if(FENESTRA_INSTALL_SESSION)
     install(FILES ${session_dir}/systemd/fenestra-session.target ${session_dir}/systemd/fenestra-shell.service
                   ${session_dir}/systemd/fenestra-shell-failed.service ${session_dir}/systemd/fenestra-release-upgrade-user.service ${session_dir}/systemd/fenestra-oobe-first-login.service
             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
+    install(FILES ${session_dir}/portals/fenestra-portals.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/xdg-desktop-portal)
+endif()
+
+# «Migrar a KDE» (fenestra-migrate + its polkit action) belongs to the GNOME-side overlay
+# (build/build-overlay.sh, installed by Fenestra Update): it must exist before this package does,
+# and `dnf remove fenestra-shell` (its rollback) must not remove it. OFF for the RPM.
+option(FENESTRA_INSTALL_MIGRATOR "Install migrator/ (only for setups without the Fenestra overlay)" OFF)
+if(FENESTRA_INSTALL_MIGRATOR)
     install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/../migrator/fenestra-migrate DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../migrator/org.fenestra.migrate.policy DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/actions)
-    install(FILES ${session_dir}/portals/fenestra-portals.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/xdg-desktop-portal)
 endif()
 
 # KWin parts: Fenestra decoration (Aurorae SVG themes) and Alt+Tab switcher (../kwin).

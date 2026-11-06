@@ -54,7 +54,7 @@ echo "Packages to install: ${missing:-none}"
 if [ $MODE = dry ]; then
     [ -n "$missing" ] && dnf install --assumeno $missing 2>&1 | tail -5 || true
     echo "Would build $REPO/shell into $BUILD and install under /usr (session file, shell, KWin decoration and"
-    echo "switcher, lock screen, user units, portals config, migrator). Existing files are never overwritten."
+    echo "switcher, lock screen, user units, portals config). Existing files are never overwritten."
     exit 0
 fi
 

@@ -55,6 +55,11 @@ install -m755 "$D/libexec/fenestra-reset" "$OUT/usr/libexec/fenestra/"
 # and the steps every install and update ends with (fenestra-post-install).
 install -m755 "$D/libexec/fenestra-update" "$D/libexec/fenestra-post-install" "$OUT/usr/libexec/fenestra/"
 install -Dm644 "$D/polkit/org.fenestra.update.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.update.policy"
+# Settings > Fenestra Update > «Migrar a KDE»: installs the Fenestra session (KWin) next to GNOME.
+# Here, not in the fenestra-shell RPM: it must exist on a GNOME-only install, and removing the
+# RPM (its rollback) must not remove it.
+install -m755 "$REPO/migrator/fenestra-migrate" "$OUT/usr/libexec/fenestra/"
+install -Dm644 "$REPO/migrator/org.fenestra.migrate.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.migrate.policy"
 install -Dm644 "$D/systemd/fenestra-reset.service" "$OUT/usr/lib/systemd/system/fenestra-reset.service"
 install -Dm644 "$D/polkit/org.fenestra.reset.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.reset.policy"
 install -d "$OUT/usr/lib/systemd/user"

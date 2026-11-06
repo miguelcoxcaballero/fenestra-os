@@ -1,12 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Fenestra Shell and the Fenestra session (KWin). Build: packaging/build-rpm.sh
+# build-rpm.sh passes the commit it builds: Release = <commit date>.git<short id> (ordered by
+# date, so every newer Fenestra build is an upgrade), e.g. 0.1.0-20261106153000.gitc27400b.fc45.
+%{!?fenestra_release: %global fenestra_release 1}
 Name:           fenestra-shell
 Version:        0.1.0
-Release:        1%{?dist}
+Release:        %{fenestra_release}%{?dist}
 Summary:        Fenestra desktop shell and session for KWin
 License:        GPL-3.0-or-later
 URL:            https://github.com/miguelcoxcaballero/fenestra-os
 Source0:        %{name}-%{version}.tar.gz
+%{?fenestra_commit:VCS:            %{url}/commit/%{fenestra_commit}}
 
 BuildRequires:  cmake ninja-build gcc-c++ extra-cmake-modules python3
 BuildRequires:  qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtwayland-devel
@@ -23,15 +27,16 @@ Requires:       gdm
 %description
 Fenestra Shell draws the Fenestra desktop (taskbar, Start, Search, quick settings,
 notifications, calendar, desktop icons, lock screen) on top of KWin. The package adds the
-"Fenestra" session to GDM next to GNOME, the Fenestra window decoration and Alt+Tab switcher,
-and the «Migrar a KDE» backend.
+"Fenestra" session to GDM next to GNOME, the Fenestra window decoration and Alt+Tab switcher.
+«Migrar a KDE» (fenestra-migrate) is not in this package: the Fenestra overlay ships it, so
+it is there before this package is installed and stays when it is removed.
 
 %prep
 %autosetup
 
 %build
 python3 tools/build-aurorae-theme.py
-%cmake -S shell -G Ninja
+%cmake -S shell -G Ninja -DFENESTRA_INSTALL_MIGRATOR=OFF
 %cmake_build
 
 %install
@@ -44,7 +49,6 @@ python3 tools/build-aurorae-theme.py
 %{_libexecdir}/fenestra/fenestra-session-inner
 %{_libexecdir}/fenestra/fenestra-shell-crashlog
 %{_libexecdir}/fenestra/fenestra-shell-failed
-%{_libexecdir}/fenestra/fenestra-migrate
 %{_datadir}/wayland-sessions/fenestra.desktop
 %{_datadir}/applications/org.fenestra.Shell.desktop
 %{_userunitdir}/fenestra-session.target
@@ -56,7 +60,6 @@ python3 tools/build-aurorae-theme.py
 %{_datadir}/aurorae/themes/Fenestra-Light
 %{_datadir}/kwin/tabbox/fenestra
 %{_datadir}/plasma/look-and-feel/org.fenestra.desktop
-%{_datadir}/polkit-1/actions/org.fenestra.migrate.policy
 %{_datadir}/xdg-desktop-portal/fenestra-portals.conf
 
 %changelog
