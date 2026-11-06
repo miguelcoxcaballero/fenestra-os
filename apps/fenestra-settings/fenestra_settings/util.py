@@ -87,8 +87,10 @@ def run_async(argv, callback=None, mutating=False, stdin_text=None):
         launcher.setenv("LC_ALL", "C", True)
         proc = launcher.spawnv(argv)
     except GLib.Error as e:
+        # `e` is unbound when the except block ends; capture the message for the idle callback
+        msg = str(e)
         if callback:
-            GLib.idle_add(lambda: (callback(False, "", str(e)), False)[1])
+            GLib.idle_add(lambda: (callback(False, "", msg), False)[1])
         return None
 
     def done(p, res):
