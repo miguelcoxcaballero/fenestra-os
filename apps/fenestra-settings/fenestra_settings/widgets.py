@@ -326,7 +326,7 @@ class SettingRow(Gtk.Box):
             self.suffix.append(control)
         if chevron or external:
             self.suffix.append(icon("fs-open-symbolic" if external else "fs-chevron-right-symbolic",
-                                    16 if not external else 16, "row-chevron"))
+                                    20 if not external else 16, "row-chevron"))
 
         if on_click is not None:
             self.add_css_class("activatable")
@@ -428,7 +428,7 @@ class Group(Gtk.Box):
             self.add_css_class(css)
         if title:
             self.append(label(title, "section-title"))
-        self.rows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.rows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         self.rows.add_css_class("group-rows")
         self.append(self.rows)
 

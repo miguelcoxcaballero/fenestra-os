@@ -38,13 +38,18 @@ class Avatar(Gtk.Box):
                 return
             except Exception:  # noqa: BLE001 - any loader error -> initials
                 pass
-        self.add_css_class("initials")
-        lb = Gtk.Label(label=user.initials())
-        lb.set_size_request(self.size, self.size)
-        lb.add_css_class("avatar-initials")
-        if self.size < 48:
-            lb.add_css_class("small")
-        self.append(lb)
+        # no account picture: the generic person glyph, like the reference
+        self.remove_css_class("initials")
+        import os
+        from . import util
+        path = os.path.join(util.data_dir(), "icons", "fenestra-avatar-default.svg")
+        try:
+            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, self.size * 2, self.size * 2, False)
+            img = Gtk.Image.new_from_paintable(Gdk.Texture.new_for_pixbuf(pb))
+        except Exception:  # noqa: BLE001 - no SVG loader
+            img = Gtk.Image.new_from_file(path)
+        img.set_pixel_size(self.size)
+        self.append(img)
 
 
 class NavPane(Gtk.Box):
@@ -56,9 +61,9 @@ class NavPane(Gtk.Box):
 
         # --- user card
         user = current_user()
-        self.user_card = Gtk.Box(spacing=16)
+        self.user_card = Gtk.Box(spacing=12)
         self.user_card.add_css_class("user-card")
-        self.avatar = Avatar(64)
+        self.avatar = Avatar(60)
         self.avatar.set_user(user)
         self.user_card.append(self.avatar)
         tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
@@ -76,17 +81,18 @@ class NavPane(Gtk.Box):
         self.entry = Gtk.Entry()
         self.entry.set_placeholder_text(_("Find a setting"))
         self.entry.add_css_class("search-entry")
-        self.entry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, "fs-search-symbolic")
+        self.entry.set_icon_from_icon_name(Gtk.EntryIconPosition.PRIMARY, "fs-search-symbolic")
         self.entry.connect("changed", self._on_search_changed)
         self.entry.connect("activate", self._on_search_activate)
-        self.entry.connect("icon-press", lambda *_: self._on_search_activate(self.entry))
+        self.entry.connect("icon-press", self._on_icon_press)
         keyc = Gtk.EventControllerKey()
         keyc.connect("key-pressed", self._on_search_key)
         self.entry.add_controller(keyc)
         self.search_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.search_wrap.add_css_class("search-wrap")
+        self.entry.set_size_request(516, -1)
         self.search_wrap.append(self.entry)
-        self.append(self.search_wrap)
+        # the window puts search_wrap in the title bar (centred), like the reference
 
         self.popover = Gtk.Popover()
         self.popover.add_css_class("search-popover")
@@ -116,7 +122,7 @@ class NavPane(Gtk.Box):
             row.page_id = pid
             row.add_css_class("nav-item")
             ov = Gtk.Overlay()
-            box = Gtk.Box(spacing=16)
+            box = Gtk.Box(spacing=14)
             box.add_css_class("nav-item-box")
             box.append(icon(f"fs-nav-{pid}", 20, "nav-icon"))
             lb = label(_(cls.title), "nav-label", ellipsize=True)
@@ -161,7 +167,6 @@ class NavPane(Gtk.Box):
         else:
             self.remove_css_class("compact")
         self.user_texts.set_visible(not compact)
-        self.search_wrap.set_visible(not compact)
         for row in self.rows.values():
             row.nav_label.set_visible(not compact)
         self.avatar.set_visible(not compact)
@@ -173,8 +178,16 @@ class NavPane(Gtk.Box):
         self.name_lbl.set_label(u.real_name)
 
     # -------------------------------------------------------------- search
+    def _on_icon_press(self, entry, pos):
+        if pos == Gtk.EntryIconPosition.SECONDARY:
+            entry.set_text("")
+        else:
+            self._on_search_activate(entry)
+
     def _on_search_changed(self, entry):
         text = entry.get_text()
+        entry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY,
+                                      "fs-dismiss-symbolic" if text else None)
         if self._index is None:
             self._index = search.build_index()
         res = search.query(self._index, text)

@@ -6,7 +6,7 @@ import threading
 import gi
 
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango  # noqa: E402
 
 from .. import theme, util  # noqa: E402
 from ..backends import system_info  # noqa: E402
@@ -112,13 +112,15 @@ def device_hero(page, show_status=True):
     """Device banner: wallpaper thumb, device name, model, Rename link."""
     box = Gtk.Box(spacing=0)
     box.add_css_class("hero")
+    box.add_css_class("device-hero")
     thumb_frame = Gtk.Box()
     thumb_frame.add_css_class("hero-device")
-    thumb = wallpaper_thumb(176, 110, "hero-thumb")
+    thumb = wallpaper_thumb(112, 60, "hero-thumb")
     thumb_frame.append(thumb)
     box.append(thumb_frame)
-    texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER, spacing=2)
-    texts.set_margin_start(20)
+    texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.START, spacing=0)
+    texts.add_css_class("hero-texts")
+    texts.set_margin_start(16)
     name = label(system_info.hostname(), "hero-name", ellipsize=True)
     texts.append(name)
     mdl = system_info.model()
@@ -128,7 +130,7 @@ def device_hero(page, show_status=True):
     texts.set_hexpand(True)
     box.append(texts)
     if show_status:
-        st = Gtk.Box(spacing=0, valign=Gtk.Align.CENTER)
+        st = Gtk.Box(spacing=24, valign=Gtk.Align.START)
         st.add_css_class("hero-status")
         net_item = _status_item("fs-wifi-1-symbolic", _("Network"), _("Checking…"),
                                 lambda: page.go("network"))
@@ -169,13 +171,17 @@ def _update_status_text():
 def _status_item(icon_name, title, sub, cb):
     b = Gtk.Button()
     b.add_css_class("hero-status-item")
-    bx = Gtk.Box(spacing=10)
+    bx = Gtk.Box(spacing=16)
     ic = icon(icon_name, 20, "accent-icon")
+    ic.set_valign(Gtk.Align.START)
+    ic.add_css_class("hero-status-icon")
     bx.append(ic)
     tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     t = label(title, "hero-status-title", ellipsize=True)
-    s = label(sub, "hero-status-sub", ellipsize=True)
-    s.set_max_width_chars(22)
+    s = label(sub, "hero-status-sub", wrap=True)
+    s.set_max_width_chars(24)
+    s.set_lines(2)
+    s.set_ellipsize(Pango.EllipsizeMode.END)
     tb.append(t)
     tb.append(s)
     bx.append(tb)

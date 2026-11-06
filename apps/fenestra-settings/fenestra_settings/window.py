@@ -33,9 +33,12 @@ class SettingsWindow(Gtk.ApplicationWindow):
         self._compact = None
 
         # ------------------------------------------------------------- titlebar
+        # back | title ........ [ search box, centred ] ........ caption buttons
         tb = Gtk.WindowHandle()
+        tcenter = Gtk.CenterBox()
+        tcenter.add_css_class("titlebar-box")
         tbox = Gtk.Box(spacing=0)
-        tbox.add_css_class("titlebar-box")
+        tbox.add_css_class("titlebar-start")
         self.back_btn = Gtk.Button()
         self.back_btn.set_child(icon("fs-arrow-left-symbolic", 16))
         self.back_btn.add_css_class("back-button")
@@ -49,18 +52,19 @@ class SettingsWindow(Gtk.ApplicationWindow):
         self.menu_btn.set_visible(False)
         self.menu_btn.connect("clicked", lambda *_: self._toggle_flyout())
         tbox.append(self.menu_btn)
-        app_icon = icon(util.app_icon_name(), 16)
-        app_icon.add_css_class("title-icon")
-        tbox.append(app_icon)
         tbox.append(label(_("Settings"), "title-label"))
         if util.READ_ONLY and not getattr(app, "screenshot", None):
             tbox.append(label(_("(read-only)"), "title-label"))
-        spacer = Gtk.Box(hexpand=True)
-        tbox.append(spacer)
+        tcenter.set_start_widget(tbox)
+        self.search_slot = Gtk.Box()
+        self.search_slot.add_css_class("title-search")
+        self.search_slot.set_valign(Gtk.Align.START)
+        tcenter.set_center_widget(self.search_slot)
         controls = Gtk.WindowControls(side=Gtk.PackType.END)
         controls.add_css_class("window-controls")
-        tbox.append(controls)
-        tb.set_child(tbox)
+        controls.set_valign(Gtk.Align.START)
+        tcenter.set_end_widget(controls)
+        tb.set_child(tcenter)
         self.set_titlebar(tb)
 
         # ------------------------------------------------------------- body
@@ -71,7 +75,8 @@ class SettingsWindow(Gtk.ApplicationWindow):
         self.overlay.set_child(body)
 
         self.nav = NavPane(self)
-        self.nav.set_size_request(320, -1)
+        self.search_slot.append(self.nav.search_wrap)
+        self.nav.set_size_request(300, -1)
         self.nav.set_hexpand(False)
         body.append(self.nav)
 
@@ -127,7 +132,7 @@ class SettingsWindow(Gtk.ApplicationWindow):
             return False
         self._compact = compact
         self.nav.set_compact(compact)
-        self.nav.set_size_request(64 if compact else 320, -1)
+        self.nav.set_size_request(64 if compact else 300, -1)
         return False
 
     def _toggle_flyout(self):
