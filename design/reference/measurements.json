@@ -116730,5 +116730,424 @@
     }
    }
   }
+ },
+ "app_explorer": {
+  "_source": "reference-shots apps/{dark,light}-100-40-explorer-*, 1920x1080 at 100 %; screen px",
+  "window": {
+   "outer_box": [
+    407,
+    205,
+    1125,
+    634
+   ],
+   "border_px": 1,
+   "border": {
+    "dark": "#3b3b3b",
+    "light": "#3f3f3f"
+   }
+  },
+  "title_bar": {
+   "y": [
+    206,
+    244
+   ],
+   "bg": {
+    "dark": "#202020",
+    "light": "#e8e8e8 (VM, no Mica)"
+   },
+   "tab_active": {
+    "x": [
+     416,
+     655
+    ],
+    "bg": {
+     "dark": "#2c2c2c",
+     "light": "#f8f8f8"
+    }
+   },
+   "caption_glyph_px": 10,
+   "caption_glyph_center_y": 219.5,
+   "caption_button": [
+    46,
+    33
+   ],
+   "new_tab_glyph": [
+    673,
+    224,
+    683,
+    234
+   ]
+  },
+  "navigation_row": {
+   "y": [
+    245,
+    292
+   ],
+   "bg": {
+    "dark": "#2c2c2c",
+    "light": "#f8f8f8"
+   },
+   "top_line_light": "#dadada",
+   "bottom_line": {
+    "dark": "#3a3a3a",
+    "light": "#d6d6d6"
+   },
+   "buttons_icon_x": [
+    429,
+    477,
+    525,
+    573
+   ],
+   "forward_disabled_glyph": {
+    "dark": "#6e6e6e",
+    "light": "#b8b8b8"
+   },
+   "address_box": {
+    "x": [
+     609,
+     1251
+    ],
+    "y": [
+     253,
+     284
+    ],
+    "bg": {
+     "dark": "#383838",
+     "light": "#fdfdfd"
+    }
+   },
+   "search_box": {
+    "x": [
+     1260,
+     1518
+    ],
+    "bg": {
+     "dark": "#383838",
+     "light": "#fdfdfd"
+    },
+    "text_x": 1276
+   },
+   "crumbs_known_folder": "[This PC icon 622-637] chevron 658 'Documentos' 683; trailing chevron only with subfolders"
+  },
+  "command_bar": {
+   "y": [
+    294,
+    339
+   ],
+   "bottom_line": {
+    "dark": "#3a3a3a",
+    "light": "#d6d6d6"
+   },
+   "icons_x": {
+    "nuevo": 426,
+    "cut": 535,
+    "copy": 583,
+    "paste": 631,
+    "rename": 678,
+    "share": 727,
+    "delete": 775,
+    "ordenar": 825,
+    "ver": 935,
+    "more": 1023,
+    "detalles": 1441
+   },
+   "open_button_bg": {
+    "dark": "#272727",
+    "light": "#f6f6f6"
+   }
+  },
+  "details_view": {
+   "columns": {
+    "start_x": 582,
+    "name": 258,
+    "date": 144,
+    "type": 120,
+    "size": 80,
+    "separator": {
+     "dark": "#636363",
+     "light": "#e5e5e5"
+    }
+   },
+   "header": {
+    "y": [
+     341,
+     366
+    ],
+    "text_x": {
+     "name": 598,
+     "date": 846,
+     "type": 990,
+     "size": 1110
+    },
+    "text": {
+     "dark": "#dedede",
+     "light": "#4c607a"
+    }
+   },
+   "rows": {
+    "first_y": 372,
+    "height": 24,
+    "pitch": 28,
+    "x": [
+     582,
+     1179
+    ],
+    "hover": {
+     "dark": "#4d4d4d",
+     "light": "#e5f3ff"
+    },
+    "selected": {
+     "dark": "#505050 + 1px #c3c3c3",
+     "light": "#cce8ff + 1px #000000"
+    },
+    "text": {
+     "name": {
+      "dark": "#ffffff",
+      "light": "#000000"
+     },
+     "other": {
+      "dark": "#dedede",
+      "light": "#6d6d6d"
+     }
+    },
+    "icon_x": 588,
+    "name_x": 606,
+    "size_right_x": 1175,
+    "date_format": "dd/mm/yyyy h:mm",
+    "size_format": "ceil KB"
+   }
+  },
+  "navigation_pane": {
+   "row": {
+    "x": [
+     410,
+     563
+    ],
+    "height": 32
+   },
+   "text_x": 463,
+   "pin_x": 551,
+   "selected": {
+    "dark": "#505050 + 1px #c3c3c3",
+    "light": "#cce8ff + 1px #000000"
+   },
+   "hover": {
+    "dark": "#4d4d4d",
+    "light": "#e5f3ff"
+   },
+   "separators_y": [
+    459,
+    683
+   ],
+   "separator": {
+    "dark": "#383838",
+    "light": "#d6d6d6"
+   },
+   "divider_x": [
+    564,
+    567
+   ]
+  },
+  "status_bar": {
+   "text_x": 422,
+   "separator_x": 496,
+   "separator": "#f7f7f7",
+   "bg": {
+    "dark": "#1c1c1c",
+    "light": "#ffffff"
+   },
+   "text": {
+    "dark": "#dedede",
+    "light": "#1e395b"
+   },
+   "view_toggles": {
+    "details": [
+     1479,
+     814,
+     24,
+     24
+    ],
+    "large": [
+     1503,
+     814,
+     24,
+     24
+    ],
+    "checked": {
+     "dark": "#4d4d4d + 1px #636363",
+     "light": "#e5f3fb + 1px #0078d4"
+    }
+   },
+   "selection_text": "1 elemento seleccionado  79 bytes"
+  },
+  "home": {
+   "section_chevron_x": 592,
+   "section_title_x": 626,
+   "tiles": {
+    "icon_x": [
+     661,
+     945,
+     1229
+    ],
+    "text_x_offset": 58,
+    "rows_y": [
+     399,
+     459
+    ],
+    "subtitle_ellipsis": "Almacenado localm..."
+   },
+   "pills": {
+    "y": [
+     525,
+     555
+    ],
+    "x": {
+     "reciente": [
+      622,
+      722
+     ],
+     "favoritos": [
+      731,
+      834
+     ],
+     "compartido": [
+      843,
+      964
+     ]
+    },
+    "bg": {
+     "dark": "#272727",
+     "light": "#f6f6f6"
+    },
+    "active": {
+     "dark": "#4cc2ff",
+     "light": "#0067c0"
+    }
+   },
+   "recent": {
+    "header_text_x": {
+     "name": 654,
+     "date": 968,
+     "location": 1152,
+     "activity": 1334
+    },
+    "header_font_px": 14,
+    "row": {
+     "x": [
+      582,
+      1516
+     ],
+     "height": 34,
+     "first_text_y": 625,
+     "icon_x": 662,
+     "name_x": 695
+    },
+    "hover": {
+     "dark": "#272727",
+     "light": "#f6f6f6"
+    },
+    "dim": {
+     "dark": "#cbcbcb",
+     "light": "#616161"
+    }
+   }
+  },
+  "menus": {
+   "dropdown": {
+    "bg": {
+     "dark": "#2c2c2c",
+     "light": "#f9f9f9"
+    },
+    "border": {
+     "dark": "#121212",
+     "light": "#e2e2e2"
+    },
+    "separator": {
+     "dark": "#3d3d3d",
+     "light": "#eaeaea"
+    },
+    "row_pitch": 32,
+    "ver": [
+     857,
+     347,
+     1068,
+     605
+    ],
+    "ordenar": [
+     768,
+     347,
+     964,
+     477
+    ],
+    "nuevo": [
+     415,
+     347,
+     648,
+     510
+    ]
+   },
+   "context": {
+    "bg": {
+     "dark": "#2c2c2c",
+     "light": "#f9f9f9"
+    },
+    "border": {
+     "dark": "#3b3b3b",
+     "light": "#eaeaea"
+    },
+    "hover": {
+     "dark": "#383838",
+     "light": "#f0f0f0"
+    },
+    "background_menu": [
+     1000,
+     652,
+     1288,
+     910
+    ],
+    "file_menu": [
+     654,
+     457,
+     998,
+     800
+    ],
+    "label_px": 14
+   }
+  },
+  "details_pane": {
+   "x": [
+    1231,
+    1530
+   ],
+   "band": {
+    "y": [
+     341,
+     560
+    ],
+    "bg": {
+     "dark": "#222222",
+     "light": "#f9f9f9"
+    }
+   },
+   "name_icon_x": 1257,
+   "name_text_x": 1294,
+   "share_button_y": [
+    629,
+    657
+   ],
+   "heading_y": 694,
+   "rows_y": [
+    722,
+    744,
+    766,
+    788
+   ],
+   "keys_x": 1254,
+   "values_right_x": 1509
+  },
+  "notes": [
+   "largeicons-normal and list-normal references are identical to details-normal (the view shortcut did not take in the VM)",
+   "the VM draws no Mica/shadows: light title bar #e8e8e8 is the VM's solid fill"
+  ]
  }
 }
