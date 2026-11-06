@@ -43,6 +43,8 @@ manual equivalent and stay for recovery.
 | Same ports on GNOME 49 (headless) | all load, no regressions |
 | Fenestra Settings, Task Manager, OOBE, Notepad on GTK 4.24 / Python 3.15 | start without tracebacks |
 | Explorer on Nautilus 51.1 (`overlay/51`, fedora:45 container, GNOME Shell 51 headless) vs Nautilus 49.6 (fedora:43), same overlay build and user | same pixels side by side: tabs in the title bar, command bar, View/Sort/See more menus under their buttons, background and file context menus with icons, address bar (path and edit mode), sidebar with patched icons and pins, Home/This PC/Gallery pages, Details view, new tab. Only environment differences: thumbnails (no thumbnailer in the container), "Open in Terminal" (no terminal extension) |
+| Plymouth theme `fenestra` (Plymouth 26, Fedora 45 kernel 7.2.15 + dracut initramfs, QEMU **TCG** + OVMF, bochs-drm; `tests/plymouth/`) | boot (firmware-logo stand-in + spinner), live switch to the offline-upgrade screen (`change-mode --system-upgrade`, what `dnf5 offline` does), progress 0/42/87 %, `--updates` mode, Restarting, Shutting down; English and Spanish; 1280×800, 1920×1080 and 2560×1600 (2× assets). Text uses Selawik Semilight through the `99fenestra-plymouth` dracut module (Plymouth only reads `/usr/share/fonts/Plymouth.ttf`). Not covered without KVM/real hardware: the firmware's own BGRT logo hand-off and a full `dnf5 offline` run |
+| Release upgrade for later releases (os-release logic, rebrand, GNOME version check), fedora:45 container | version from `/usr/lib/os-release`; a stale "Fenestra 43" `/etc/os-release` and boot entry become "Fenestra 45"; with a simulated GNOME 53 the login step keeps the desktop extensions on and reports them |
 
 ## GNOME 51 API changes handled
 

@@ -398,8 +398,10 @@ def install_plymouth():
         return
     if not os.path.exists('/usr/lib64/plymouth/script.so'):
         sh(['dnf', '-y', '-q', 'install', 'plymouth-plugin-script', 'python3-pillow'], check=False)
+    if not glob.glob('/usr/share/fonts/selawik/*.ttf'):
+        emit('LOG', 'Selawik font not installed; the boot screens use the system font')
     out = '/usr/share/plymouth/themes/fenestra'
-    sh(['python3', builder, out, '--lang', locale_lang(), '--bgrt'], check=False, log=False)
+    sh(['python3', builder, out, '--lang', locale_lang(), '--bgrt', '--dracut'], check=False, log=False)
     sh(['restorecon', '-R', out], check=False, log=False)
     sh(['plymouth-set-default-theme', 'fenestra'], check=False)
     for k in {os.uname().release, newest_kernel()}:
