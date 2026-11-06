@@ -21,6 +21,21 @@ bootloader --timeout=1
 
 %packages
 @^workstation-product-environment
+# Fenestra session (KWin + Fenestra Shell): runtime of the fenestra-shell RPM shipped on the
+# media (fenestra/rpms, installed in %post). GNOME stays installed and is the default session
+# until the Fenestra session has passed the VM checklist (docs/fenestra-shell/CHECKLIST.md).
+kwin
+xorg-x11-server-Xwayland
+layer-shell-qt
+qt6-qtsvg
+kscreenlocker
+kscreen
+xdg-desktop-portal-kde
+kf6-bluez-qt
+kf6-networkmanager-qt
+pulseaudio-qt-qt6
+polkit-qt6-1
+libgweather
 nautilus-python
 # ArcMenu (Start) needs the GMenu typelib.
 gnome-menus
@@ -74,6 +89,11 @@ if [ -z "$SRC" ]; then
 fi
 [ -n "$SRC" ] || { echo "Fenestra overlay not found on install media"; exit 1; }
 tar -xzf "$SRC/rootfs.tar.gz" -C /mnt/sysroot --no-same-owner
+# Fenestra session RPMs (packaging/build-rpm.sh), installed from the chroot below.
+if ls "$SRC"/rpms/fenestra-shell-[0-9]*.rpm >/dev/null 2>&1; then
+    mkdir -p /mnt/sysroot/var/tmp/fenestra-rpms
+    cp "$SRC"/rpms/fenestra-shell-[0-9]*.rpm /mnt/sysroot/var/tmp/fenestra-rpms/
+fi
 %end
 
 %post --log=/root/fenestra-post.log
@@ -81,6 +101,11 @@ set -x
 # SELinux labels, branding, Settings/Files/Task Manager hooks, dconf, caches.
 # The same script runs after every Fenestra update (fenestra-update).
 /usr/libexec/fenestra/fenestra-post-install
+# Fenestra session (its dependencies came with %packages).
+if ls /var/tmp/fenestra-rpms/*.rpm >/dev/null 2>&1; then
+    dnf install -y --disablerepo='*' /var/tmp/fenestra-rpms/*.rpm || echo "fenestra-shell RPM not installed"
+    rm -rf /var/tmp/fenestra-rpms
+fi
 # GDM skips initial setup when this is set (see the note on firstboot above); belt and braces.
 if [ -f /etc/sysconfig/anaconda ]; then
     sed -i 's/^post_install_tools_disabled *=.*/post_install_tools_disabled = 0/' /etc/sysconfig/anaconda

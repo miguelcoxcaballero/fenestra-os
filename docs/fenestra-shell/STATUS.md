@@ -13,7 +13,12 @@ Branch `feature/fenestra-shell-kwin`. Tested only in the headless KWin bench
 | H4 tray panels | mostly done in the container | notifications server + centre + banners, calendar with Focus, quick settings + media, OSD, Ctrl+Alt+Del, image toast. **Missing:** real devices, polkit and media keys (VM), camera privacy glyph |
 | H5 desktop | done in the container | icons, selection, rename, new folder / from template, move, trash, menus, solid colour and Spotlight wallpapers |
 | Visual tuning | waiting for reference measurements | `design/tokens.json` holds placeholders; `tools/apply-measurements.py` merges the measured values |
-| H6–H11 | not started | — |
+| H6 windows | mostly done in the container | Fenestra decoration (Aurorae, loaded by KWin), Alt+Tab theme, Snap Layouts (window placed exactly), Task View (KWin Overview), first-login curtain. **Missing:** rounded window corners (needs a KWin effect; GL), Snap Layouts on hovering maximize |
+| H7 apps | in progress | session integration done (portals, autostart, mimeapps, search launcher); Fenestra Settings backends being split for the KWin session |
+| H8 lock | lock screen done (render test) | kscreenlocker look-and-feel `org.fenestra.desktop`; real PAM / Howdy / fingerprint unlock and the login screen: VM / laptop |
+| H9 migrator | backend done | `fenestra-migrate` phases tested in the container; the Settings page comes after the backend split |
+| H10 performance | protocol + container numbers | PERF.md; laptop comparison with GNOME pending |
+| H11 install | RPM + kickstart | `fenestra-shell` RPM builds; the ISO ships it; GNOME stays the default session until the VM checklist passes |
 
 ## How to run the bench
 

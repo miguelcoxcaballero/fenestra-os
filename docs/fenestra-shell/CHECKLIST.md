@@ -35,13 +35,13 @@ run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin
 | D01 | Desktop icons with Fenestra folder icons; select, drag and drop | pending (VM) | PASS-CONTAINER | checks D01-* (icons, new folder + rename, move remembered, trash) |
 | D02 | Desktop context menu like the Explorer's | pending (VM) | PASS-CONTAINER | checks D02-background-menu, D02-item-menu (glyphs of the GNOME layer) |
 | D03 | Wallpapers: Fenestra originals, solid palette colours, Spotlight | pending (VM) | PASS-CONTAINER | checks D03-solid-colour, D03-spotlight (current.json, same allow-list) |
-| W01 | Fenestra caption buttons (46 px, close #c42b1c on hover) on GTK 4/libadwaita, GTK 3, Qt, X11/Xwayland, Flatpak, Electron; always three buttons | pending (VM) | PARTIAL | GTK CSD windows keep their buttons (Notepad); server-side decoration in H6 |
-| W02 | Rounded corners; square when snapped or maximized | pending (VM) | TODO |  |
-| W03 | Snap to edges and quarters; layouts over maximize | pending (VM) | TODO |  |
-| W04 | Alt+Tab, Task View, virtual desktops | pending (VM) | TODO |  |
-| W05 | First login: never a half-built desktop (black → setup → black → desktop when smooth) | pending (VM) | TODO |  |
-| L01 | Lock screen: Fenestra clock in the system language, Spotlight, network and battery state; really locks (Super+L, suspend) | pending (VM) | TODO |  |
-| L02 | Direct fast unlock; user password prompt | pending (VM) | TODO |  |
+| W01 | Fenestra caption buttons (46 px, close #c42b1c on hover) on GTK 4/libadwaita, GTK 3, Qt, X11/Xwayland, Flatpak, Electron; always three buttons | pending (VM) | PARTIAL | server-side windows: Fenestra decoration loaded by KWin (check W01-decoration-loaded); GTK CSD keep the existing CSS; Flatpak / Electron in the VM |
+| W02 | Rounded corners; square when snapped or maximized | pending (VM) | TODO | rounded corners need a KWin effect (OpenGL); the decoration has rounded top corners |
+| W03 | Snap to edges and quarters; layouts over maximize | pending (VM) | PASS-CONTAINER | Snap Layouts flyout (Super+Z) + exact placement (check W03-snap-left-half, 1 and 2 outputs); edge snapping = KWin quick tiling (VM) |
+| W04 | Alt+Tab, Task View, virtual desktops | pending (VM) | PARTIAL | Alt+Tab theme kwin/tabbox/fenestra and Super+Tab → KWin Overview written; thumbnails need OpenGL (VM) |
+| W05 | First login: never a half-built desktop (black → setup → black → desktop when smooth) | pending (VM) | PASS-CONTAINER | checks W05-curtain-shown, W05-curtain-lifts |
+| L01 | Lock screen: Fenestra clock in the system language, Spotlight, network and battery state; really locks (Super+L, suspend) | pending (VM) | PARTIAL | lock screen rendered with a fake authenticator (tests/lockscreen: clock, sign-in, wrong password, success); real lock via kscreenlocker in the VM |
+| L02 | Direct fast unlock; user password prompt | pending (VM) | PARTIAL | success unlocks at once in the lock screen; real PAM timing in the VM |
 | L03 | Login screen: clock over the background; key → the single account with its password; standard login if anything fails | pending (VM) | TODO |  |
 | L04 | Fenestra Hello: face and fingerprint animations, live face while scanning, fingerprint fills bottom-up (real unlock SOLO-PORTÁTIL) | pending (VM) | TODO |  |
 | L05 | Login guard turns off only the culprit, notifies, can be reverted; forced-failure test | pending (VM) | TODO |  |
@@ -58,7 +58,7 @@ run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin
 | C05 | Personalization: light/dark, 48 accents + custom (#0078D4 default) everywhere; backgrounds; taskbar (B01, B05, B06); Start; lock screen; icon pack import | pending (VM) | TODO |  |
 | C06 | Apps (installed, defaults, startup), Accounts (users, autologin, sign-in options with the Hello wizard) | pending (VM) | TODO |  |
 | C07 | Time and language, Gaming, Accessibility, Privacy and security | pending (VM) | TODO |  |
-| C08 | Fenestra Update: Fedora + Flatpak updates, Fenestra builds from GitHub with changelog, next Fedora release with checks and screens, «Migrar a KDE» | pending (VM) | TODO |  |
+| C08 | Fenestra Update: Fedora + Flatpak updates, Fenestra builds from GitHub with changelog, next Fedora release with checks and screens, «Migrar a KDE» | pending (VM) | PARTIAL | «Migrar a KDE» backend tested in the container; Settings page pending |
 | C09 | Recovery: Reset this PC (keep files, remove everything) — VM only | pending (VM) | TODO |  |
 | C10 | «Fenestra» section with the former GNOME options | pending (VM) | TODO |  |
 | C11 | Read-only and demo modes; gnome-control-center <panel> opens the Fenestra Settings page | pending (VM) | TODO |  |
@@ -66,13 +66,13 @@ run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin
 | T02 | Ctrl+Shift+Esc and from Ctrl+Alt+Del; single instance; end task (VM only) | pending (VM) | TODO |  |
 | O01 | OOBE on first boot: region, keyboard, network, device name, account, autologin, privacy, icon import, «Hi… this can take a few minutes» on black | pending (VM) | TODO |  |
 | O02 | Works without a GPU (VM without acceleration) | pending (VM) | TODO |  |
-| O03 | Anaconda installer with Fenestra name, art and boot menu; no account screens | pending (VM) | TODO |  |
+| O03 | Anaconda installer with Fenestra name, art and boot menu; no account screens | pending (VM) | PARTIAL | kickstart installs the Fenestra session RPM from the media (ksvalidator OK); full ISO install in the VM |
 | O04 | Plymouth «fenestra»: boot, reboot, shutdown, offline update with progress | pending (VM) | TODO |  |
 | A01 | Notepad: tabs in the title bar, menus, Find/Replace, Go to, zoom, CRLF/LF/CR, encodings, Markdown preview, sessions, light/dark, printing | pending (VM) | TODO |  |
 | A02 | Paint: tools, brushes, shapes, colours, layers, text, resize/skew, rotate/flip, zoom, image properties, light/dark | pending (VM) | TODO |  |
 | A03 | Icon Extractor (on Windows): the pack is imported from Settings and the OOBE | pending (VM) | TODO |  |
 | A04 | All apps: portal file chooser, notifications, printing, Fenestra icons and cursor, same sizes and fonts | pending (VM) | PARTIAL | Notepad starts from the taskbar under KWin (Wayland); portals and printing in H7 |
-| M01 | Fedora release upgrade end to end in the VM (backup, simulation, download, offline restart, post-boot) | pending (VM) | TODO |  |
+| M01 | Fedora release upgrade end to end in the VM (backup, simulation, download, offline restart, post-boot) | pending (VM) | TODO | release upgrade must also carry fenestra-shell (matrix KWin/Qt versions) — VM |
 | M02 | Reset this PC in both modes, in the VM | pending (VM) | TODO |  |
 | M03 | Laptop services: howdy-preload, galaxy-book-guard, camera relay watchdog, Howdy in GDM PAM, DKMS ov02c10, ipu-bridge-fix, max98390-hda (SOLO-PORTÁTIL) | SOLO-PORTÁTIL | SOLO-PORTÁTIL |  |
 | M04 | Language: Fenestra UI in Spanish and English by system locale | pending (VM) | PARTIAL | shell strings es/en (design/Strings.qml) |
