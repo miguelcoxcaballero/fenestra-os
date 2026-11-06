@@ -61,7 +61,7 @@ class PackInfo:
         if isinstance(c, list):
             return [str(x) for x in c]
         tops = {n[len(self.prefix):].split("/", 1)[0] for n in self.names if n.startswith(self.prefix)}
-        return sorted(t for t in tops if t in ("fonts", "cursors", "assets", "icons", "raw"))
+        return sorted(t for t in tops if t in ("fonts", "cursors", "assets", "icons", "glyphs", "apps", "bitmaps", "raw"))
 
 
 def inspect(path: str) -> PackInfo:
@@ -121,6 +121,10 @@ PREVIEW_RULES = [
     ("Network", r"^assets/status/[^/]*(wifi|wireless|network)[^/]*\.svg$", True),
     ("Volume", r"^assets/status/[^/]*(volume|speaker|audio)[^/]*\.svg$", True),
     ("Tray", r"^assets/status/[^/]+\.svg$", True),
+    # Segoe Fluent glyphs (glyphs/, fill="currentColor": black on a light tile)
+    ("Settings glyph", r"^glyphs/preferences-system\.svg$", False),
+    ("Search glyph", r"^glyphs/system-search\.svg$", False),
+    ("Calculator", r"^icons/[^/]+/48x48/apps/calculator\.png$", False),
 ]
 
 # Generic themes: same idea relative to the theme directory.

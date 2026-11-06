@@ -37,7 +37,8 @@ jobs:
           $p = Start-Process out\portable\FenestraIconExtractor.exe -ArgumentList '--export', "$env:RUNNER_TEMP\pack.zip", '--log', "$env:RUNNER_TEMP\pack.log" -Wait -PassThru
           Get-Content "$env:RUNNER_TEMP\pack.log"
           if ($p.ExitCode -ne 0) { exit 1 }
-          python tools\validate-pack.py "$env:RUNNER_TEMP\pack.zip" | Select-Object -Last 25
+          # Status of every icons.json entry (names, ids, sources; no artwork). The pack itself is never uploaded.
+          python tools\validate-pack.py "$env:RUNNER_TEMP\pack.zip" --report | Select-String -NotMatch '^ +"|^ *[{}\]]' 
           if ($LASTEXITCODE -ne 0) { exit 1 }
       - uses: actions/upload-artifact@v4
         with:

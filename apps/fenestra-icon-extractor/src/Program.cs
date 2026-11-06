@@ -7,6 +7,7 @@ static class Program
     const string Usage =
         "FenestraIconExtractor.exe [--export PACK.zip] [--no-fonts] [--no-cursors] [--no-icons] [--no-folders]\n" +
         "                          [--no-taskbar] [--no-apps] [--no-battery] [--wallpapers] [--log FILE]\n" +
+        "                          [--no-glyphs] [--all-glyphs] [--no-package-logos] [--no-bitmaps] [--probe-modules]\n" +
         "Without --export the window opens. Windows is only read; only PACK.zip is written.";
 
     [STAThread]
@@ -78,6 +79,11 @@ static class Program
                 case "--no-apps": o.AppIcons = false; break;
                 case "--no-battery": o.Battery = false; break;
                 case "--wallpapers": o.Wallpapers = true; break;
+                case "--no-glyphs": o.Glyphs = false; break;
+                case "--all-glyphs": o.AllGlyphs = true; break;
+                case "--no-package-logos": o.PackageLogos = false; break;
+                case "--no-bitmaps": o.ReferenceBitmaps = false; break;
+                case "--probe-modules": o.ProbeModules = true; break;
                 default: Console.WriteLine(Usage); return 2;
             }
         }

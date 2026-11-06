@@ -4,12 +4,10 @@
 #include <QCommandLineParser>
 #include <QGuiApplication>
 #include <QIcon>
-#include <QPainter>
-#include <QUrl>
 #include <QQmlApplicationEngine>
-#include <QQuickImageProvider>
 #include <QQuickWindow>
 
+#include "iconoverrides.h"
 #include "kwinintegration.h"
 #include "notifications.h"
 #include "polkitagent.h"
@@ -17,59 +15,8 @@
 #include "shortcuts.h"
 #include "snip.h"
 #include "testprobe.h"
+#include "theme.h"
 #include "trayitems.h"
-
-namespace
-{
-// image://icon/<name>: icons from the Fenestra icon theme (hicolor as fallback).
-class IconProvider : public QQuickImageProvider
-{
-public:
-    IconProvider() : QQuickImageProvider(QQuickImageProvider::Pixmap) {}
-    QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requested) override
-    {
-        const QSize want = requested.isValid() ? requested : QSize(32, 32);
-        QIcon icon = QIcon::fromTheme(id);
-        if (icon.isNull())
-            icon = QIcon::fromTheme(id.toLower());
-        if (icon.isNull())
-            icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));
-        const QPixmap pixmap = icon.pixmap(want);
-        if (size)
-            *size = pixmap.size();
-        return pixmap;
-    }
-};
-
-// image://tint/<rrggbb>/<icon name, file or qrc URL>: a glyph recoloured (light mode: Fenestra's white
-// line-art glyphs drawn in #1a1a1a), with QPainter so it works with every scene graph backend.
-class TintProvider : public QQuickImageProvider
-{
-public:
-    TintProvider() : QQuickImageProvider(QQuickImageProvider::Image) {}
-    QImage requestImage(const QString &id, QSize *size, const QSize &requested) override
-    {
-        const QColor color(QLatin1Char('#') + id.section(QLatin1Char('/'), 0, 0));
-        const QString what = QUrl::fromPercentEncoding(id.section(QLatin1Char('/'), 1).toUtf8());
-        const QSize want = requested.isValid() ? requested : QSize(16, 16);
-        QImage img;
-        if (what.startsWith(QLatin1String("file:")))
-            img = QIcon(QUrl(what).toLocalFile()).pixmap(want).toImage();
-        else if (what.startsWith(QLatin1String("qrc:"))) // glyphs built into the shell (qml/snip/icons)
-            img = QIcon(QLatin1Char(':') + QUrl(what).path()).pixmap(want).toImage();
-        else
-            img = QIcon::fromTheme(what).pixmap(want).toImage();
-        img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-        QPainter p(&img);
-        p.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        p.fillRect(img.rect(), color);
-        p.end();
-        if (size)
-            *size = img.size();
-        return img;
-    }
-};
-}
 
 int main(int argc, char *argv[])
 {
@@ -95,6 +42,9 @@ int main(int argc, char *argv[])
         QIcon::setThemeName(QStringLiteral("Fenestra"));
 
     QQmlApplicationEngine engine;
+    // Glyphs and app logos of an imported icon pack replace Fenestra's own (core/iconoverrides.h).
+    IconOverrides::setDarkMode([] { return Theme::instance()->dark(); });
+    engine.addUrlInterceptor(new IconOverrideInterceptor);
     engine.addImageProvider(QStringLiteral("icon"), new IconProvider);
     engine.addImageProvider(QStringLiteral("sni"), new TrayImageProvider);
     engine.addImageProvider(QStringLiteral("tint"), new TintProvider);

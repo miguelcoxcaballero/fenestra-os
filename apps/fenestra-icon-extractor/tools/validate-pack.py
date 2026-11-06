@@ -1,12 +1,16 @@
 #!/usr/bin/python3
 """Validates a Fenestra icon pack against docs/ICON-PACK-FORMAT.md (v1).
 
-Usage: validate-pack.py PACK.zip [--sheet out.png]   (exit 0 = valid)
+Usage: validate-pack.py PACK.zip [--sheet out.png] [--report]   (exit 0 = valid)
+--report prints the status of every icons.json entry (glyphs, apps, modules, bitmaps): names, ids
+and sources only, no artwork.
 """
 import argparse
 import io
 import json
+import re
 import sys
+import xml.etree.ElementTree as ET
 import zipfile
 
 REQUIRED_KEYS = ('format', 'version', 'id', 'name', 'generator', 'source', 'created', 'contents', 'licence_note')
@@ -19,10 +23,45 @@ THEME_ICONS = ['places/folder', 'places/folder-documents', 'places/user-desktop'
                'mimetypes/text-x-generic', 'mimetypes/image-x-generic', 'mimetypes/application-pdf']
 
 
+TOPS = ('fonts', 'cursors', 'assets', 'icons', 'glyphs', 'apps', 'bitmaps', 'raw')
+NAME_RE = re.compile(r'^[a-z0-9][a-z0-9.+-]*$')
+SVG_NS = '{http://www.w3.org/2000/svg}'
+SVG_ELEMENTS = {'svg', 'g', 'path', 'title', 'desc', 'defs', 'use', 'rect', 'circle', 'ellipse', 'line', 'polyline',
+                'polygon', 'linearGradient', 'radialGradient', 'stop', 'clipPath', 'mask', 'symbol'}
+
+
+def svg_problem(data, limit=64 * 1024):
+    """Same rules as the importer (tools/fenestra-import-windows-assets: svg_problem)."""
+    if len(data) > limit:
+        return f'larger than {limit // 1024} KB'
+    if b'<!DOCTYPE' in data or b'<!ENTITY' in data:
+        return 'DOCTYPE/ENTITY not allowed'
+    try:
+        root = ET.fromstring(data)
+    except ET.ParseError as exc:
+        return f'not well-formed XML ({exc})'
+    if root.tag != SVG_NS + 'svg':
+        return 'root element is not <svg>'
+    for el in root.iter():
+        tag = el.tag[len(SVG_NS):] if el.tag.startswith(SVG_NS) else el.tag
+        if tag not in SVG_ELEMENTS:
+            return f'element <{tag}> not allowed'
+        for k, v in el.attrib.items():
+            local = k.rsplit('}', 1)[-1]
+            if local.lower().startswith('on'):
+                return f'event attribute {local}'
+            if local == 'href' and not v.startswith('#'):
+                return f'external reference {v[:40]}'
+            if re.search(r'url\(\s*[\'"]?(?!#)', v) or '@import' in v:
+                return f'external reference in {local}'
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('pack')
     ap.add_argument('--sheet')
+    ap.add_argument('--report', action='store_true')
     a = ap.parse_args()
     errors, warnings = [], []
     z = zipfile.ZipFile(a.pack)
@@ -47,8 +86,52 @@ def main():
     if sorted(m.get('contents', [])) != tops:
         errors.append(f'contents {m.get("contents")} != top-level dirs {tops}')
     for t in tops:
-        if t not in ('fonts', 'cursors', 'assets', 'icons', 'raw'):
+        if t not in TOPS:
             errors.append(f'unknown top-level dir {t}')
+    # glyphs/: index, one SVG per entry, every SVG listed, importer safety rules.
+    if 'glyphs' in tops:
+        try:
+            gi = json.loads(z.read('glyphs/glyphs.json'))
+        except (KeyError, ValueError):
+            errors.append('glyphs/ without a valid glyphs/glyphs.json')
+            gi = {'glyphs': {}}
+        listed = set()
+        for gname, g in gi.get('glyphs', {}).items():
+            if not NAME_RE.match(gname):
+                errors.append(f'glyphs.json: bad name {gname}')
+            f = 'glyphs/' + str(g.get('file', ''))
+            listed.add(f)
+            if f not in names:
+                errors.append(f'glyphs.json: {gname} -> missing {f}')
+            if not re.match(r'^U\+[0-9A-F]{4,6}$', str(g.get('codepoint', ''))):
+                errors.append(f'glyphs.json: {gname} has a bad codepoint')
+        for n in names:
+            if n.startswith('glyphs/') and n.endswith('.svg'):
+                if n not in listed and not n.startswith('glyphs/u/'):
+                    errors.append(f'{n}: not listed in glyphs.json')
+                why = svg_problem(z.read(n))
+                if why:
+                    errors.append(f'{n}: {why}')
+        print(f"glyphs: {len(gi.get('glyphs', {}))} named, missing {gi.get('missing', [])}")
+    for idx_name in ('apps/apps.json', 'bitmaps/bitmaps.json'):
+        if idx_name.split('/')[0] in tops:
+            try:
+                data = json.loads(z.read(idx_name))
+            except (KeyError, ValueError):
+                errors.append(f'no valid {idx_name}')
+                continue
+            for section in ('apps', 'modules', 'bitmaps'):
+                entries = data.get(section, {})
+                if isinstance(entries, dict) and entries:
+                    counts = {}
+                    for e in entries.values():
+                        counts[e.get('status')] = counts.get(e.get('status'), 0) + 1
+                    print(f'{idx_name} {section}: ' + ', '.join(f'{k} {v}' for k, v in sorted(counts.items(), key=str)))
+                    if a.report:
+                        for en, e in entries.items():
+                            detail = e.get('source') or e.get('reason') or e.get('note') or e.get('error') or ''
+                            extra = f" apps={e['applications']}" if 'applications' in e else ''
+                            print(f"  {section[:-1]:6} {en:28} {e.get('status', '?'):10} {detail}{extra}")
     if 'icons' in tops and m.get('icon_theme') != 'Fenestra-Windows':
         errors.append('icon_theme missing')
     if 'cursors' in tops and m.get('cursor_theme') != 'Fenestra-Windows-Cursors':
@@ -59,8 +142,9 @@ def main():
     from PIL import Image
     pngs = 0
     for n in names:
-        if n.startswith('icons/') and n.endswith('.png'):
-            size = int(n.split('/')[2].split('x')[0])
+        sized = (n.startswith('icons/') or n.startswith('apps/light/') or n.startswith('bitmaps/')) and n.endswith('.png')
+        if sized:
+            size = int(n.split('/')[2 if n.startswith(('icons/', 'apps/light/')) else 1].split('x')[0])
             im = Image.open(io.BytesIO(z.read(n)))
             if im.size != (size, size):
                 errors.append(f'{n}: {im.size} != {size}')

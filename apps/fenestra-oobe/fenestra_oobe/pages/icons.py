@@ -283,7 +283,8 @@ class IconPackPage(_BusyMixin, Page):
             self.subtitle_label.set_label(" · ".join(re.sub("<[^>]+>", "", b) for b in bits)
                                           or _("Fenestra icon pack"))
             labels = {"fonts": _("Fonts"), "cursors": _("Mouse pointers"), "assets": _("Taskbar and folder icons"),
-                      "icons": _("App icons"), "raw": _("Battery glyphs")}
+                      "icons": _("App icons"), "glyphs": _("Icon glyphs"), "apps": _("Store app logos"),
+                      "raw": _("Battery glyphs")}
             parts = [labels[c] for c in info.contents if c in labels]
             facts = "<b>" + _("Includes:") + "</b> " + GLib.markup_escape_text(", ".join(parts) or "-")
             gen = info.manifest.get("generator")

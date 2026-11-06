@@ -21,7 +21,8 @@ sealed class MainForm : Form
     readonly FluentCheck _icons = Check("System icons", "Folders, This PC, drives, Recycle Bin and file types, as an icon theme", true);
     readonly FluentCheck _folders = Check("File Explorer folder icons", "Empty and full folder artwork", true);
     readonly FluentCheck _taskbar = Check("Start button and Search icon", "The Windows logo and the colour taskbar search icon", true);
-    readonly FluentCheck _apps = Check("App icons", "Settings, Task Manager and File Explorer", true);
+    readonly FluentCheck _apps = Check("App icons", "Settings, Task Manager, File Explorer and the Store and system app logos Windows 11 shows", true);
+    readonly FluentCheck _glyphs = Check("Icon glyphs", "Segoe Fluent Icons used by the taskbar, Start, Quick Settings and menus, as SVG", true);
     readonly FluentCheck _battery = Check("Battery glyphs", "The taskbar battery icon font (Sysbatt.ttf)", true);
     readonly FluentCheck _wall = Check("Wallpaper and lock screen picture", "Your current desktop background and lock screen image", false);
     readonly Label _destHeader = new() { Text = "Save the pack to", AutoSize = false };
@@ -37,7 +38,7 @@ sealed class MainForm : Form
     };
     readonly FluentButton _open = new() { Text = "Open folder", Enabled = false };
     readonly FluentButton _export = new() { Text = "Export", Accent = true };
-    FluentCheck[] Checks => new[] { _fonts, _cursors, _icons, _folders, _taskbar, _apps, _battery, _wall };
+    FluentCheck[] Checks => new[] { _fonts, _cursors, _icons, _folders, _taskbar, _apps, _glyphs, _battery, _wall };
 
     Theme _theme = Theme.Current();
     string? _lastZip;
@@ -260,6 +261,7 @@ sealed class MainForm : Form
         {
             Fonts = _fonts.Checked, Cursors = _cursors.Checked, SystemIcons = _icons.Checked, FolderIcons = _folders.Checked,
             Taskbar = _taskbar.Checked, AppIcons = _apps.Checked, Battery = _battery.Checked, Wallpapers = _wall.Checked,
+            PackageLogos = _apps.Checked, Glyphs = _glyphs.Checked, ReferenceBitmaps = _icons.Checked,
             Destination = dest,
         };
         SetBusy(true);

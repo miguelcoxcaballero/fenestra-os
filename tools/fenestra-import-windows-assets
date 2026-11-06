@@ -18,6 +18,9 @@ tool copies those originals *for your user only*:
 Nothing is uploaded anywhere and the Windows partition is only read.
 
 It can also install a Fenestra icon pack (.zip, see docs/ICON-PACK-FORMAT.md),
+including its Segoe Fluent glyphs (glyphs/) and app logos, which replace Fenestra's own
+taskbar / Start / Quick Settings / tray / menu / snipping-bar glyphs where GLYPH_TARGETS maps
+them (~/.local/share/fenestra/icon-overrides.json, read by Fenestra Shell),
 e.g. one exported on a Windows PC with Fenestra Icon Extractor, or a plain
 freedesktop icon theme zip (anything containing an index.theme):
 
@@ -691,6 +694,338 @@ def install_icon_theme(src, name, inherit_fenestra=True):
     return dest
 
 
+# ------------------------------------------------------ glyphs and app logos ---
+# docs/ICON-PACK-FORMAT.md, "Glyphs, app logos and reference bitmaps". The pack's glyphs/ (Segoe
+# Fluent Icons outlines as SVG, named as in design/reference/icons.json) and app logos replace
+# Fenestra's own artwork where the table below maps them; everything else keeps Fenestra's icons.
+# Installed per user: ~/.local/share/fenestra/packs/<id>/ plus ~/.local/share/fenestra/icon-overrides.json,
+# which Fenestra Shell reads (shell/src/core/iconoverrides.cpp); the GNOME layer gets the icon:
+# targets through the pack's icon theme (scalable/actions).
+PACKS = DATA / 'fenestra' / 'packs'
+OVERRIDES = DATA / 'fenestra' / 'icon-overrides.json'
+GLYPH_MAX_FILE = 64 * 1024
+GLYPH_MAX_TOTAL = 16 * 1024 * 1024
+LOGO_MAX_FILE = 2 * 1024 * 1024
+_GLYPH_NAME_RE = re.compile(r'^[a-z0-9][a-z0-9.+-]{0,63}$')
+_APP_NAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$')
+
+# icons.json glyph name -> where Fenestra uses it. Targets:
+#   icon:NAME   icon name asked by Fenestra Shell (image://icon, image://tint) and installed in the
+#               pack's icon theme for GTK/GNOME (symbolic names: GTK recolours them)
+#   shell:NAME  icon name for Fenestra Shell only (the GTK meaning of the name differs)
+#   asset:REL   Fenestra Shell asset /usr/share/fenestra/assets/REL (menus, power, Ctrl+Alt+Del)
+#   snip:NAME   snipping toolbar glyph (shell/qml/snip/icons/NAME.svg)
+# Each Windows glyph has its own Fenestra file, so a pack never puts one glyph in two places
+# (the taskbar's "Task Manager" has menu-icons/win11-menu-taskmanager.svg, Display settings
+# win11-menu-tvmonitor.svg).
+GLYPH_TARGETS = {
+    'utilities-system-monitor': ['asset:menu-icons/win11-menu-taskmanager.svg'],  # taskbar menu «Administrador de tareas»
+    # taskbar, tray, notifications
+    'pan-up': ['icon:pan-up-symbolic', 'shell:go-up-symbolic'],            # tray ^, calendar folded
+    'pan-down': ['icon:pan-down-symbolic', 'shell:go-down-symbolic'],      # drop-downs, calendar fold
+    'pan-end': ['icon:pan-end-symbolic', 'shell:go-next-symbolic'],        # Quick Settings tile ›, Start "All ›"
+    'pan-start': ['icon:pan-start-symbolic'],
+    'audio-volume-high': ['icon:audio-volume-high-symbolic'],
+    'network-wired': ['icon:network-wired-symbolic'],
+    'notifications': ['icon:notifications-symbolic'],
+    'notifications-disabled': ['icon:notifications-disabled-symbolic'],
+    'window-close': ['icon:window-close-symbolic', 'snip:snip-close'],     # toasts, title bars, snipping bar
+    'window-minimize': ['icon:window-minimize-symbolic'],
+    'window-maximize': ['icon:window-maximize-symbolic'],
+    'window-restore': ['icon:window-restore-symbolic'],
+    'window-close-symbolic': ['asset:menu-icons/win11-menu-cancel.svg'],  # jump list "Close window", preview ×
+    'view-pin': ['asset:menu-icons/win11-explorer-pin.svg'],
+    'emblem-shared': ['asset:menu-icons/win11-menu-share.svg'],
+    # Quick Settings
+    'preferences-system': ['shell:emblem-system-symbolic', 'asset:menu-icons/win11-menu-settings.svg'],
+    'accessibility': ['icon:preferences-desktop-accessibility-symbolic', 'asset:security/accessibility.svg'],
+    'airplane-mode': ['icon:airplane-mode-symbolic'],
+    'night-light': ['icon:night-light-symbolic'],
+    'bluetooth': ['icon:bluetooth-active-symbolic'],
+    'battery-saver': ['shell:battery-level-50-symbolic'],                  # the Battery saver tile only
+    'audio-mixer': ['shell:audio-card-symbolic'],                          # volume row: output / mixer
+    'go-previous': ['icon:go-previous-symbolic', 'asset:menu-icons/win11-explorer-back.svg'],  # QS page ‹, Search back
+    'media-playback-start': ['icon:media-playback-start-symbolic'],
+    'media-playback-pause': ['icon:media-playback-pause-symbolic'],
+    'media-skip-backward': ['icon:media-skip-backward-symbolic'],
+    'media-skip-forward': ['icon:media-skip-forward-symbolic'],
+    'list-add': ['icon:list-add-symbolic'],
+    'list-remove': ['icon:list-remove-symbolic'],
+    # Start power menu, Ctrl+Alt+Del
+    'system-lock-screen': ['asset:power/1.svg'],
+    'system-reboot': ['asset:power/2.svg', 'asset:security/restart.svg'],
+    'system-shutdown': ['asset:power/3.svg', 'asset:security/shutdown.svg'],
+    # desktop and Search context menus
+    'view-refresh': ['icon:view-refresh-symbolic', 'asset:menu-icons/win11-menu-refresh.svg'],
+    'sort': ['asset:menu-icons/win11-menu-sort.svg'],
+    'view': ['asset:menu-icons/win11-menu-view.svg'],
+    'personalize': ['asset:menu-icons/win11-menu-personalize.svg'],
+    'display': ['asset:menu-icons/win11-menu-tvmonitor.svg'],
+    'utilities-terminal': ['asset:menu-icons/win11-menu-terminal.svg'],
+    'more-options': ['asset:menu-icons/win11-menu-openwith.svg'],
+    'document-new': ['asset:menu-icons/win11-menu-new.svg'],
+    'folder-new': ['icon:folder-new-symbolic', 'asset:menu-icons/win11-menu-newfolder.svg'],
+    'folder-open': ['asset:menu-icons/win11-menu-folderopen.svg'],
+    'window-new': ['asset:menu-icons/win11-menu-openinnewwindow.svg'],
+    'edit-cut': ['icon:edit-cut-symbolic', 'asset:menu-icons/win11-menu-cut.svg'],
+    'edit-copy': ['icon:edit-copy-symbolic', 'asset:menu-icons/win11-menu-copy.svg', 'asset:menu-icons/win11-menu-copypath.svg'],
+    'edit-paste': ['icon:edit-paste-symbolic', 'asset:menu-icons/win11-menu-paste.svg'],
+    'edit-delete': ['icon:edit-delete-symbolic', 'asset:menu-icons/win11-menu-delete.svg'],
+    'edit-select-all': ['icon:edit-select-all-symbolic', 'asset:menu-icons/win11-menu-selectall.svg'],
+    'document-properties': ['asset:menu-icons/win11-menu-properties.svg'],
+    'more': ['icon:view-more-horizontal-symbolic'],
+    # snipping toolbar
+    'selection-rectangle': ['snip:snip-rectangle'],
+    'selection-window': ['snip:snip-window'],
+    'selection-fullscreen': ['snip:snip-screen'],
+    'selection-freeform': ['snip:snip-freeform'],
+    'camera-photo-symbolic': ['icon:camera-photo-symbolic'],
+    'camera-video-symbolic': ['icon:camera-video-symbolic'],
+    # GTK apps (headerbars, entries, text editors)
+    'system-search': ['icon:system-search-symbolic'],
+    'help-browser': ['icon:help-browser-symbolic'],
+    'view-list': ['icon:view-list-symbolic'],
+    'zoom-fit-best': ['icon:zoom-fit-best-symbolic'],
+    'tab-new': ['icon:tab-new-symbolic'],
+    'format-text-bold': ['icon:format-text-bold-symbolic'],
+    'format-text-italic': ['icon:format-text-italic-symbolic'],
+    'format-text-strikethrough': ['icon:format-text-strikethrough-symbolic'],
+    'insert-link': ['icon:insert-link-symbolic'],
+    'emblem-synchronizing': ['icon:emblem-synchronizing-symbolic'],
+}
+
+# icons.json apps[] name -> the icon names of the Fenestra apps in the same role. Brands of other
+# vendors are not swapped (no Edge logo on Firefox).
+APP_ALIASES = {
+    'system-file-manager': ['org.gnome.Nautilus', 'fenestra-file-explorer'],
+    'microsoft-store': ['org.fenestra.Store', 'org.gnome.Software'],
+    'photos': ['org.gnome.Loupe'],
+    'calculator': ['org.gnome.Calculator'],
+    'clock': ['org.gnome.clocks'],
+    'camera': ['org.gnome.Snapshot'],
+    'bing-weather': ['org.gnome.Weather'],
+    'terminal': ['org.gnome.Ptyxis', 'utilities-terminal'],
+}
+
+SVG_NS = '{http://www.w3.org/2000/svg}'
+SVG_ELEMENTS = {'svg', 'g', 'path', 'title', 'desc', 'defs', 'use', 'rect', 'circle', 'ellipse', 'line', 'polyline',
+                'polygon', 'linearGradient', 'radialGradient', 'stop', 'clipPath', 'mask', 'symbol'}
+
+
+def svg_problem(data, limit=GLYPH_MAX_FILE):
+    """None when ``data`` is a small, self-contained SVG; otherwise the reason it is refused:
+    not well-formed, root not <svg>, DOCTYPE/entities, scripts, foreignObject or any element outside a
+    plain-shapes allow-list, event attributes, or references to anything but '#...'."""
+    import xml.etree.ElementTree as ET
+    if len(data) > limit:
+        return f'larger than {limit // 1024} KB'
+    if b'<!DOCTYPE' in data or b'<!ENTITY' in data:
+        return 'DOCTYPE/ENTITY not allowed'
+    try:
+        root = ET.fromstring(data)
+    except ET.ParseError as exc:
+        return f'not well-formed XML ({exc})'
+    if root.tag != SVG_NS + 'svg':
+        return 'root element is not <svg>'
+    for el in root.iter():
+        tag = el.tag[len(SVG_NS):] if isinstance(el.tag, str) and el.tag.startswith(SVG_NS) else el.tag
+        if tag not in SVG_ELEMENTS:
+            return f'element <{tag}> not allowed'
+        for k, v in el.attrib.items():
+            local = k.rsplit('}', 1)[-1]
+            if local.lower().startswith('on'):
+                return f'event attribute {local}'
+            if local == 'href' and not v.startswith('#'):
+                return f'external reference {v[:40]}'
+            if re.search(r'url\(\s*[\'"]?(?!#)', v) or '@import' in v:
+                return f'external reference in {local}'
+    return None
+
+
+def _png_size(data):
+    if len(data) < 24 or data[:8] != b'\x89PNG\r\n\x1a\n' or data[12:16] != b'IHDR':
+        return None
+    return struct.unpack('>II', data[16:24])
+
+
+def _white(svg_bytes):
+    """The glyph drawn white: Fenestra Shell shows its own glyphs as white line art on dark surfaces
+    and recolours them (image://tint) everywhere else."""
+    text = svg_bytes.decode('utf-8')
+    return re.sub(r'fill="currentColor"', 'fill="#ffffff"', text).encode('utf-8')
+
+
+def _ensure_scalable_dir(theme_dir, context_dir='scalable/actions', context='Actions'):
+    """Add a scalable directory to an installed theme's index.theme (create a minimal theme when there is none)."""
+    index = theme_dir / 'index.theme'
+    if not index.exists():
+        theme_dir.mkdir(parents=True, exist_ok=True)
+        index.write_text(f'[Icon Theme]\nName={theme_dir.name}\nComment=Icons from your Fenestra icon pack\n'
+                         'Inherits=Fenestra,Win11,Adwaita,hicolor\nDirectories=\n')
+    text = index.read_text(errors='replace')
+    m = re.search(r'^Directories\s*=\s*(.*)$', text, re.M)
+    dirs = [d.strip() for d in (m.group(1).split(',') if m else []) if d.strip()]
+    if context_dir not in dirs:
+        dirs.append(context_dir)
+        line = 'Directories=' + ','.join(dirs)
+        text = (text[:m.start()] + line + text[m.end():]) if m else text.replace('[Icon Theme]\n', '[Icon Theme]\n' + line + '\n', 1)
+    if f'[{context_dir}]' not in text:
+        text = text.rstrip('\n') + f'\n\n[{context_dir}]\nSize=16\nMinSize=8\nMaxSize=512\nType=Scalable\nContext={context}\n'
+    index.write_text(text)
+
+
+def install_glyphs_and_logos(root, pack_id, theme_name):
+    """Install glyphs/ and the app logos of a validated, extracted pack; write icon-overrides.json.
+
+    Returns the overrides dict. Unsafe or unlisted files are skipped with a log line, never installed."""
+    dest = PACKS / pack_id
+    if dest.exists():
+        shutil.rmtree(dest)
+    overrides = {'version': 1, 'pack': pack_id, 'icons': {}, 'icons_light': {}, 'assets': {}, 'assets_light': {},
+                 'snip': {}, 'glyphs': {}}
+    theme_dir = DATA / 'icons' / theme_name if theme_name else None
+
+    # glyphs/
+    gdir = root / 'glyphs'
+    index = {}
+    if (gdir / 'glyphs.json').is_file():
+        try:
+            index = json.loads((gdir / 'glyphs.json').read_text(encoding='utf-8'))
+        except (ValueError, UnicodeDecodeError):
+            log('glyphs: glyphs.json is not valid JSON, glyphs skipped')
+            index = {}
+    entries = index.get('glyphs') if isinstance(index.get('glyphs'), dict) else {}
+    total, installed, refused = 0, {}, 0
+    for name, meta in sorted(entries.items()):
+        if not _GLYPH_NAME_RE.match(name) or not isinstance(meta, dict) or meta.get('file') != f'{name}.svg':
+            refused += 1
+            continue
+        src = gdir / f'{name}.svg'
+        if not src.is_file() or src.is_symlink():
+            continue
+        data = src.read_bytes()
+        why = svg_problem(data)
+        total += len(data)
+        if why or total > GLYPH_MAX_TOTAL:
+            log(f'glyphs: {name}.svg refused ({why or "glyphs/ over 16 MB"})')
+            refused += 1
+            continue
+        out = dest / 'glyphs' / f'{name}.svg'
+        white = dest / 'glyphs' / 'white' / f'{name}.svg'
+        out.parent.mkdir(parents=True, exist_ok=True)
+        white.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(data)
+        white.write_bytes(_white(data))
+        installed[name] = (out, white)
+        overrides['glyphs'][name] = str(out)
+    # glyphs/u/XXXX.svg (--all-glyphs): kept for people who pick substitutes themselves
+    udir = gdir / 'u'
+    if udir.is_dir():
+        n = 0
+        for f in sorted(udir.glob('*.svg')):
+            if not re.match(r'^[0-9A-F]{4,6}\.svg$', f.name) or f.is_symlink():
+                continue
+            data = f.read_bytes()
+            total += len(data)
+            if total > GLYPH_MAX_TOTAL * 4 or svg_problem(data):
+                continue
+            (dest / 'glyphs' / 'u').mkdir(parents=True, exist_ok=True)
+            (dest / 'glyphs' / 'u' / f.name).write_bytes(data)
+            n += 1
+        if n:
+            log(f'glyphs: {n} code point SVGs (glyphs/u)')
+    gtk_names = []
+    for name, (orig, white) in installed.items():
+        for target in GLYPH_TARGETS.get(name, []):
+            kind, _, what = target.partition(':')
+            if kind in ('icon', 'shell'):
+                overrides['icons'][what] = [str(white)]
+                overrides['icons_light'][what] = [str(orig)]
+                if kind == 'icon' and theme_dir is not None:
+                    gtk_names.append((what, orig))
+            elif kind == 'asset':
+                overrides['assets'][what] = str(white)
+                overrides['assets_light'][what] = str(orig)
+            elif kind == 'snip':
+                overrides['snip'][what] = str(white)
+    if gtk_names:
+        _ensure_scalable_dir(theme_dir)
+        sdir = theme_dir / 'scalable' / 'actions'
+        sdir.mkdir(parents=True, exist_ok=True)
+        for what, orig in gtk_names:
+            shutil.copyfile(orig, sdir / f'{what}.svg')
+    if entries:
+        mapped = sum(1 for n in installed if n in GLYPH_TARGETS)
+        log(f'glyphs: {len(installed)} installed ({mapped} replace Fenestra glyphs), {refused} refused, '
+            f'missing in pack: {", ".join(index.get("missing", [])) or "none"}')
+
+    # app logos: icons/<theme>/<n>x<n>/apps/<name>.png (installed with the theme) + apps/light/
+    apps_index = {}
+    if (root / 'apps' / 'apps.json').is_file():
+        try:
+            apps_index = json.loads((root / 'apps' / 'apps.json').read_text(encoding='utf-8')).get('apps', {})
+        except (ValueError, UnicodeDecodeError, AttributeError):
+            log('apps: apps.json is not valid JSON')
+            apps_index = {}
+    if not isinstance(apps_index, dict):
+        apps_index = {}
+    n_apps = 0
+    for name, meta in sorted(apps_index.items()):
+        if not _APP_NAME_RE.match(name) or not isinstance(meta, dict) or meta.get('status') not in ('exported', 'candidate'):
+            continue
+        dark = sorted(theme_dir.glob(f'*x*/apps/{name}.png'), key=lambda p: int(p.parts[-3].split('x')[0])) \
+            if theme_dir is not None and theme_dir.is_dir() else []
+        dark = [p for p in dark if (sz := _png_size(p.read_bytes()[:32])) and sz[0] == sz[1] == int(p.parts[-3].split('x')[0])]
+        light = []
+        ldir = root / 'apps' / 'light'
+        for p in sorted(ldir.glob(f'*x*/{name}.png')) if ldir.is_dir() else []:
+            data = p.read_bytes()
+            sz = _png_size(data)
+            if p.is_symlink() or len(data) > LOGO_MAX_FILE or not sz or not re.match(r'^\d+x\d+$', p.parent.name) \
+                    or sz != (int(p.parent.name.split('x')[0]),) * 2:
+                continue
+            out = dest / 'apps' / 'light' / p.parent.name / p.name
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(data)
+            light.append(out)
+        if not dark:
+            continue
+        n_apps += 1
+        for alias in [name] + APP_ALIASES.get(name, []):
+            files = []
+            for p in dark:
+                target = p.with_name(f'{alias}.png')
+                if target != p:
+                    shutil.copyfile(p, target)
+                files.append(str(target))
+            overrides['icons'][alias] = files
+            if light:
+                overrides['icons_light'][alias] = [str(p) for p in light]
+    if apps_index:
+        log(f'apps: {n_apps} app logos ({sum(len(APP_ALIASES.get(n, [])) for n in apps_index if n in APP_ALIASES)} aliases for Fenestra apps)')
+
+    # bitmaps/ (reference bitmaps; kept with the pack, not mapped yet) and the indexes, for checking
+    for sub in ('bitmaps', 'apps'):
+        for f in (root / sub).rglob('*') if (root / sub).is_dir() else []:
+            if f.is_file() and not f.is_symlink() and f.suffix.lower() in ('.png', '.json') and f.stat().st_size <= LOGO_MAX_FILE:
+                if f.suffix.lower() == '.png' and not _png_size(f.read_bytes()[:32]):
+                    continue
+                out = dest / f.relative_to(root)
+                out.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(f, out)
+    if (gdir / 'glyphs.json').is_file():
+        (dest / 'glyphs').mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(gdir / 'glyphs.json', dest / 'glyphs' / 'glyphs.json')
+
+    OVERRIDES.parent.mkdir(parents=True, exist_ok=True)
+    tmp = OVERRIDES.with_suffix('.json.tmp')
+    tmp.write_text(json.dumps(overrides, indent=1, sort_keys=True) + '\n')
+    os.replace(tmp, OVERRIDES)
+    if theme_dir is not None and theme_dir.is_dir() and APPLY:
+        subprocess.run(['gtk-update-icon-cache', '-q', '-f', '-t', str(theme_dir)], check=False)
+    return overrides
+
+
 def import_pack(path, dry=False):
     info = inspect_pack(path)
     m = info['manifest']
@@ -756,9 +1091,17 @@ def import_pack(path, dry=False):
         themes = [p for p in themes if _THEME_RE.match(p.name)]
         for t in themes:
             install_icon_theme(t, t.name, inherit_fenestra=True)
+        chosen = None
         if themes:
             wanted = m.get('icon_theme')
             chosen = wanted if wanted in [t.name for t in themes] else themes[0].name
+        # glyphs and app logos (icon-overrides.json for Fenestra Shell; icon: glyphs in the theme)
+        has_glyphs = (root / 'glyphs').is_dir()
+        if has_glyphs and chosen is None:
+            chosen = m.get('icon_theme') if isinstance(m.get('icon_theme'), str) and _THEME_RE.match(m['icon_theme']) \
+                else 'Fenestra-Windows'
+        install_glyphs_and_logos(root, pack_id, chosen)
+        if chosen:
             gsettings_set('org.gnome.desktop.interface', 'icon-theme', chosen)
             log(f'icons: theme {chosen}')
         # accent colour
