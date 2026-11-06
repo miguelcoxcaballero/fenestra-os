@@ -1264,4 +1264,7 @@ STRINGS = {
     'Preparing local packages for the new version': 'Preparando paquetes locales para la nueva versión',
     'Ready to restart': 'Listo para reiniciar',
     'Rebuilding local packages for the new version': 'Recompilando paquetes locales para la nueva versión',
+    # Release upgrade: login-screen safety
+    'Some sign-in screen customizations will be turned off': 'Se desactivarán algunas personalizaciones de la pantalla de inicio de sesión',
+    'Not yet checked with GNOME {0}: {1}. The standard sign-in screen is used until a Fenestra update supports them.': 'Aún no comprobadas con GNOME {0}: {1}. Se usará la pantalla de inicio de sesión estándar hasta que una actualización de Fenestra las admita.',
 }

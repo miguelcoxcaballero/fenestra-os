@@ -90,6 +90,8 @@ class UpdatePage(Page):
     # ------------------------------------------------------------ release upgrade
     def _got_release(self, info):
         self._rel_next = info.get("next")
+        self._rel_login_off = info.get("login_unvalidated") or []
+        self._rel_gnome = info.get("gnome")
         self._render_release()
 
     def _stop_rel_timer(self):
@@ -156,6 +158,15 @@ class UpdatePage(Page):
             _("Fedora {0} is available").format(target),
             _("Upgrade the whole system. Fenestra, your drivers, files, apps and settings are kept."),
             "fs-arrow-sync-symbolic", control=button(_("Upgrade"), self._release_start, accent=True)))
+        off = getattr(self, "_rel_login_off", [])
+        if off:
+            # Login / lock-screen extensions not validated for the new GNOME: turned off before
+            # the restart, so the standard sign-in is always there (fenestra-login-guard).
+            self.rel_group.add(SettingRow(
+                _("Some sign-in screen customizations will be turned off"),
+                _("Not yet checked with GNOME {0}: {1}. The standard sign-in screen is used until a "
+                  "Fenestra update supports them.").format(getattr(self, "_rel_gnome", "") or "", ", ".join(off)),
+                "fs-shield-checkmark-symbolic"))
 
     def _release_start(self):
         if util.READ_ONLY:

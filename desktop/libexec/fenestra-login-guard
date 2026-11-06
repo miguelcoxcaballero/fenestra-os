@@ -1,0 +1,350 @@
+#!/usr/bin/python3
+"""Keep the login screen usable whatever happens to Fenestra's login/lock extensions.
+
+    fenestra-login-guard check [--gnome N]               JSON: login/lock extensions in use, validated?
+    fenestra-login-guard disable-unvalidated --gnome N   (root) before an upgrade: turn off the ones
+                                                         not validated for GNOME N
+    fenestra-login-guard watch [--log FILE] [--seconds S] (root, fenestra-greeter-guard.service, at
+                                                         every GDM start) watch the greeter; turn off
+                                                         an extension that breaks it
+    fenestra-login-guard revert [UUID...]                (root) turn back on what the guard turned off
+    fenestra-login-guard status                          what the guard did (JSON)
+
+Validation data: login-extensions.json (extras/compat/ in the repo, /usr/share/fenestra/compat/).
+Only the greeter's settings are touched (/etc/dconf/db/gdm.d); a user session is never changed by
+root: extensions to turn off there are handed to the login step of that user
+(fenestra-release-upgrade-user). Every change is logged (/var/log/fenestra-login-guard.log),
+remembered (/var/lib/fenestra/login-guard.json) and reversible.
+"""
+import ast
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+GDM_DB = '/etc/dconf/db/gdm.d'
+STATE = '/var/lib/fenestra/login-guard.json'
+LOG = '/var/log/fenestra-login-guard.log'
+BACKUPS = '/var/backups/fenestra-login-guard'
+EXT_DIRS = ['/usr/share/gnome-shell/extensions', '/usr/local/share/gnome-shell/extensions']
+_HERE = os.path.dirname(os.path.realpath(__file__))
+MATRIX = [os.path.join(_HERE, '..', '..', 'extras', 'compat', 'login-extensions.json'),   # repo checkout
+          os.path.join(_HERE, 'login-extensions.json'),                                 # copied next to it
+          '/usr/share/fenestra/compat/login-extensions.json']
+MAX_PER_BOOT = 3          # greeter extensions the guard may turn off in one boot
+RESTARTS = 3              # greeter shell restarts within RESTART_WINDOW = "crash loop"
+RESTART_WINDOW = 90
+
+
+def log(msg):
+    line = f'{time.strftime("%Y-%m-%dT%H:%M:%S")} {msg}'
+    print(line, flush=True)
+    if os.geteuid() == 0:
+        try:
+            with open(LOG, 'a') as f:
+                f.write(line + '\n')
+        except OSError:
+            pass
+
+
+def load_state():
+    try:
+        return json.load(open(STATE))
+    except (OSError, ValueError):
+        return {'disabled': [], 'boots': {}}
+
+
+def save_state(st):
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    tmp = STATE + '.tmp'
+    json.dump(st, open(tmp, 'w'), indent=1)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, STATE)
+
+
+def matrix():
+    for p in MATRIX:
+        try:
+            return json.load(open(p)).get('extensions', {})
+        except (OSError, ValueError):
+            continue
+    return {}
+
+
+def shell_major():
+    try:
+        out = subprocess.run(['gnome-shell', '--version'], capture_output=True, text=True).stdout
+        return int(re.search(r'(\d+)', out).group(1))
+    except (OSError, AttributeError, ValueError):
+        return 0
+
+
+# ------------------------------------------------------------------ greeter settings ---
+def gdm_keyfile():
+    for f in sorted(glob.glob(f'{GDM_DB}/*')):
+        try:
+            if re.search(r'^enabled-extensions\s*=', open(f).read(), re.M):
+                return f
+        except OSError:
+            continue
+    return None
+
+
+def gdm_enabled():
+    f = gdm_keyfile()
+    if not f:
+        return []
+    m = re.search(r'^enabled-extensions\s*=\s*(.+)$', open(f).read(), re.M)
+    try:
+        return list(ast.literal_eval(m.group(1).replace('@as ', ''))) if m else []
+    except (ValueError, SyntaxError):
+        return []
+
+
+def set_gdm_enabled(uuids):
+    f = gdm_keyfile() or f'{GDM_DB}/90-fenestra-login-extensions'
+    os.makedirs(BACKUPS, exist_ok=True)
+    if os.path.exists(f):
+        shutil.copy2(f, os.path.join(BACKUPS, f'{os.path.basename(f)}.{time.strftime("%Y%m%d-%H%M%S")}'))
+        text = open(f).read()
+    else:
+        text = '[org/gnome/shell]\n'
+    value = ('[' + ', '.join(f"'{u}'" for u in uuids) + ']') if uuids else '@as []'
+    if re.search(r'^enabled-extensions\s*=', text, re.M):
+        text = re.sub(r'^enabled-extensions\s*=.*$', f'enabled-extensions={value}', text, flags=re.M)
+    else:
+        text += f'enabled-extensions={value}\n'
+    open(f, 'w').write(text)
+    subprocess.run(['dconf', 'update'], check=False)
+    subprocess.run(['restorecon', f], capture_output=True)
+    log(f'greeter enabled-extensions = {value} ({f})')
+
+
+def installed_meta(uuid, homes=()):
+    for d in EXT_DIRS + [os.path.join(h, '.local/share/gnome-shell/extensions') for h in homes]:
+        try:
+            return json.load(open(os.path.join(d, uuid, 'metadata.json')))
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def human_users():
+    out = []
+    for line in open('/etc/passwd'):
+        p = line.split(':')
+        if len(p) > 6 and p[2].isdigit() and 1000 <= int(p[2]) < 60000 and os.path.isdir(p[5]):
+            out.append((p[0], p[5]))
+    return out
+
+
+def user_enabled(user):
+    import pwd
+    me = pwd.getpwuid(os.geteuid()).pw_name
+    if os.geteuid() != 0 and user != me:
+        return []          # without root only the calling user's settings can be read
+    cmd = ['dconf', 'read', '/org/gnome/shell/enabled-extensions']
+    if os.geteuid() == 0:
+        cmd = ['runuser', '-u', user, '--'] + cmd
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout.strip()
+        return list(ast.literal_eval(out.replace('@as ', ''))) if out else []
+    except (OSError, ValueError, SyntaxError, subprocess.TimeoutExpired):
+        return []
+
+
+def critical(gnome):
+    """Login (gdm) and lock-screen (unlock-dialog) extensions in use, with their validation."""
+    mx, rows = matrix(), []
+    for uuid in gdm_enabled():
+        meta = installed_meta(uuid)
+        rows.append({'uuid': uuid, 'where': 'greeter', 'installed': meta is not None,
+                     'validated': str(gnome) in mx.get(uuid, {}).get('validated', {})})
+    for user, home in human_users():
+        for uuid in user_enabled(user):
+            meta = installed_meta(uuid, [home])
+            if meta and 'unlock-dialog' in meta.get('session-modes', []):
+                rows.append({'uuid': uuid, 'where': f'user:{user}', 'installed': True,
+                             'validated': str(gnome) in mx.get(uuid, {}).get('validated', {})})
+    return rows
+
+
+# ------------------------------------------------------------------ commands ---
+def cmd_check(gnome):
+    rows = critical(gnome)
+    print(json.dumps({'gnome': gnome, 'extensions': rows,
+                      'unvalidated': sorted({r['uuid'] for r in rows if r['installed'] and not r['validated']})}))
+    return 0
+
+
+def turn_off_greeter(uuids, reason):
+    st = load_state()
+    current = gdm_enabled()
+    keep = [u for u in current if u not in uuids]
+    if keep == current:
+        return []
+    set_gdm_enabled(keep)
+    done = [u for u in current if u in uuids]
+    for u in done:
+        st['disabled'].append({'uuid': u, 'where': 'greeter', 'reason': reason, 'time': int(time.time()), 'notified': []})
+        log(f'turned off {u} on the login screen: {reason}')
+    save_state(st)
+    return done
+
+
+def cmd_disable_unvalidated(gnome):
+    rows = critical(gnome)
+    greeter = [r['uuid'] for r in rows if r['where'] == 'greeter' and r['installed'] and not r['validated']]
+    users = [r for r in rows if r['where'].startswith('user:') and not r['validated']]
+    turn_off_greeter(greeter, f'not validated for GNOME {gnome} (upgrade)')
+    if users:
+        st = load_state()
+        for r in users:
+            st['disabled'].append({'uuid': r['uuid'], 'where': r['where'], 'reason': f'not validated for GNOME {gnome} (upgrade)',
+                                   'time': int(time.time()), 'pending_user': True, 'notified': []})
+            log(f'{r["uuid"]} ({r["where"]}) will be turned off at that user\'s next login: not validated for GNOME {gnome}')
+        save_state(st)
+    print(json.dumps({'greeter': greeter, 'users': [r['uuid'] for r in users]}))
+    return 0
+
+
+ERR_EXT = re.compile(r'Extension ([\w.@-]+@[\w.-]+): ')
+ERR_PATH = re.compile(r'/gnome-shell/extensions/([\w.@-]+@[\w.-]+)/')
+
+
+def greeter_uid(uid):
+    # gdm (system user) or the dynamic gdm-greeter users of GDM 49+ (systemd range 61184-65519)
+    return uid is not None and (uid < 1000 or 61184 <= uid <= 65519)
+
+
+def events(path, seconds):
+    """(time, pid, uid, message) of greeter gnome-shell log lines: from FILE (tests) or the journal."""
+    if path:
+        pid_re = re.compile(r'gnome-shell[:\[(](\d+)')
+        for line in open(path, errors='replace'):
+            m = pid_re.search(line)
+            yield time.time(), int(m.group(1)) if m else 0, 0, line.rstrip()
+        return
+    p = subprocess.Popen(['journalctl', '-f', '-n', '0', '-o', 'json', '_COMM=gnome-shell'],
+                         stdout=subprocess.PIPE, text=True)
+    end = time.time() + seconds
+    try:
+        for line in p.stdout:
+            if time.time() > end:
+                break
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            uid = int(e.get('_UID', '-1')) if str(e.get('_UID', '')).isdigit() else None
+            if greeter_uid(uid):
+                msg = e.get('MESSAGE')
+                if isinstance(msg, list):
+                    msg = bytes(msg).decode(errors='replace')
+                yield time.time(), int(e.get('_PID', 0)), uid, msg or ''
+    finally:
+        p.terminate()
+
+
+def user_session_active():
+    try:
+        out = subprocess.run(['loginctl', 'list-sessions', '--no-legend'], capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            sid = line.split()[0]
+            cls = subprocess.run(['loginctl', 'show-session', sid, '-p', 'Class', '--value'],
+                                 capture_output=True, text=True).stdout.strip()
+            if cls == 'user':
+                return True
+    except (OSError, IndexError):
+        pass
+    return False
+
+
+def cmd_watch(path, seconds):
+    st = load_state()
+    boot = open('/proc/sys/kernel/random/boot_id').read().strip() if os.path.exists('/proc/sys/kernel/random/boot_id') else 'x'
+    count = st.setdefault('boots', {}).get(boot, 0)
+    ours = set(gdm_enabled())
+    if not ours:
+        return 0
+    starts, culprits, in_trace = [], {}, False
+    for t, pid, _uid, msg in events(path, seconds):
+        if pid and pid not in [p for _, p in starts]:
+            starts.append((t, pid))
+        # An error with its stack trace: one journal message, or several lines in a text log
+        # (the frames follow the "JS ERROR"/"...Error:" line).
+        is_error = 'JS ERROR' in msg or 'Extension ' in msg or re.search(r'\w*Error\b', msg) is not None
+        is_frame = re.search(r'@(file|resource)://', msg) is not None
+        in_trace = is_error or (in_trace and (is_frame or msg.strip() == 'Stack trace:'))
+        uuids = set(ERR_EXT.findall(msg)) | set(ERR_PATH.findall(msg))
+        hit = [u for u in uuids if u in ours] if in_trace else []
+        for u in hit:
+            culprits[u] = culprits.get(u, 0) + 1
+        recent = [p for tt, p in starts if t - tt <= RESTART_WINDOW]
+        loop = len(recent) >= RESTARTS
+        if (hit or loop) and count < MAX_PER_BOOT:
+            off = hit or (sorted(ours) if loop else [])   # no culprit in a crash loop: all of them
+            reason = (f'errors on the login screen ({", ".join(sorted(hit))})' if hit else
+                      f'the login screen restarted {len(recent)} times in {RESTART_WINDOW} s')
+            done = turn_off_greeter(off, reason)
+            ours -= set(done)
+            count += len(done)
+            st = load_state()
+            st.setdefault('boots', {})[boot] = count
+            save_state(st)
+            if done and not path and not user_session_active():
+                # Nobody is signed in: show the (now standard) login screen at once.
+                log('no user session: restarting the login screen')
+                subprocess.run(['systemctl', 'restart', 'gdm.service'], check=False)
+                return 0
+            if not ours:
+                break
+        elif (hit or loop) and count >= MAX_PER_BOOT:
+            log('limit reached for this boot; not changing anything else')
+            break
+    return 0
+
+
+def cmd_revert(uuids):
+    st = load_state()
+    back = [d for d in st['disabled'] if d['where'] == 'greeter' and (not uuids or d['uuid'] in uuids)]
+    if back:
+        current = gdm_enabled()
+        set_gdm_enabled(current + [d['uuid'] for d in back if d['uuid'] not in current])
+    st['disabled'] = [d for d in st['disabled'] if d not in back and not (d.get('pending_user') and (not uuids or d['uuid'] in uuids))]
+    save_state(st)
+    for d in back:
+        log(f'turned {d["uuid"]} back on for the login screen (revert)')
+    print(json.dumps({'reverted': [d['uuid'] for d in back]}))
+    return 0
+
+
+def main(argv):
+    def opt(name, default=None):
+        return argv[argv.index(name) + 1] if name in argv and argv.index(name) + 1 < len(argv) else default
+    cmd = argv[1] if len(argv) > 1 else ''
+    gnome = int(opt('--gnome', 0) or 0) or shell_major()
+    if cmd == 'check':
+        return cmd_check(gnome)
+    if cmd == 'status':
+        print(json.dumps(load_state(), indent=1))
+        return 0
+    if os.geteuid() != 0 and not opt('--log'):
+        print('needs root', file=sys.stderr)
+        return 1
+    if cmd == 'disable-unvalidated':
+        return cmd_disable_unvalidated(gnome)
+    if cmd == 'watch':
+        return cmd_watch(opt('--log'), int(opt('--seconds', 180)))
+    if cmd == 'revert':
+        return cmd_revert([a for a in argv[2:] if '@' in a])
+    print(__doc__)
+    return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

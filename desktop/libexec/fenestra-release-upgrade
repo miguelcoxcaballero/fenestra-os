@@ -190,8 +190,43 @@ def available():
     except Exception as e:  # noqa: BLE001 - offline is a normal answer
         print(json.dumps({'current': cur, 'next': None, 'error': str(e)}))
         return 0
-    print(json.dumps({'current': cur, 'next': best, 'name': os_release().get('NAME', 'Fedora')}))
+    info = {'current': cur, 'next': best, 'name': os_release().get('NAME', 'Fedora')}
+    if best:
+        info['gnome'] = target_gnome(best)
+        # Shown in Settings: these are turned off before the restart (standard login kept).
+        info['login_unvalidated'] = login_check(info['gnome'])
+    print(json.dumps(info))
     return 0
+
+
+def target_gnome(target, exact=False):
+    """GNOME Shell major of Fedora `target`: from its repositories when exact, else the
+    usual pairing (Fedora N ships GNOME N + 6: 43 -> 49, 45 -> 51)."""
+    if exact:
+        p = sh(['dnf', '-q', 'repoquery', f'--releasever={target}', '--latest-limit', '1', '--qf', '%{version}\\n',
+                'gnome-shell'], capture=True, check=False, log=False)
+        m = re.search(r'^(\d+)\.', p.stdout or '', re.M)
+        if m:
+            return int(m.group(1))
+    return target + 6
+
+
+def login_guard():
+    here = os.path.dirname(os.path.realpath(sys.argv[0]))
+    return next((p for p in (f'{here}/fenestra-login-guard', '/usr/libexec/fenestra/fenestra-login-guard',
+                             '/usr/local/libexec/fenestra/fenestra-login-guard') if os.path.exists(p)), None)
+
+
+def login_check(gnome):
+    """Login / lock-screen extensions not validated for GNOME `gnome` (see fenestra-login-guard)."""
+    g = login_guard()
+    if not g:
+        return []
+    p = subprocess.run(['python3', g, 'check', '--gnome', str(gnome)], capture_output=True, text=True)
+    try:
+        return json.loads(p.stdout.strip().splitlines()[-1]).get('unvalidated', [])
+    except (ValueError, IndexError):
+        return []
 
 
 # ---------------------------------------------------------------------- steps ---
@@ -477,6 +512,22 @@ def run(target, kits, user):
         sh(['dnf', '-y', 'system-upgrade', 'download', f'--releasever={target}', '--allowerasing'])
         step(93, 'Getting ready to restart')
         verify_download()
+        # Login screen safety: login / lock-screen extensions that were not validated for
+        # the new GNOME are turned off now, so the next boot shows the standard login.
+        gnome = target_gnome(target, exact=True)
+        g = login_guard()
+        if g:
+            p = sh(['python3', g, 'disable-unvalidated', '--gnome', str(gnome)], capture=True, check=False, log=False)
+            try:
+                off = json.loads(p.stdout.strip().splitlines()[-1])
+            except (ValueError, IndexError):
+                off = {}
+            if off.get('greeter') or off.get('users'):
+                emit('WARN', f'not yet validated for GNOME {gnome}, turned off until a Fenestra update validates them: '
+                             + ', '.join(sorted(set(off.get('greeter', []) + off.get('users', [])))))
+            save_state(login_guard=off, target_gnome=gnome)
+        else:
+            emit('WARN', 'fenestra-login-guard not found: login extensions were not checked for the new GNOME')
         sh(['systemctl', 'enable', 'fenestra-post-upgrade.service'], check=False)
         save_state(status='ready-to-reboot', message='')
         step(100, 'Ready to restart')
@@ -515,6 +566,13 @@ def post_boot():
     if hq.returncode == 0 and py not in hq.stdout:
         sh(['dnf', '-y', '--repo=fenestra-local', 'install', 'howdy', 'howdy-data', 'python3-dlib'], check=False)
     install_system_pieces(st.get('kits', []))
+    # Local services with a Python version or the GDM PAM layout written into them
+    # (howdy-preload, galaxy-book-guard, Howdy in gdm-password): adapt them to this release.
+    fixer = next((p for p in ('/usr/libexec/fenestra/fenestra-fix-local-services',
+                              '/usr/local/libexec/fenestra/fenestra-fix-local-services')
+                  if os.path.exists(p)), None)
+    if fixer:
+        sh(['bash', fixer], check=False)
     if st.get('branded'):  # installed Fenestra (not Fedora with Fenestra pieces)
         rebrand()
     for m in ('ov02c10', 'ipu_bridge', 'snd_hda_scodec_max98390', 'snd_hda_scodec_max98390_i2c', 'v4l2loopback'):
@@ -565,10 +623,17 @@ def install_self():
         shutil.copy2(me, exe)
         os.chown(exe, 0, 0)
         os.chmod(exe, 0o755)
-        theme = os.path.join(os.path.dirname(me), 'fenestra-plymouth-theme')
-        if os.path.exists(theme):
-            shutil.copy2(theme, os.path.join(os.path.dirname(exe), 'fenestra-plymouth-theme'))
-            os.chown(os.path.join(os.path.dirname(exe), 'fenestra-plymouth-theme'), 0, 0)
+        for name, src in (('fenestra-plymouth-theme', os.path.join(os.path.dirname(me), 'fenestra-plymouth-theme')),
+                          ('fenestra-login-guard', os.path.join(os.path.dirname(me), 'fenestra-login-guard')),
+                          ('login-extensions.json', os.path.join(os.path.dirname(me), '..', '..', 'extras', 'compat',
+                                                                 'login-extensions.json')),
+                          ('fenestra-fix-local-services', os.path.join(os.path.dirname(me), '..', '..', 'extras',
+                                                                       'fedora-upgrade', 'fix-local-services.sh'))):
+            if os.path.exists(src):
+                dst = os.path.join(os.path.dirname(exe), name)
+                shutil.copy2(src, dst)
+                os.chown(dst, 0, 0)
+                os.chmod(dst, 0o755)
     unit = '/usr/lib/systemd/system/fenestra-post-upgrade.service'
     if not os.path.exists(unit):
         unit = '/etc/systemd/system/fenestra-post-upgrade.service'
