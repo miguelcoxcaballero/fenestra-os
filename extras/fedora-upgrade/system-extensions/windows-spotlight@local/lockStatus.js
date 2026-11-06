@@ -13,8 +13,10 @@ export function installLockStatus(path) {
     const battery = new St.Icon({icon_size:22});
     box.add_child(wifi);box.add_child(battery);
     Main.layoutManager.screenShieldGroup.add_child(box);
-    const network=NM.Client.new(null);
-    const power=UPower.Client.new().get_display_device();
+    // No NetworkManager / UPower (containers, broken services): no icon, never a broken login.
+    let network=null, power=null;
+    try{network=NM.Client.new(null);}catch(e){logError(e,'Fenestra lock status: NetworkManager');}
+    try{power=UPower.Client.new()?.get_display_device()??null;}catch(e){logError(e,'Fenestra lock status: UPower');}
     const connections=[];
     const watch=(object,signal)=>connections.push([object,object.connect(signal,refresh)]);
     function fileIcon(icon,name) {
@@ -27,9 +29,10 @@ export function installLockStatus(path) {
         const monitor=Main.layoutManager.primaryMonitor;
         if(monitor)box.set_position(monitor.x+monitor.width-100,monitor.y+monitor.height-44);
         Main.layoutManager.screenShieldGroup.set_child_above_sibling(box,null);
-        const device=network.get_devices().find(d=>d instanceof NM.DeviceWifi);
+        const device=network?.get_devices()?.find(d=>d instanceof NM.DeviceWifi);
         const ap=device?.get_active_access_point();
         const level=ap?(ap.strength>=75?'excellent':ap.strength>=50?'good':ap.strength>=25?'ok':'weak'):'offline';
+        wifi.visible=!!network;
         fileIcon(wifi,ap?`network-wireless-signal-${level}-symbolic`:'network-wireless-offline-symbolic');
         const percentage=Math.max(0,Math.min(10,Math.round((power?.percentage??0)/10)));
         const charging=power?.state===UPower.DeviceState.CHARGING;
@@ -39,7 +42,7 @@ export function installLockStatus(path) {
     watch(Main.screenShield,'locked-changed');
     watch(Main.sessionMode,'updated');
     watch(Main.layoutManager,'monitors-changed');
-    watch(network,'notify');
+    if(network)watch(network,'notify');
     if(power)watch(power,'notify');
     // AP strength notifications belong to replaceable AP objects. A visible-only
     // refresh also follows replacement after roaming, without retaining old APs.

@@ -21,7 +21,7 @@ export default class WindowsSpotlight extends Extension {
         this._stopStartup=installStartupCover();
         this._stopHello=installHelloFeedback(this._injections,this.path);
         this._stopPanelGuard=installPanelGuard({Main,GLib,St,shellGlobal:global});
-        this._stopLockStatus=installLockStatus(this.path);
+        try{this._stopLockStatus=installLockStatus(this.path);}catch(e){logError(e,'Fenestra lock status');this._stopLockStatus=null;}
         // GDM's gear chooses a desktop session; it is not Windows settings.
         this._injections.overrideMethod(LoginDialog.prototype, '_shouldShowSessionMenuButton', () => function() {return false;});
         const ext = this;
