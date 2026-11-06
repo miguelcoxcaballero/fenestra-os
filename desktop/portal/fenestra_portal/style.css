@@ -44,10 +44,12 @@ dropdown.print-dropdown > button {
   box-shadow: none; color: var(--fg-ctl); font-weight: normal;
 }
 dropdown.print-dropdown > button:hover { background-color: var(--ctl-hover); }
+dropdown.print-dropdown > button:focus-visible:hover { background-color: var(--ctl-focus-hover); }
 dropdown.print-dropdown > button:active,
 dropdown.print-dropdown > button:checked { background-color: var(--ctl-press); }
 dropdown.print-dropdown > button:focus-visible {
-  background-color: var(--ctl-focus);
+  background-color: var(--ctl-focus); border-color: var(--ctl-focus-border);
+  border-bottom-color: var(--ctl-focus-border-bottom);
   background-image: linear-gradient(var(--accent), var(--accent));
   background-repeat: no-repeat;
 }

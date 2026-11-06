@@ -544,7 +544,7 @@ class PrintDialog(Gtk.Window):
         hint.set_size_request(metrics.CONTROL_WIDTH, -1)
         box.append(hint)
 
-        more = self._link(_("More settings"))
+        more = self.more_link = self._link(_("More settings"))
         more.set_margin_top(metrics.MORE_GAP - metrics.TEXT_NUDGE)
         more.connect("clicked", lambda *_: self.stack.set_visible_child_name("more"))
         box.append(more)
@@ -925,6 +925,15 @@ class PrintDialog(Gtk.Window):
         return False
 
     # ------------------------------------------------------------------ screenshot (tests)
+    def force_state(self, name, state):
+        """--ui hover=NAME / pressed=NAME: paint a control as hovered or pressed."""
+        w = {"printer": self.printer_dd.get_first_child(), "orientation": self.orientation.get_first_child(),
+             "print": self.print_button, "cancel": self.cancel_button, "toggle": self.to_file,
+             "more": self.more_link, "add": self.add_printer, "check": self.allow_app,
+             "fit": self.fit_btn}.get(name)
+        if w is not None:
+            w.set_state_flags(Gtk.StateFlags.PRELIGHT | (Gtk.StateFlags.ACTIVE if state == "pressed" else 0), False)
+
     def save_screenshot(self, path) -> bool:
         """The window content plus any open combo list (pop-ups are separate surfaces)."""
         w, h = self.get_width(), self.get_height()

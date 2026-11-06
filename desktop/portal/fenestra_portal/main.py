@@ -75,6 +75,9 @@ def _standalone(o):
         dlg.to_file.set_active(ui["to_file"] in ("1", "on"))
     if ui.get("allow_app"):
         dlg.allow_app.set_active(ui["allow_app"] in ("1", "on"))
+    for st in ("hover", "pressed"):
+        if ui.get(st):
+            dlg.force_state(ui[st], st)
     if ui.get("focus") == "none":
         dlg.set_focus_visible(False)
         dlg.set_focus(None)

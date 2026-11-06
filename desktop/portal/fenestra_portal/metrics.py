@@ -129,7 +129,8 @@ ACCENT_TEXT = {"blue": ("#003e92", "#99ebff")}
 DARK = {
     "bg": "#282828", "footer": "#202020", "footer-border": "#373737", "frame": "#3e3e3e",
     "fg": "#ffffff", "fg-ctl": "#ffffff", "fg2": "#c5c5c5", "fg3": "#9d9d9d", "fg-disabled": "#767676",
-    "ctl": "#353535", "ctl-hover": "#3a3a3a", "ctl-press": "#2f2f2f", "ctl-focus": "#414141",
+    "ctl": "#353535", "ctl-hover": "#3a3a3a", "ctl-press": "#2f2f2f", "ctl-focus": "#414141", "ctl-focus-hover": "#464646",
+    "ctl-focus-border": "#484848", "ctl-focus-border-bottom": "#434343",
     "ctl-border": "#373737", "ctl-border-top": "#3c3c3c", "ctl-border-bottom": "#373737",
     "btn": "#2d2d2d", "btn-hover": "#323232", "btn-press": "#272727",
     "btn-border": "#303030", "btn-border-top": "#353535", "btn-border-bottom": "#303030",
@@ -147,7 +148,8 @@ DARK = {
 LIGHT = {
     "bg": "#f9f9f9", "footer": "#f3f3f3", "footer-border": "#eaeaea", "frame": "#adadad",
     "fg": "#1a1a1a", "fg-ctl": "#1b1b1b", "fg2": "#5f5f5f", "fg3": "#8a8a8a", "fg-disabled": "#9f9f9f",
-    "ctl": "#fdfdfd", "ctl-hover": "#f9f9f9", "ctl-press": "#f9f9f9", "ctl-focus": "#fefefe",
+    "ctl": "#fdfdfd", "ctl-hover": "#f9f9f9", "ctl-press": "#f9f9f9", "ctl-focus": "#fefefe", "ctl-focus-hover": "#fbfbfb",
+    "ctl-focus-border": "#eeeeee", "ctl-focus-border-bottom": "#d4d4d4",
     "ctl-border": "#eaeaea", "ctl-border-top": "#eaeaea", "ctl-border-bottom": "#d1d1d1",
     "btn": "#fbfbfb", "btn-hover": "#f6f6f6", "btn-press": "#f5f5f5",
     "btn-border": "#e5e5e5", "btn-border-top": "#e5e5e5", "btn-border-bottom": "#cccccc",

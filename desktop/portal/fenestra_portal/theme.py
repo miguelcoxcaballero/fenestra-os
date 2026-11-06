@@ -164,7 +164,8 @@ class ThemeManager:
 def geometry_css() -> str:
     """Every size of style.css, from metrics.py."""
     m = metrics
-    ring = f"0 0 0 {m.FOCUS_GAP}px var(--focus-gap), 0 0 0 {m.FOCUS_GAP + m.FOCUS_RING}px var(--focus)"
+    # GTK paints the later shadow on top: ring first, the gap over it.
+    ring = f"0 0 0 {m.FOCUS_GAP + m.FOCUS_RING}px var(--focus), 0 0 0 {m.FOCUS_GAP}px var(--focus-gap)"
     ch, ich = m.CONTROL_HEIGHT - 2, m.ICON_CONTROL_HEIGHT - 2
     pill_w, pill_h = m.FOCUS_PILL
     mp_w, mp_h = m.MENU_PILL
