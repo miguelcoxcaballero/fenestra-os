@@ -24,10 +24,12 @@ Row {
     Row {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8; rightPadding: 6; leftPadding: 4
-        visible: Privacy.microphoneApps.length > 0 || Privacy.locationInUse
+        visible: Privacy.microphoneApps.length > 0 || Privacy.locationInUse || CameraWatch.inUse
         SymbolicIcon { visible: Privacy.microphoneApps.length > 0; src: Metrics.assets + "privacy/mic.svg"
             Accessible.name: Privacy.microphoneApps.length === 1 ? Privacy.microphoneApps[0] + " " + Strings.tr("is using your microphone")
                              : Privacy.microphoneApps.length + " " + Strings.tr("apps are using your microphone") }
+        SymbolicIcon { visible: CameraWatch.inUse; src: Metrics.assets + "privacy/camera.svg"
+            Accessible.name: Strings.tr("Your camera is being used") }
         SymbolicIcon { visible: Privacy.locationInUse; src: Metrics.assets + "privacy/location.svg"
             Accessible.name: Strings.tr("Your location is being used") }
     }

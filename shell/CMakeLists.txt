@@ -26,6 +26,7 @@ find_package(QtWaylandScanner REQUIRED)
 find_package(Wayland 1.15 REQUIRED COMPONENTS Client)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GWEATHER REQUIRED IMPORTED_TARGET gweather4 gio-2.0)
+pkg_check_modules(PIPEWIRE REQUIRED IMPORTED_TARGET libpipewire-0.3)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -50,6 +51,7 @@ qt_add_executable(fenestra-shell
     src/services/polkitagent.cpp src/services/polkitagent.h
     src/services/desktop.cpp src/services/desktop.h
     src/services/kwinintegration.cpp src/services/kwinintegration.h
+    src/services/camerawatch.cpp src/services/camerawatch.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -120,7 +122,7 @@ target_link_libraries(fenestra-shell PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::DBus Qt6::WaylandClient Qt6::WaylandClientPrivate
     LayerShellQt::Interface Wayland::Client
     KF6::Service KF6::KIOGui KF6::KIOCore KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt KF6::GlobalAccel KF6::ConfigCore
-    PolkitQt6-1::Agent PkgConfig::GWEATHER)
+    PolkitQt6-1::Agent PkgConfig::GWEATHER PkgConfig::PIPEWIRE)
 
 install(TARGETS fenestra-shell RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.fenestra.Shell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

@@ -13,10 +13,10 @@ BuildRequires:  qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-deve
 BuildRequires:  layer-shell-qt-devel plasma-wayland-protocols-devel wayland-devel
 BuildRequires:  kf6-kservice-devel kf6-kio-devel kf6-kwindowsystem-devel kf6-networkmanager-qt-devel
 BuildRequires:  kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-kglobalaccel-devel kf6-kconfig-devel
-BuildRequires:  polkit-qt6-1-devel libgweather-devel
+BuildRequires:  polkit-qt6-1-devel libgweather-devel pipewire-devel
 
 Requires:       kwin xorg-x11-server-Xwayland layer-shell-qt qt6-qtsvg kscreenlocker kscreen
-Requires:       xdg-desktop-portal-kde xdg-desktop-portal-gtk kf6-bluez-qt
+Requires:       xdg-desktop-portal-kde xdg-desktop-portal-gtk kf6-bluez-qt pipewire-libs
 # GNOME stays installed as the fallback session; nothing here replaces GDM.
 Requires:       gdm
 

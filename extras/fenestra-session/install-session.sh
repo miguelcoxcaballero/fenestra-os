@@ -22,7 +22,7 @@ case "${1:-}" in --dry-run) MODE=dry ;; --rollback) MODE=rollback ;; --status) M
 DEPS="kwin xorg-x11-server-Xwayland layer-shell-qt layer-shell-qt-devel qt6-qtbase-devel qt6-qtbase-private-devel
 qt6-qtdeclarative-devel qt6-qtwayland-devel qt6-qtsvg plasma-wayland-protocols-devel wayland-devel extra-cmake-modules
 cmake gcc-c++ ninja-build kf6-kservice-devel kf6-kio-devel kf6-kwindowsystem-devel kf6-networkmanager-qt-devel
-kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-kglobalaccel-devel kf6-kconfig-devel polkit-qt6-1-devel libgweather-devel
+kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-kglobalaccel-devel kf6-kconfig-devel polkit-qt6-1-devel libgweather-devel pipewire-devel
 kscreenlocker kscreen xdg-desktop-portal-kde xdg-desktop-portal-gtk"
 
 status() {

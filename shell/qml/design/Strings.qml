@@ -49,6 +49,7 @@ QtObject {
         "Password": "Contraseña", "Yes": "Sí", "No": "No",
         "is using your microphone": "está usando el micrófono", "apps are using your microphone": "aplicaciones están usando el micrófono",
         "Your location is being used": "Se está usando tu ubicación",
+        "Your camera is being used": "Se está usando tu cámara",
         "Sort by": "Ordenar por", "Name": "Nombre", "Type": "Tipo", "Date modified": "Fecha de modificación", "Refresh": "Actualizar",
         "Paste": "Pegar", "New folder": "Nueva carpeta", "New": "Nuevo", "Open in Terminal": "Abrir en Terminal",
         "Display settings": "Configuración de pantalla", "Personalize": "Personalizar", "Cut": "Cortar", "Copy": "Copiar",
