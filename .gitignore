@@ -11,6 +11,8 @@ docs/INVENTORY.md
 apps/fenestra-icon-extractor/bin/
 apps/fenestra-icon-extractor/obj/
 apps/fenestra-icon-extractor/out/
+apps/fenestra-icon-extractor/tests/*/bin/
+apps/fenestra-icon-extractor/tests/*/obj/
 *.zip
 
 # Side-by-side comparisons with the reference OS stay local

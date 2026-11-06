@@ -15,7 +15,7 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationVisualStyles>true</ApplicationVisualStyles>
     <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Fenestra Icon Extractor</Product>
     <Company>Fenestra OS</Company>
     <Description>Exports your own Windows fonts, cursors and icons into a Fenestra icon pack</Description>
@@ -30,7 +30,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="tools/**;installer/**;bin/**;obj/**" />
+    <Compile Remove="tools/**;tests/**;installer/**;bin/**;obj/**" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Linux-runnable tests of src/TrueType.cs and src/AppxLogos.cs (no Windows APIs). See README "Tests". -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FenestraIconExtractor.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/TrueType.cs" Link="TrueType.cs" />
+    <Compile Include="../../src/AppxLogos.cs" Link="AppxLogos.cs" />
+  </ItemGroup>
+</Project>

@@ -16,6 +16,16 @@ public sealed class ExportOptions
     public bool AppIcons { get; set; } = true;
     public bool Battery { get; set; } = true;
     public bool Wallpapers { get; set; }
+    /// <summary>Segoe Fluent Icons glyphs named in design/reference/icons.json, as SVG (glyphs/).</summary>
+    public bool Glyphs { get; set; } = true;
+    /// <summary>Also every code point of the icon font (glyphs/u/XXXX.svg).</summary>
+    public bool AllGlyphs { get; set; }
+    /// <summary>Store/system app logos and exe icons of icons.json apps[] (theme apps/ + apps/apps.json).</summary>
+    public bool PackageLogos { get; set; } = true;
+    /// <summary>icons.json modules[] and the bitmaps[] a documented API resolves (bitmaps/).</summary>
+    public bool ReferenceBitmaps { get; set; } = true;
+    /// <summary>Dump every icon group of the candidate modules at 32 px (raw/probe/), to identify ids.</summary>
+    public bool ProbeModules { get; set; }
     public string Destination { get; set; } = DefaultDestination;
 
     public static string DefaultDestination =>
@@ -30,9 +40,9 @@ public sealed record ExportResult(int Files, long Bytes, int Missing, string Pat
 /// Builds a Fenestra icon pack (docs/ICON-PACK-FORMAT.md). Windows is only read; the only
 /// file written is the destination .zip (via a temporary ".partial" file next to it).
 /// </summary>
-public sealed class Exporter
+public sealed partial class Exporter
 {
-    public const string Version = "1.1.0";
+    public const string Version = "1.2.0";
     public const string IconTheme = "Fenestra-Windows";
     public const string CursorTheme = "Fenestra-Windows-Cursors";
     static readonly int[] Sizes = { 256, 48, 32, 16 };
@@ -140,6 +150,9 @@ public sealed class Exporter
         if (_o.FolderIcons) steps.Add(("Explorer folder icons", ExportFolderIcons));
         if (_o.Taskbar) steps.Add(("Start button and Search icon", ExportTaskbar));
         if (_o.AppIcons) steps.Add(("App icons", ExportAppIcons));
+        if (_o.PackageLogos) steps.Add(("Store and system app logos", ExportPackageLogos));
+        if (_o.Glyphs) steps.Add(("Segoe Fluent icon glyphs", ExportGlyphs));
+        if (_o.ReferenceBitmaps) steps.Add(("Reference icons and bitmaps", ExportReferenceBitmaps));
         if (_o.Battery) steps.Add(("Battery glyphs", ExportBattery));
         if (_o.Wallpapers) steps.Add(("Wallpaper and lock screen", ExportWallpapers));
         try
@@ -540,7 +553,7 @@ public sealed class Exporter
 
     void WriteManifest()
     {
-        var tops = new[] { "fonts", "cursors", "assets", "icons", "raw" }
+        var tops = new[] { "fonts", "cursors", "assets", "icons", "glyphs", "apps", "bitmaps", "raw" }
             .Where(t => _written.Any(w => w.StartsWith(t + "/", StringComparison.Ordinal))).ToList();
         var os = WindowsInfo.OsName;
         var source = new JsonObject { ["os"] = os, ["build"] = WindowsInfo.Build, ["locale"] = WindowsInfo.Locale };
