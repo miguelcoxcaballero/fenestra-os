@@ -3,17 +3,32 @@
 Status: **WIP**. The upgrade path is ready and verified as far as it can be without the
 real reboot. The Explorer layer for Nautilus 51 is done (`desktop/nautilus/overlay/51/`).
 
-## User steps
+## How the upgrade runs (Settings › Fenestra Update › Upgrade)
 
-1. `sudo bash extras/fedora-upgrade/prepare-f45.sh` — backup, system-wide Fenestra pieces,
-   local repo with the Fedora 45 rebuilds (kit in `~/Downloads/Fenestra/fedora45-kit`),
-   COPR fixes, GRUB menu visible, full Fedora 43 update (installs kernel 7.2.15 = the
-   Fedora 45 kernel, rebuilds the DKMS drivers for it).
-2. Reboot (7.2.15 is the default), log in, `bash extras/fedora-upgrade/check.sh`, and try
-   camera (Meet), speakers, mic, Hello, fingerprint, Wi-Fi, Bluetooth, suspend.
-   If anything fails: reboot, pick 6.17.1 in GRUB, report.
-3. `sudo bash extras/fedora-upgrade/upgrade-f45.sh` — download + offline upgrade.
-4. First login on 45: `sudo bash extras/fedora-upgrade/post-upgrade-f45.sh`, then log out/in.
+`desktop/libexec/fenestra-release-upgrade` does everything; the scripts in this folder are the
+manual equivalent and stay for recovery.
+
+1. Settings asks `fenestra-release-upgrade available` (fedoraproject.org/releases.json) and
+   shows "Fedora N is available" for the newest release at most two ahead.
+2. **Upgrade** → `pkexec fenestra-release-upgrade start N --kit … --user …`: the helper copies
+   itself to `/usr/local/libexec/fenestra/` (or uses `/usr/libexec/fenestra/` on the ISO),
+   installs `fenestra-post-upgrade.service` and runs as the transient unit
+   `fenestra-release-upgrade.service` (closing Settings does not stop it). Progress goes to
+   `/var/log/fenestra-release-upgrade.log` and `/var/lib/fenestra/release-upgrade.json`, which
+   the page polls.
+3. Run: backup → COPRs without a chroot for N disabled → Fenestra system pieces (lock screen,
+   Hello assets) → local repo with rebuilds of local packages (prebuilt from the kit
+   `~/.local/share/fenestra/upgrade-kit/rpms`, else rebuilt from `srpms/` in a fedora:N
+   container) → pinned drivers (egismoc libfprint) → dry run (stops if anything important
+   would be removed) → full update of the current release + DKMS check for the new kernel →
+   `dnf system-upgrade download` → Windows-style Plymouth theme (`fenestra-plymouth-theme`,
+   black screen, dot spinner, "Working on updates · NN% complete · Don't turn off your
+   computer") + initramfs → "Restart now".
+4. Restart → offline upgrade with that screen → `fenestra-post-upgrade.service` (before the
+   login screen): DKMS/akmods for the new kernel, local rebuilds for the new Python, system
+   pieces; if the camera/speaker drivers do not build, the previous kernel becomes the default.
+5. Login → `fenestra-release-upgrade-user` (autostart): extensions on, Explorer layer for the
+   new Nautilus, `check.sh`, notification with the result. The page shows the outcome.
 
 ## What was verified
 

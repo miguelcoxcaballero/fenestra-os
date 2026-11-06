@@ -1,0 +1,15 @@
+[Unit]
+Description=Finish a Fenestra release upgrade (drivers, local packages, Fenestra pieces)
+ConditionPathExists=/var/lib/fenestra/release-upgrade.json
+Wants=network-online.target
+After=local-fs.target network-online.target
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+Environment=LANG=C.UTF-8
+ExecStart=/usr/libexec/fenestra/fenestra-release-upgrade post-boot
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

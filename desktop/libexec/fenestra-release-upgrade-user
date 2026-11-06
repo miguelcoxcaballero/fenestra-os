@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Runs at login (autostart). After a Fenestra release upgrade finished at boot, redo the
+# per-user parts once: extensions on, Explorer layer for the new Nautilus, health check,
+# and a notification with the result.
+set -u
+S=/var/lib/fenestra/release-upgrade.json
+[ -r "$S" ] || exit 0
+status=$(python3 -c 'import json;print(json.load(open("/var/lib/fenestra/release-upgrade.json")).get("status",""))' 2>/dev/null)
+case "$status" in done|post-failed) ;; *) exit 0 ;; esac
+stamp="$HOME/.local/state/fenestra/release-upgrade.done"
+started=$(python3 -c 'import json;print(json.load(open("/var/lib/fenestra/release-upgrade.json")).get("started",""))')
+[ -f "$stamp" ] && [ "$(cat "$stamp")" = "$started" ] && exit 0
+mkdir -p "$(dirname "$stamp")"
+gsettings set org.gnome.shell disable-user-extensions false
+gsettings set org.gnome.shell disable-extension-version-validation false
+rm -f "/run/user/$(id -u)/gnome-shell-disable-extensions"
+find_tool() { for d in "$HOME/Projects/fenestra-os/extras/fedora-upgrade" /usr/share/fenestra/upgrade; do [ -f "$d/$1" ] && { echo "$d/$1"; return; }; done; }
+r=$(find_tool nautilus-user-refresh.sh); [ -n "$r" ] && bash "$r" >/dev/null 2>&1
+c=$(find_tool check.sh)
+fails=0
+if [ -n "$c" ]; then
+    out=$(bash "$c" 2>&1); fails=$(printf '%s\n' "$out" | grep -c "FAIL")
+    printf '%s\n' "$out" > "$HOME/.local/state/fenestra/release-upgrade-check.txt"
+fi
+msg=$(python3 -c 'import json;print(json.load(open("/var/lib/fenestra/release-upgrade.json")).get("message",""))')
+ver=$(rpm -E %fedora)
+if [ "$status" = done ] && [ "$fails" = 0 ]; then
+    notify-send -a "Fenestra Update" -i fs-arrow-sync-symbolic "Fenestra is up to date" "Your PC now runs Fedora $ver. Everything checked out." || true
+else
+    notify-send -a "Fenestra Update" -u critical "Fedora $ver installed, with problems" "${msg:-$fails checks failed.} Open Settings › Fenestra Update for details." || true
+fi
+echo "$started" > "$stamp"

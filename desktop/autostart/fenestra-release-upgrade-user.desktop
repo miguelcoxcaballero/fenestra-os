@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Fenestra Update (finish upgrade)
+Exec=/usr/libexec/fenestra/fenestra-release-upgrade-user
+NoDisplay=true
+X-GNOME-Autostart-Phase=Application
+X-GNOME-Autostart-Delay=10

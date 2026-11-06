@@ -4,7 +4,7 @@ from __future__ import annotations
 from gi.repository import GLib, Gtk
 
 from .. import util
-from ..backends import packages
+from ..backends import packages, release
 from ..i18n import _
 from ..widgets import (ExpanderRow, SettingRow, ToggleSwitch, button, clear, confirm, icon, label,
                        not_available_row, spinner, toast)
@@ -57,6 +57,14 @@ class UpdatePage(Page):
         self.list_group = self.group()
         self.list_group.set_visible(False)
 
+        # New Fedora release (whole-system upgrade, see fenestra-release-upgrade).
+        self.rel_group = self.group()
+        self.rel_group.set_visible(False)
+        self._rel_next = None
+        self._rel_timer = 0
+        self._render_release()
+        release.available(self._got_release)
+
         g = self.group(_("More options"))
         g.set_margin_top(18)
         if util.has_key(UPD, "download-updates"):
@@ -78,6 +86,101 @@ class UpdatePage(Page):
             self.ext_row(g, _("Software center"), _("Firmware and app updates"), "fs-apps-symbolic",
                          ["gnome-software", "--mode=updates"])
         self._render()
+
+    # ------------------------------------------------------------ release upgrade
+    def _got_release(self, info):
+        self._rel_next = info.get("next")
+        self._render_release()
+
+    def _stop_rel_timer(self):
+        if self._rel_timer:
+            GLib.source_remove(self._rel_timer)
+            self._rel_timer = 0
+
+    def _poll_release(self):
+        if self.rel_group.get_root() is None:      # page closed
+            self._rel_timer = 0
+            return GLib.SOURCE_REMOVE
+        self._render_release()
+        return GLib.SOURCE_CONTINUE if self._rel_timer else GLib.SOURCE_REMOVE
+
+    def _render_release(self):
+        g = self.rel_group
+        g.clear()
+        st = release.state()
+        status = st.get("status", "")
+        cur = release.current_version()
+        target = st.get("target") or self._rel_next
+        busy = release.running() or status == "preparing"
+        pct, step_text, last, warns, err = release.progress()
+        if busy:
+            if not self._rel_timer:
+                self._rel_timer = GLib.timeout_add(1000, self._poll_release)
+            bar = Gtk.ProgressBar(fraction=max(0.0, min(1.0, pct / 100)), hexpand=True)
+            bar.set_size_request(220, -1)
+            g.add(SettingRow(_("Upgrading to Fedora {0}").format(target), _(step_text) if step_text else
+                             _("Starting…"), "fs-arrow-sync-symbolic", control=bar))
+            if last:
+                g.add(SettingRow(_("Details"), last[-160:], None))
+            g.add(SettingRow(_("You can keep using your device. Don't turn it off."), None,
+                             "fs-info-symbolic"))
+        else:
+            self._stop_rel_timer()
+            if status == "ready-to-reboot" and cur < int(target or 0):
+                g.add(SettingRow(_("Fedora {0} is ready to install").format(target),
+                                 _("Your device will restart and install it. This takes 20–40 minutes; "
+                                   "your files, apps and settings stay."),
+                                 "fs-arrow-sync-symbolic",
+                                 control=button(_("Restart now"), self._release_reboot, accent=True)))
+            elif status == "failed":
+                g.add(SettingRow(_("The upgrade to Fedora {0} didn't finish").format(target),
+                                 st.get("message") or err or "", "fs-error-circle-symbolic",
+                                 control=button(_("Try again"), self._release_start, accent=True)))
+            elif status in ("done", "post-failed") and cur >= int(target or 0):
+                ok = status == "done"
+                g.add(SettingRow(_("Your device runs Fedora {0}").format(cur),
+                                 _("Everything was set up for the new version") if ok else
+                                 (st.get("message") or _("Some drivers need attention")),
+                                 "fs-checkmark-circle-symbolic" if ok else "fs-warning-symbolic"))
+                if self._rel_next and self._rel_next > cur:
+                    self._offer(self._rel_next)
+            elif self._rel_next and self._rel_next > cur:
+                self._offer(self._rel_next)
+            for w in warns[-3:]:
+                if status in ("failed", "ready-to-reboot"):
+                    g.add(SettingRow(w, None, "fs-warning-symbolic"))
+        g.set_visible(g.rows.get_first_child() is not None)
+
+    def _offer(self, target):
+        self.rel_group.add(SettingRow(
+            _("Fedora {0} is available").format(target),
+            _("Upgrade the whole system. Fenestra, your drivers, files, apps and settings are kept."),
+            "fs-arrow-sync-symbolic", control=button(_("Upgrade"), self._release_start, accent=True)))
+
+    def _release_start(self):
+        if util.READ_ONLY:
+            toast(self.box, _("This action is disabled in read-only mode"))
+            return
+        target = release.state().get("target") if release.state().get("status") == "failed" else self._rel_next
+        target = target or self._rel_next
+        if not target:
+            return
+
+        def go():
+            def started(ok, msg):
+                if not ok:
+                    toast(self.box, _("Couldn't start the upgrade"))
+                self._render_release()
+            release.start(target, started)
+            GLib.timeout_add(1500, lambda: (self._render_release(), False)[1])
+        confirm(self.box, _("Upgrade to Fedora {0}?").format(target),
+                _("Fenestra checks that everything will keep working, downloads the new version and then asks "
+                  "you to restart. Keep the device plugged in."), _("Upgrade"), go)
+
+    def _release_reboot(self):
+        confirm(self.box, _("Restart now?"), _("Save your work before restarting. The new version is installed "
+                                                 "during the restart."), _("Restart now"),
+                lambda: release.reboot(lambda ok, *_: ok or toast(self.box, _("Couldn't restart"))))
 
     def _gs_toggle(self, key):
         t = ToggleSwitch(bool(util.gget(UPD, key)), lambda v: util.gset(UPD, key, v))

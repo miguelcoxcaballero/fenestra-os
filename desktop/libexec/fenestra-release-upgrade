@@ -1,0 +1,536 @@
+#!/usr/bin/python3
+"""Fenestra release upgrade: move this PC to the next Fedora release safely.
+
+Used by Fenestra Settings > Fenestra Update ("Upgrade to Fedora N"). Works for any
+target release, not only one: everything that is specific to this machine is detected.
+
+    fenestra-release-upgrade available            # user: newest release we can go to (JSON)
+    fenestra-release-upgrade status               # user: state of a running/finished upgrade (JSON)
+    pkexec fenestra-release-upgrade run N [--kit DIR]... [--user NAME]
+    fenestra-release-upgrade post-boot            # root, at boot (fenestra-post-upgrade.service)
+
+`run` prints one line per event for the Settings page:
+    STEP <percent> <text>      LOG <text>      WARN <text>      DONE <text>      ERROR <text>
+
+What `run` does, in order (it stops before touching the system if a check fails):
+  1. backup of /etc, the package list and the DKMS sources to /var/backups/
+  2. COPR repositories without a build for N are disabled (and remembered)
+  3. packages installed from no repository (local builds such as howdy/python3-dlib) are
+     rebuilt for N — from prebuilt RPMs in a kit, or from their SRPMs in a fedora:N
+     container — and served from the local repo /var/local/fenestra-repo/N
+  4. drivers that must not be swapped (the Galaxy Book's egismoc fingerprint libfprint)
+     are pinned to their COPR build
+  5. a dry run of the whole upgrade; anything that would remove an important package
+     stops here with an explanation
+  6. the current release is fully updated (new kernel + DKMS rebuild), then the new
+     release is downloaded with `dnf system-upgrade download`
+  7. the offline upgrade is armed; Settings shows "Restart now"
+After the restart, `post-boot` rebuilds DKMS/akmods drivers for the new kernel, reinstalls
+local rebuilds if needed, re-applies Fenestra's system pieces and, if the camera/speaker
+drivers cannot be built for the new kernel, makes the previous kernel the default so the
+machine keeps working; the user part (extensions, Explorer layer) runs at login.
+"""
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+
+STATE = '/var/lib/fenestra/release-upgrade.json'
+LOCAL = '/var/local/fenestra-repo'
+REPO_FILE = '/etc/yum.repos.d/fenestra-local.repo'
+SHARE = '/usr/share/fenestra/upgrade'
+# Packages whose removal would break something the user relies on.
+IMPORTANT = re.compile(r'^(howdy|python3-dlib|libfprint|fprintd|akmod-|kmod-|dkms|kernel|gnome-shell|mutter|nautilus|'
+                       r'gdm|pipewire|wireplumber|libcamera|NetworkManager|v4l2loopback)')
+DKMS_REQUIRED = ('ov02c10', 'ipu-bridge-fix', 'max98390-hda')
+
+
+LOGFILE = '/var/log/fenestra-release-upgrade.log'
+
+
+def emit(kind, text=''):
+    line = f'{kind} {text}'.rstrip()
+    print(line, flush=True)
+    if os.geteuid() == 0:
+        try:
+            with open(LOGFILE, 'a') as f:
+                f.write(line + '\n')
+            os.chmod(LOGFILE, 0o644)
+        except OSError:
+            pass
+
+
+def step(pct, text):
+    emit('STEP', f'{int(pct)} {text}')
+
+
+class _Missing:
+    returncode = 127
+    stdout = ''
+
+
+def sh(cmd, check=True, capture=False, log=True, env=None):
+    if not shutil.which(cmd[0]):
+        if check:
+            raise RuntimeError(f'{cmd[0]} is not installed')
+        emit('LOG', f'(skipped, {cmd[0]} not installed)')
+        return _Missing()
+    if log:
+        emit('LOG', '$ ' + ' '.join(cmd))
+    if capture:
+        p = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
+        if check and p.returncode:
+            raise RuntimeError(f'{cmd[0]} failed: {p.stdout.strip().splitlines()[-1] if p.stdout.strip() else p.returncode}')
+        return p
+    p = subprocess.Popen(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, bufsize=1)
+    tail = []
+    for line in p.stdout:
+        line = line.rstrip()
+        if line:
+            emit('LOG', line[-300:])
+            tail = (tail + [line])[-20:]
+    p.wait()
+    if check and p.returncode:
+        raise RuntimeError(f'{os.path.basename(cmd[0])} failed: {tail[-1] if tail else p.returncode}')
+    return p
+
+
+def os_release():
+    d = {}
+    for line in open('/etc/os-release'):
+        k, _, v = line.strip().partition('=')
+        d[k] = v.strip('"')
+    return d
+
+
+def current_version():
+    return int(os_release().get('VERSION_ID', '0'))
+
+
+def load_state():
+    try:
+        return json.load(open(STATE))
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(**kw):
+    d = load_state()
+    d.update(kw)
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    tmp = STATE + '.tmp'
+    json.dump(d, open(tmp, 'w'), indent=1)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, STATE)
+
+
+# ------------------------------------------------------------------ available ---
+def available():
+    cur = current_version()
+    best = None
+    try:
+        with urllib.request.urlopen('https://fedoraproject.org/releases.json', timeout=20) as r:
+            rel = json.load(r)
+        versions = sorted({int(x['version']) for x in rel if str(x.get('version', '')).isdigit()})
+        cands = [v for v in versions if cur < v <= cur + 2]
+        best = max(cands) if cands else None
+    except Exception as e:  # noqa: BLE001 - offline is a normal answer
+        print(json.dumps({'current': cur, 'next': None, 'error': str(e)}))
+        return 0
+    print(json.dumps({'current': cur, 'next': best, 'name': os_release().get('NAME', 'Fedora')}))
+    return 0
+
+
+# ---------------------------------------------------------------------- steps ---
+def backup(target):
+    b = f'/var/backups/fenestra-pre-f{target}-{time.strftime("%Y%m%d-%H%M")}'
+    os.makedirs(b, exist_ok=True)
+    sh(['tar', '-czf', f'{b}/etc.tar.gz', '-C', '/', 'etc'], check=False, log=False)
+    with open(f'{b}/packages.txt', 'w') as f:
+        f.write(sh(['rpm', '-qa', '--qf', '%{name}-%{version}-%{release}.%{arch} %{vendor}\\n'],
+                   capture=True, log=False).stdout)
+    for src in glob.glob('/usr/src/*') + ['/usr/local/bin', '/var/local/fenestra-repo']:
+        if os.path.isdir(src) and not os.path.basename(src).startswith(('kernels', 'debug')):
+            shutil.copytree(src, f'{b}/{src.strip("/").replace("/", "_")}', symlinks=True, dirs_exist_ok=True)
+    emit('LOG', f'backup: {b}')
+    return b
+
+
+def enabled_coprs():
+    out = sh(['dnf', 'repolist', '--enabled'], capture=True, check=False, log=False).stdout
+    res = []
+    for line in out.splitlines():
+        m = re.match(r'^copr:copr\.fedorainfracloud\.org:([^:\s]+):(\S+)', line)
+        if m:
+            res.append((m.group(1), m.group(2)))
+    return res
+
+
+def copr_has_chroot(owner, project, target):
+    url = f'https://copr.fedorainfracloud.org/api_3/project?ownername={owner}&projectname={project}'
+    try:
+        with urllib.request.urlopen(url, timeout=20) as r:
+            d = json.load(r)
+        return any(k.startswith(f'fedora-{target}-') for k in d.get('chroot_repos', {}))
+    except Exception:  # noqa: BLE001
+        return True   # unknown: leave it alone, the dry run decides
+
+
+def handle_coprs(target):
+    disabled = []
+    for owner, project in enabled_coprs():
+        if not copr_has_chroot(owner, project, target):
+            sh(['dnf', 'copr', 'disable', '-y', f'{owner}/{project}'], check=False)
+            disabled.append(f'{owner}/{project}')
+            emit('WARN', f'{owner}/{project} has no Fedora {target} build yet: disabled (installed apps keep working)')
+    return disabled
+
+
+def extras():
+    """Installed packages that no enabled repository provides (local builds)."""
+    out = sh(['dnf', 'list', '--extras', '-q'], capture=True, check=False, log=False).stdout
+    names = []
+    for line in out.splitlines():
+        p = line.split()
+        if p and '.' in p[0] and not p[0].startswith(('Extra', 'Installed')):
+            names.append(p[0].rsplit('.', 1)[0])
+    return names
+
+
+def pyabi_bound(name):
+    req = sh(['rpm', '-q', '--requires', name], capture=True, check=False, log=False).stdout
+    return 'python(abi)' in req
+
+
+def local_repo(target, kits, user_home):
+    """Make /var/local/fenestra-repo/<target> with rebuilds of the local packages that need one."""
+    dest = f'{LOCAL}/{target}'
+    os.makedirs(dest, exist_ok=True)
+    os.makedirs(f'{LOCAL}/{current_version()}', exist_ok=True)
+    tag = f'.fc{target}.'
+    have = {os.path.basename(p) for p in glob.glob(f'{dest}/*.rpm')}
+    for kit in kits:                                       # 1. prebuilt RPMs
+        for p in glob.glob(f'{kit}/rpms/*{tag}*.rpm') + glob.glob(f'{kit}/{target}/rpms/*{tag}*.rpm'):
+            if os.path.basename(p) not in have:
+                shutil.copy2(p, dest)
+                have.add(os.path.basename(p))
+    need = [n for n in extras() if pyabi_bound(n) or n in ('howdy', 'howdy-data', 'libfprint')]
+    built = {re.sub(r'-[^-]+-[^-]+\.[^.]+\.rpm$', '', f) for f in have}
+    missing = [n for n in need if n not in built and not n.startswith('kmod-')]
+    if missing:                                            # 2. rebuild from SRPMs
+        srpms = []
+        for kit in kits:
+            srpms += glob.glob(f'{kit}/srpms/*.src.rpm')
+        if not srpms:
+            raise RuntimeError('these local packages need a rebuild for Fedora %d and no source package was found: %s'
+                               % (target, ', '.join(missing)))
+        if not shutil.which('podman'):
+            raise RuntimeError('podman is needed to rebuild ' + ', '.join(missing))
+        work = tempfile.mkdtemp(prefix='fenestra-rebuild-')
+        for s in srpms:
+            shutil.copy2(s, work)
+        script = ('set -e; dnf -y -q install rpm-build dnf-plugins-core >/dev/null; '
+                  'for s in /w/*.src.rpm; do n=$(rpm -qp --qf %{NAME} "$s"); '
+                  'dnf -y -q builddep "$s" >/dev/null; '
+                  'rpmbuild --define "_topdir /w/rb" --define "dist .fc' + str(target) + '" --rebuild "$s"; done')
+        step(30, 'Rebuilding local packages for the new version')
+        emit('LOG', 'rebuilding: ' + ', '.join(missing))
+        sh(['podman', 'run', '--rm', '-v', f'{work}:/w:Z', f'registry.fedoraproject.org/fedora:{target}',
+            'bash', '-c', script])
+        for p in glob.glob(f'{work}/rb/RPMS/*/*.rpm'):
+            if 'debug' not in os.path.basename(p):
+                shutil.copy2(p, dest)
+        shutil.rmtree(work, ignore_errors=True)
+    sh(['createrepo_c', '-q', dest], log=False)
+    sh(['createrepo_c', '-q', f'{LOCAL}/{current_version()}'], log=False)
+    with open(REPO_FILE, 'w') as f:
+        f.write('[fenestra-local]\nname=Fenestra local rebuilds for Fedora $releasever\n'
+                f'baseurl=file://{LOCAL}/$releasever\nenabled=1\ngpgcheck=0\npriority=10\nskip_if_unavailable=True\n')
+    sh(['restorecon', '-R', LOCAL], check=False, log=False)
+    emit('LOG', 'local repo: ' + ', '.join(sorted(os.listdir(dest))))
+
+
+def pin_drivers():
+    """Keep COPR builds of drivers the hardware depends on (Fedora's own could change behaviour)."""
+    q = sh(['rpm', '-q', '--qf', '%{release} %{vendor}', 'libfprint'], capture=True, check=False, log=False).stdout
+    if 'egismoc' in q:
+        sh(['dnf', 'config-manager', 'setopt', 'fedora.excludepkgs=libfprint', 'updates.excludepkgs=libfprint'],
+           check=False)
+        emit('LOG', 'fingerprint driver: keeping the egismoc (SDCP) build')
+
+
+def dry_run(target):
+    p = sh(['dnf', 'distro-sync', f'--releasever={target}', '--assumeno', '--refresh'], capture=True, check=False)
+    out = p.stdout
+    if 'Failed to resolve the transaction' in out:
+        probs = [l.strip() for l in out.splitlines() if l.strip().startswith(('Problem', '- installed', '- nothing'))]
+        raise RuntimeError('the upgrade cannot be resolved:\n' + '\n'.join(probs[:12]))
+    removing, sect = [], None
+    for line in out.splitlines():
+        if line.startswith(('Removing', 'Removing dependent packages')):
+            sect = 'rm'
+            continue
+        if line and not line.startswith(' '):
+            sect = None
+        if sect == 'rm' and line.startswith(' ') and not line.startswith('   '):
+            removing.append(line.split()[0])
+    bad = [n for n in removing if IMPORTANT.match(n)]
+    if bad:
+        raise RuntimeError('the upgrade would remove important packages: ' + ', '.join(bad))
+    if removing:
+        emit('WARN', 'will be removed (no longer in Fedora %d): %s' % (target, ', '.join(removing)))
+    m = re.search(r'Total size of inbound packages is ([^.]+)\.', out)
+    return m.group(1) if m else ''
+
+
+def newest_kernel():
+    out = sh(['rpm', '-q', '--last', 'kernel-core'], capture=True, check=False, log=False).stdout
+    m = re.match(r'kernel-core-(\S+)', out)
+    return m.group(1) if m else os.uname().release
+
+
+def dkms_ok(kver):
+    out = sh(['dkms', 'status'], capture=True, check=False, log=False).stdout
+    present = {l.split('/')[0] for l in out.splitlines() if '/' in l}
+    bad = [m for m in DKMS_REQUIRED if m in present and not re.search(rf'^{re.escape(m)}/.*{re.escape(kver)}.*installed',
+                                                                       out, re.M)]
+    return bad
+
+
+def install_system_pieces(kits):
+    """GNOME-version-independent system copies of Fenestra pieces (lock screen, Hello assets)."""
+    for kit in kits:
+        for ext in glob.glob(f'{kit}/system-extensions/*@*'):
+            dst = f'/usr/share/gnome-shell/extensions/{os.path.basename(ext)}'
+            shutil.rmtree(dst, ignore_errors=True)
+            shutil.copytree(ext, dst)
+        if os.path.isdir(f'{kit}/assets/hello'):
+            os.makedirs('/usr/share/fenestra/assets', exist_ok=True)
+            shutil.rmtree('/usr/share/fenestra/assets/hello', ignore_errors=True)
+            shutil.copytree(f'{kit}/assets/hello', '/usr/share/fenestra/assets/hello')
+    sh(['chmod', '-R', 'a+rX', '/usr/share/gnome-shell/extensions'], check=False, log=False)
+    sh(['restorecon', '-R', '/usr/share/gnome-shell/extensions', '/usr/share/fenestra'], check=False, log=False)
+
+
+def locale_lang():
+    try:
+        for line in open('/etc/locale.conf'):
+            if line.startswith('LANG='):
+                return line.split('=', 1)[1].strip().strip('"')[:2]
+    except OSError:
+        pass
+    return 'en'
+
+
+def install_plymouth():
+    """Windows-11-style boot / restart / update screens (theme 'fenestra')."""
+    here = os.path.dirname(os.path.realpath(sys.argv[0]))
+    builder = next((p for p in (f'{here}/fenestra-plymouth-theme', '/usr/libexec/fenestra/fenestra-plymouth-theme',
+                                '/usr/local/libexec/fenestra/fenestra-plymouth-theme') if os.path.exists(p)), None)
+    if not builder:
+        emit('WARN', 'Plymouth theme builder not found; boot screens unchanged')
+        return
+    if not os.path.exists('/usr/lib64/plymouth/script.so'):
+        sh(['dnf', '-y', '-q', 'install', 'plymouth-plugin-script', 'python3-pillow'], check=False)
+    out = '/usr/share/plymouth/themes/fenestra'
+    sh(['python3', builder, out, '--lang', locale_lang(), '--bgrt'], check=False, log=False)
+    sh(['restorecon', '-R', out], check=False, log=False)
+    sh(['plymouth-set-default-theme', 'fenestra'], check=False)
+    for k in {os.uname().release, newest_kernel()}:
+        if os.path.exists(f'/lib/modules/{k}'):
+            sh(['dracut', '-f', '--kver', k], check=False)
+
+
+def run(target, kits, user):
+    if os.geteuid() != 0:
+        emit('ERROR', 'needs administrator rights')
+        return 1
+    cur = current_version()
+    if target <= cur:
+        emit('ERROR', f'this PC already runs Fedora {cur}')
+        return 1
+    kits = [k for k in kits if os.path.isdir(k)] + [d for d in (SHARE,) if os.path.isdir(d)]
+    home = os.path.expanduser(f'~{user}') if user else '/root'
+    try:
+        os.remove(LOGFILE)
+    except OSError:
+        pass
+    save_state(status='preparing', target=target, source=cur, started=time.time(), user=user,
+               previous_kernel=os.uname().release, kits=kits, message='')
+    try:
+        step(2, 'Backing up system settings')
+        bk = backup(target)
+        step(8, 'Checking third-party repositories')
+        disabled = handle_coprs(target)
+        save_state(disabled_coprs=disabled, backup=bk)
+        step(12, 'Installing Fenestra components for the new version')
+        install_system_pieces(kits)
+        sh(['grub2-editenv', '-', 'unset', 'menu_auto_hide'], check=False, log=False)
+        step(15, 'Preparing local packages for the new version')
+        if not shutil.which('createrepo_c'):
+            sh(['dnf', '-y', '-q', 'install', 'createrepo_c'])
+        local_repo(target, kits, home)
+        pin_drivers()
+        step(35, 'Checking that the new version can be installed')
+        size = dry_run(target)
+        step(42, 'Installing the latest updates for this version')
+        sh(['dnf', '-y', 'upgrade', '--refresh'])
+        k = newest_kernel()
+        sh(['dkms', 'autoinstall', '-k', k], check=False)
+        sh(['akmods', '--force', '--kernels', k], check=False)
+        bad = dkms_ok(k)
+        if bad:
+            raise RuntimeError(f'camera/speaker drivers do not build for kernel {k}: {", ".join(bad)}')
+        step(55, 'Downloading the new version')
+        emit('LOG', f'download size: {size}')
+        sh(['dnf', '-y', 'system-upgrade', 'download', f'--releasever={target}'])
+        step(93, 'Getting ready to restart')
+        install_plymouth()
+        sh(['systemctl', 'enable', 'fenestra-post-upgrade.service'], check=False)
+        save_state(status='ready-to-reboot', message='')
+        step(100, 'Ready to restart')
+        emit('DONE', f'Fedora {target} is downloaded. Restart to install it.')
+        return 0
+    except Exception as e:  # noqa: BLE001
+        save_state(status='failed', message=str(e))
+        emit('ERROR', str(e))
+        return 2
+
+
+# ------------------------------------------------------------------ post-boot ---
+def post_boot():
+    st = load_state()
+    if not st or st.get('status') not in ('ready-to-reboot', 'post-failed'):
+        return 0
+    if current_version() < int(st.get('target', 0)):
+        # The offline upgrade did not happen (cancelled or failed): keep the request.
+        if not os.path.exists('/system-update'):
+            save_state(status='failed', message='The upgrade did not run during the restart. Try again.')
+        return 0
+    k = os.uname().release
+    msgs = []
+    rpm_k = sh(['rpm', '-q', f'kernel-devel-{k}'], capture=True, check=False, log=False)
+    if rpm_k.returncode:
+        sh(['dnf', '-y', 'install', f'kernel-devel-{k}'], check=False)
+    sh(['dkms', 'autoinstall', '-k', k], check=False)
+    sh(['akmods', '--force', '--kernels', k], check=False)
+    sh(['depmod', '-a', k], check=False)
+    py = 'python%d.%d' % sys.version_info[:2]
+    hq = sh(['rpm', '-ql', 'howdy'], capture=True, check=False, log=False)
+    if hq.returncode == 0 and py not in hq.stdout:
+        sh(['dnf', '-y', '--repo=fenestra-local', 'install', 'howdy', 'howdy-data', 'python3-dlib'], check=False)
+    install_system_pieces(st.get('kits', []))
+    for m in ('ov02c10', 'ipu_bridge', 'snd_hda_scodec_max98390', 'snd_hda_scodec_max98390_i2c', 'v4l2loopback'):
+        sh(['modprobe', m], check=False, log=False)
+    bad = dkms_ok(k)
+    if bad:
+        prev = st.get('previous_kernel')
+        if prev and os.path.exists(f'/boot/vmlinuz-{prev}'):
+            sh(['grubby', '--set-default', f'/boot/vmlinuz-{prev}'], check=False)
+            msgs.append(f'Drivers for the new kernel failed ({", ".join(bad)}); the previous kernel {prev} '
+                        'will be used from the next restart.')
+        else:
+            msgs.append(f'Drivers for the new kernel failed: {", ".join(bad)}')
+    sh(['systemctl', 'restart', 'camera-relay-login.service', 'camera-relay-watchdog.service',
+        'howdy-preload.service'], check=False, log=False)
+    sh(['systemctl', 'disable', 'fenestra-post-upgrade.service'], check=False, log=False)
+    save_state(status='post-failed' if bad else 'done', finished=time.time(), kernel=k, message=' '.join(msgs))
+    return 0
+
+
+UNIT = '''[Unit]
+Description=Finish a Fenestra release upgrade (drivers, local packages, Fenestra pieces)
+ConditionPathExists=/var/lib/fenestra/release-upgrade.json
+Wants=network-online.target
+After=local-fs.target network-online.target
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+Environment=LANG=C.UTF-8
+ExecStart={exe} post-boot
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target
+'''
+
+
+def install_self():
+    """Run from a root-owned copy (the Settings app may ship a per-user copy) and make sure
+    the post-upgrade boot service exists."""
+    me = os.path.realpath(sys.argv[0])
+    if me.startswith(('/usr/libexec/', '/usr/local/libexec/')) and os.stat(me).st_uid == 0:
+        exe = me
+    else:
+        exe = '/usr/local/libexec/fenestra/fenestra-release-upgrade'
+        os.makedirs(os.path.dirname(exe), exist_ok=True)
+        shutil.copy2(me, exe)
+        os.chown(exe, 0, 0)
+        os.chmod(exe, 0o755)
+        theme = os.path.join(os.path.dirname(me), 'fenestra-plymouth-theme')
+        if os.path.exists(theme):
+            shutil.copy2(theme, os.path.join(os.path.dirname(exe), 'fenestra-plymouth-theme'))
+            os.chown(os.path.join(os.path.dirname(exe), 'fenestra-plymouth-theme'), 0, 0)
+    unit = '/usr/lib/systemd/system/fenestra-post-upgrade.service'
+    if not os.path.exists(unit):
+        unit = '/etc/systemd/system/fenestra-post-upgrade.service'
+        with open(unit, 'w') as f:
+            f.write(UNIT.format(exe=exe))
+        subprocess.run(['systemctl', 'daemon-reload'])
+    subprocess.run(['restorecon', '-R', os.path.dirname(exe), unit], capture_output=True)
+    return exe
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__)
+        return 1
+    cmd = argv[1]
+    if cmd == 'available':
+        return available()
+    if cmd == 'status':
+        print(json.dumps(load_state()))
+        return 0
+    if cmd == 'post-boot':
+        return post_boot()
+    if cmd == 'reboot':
+        if load_state().get('status') != 'ready-to-reboot':
+            emit('ERROR', 'nothing to install')
+            return 1
+        return sh(['dnf', 'offline', 'reboot', '-y'], check=False).returncode
+    if cmd == 'start' and len(argv) >= 3:
+        # Detach from the caller (Settings may be closed): run as a transient system unit.
+        me = install_self()
+        args = [me, 'run'] + argv[2:]
+        uid = os.environ.get('PKEXEC_UID')
+        if uid and '--user' not in args:
+            args += ['--user', __import__('pwd').getpwuid(int(uid)).pw_name]
+        subprocess.run(['systemctl', 'reset-failed', 'fenestra-release-upgrade.service'], capture_output=True)
+        return subprocess.run(['systemd-run', '--unit=fenestra-release-upgrade', '--collect',
+                               '--property=KillMode=process', '--setenv=LANG=C.UTF-8'] + args).returncode
+    if cmd == 'run' and len(argv) >= 3 and argv[2].isdigit():
+        kits, user, i = [], None, 3
+        while i < len(argv):
+            if argv[i] == '--kit' and i + 1 < len(argv):
+                kits.append(argv[i + 1])
+                i += 2
+            elif argv[i] == '--user' and i + 1 < len(argv):
+                user = argv[i + 1]
+                i += 2
+            else:
+                i += 1
+        return run(int(argv[2]), kits, user or os.environ.get('PKEXEC_UID') and
+                   __import__('pwd').getpwuid(int(os.environ['PKEXEC_UID'])).pw_name)
+    print(__doc__)
+    return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
