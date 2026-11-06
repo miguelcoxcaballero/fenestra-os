@@ -83,6 +83,19 @@ void WindowManagement::org_kde_plasma_window_management_show_desktop_changed(uin
     Q_EMIT showingDesktopChanged();
 }
 
+// Sent on bind and on every change for versions below 17 (we bind 16).
+void WindowManagement::org_kde_plasma_window_management_stacking_order_uuid_changed(const QString &uuids)
+{
+    stackingOrder = uuids.split(QLatin1Char(';'), Qt::SkipEmptyParts);
+    m_model->stackingChanged();
+}
+
+void WindowsModel::stackingChanged()
+{
+    if (!m_windows.isEmpty())
+        Q_EMIT dataChanged(index(0), index(m_windows.size() - 1), {StackingRole});
+}
+
 WindowsModel *WindowsModel::instance()
 {
     static auto *m = new WindowsModel;
@@ -194,6 +207,8 @@ QVariant WindowsModel::data(const QModelIndex &index, int role) const
         return w->pid;
     case GeometryRole:
         return w->geometry;
+    case StackingRole:
+        return int(m_management->stackingOrder.indexOf(w->uuid));
     }
     return {};
 }
@@ -203,7 +218,7 @@ QHash<int, QByteArray> WindowsModel::roleNames() const
     return {{TitleRole, "title"}, {AppIdRole, "appId"}, {IconNameRole, "iconName"},
             {ActiveRole, "active"}, {MinimizedRole, "minimized"}, {MaximizedRole, "maximized"},
             {DemandsAttentionRole, "demandsAttention"}, {UuidRole, "uuid"}, {PidRole, "pid"},
-            {GeometryRole, "geometry"}};
+            {GeometryRole, "geometry"}, {StackingRole, "stacking"}};
 }
 
 void WindowsModel::setState(int row, quint32 flags, bool on)

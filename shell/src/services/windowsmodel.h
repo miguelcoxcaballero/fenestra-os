@@ -50,6 +50,7 @@ class WindowManagement : public QWaylandClientExtensionTemplate<WindowManagement
 public:
     explicit WindowManagement(WindowsModel *model);
     bool showingDesktop = false;
+    QStringList stackingOrder; // uuids, bottom to top
 
 Q_SIGNALS:
     void showingDesktopChanged();
@@ -57,6 +58,7 @@ Q_SIGNALS:
 protected:
     void org_kde_plasma_window_management_window_with_uuid(uint32_t id, const QString &uuid) override;
     void org_kde_plasma_window_management_show_desktop_changed(uint32_t state) override;
+    void org_kde_plasma_window_management_stacking_order_uuid_changed(const QString &uuids) override;
 
 private:
     WindowsModel *m_model;
@@ -72,7 +74,8 @@ class WindowsModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 public:
     enum Roles { TitleRole = Qt::UserRole + 1, AppIdRole, IconNameRole, ActiveRole, MinimizedRole,
-                 MaximizedRole, DemandsAttentionRole, UuidRole, PidRole, GeometryRole };
+                 MaximizedRole, DemandsAttentionRole, UuidRole, PidRole, GeometryRole,
+                 StackingRole }; // StackingRole: position bottom to top, -1 unknown (snipping overlay)
 
     static WindowsModel *instance();
     static WindowsModel *create(QQmlEngine *, QJSEngine *);
@@ -95,6 +98,7 @@ public:
     Q_INVOKABLE void toggleShowDesktop();
 
     void addWindow(const QString &uuid, ::org_kde_plasma_window *object);
+    void stackingChanged();
 
 Q_SIGNALS:
     void availableChanged();
