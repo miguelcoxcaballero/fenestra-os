@@ -59,9 +59,43 @@ GDM_XML = '''<node><interface name="org.gnome.DisplayManager.Manager">
  <property name="Version" type="s" access="read"/>
 </interface></node>'''
 gdm_node = Gio.DBusNodeInfo.new_for_xml(GDM_XML)
+# GDM hands the greeter a private peer-to-peer D-Bus server (OpenSession) with the Greeter and
+# UserVerifier interfaces at /org/gnome/DisplayManager/Session; the login dialog only loads
+# its user list after that works. Interfaces from GDM's daemon/gdm-session.xml (signatures
+# only). Every call is answered neutrally: no timed login, nothing ever authenticates.
+import os
+GREETER_ADDR = 'unix:path=/run/fake-gdm-greeter'
+try:
+    os.unlink('/run/fake-gdm-greeter')
+except OSError:
+    pass
+SESSION_XML = '<node><interface name="org.gnome.DisplayManager.UserVerifier"><method name="EnableExtensions"><arg type="as" name="extensions" direction="in" /></method><method name="BeginVerification"><arg type="s" name="service_name" direction="in" /></method><method name="BeginVerificationForUser"><arg type="s" name="service_name" direction="in" /><arg type="s" name="username" direction="in" /></method><method name="AnswerQuery"><arg type="s" name="service_name" direction="in" /><arg type="s" name="answer" direction="in" /></method><method name="Cancel" /><signal name="ConversationStarted"><arg type="s" name="service_name" /></signal><signal name="ConversationStopped"><arg type="s" name="service_name" /></signal><signal name="ReauthenticationStarted"><arg type="i" name="pid_of_caller" /></signal><signal name="Info"><arg type="s" name="service_name" /><arg type="s" name="info" /></signal><signal name="Problem"><arg type="s" name="service_name" /><arg type="s" name="problem" /></signal><signal name="InfoQuery"><arg type="s" name="service_name" /><arg type="s" name="query" /></signal><signal name="SecretInfoQuery"><arg type="s" name="service_name" /><arg type="s" name="query" /></signal><signal name="Reset" /><signal name="ServiceUnavailable"><arg type="s" name="service_name" /><arg type="s" name="message" /></signal><signal name="VerificationFailed"><arg type="s" name="service_name" /></signal><signal name="VerificationComplete"><arg type="s" name="service_name" /></signal></interface><interface name="org.gnome.DisplayManager.UserVerifier.ChoiceList"><method name="SelectChoice"><arg type="s" name="service_name" direction="in" /><arg type="s" name="choice" direction="in" /></method><signal name="ChoiceQuery"><arg type="s" name="service_name" /><arg type="s" name="prompt_message" /><arg type="a{ss}" name="list" /></signal></interface><interface name="org.gnome.DisplayManager.UserVerifier.CustomJSON"><method name="Reply"><arg type="s" name="service_name" direction="in" /><arg type="s" name="reply" direction="in" /></method><method name="ReportError"><arg type="s" name="service_name" direction="in" /><arg type="s" name="error" direction="in" /></method><signal name="Request"><arg type="s" name="service_name" /><arg type="s" name="protocol" /><arg type="u" name="version" /><arg type="s" name="request" /></signal></interface><interface name="org.gnome.DisplayManager.Greeter"><method name="SelectSession"><arg type="s" name="session" direction="in" /></method><method name="SelectUser"><arg type="s" name="username" direction="in" /></method><method name="BeginAutoLogin"><arg type="s" name="username" direction="in" /></method><method name="GetTimedLoginDetails"><arg type="b" name="enabled" direction="out" /><arg type="s" name="username" direction="out" /><arg type="i" name="delay" direction="out" /></method><method name="StartSessionWhenReady"><arg type="s" name="service_name" direction="in" /><arg type="b" name="should_start_session" direction="in" /></method><method name="StopConflictingSession" /><signal name="SelectedUserChanged"><arg type="s" name="username" /></signal><signal name="DefaultLanguageNameChanged"><arg type="s" name="language_name" /></signal><signal name="DefaultSessionNameChanged"><arg type="s" name="session_name" /></signal><signal name="TimedLoginRequested"><arg type="s" name="username" /><arg type="i" name="delay" /></signal><signal name="SessionOpened"><arg type="s" name="service_name" /><arg type="s" name="session_id" /></signal><signal name="Reauthenticated"><arg type="s" name="service_name" /></signal></interface></node>'
+session_node = Gio.DBusNodeInfo.new_for_xml(SESSION_XML)
+
+def _session_call(conn, sender, path, iface, method, params, inv):
+    if method == 'GetTimedLoginDetails':
+        inv.return_value(GLib.Variant('(bsi)', (False, '', 0)))
+    else:
+        inv.return_value(None)   # every other method has no out arguments
+
+_peers = []
+def _new_peer(server, conn):
+    _peers.append(conn)
+    for i in session_node.interfaces:
+        conn.register_object('/org/gnome/DisplayManager/Session', i, _session_call, None, None)
+    return True
+
+greeter_server = Gio.DBusServer.new_sync(GREETER_ADDR, Gio.DBusServerFlags.AUTHENTICATION_ALLOW_ANONYMOUS,
+                                         Gio.dbus_generate_guid(), None, None)
+greeter_server.connect('new-connection', _new_peer)
+greeter_server.start()
+os.chmod('/run/fake-gdm-greeter', 0o777)
+
 def gdm_call(conn, sender, path, iface, method, params, inv):
     if method in ('RegisterSession', 'RegisterDisplay'):
         inv.return_value(None)
+    elif method in ('OpenSession', 'OpenReauthenticationChannel'):
+        inv.return_value(GLib.Variant('(s)', (GREETER_ADDR,)))
     else:
         inv.return_dbus_error('org.gnome.DisplayManager.Manager.Error', 'not available in the test lab')
 def gdm_prop(conn, sender, path, iface, name):
