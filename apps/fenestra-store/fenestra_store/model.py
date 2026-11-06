@@ -91,6 +91,7 @@ class App:
     backend: str                  # backend id that handles operations
     source: str                   # "flathub" | "fedora"
     name: str
+    packaging: str = "flatpak"    # "flatpak" | "rpm"
     summary: str = ""
     description: list = field(default_factory=list)   # paragraphs; bullet lines start with "• "
     developer: str = ""
@@ -115,6 +116,7 @@ class App:
     state: str = AVAILABLE
     progress: float = 0.0
     status_text: str = ""
+    pkgname: str = ""             # RPM package name (packagekit backend)
     ref: str = ""                 # flatpak ref ("app/org.x.Y/x86_64/stable") or package id
     origin: str = ""              # flatpak remote / rpm repo
     desktop_id: str = ""          # for launching

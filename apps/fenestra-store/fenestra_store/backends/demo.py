@@ -229,6 +229,7 @@ class DemoBackend(Backend):
         uid = f"demo:{source}:{aid}"
         size_mb = size or size_mb
         app = App(uid=uid, app_id=aid, backend=self.id, source=source, name=name,
+                  packaging=("flatpak" if source == "flathub" else "rpm"),
                   summary=pick(summary), description=list(pick(desc)), developer=dev,
                   categories=list(cats), kind=kind, version=version or ver, license=lic,
                   download_size=int(size_mb * 1e6 * 0.42), installed_size=int(size_mb * 1e6),

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Invented sample catalogue in Flathub's AppStream catalog format, for tools/test-backends.py. -->
+<components version="0.16" origin="flathub">
+  <component type="desktop-application">
+    <id>org.fenestra.sample.Telar</id>
+    <name>Telar</name>
+    <name xml:lang="es">Telar</name>
+    <summary>Weave patterns from simple shapes</summary>
+    <summary xml:lang="es">Teje patrones a partir de formas simples</summary>
+    <description>
+      <p>Telar turns a few shapes into repeating patterns.</p>
+      <p xml:lang="es">Telar convierte unas pocas formas en patrones que se repiten.</p>
+      <ul>
+        <li>Export as SVG</li>
+        <li xml:lang="es">Exporta como SVG</li>
+      </ul>
+    </description>
+    <developer id="org.fenestra.sample"><name>Sample Collective</name></developer>
+    <project_license>GPL-3.0-or-later</project_license>
+    <url type="homepage">https://example.org/telar</url>
+    <categories><category>Graphics</category><category>2DGraphics</category></categories>
+    <keywords><keyword>pattern</keyword><keyword>tile</keyword></keywords>
+    <icon type="cached" width="128" height="128">org.fenestra.sample.Telar.png</icon>
+    <icon type="remote" width="128" height="128">https://example.org/telar.png</icon>
+    <screenshots>
+      <screenshot type="default">
+        <caption>Main window</caption>
+        <caption xml:lang="es">Ventana principal</caption>
+        <image type="source" width="1600" height="1000">https://example.org/telar-1.png</image>
+        <image type="thumbnail" width="752" height="470">https://example.org/telar-1-752.png</image>
+      </screenshot>
+    </screenshots>
+    <launchable type="desktop-id">org.fenestra.sample.Telar.desktop</launchable>
+    <bundle type="flatpak" runtime="org.gnome.Platform/x86_64/49">app/org.fenestra.sample.Telar/x86_64/stable</bundle>
+    <releases>
+      <release version="2.1.0" timestamp="1790000000"/>
+      <release version="2.0.0" timestamp="1780000000"/>
+    </releases>
+  </component>
+  <component type="desktop-application">
+    <id>org.fenestra.sample.Carrusel</id>
+    <name>Carrusel</name>
+    <summary>A small racing game</summary>
+    <developer_name>Sample Games</developer_name>
+    <project_license>MIT</project_license>
+    <categories><category>Game</category><category>ArcadeGame</category></categories>
+    <icon type="stock">applications-games</icon>
+    <bundle type="flatpak">app/org.fenestra.sample.Carrusel/x86_64/stable</bundle>
+    <pkgname>carrusel</pkgname>
+    <releases><release version="0.4" date="2026-09-01"/></releases>
+  </component>
+  <component type="runtime">
+    <id>org.fenestra.sample.Platform</id>
+    <name>Sample runtime (ignored)</name>
+  </component>
+</components>
