@@ -9,4 +9,9 @@ export DESKTOP_SESSION=fenestra
 export QT_QPA_PLATFORM="wayland;xcb" QT_WAYLAND_DISABLE_WINDOWDECORATION=0
 export MOZ_ENABLE_WAYLAND=1 ELECTRON_OZONE_PLATFORM_HINT=auto
 mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/fenestra"
+# KWin defaults for the Fenestra session, only where the user has not chosen something else:
+# Super alone opens Start (org.fenestra.Shell), Super+S opens Search.
+kread() { kreadconfig6 --file kwinrc --group "$1" --key "$2" 2>/dev/null; }
+kwrite() { [ -n "$(kread "$1" "$2")" ] || kwriteconfig6 --file kwinrc --group "$1" --key "$2" "$3"; }
+kwrite ModifierOnlyShortcuts Meta "org.fenestra.Shell,/org/fenestra/Shell,org.fenestra.Shell,ToggleStart"
 exec kwin_wayland_wrapper --xwayland --exit-with-session /usr/libexec/fenestra/fenestra-session-inner

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <KWindowEffects>
 #include <LayerShellQt/Window>
 #include <QGuiApplication>
 #include <QObject>
@@ -32,5 +33,12 @@ public:
             }
         }
         return false;
+    }
+    // KWin's blur behind the whole surface (org_kde_kwin_blur; drawn only with OpenGL compositing).
+    Q_INVOKABLE void enableBlur(QWindow *window, int radius) const
+    {
+        Q_UNUSED(radius)
+        if (window)
+            KWindowEffects::enableBlurBehind(window, true);
     }
 };

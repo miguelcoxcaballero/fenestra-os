@@ -32,11 +32,14 @@ qt_add_executable(fenestra-shell
     src/core/shellsettings.cpp src/core/shellsettings.h
     src/core/theme.cpp src/core/theme.h
     src/core/shellutil.h
+    src/core/shellcontrol.h
     src/services/apps.cpp src/services/apps.h
     src/services/taskbarmodel.cpp src/services/taskbarmodel.h
     src/services/weather.cpp src/services/weather.h
     src/services/status.cpp src/services/status.h
     src/services/trayitems.cpp src/services/trayitems.h
+    src/services/startservices.cpp src/services/startservices.h
+    src/services/search.cpp src/services/search.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -49,7 +52,7 @@ ecm_add_qtwayland_client_protocol(protocol_sources
     BASENAME plasma-window-management)
 target_sources(fenestra-shell PRIVATE ${protocol_sources})
 
-set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/ShellState.qml
+set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml
     PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(fenestra-shell
@@ -61,16 +64,22 @@ qt_add_qml_module(fenestra-shell
         qml/components/ContextMenu.qml
         qml/components/Flyout.qml
         qml/components/MenuRow.qml
+        qml/components/ShellPopup.qml
+        qml/components/SymbolicIcon.qml
         qml/design/Metrics.qml
+        qml/design/Motion.qml
         qml/design/Strings.qml
         qml/desktop/Wallpaper.qml
+        qml/search/SearchFlyout.qml
+        qml/start/AppTile.qml
+        qml/start/SectionHeader.qml
+        qml/start/StartMenu.qml
         qml/taskbar/Clock.qml
         qml/taskbar/SearchButton.qml
         qml/taskbar/TaskButton.qml
         qml/taskbar/TaskPreview.qml
         qml/taskbar/Taskbar.qml
         qml/taskbar/WeatherButton.qml
-        qml/tray/SymbolicIcon.qml
         qml/tray/Tray.qml
         qml/tray/TrayButton.qml
 )

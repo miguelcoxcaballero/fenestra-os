@@ -19,11 +19,11 @@ run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin
 | B09 | Show desktop corner | pending (VM) | CODE | show_desktop request; not clicked in the bench yet |
 | B10 | Multi-monitor and scaling (taskbar per monitor, flyouts on the right monitor) | pending (VM) | PASS-CONTAINER | OUTPUTS=2 bench: check B10-taskbar-per-output (one taskbar and wallpaper per output); scaling in the VM |
 | B11 | Every taskbar flyout 12 px above the taskbar and 13 px from the screen edge, no arrow | pending (VM) | PASS-CONTAINER | Flyout.qml margins 12/13 + layer-shell exclusive zone; screenshots 02–04 |
-| S01 | Start: search box, Pinned, Recommended, All apps (category, grid, list), account and power menus | pending (VM) | TODO |  |
-| S02 | Start open/close animation, acrylic, no strip above the search box, no accent underline on focus | pending (VM) | TODO |  |
-| S03 | Start works for a new account | pending (VM) | TODO |  |
-| S04 | Search flyout: recent searches, top apps, chips (All, Web, Apps, Documents, Settings, Folders, Photos), best match, preview pane | pending (VM) | TODO |  |
-| S05 | Search finds and opens apps, documents, folders and Settings pages | pending (VM) | TODO |  |
+| S01 | Start: search box, Pinned, Recommended, All apps (category, grid, list), account and power menus | pending (VM) | PASS-CONTAINER | checks S01-* (D-Bus/Super, pins, Recommended from recently-used.xbel, power and account menus, All apps in three views, light mode); screenshots 09–12, 16 |
+| S02 | Start open/close animation, acrylic, no strip above the search box, no accent underline on focus | pending (VM) | PARTIAL | slide 96 px / 200 ms OutQuint, close 120 ms InQuad, no strip, no focus underline; acrylic blur needs KWin OpenGL (VM) |
+| S03 | Start works for a new account | pending (VM) | CODE | defaults (Start pins, taskbar pins) apply without shell.conf; check with a new account in the VM |
+| S04 | Search flyout: recent searches, top apps, chips (All, Web, Apps, Documents, Settings, Folders, Photos), best match, preview pane | pending (VM) | PASS-CONTAINER | checks S04-* (home, chips, results + preview, Settings filter, history file kept at the GNOME layer path); screenshots 13–15 |
+| S05 | Search finds and opens apps, documents, folders and Settings pages | pending (VM) | PASS-CONTAINER | checks S05-finds-photo, -finds-settings-page (Fenestra Settings --export-search-index), -finds-app, -opens-app; documents via a folder index (localsearch not used yet) |
 | Q01 | Quick settings tiles with subpages; volume, brightness, audio output | pending (VM) | TODO |  |
 | Q02 | Media panel (MPRIS): play/pause, previous, next | pending (VM) | TODO |  |
 | Q03 | Volume and brightness OSD (keys and wheel) | pending (VM) | TODO |  |

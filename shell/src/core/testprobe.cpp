@@ -21,8 +21,8 @@ void TestProbe::installIfRequested(QQmlApplicationEngine *engine)
     auto *probe = new TestProbe(qApp);
     probe->m_engine = engine;
     auto bus = QDBusConnection::sessionBus();
-    if (!bus.registerService(QStringLiteral("org.fenestra.Shell"))
-        || !bus.registerObject(QStringLiteral("/org/fenestra/Shell/Test"), probe, QDBusConnection::ExportScriptableSlots))
+    bus.registerService(QStringLiteral("org.fenestra.Shell"));
+    if (!bus.registerObject(QStringLiteral("/org/fenestra/Shell/Test"), probe, QDBusConnection::ExportScriptableSlots))
         qWarning("fenestra-shell: test probe could not register on the session bus");
 }
 

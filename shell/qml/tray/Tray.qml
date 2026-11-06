@@ -17,7 +17,7 @@ Row {
         hpad: 10
         visible: TrayItems.count > 0
         accessibleName: Strings.tr("Show hidden icons")
-        SymbolicIcon { name: "pan-up-symbolic"; width: 12; height: 12 }
+        SymbolicIcon { name: "pan-up-symbolic"; size: 12 }
         onClicked: { overflow.anchorX = overflowButton.mapToItem(null, overflowButton.width / 2, 0).x; overflow.toggle() }
     }
     TrayButton {
@@ -34,7 +34,7 @@ Row {
         accessibleName: [NetworkStatus.name, AudioStatus.volume + " %", PowerStatus.hasBattery ? PowerStatus.percentage + " %" : ""].join(" ")
         SymbolicIcon { name: NetworkStatus.iconName }
         SymbolicIcon { name: AudioStatus.iconName }
-        SymbolicIcon { source: PowerStatus.iconSource }
+        SymbolicIcon { src: PowerStatus.iconSource }
         onClicked: tray.quickSettingsRequested(quick.mapToItem(null, quick.width / 2, 0).x)
         onWheel: (delta) => { if (AudioStatus.available) AudioStatus.volume = Math.max(0, Math.min(100, AudioStatus.volume + (delta > 0 ? 2 : -2))) }
     }

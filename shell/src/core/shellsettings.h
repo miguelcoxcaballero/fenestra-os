@@ -25,6 +25,7 @@ class ShellSettings : public QObject
     Q_PROPERTY(QString colorScheme READ colorScheme WRITE setColorScheme NOTIFY changed)
     Q_PROPERTY(QString accentColor READ accentColor WRITE setAccentColor NOTIFY changed)
     Q_PROPERTY(QString wallpaper READ wallpaper WRITE setWallpaper NOTIFY changed)
+    Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY changed)
 
 public:
     static ShellSettings *instance();
@@ -37,6 +38,7 @@ public:
     QString colorScheme() const { return m_scheme; }
     QString accentColor() const { return m_accent; }
     QString wallpaper() const { return m_wallpaper; }
+    bool reduceMotion() const { return m_reduceMotion; }
 
     void setTaskbarAlignment(const QString &v) { write(QStringLiteral("Taskbar/Alignment"), v); }
     void setSearchMode(const QString &v) { write(QStringLiteral("Taskbar/SearchMode"), v); }
@@ -52,8 +54,13 @@ public:
 
     static QString path();
 
+    // Other sections of shell.conf ([Start], [Search]…) for services that own them.
+    QVariant value(const QString &key, const QVariant &fallback = {}) const;
+    void setValue(const QString &key, const QVariant &value) { write(key, value); }
+
 Q_SIGNALS:
     void changed();
+    void fileChanged(); // after every (re)load, whatever changed
 
 private:
     explicit ShellSettings(QObject *parent = nullptr);
@@ -64,5 +71,6 @@ private:
     QFileSystemWatcher m_watcher;
     QString m_alignment, m_searchMode, m_scheme, m_accent, m_wallpaper;
     bool m_showWeather = true;
+    bool m_reduceMotion = false;
     QStringList m_pinned;
 };

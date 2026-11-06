@@ -16,13 +16,18 @@ Rectangle {
     Accessible.role: Accessible.MenuItem
     Accessible.name: text
 
+    // Fenestra's own glyphs (assets) are white line art: tinted in light mode. Theme icons are not.
+    SymbolicIcon {
+        x: 12; anchors.verticalCenter: parent.verticalCenter
+        visible: row.iconSource.toString() !== ""
+        src: row.iconSource
+    }
     Image {
-        id: icon
         x: 12; anchors.verticalCenter: parent.verticalCenter
         width: 16; height: 16
         sourceSize: Qt.size(16 * Screen.devicePixelRatio, 16 * Screen.devicePixelRatio)
-        source: row.iconSource.toString() !== "" ? row.iconSource : (row.iconName ? "image://icon/" + row.iconName : "")
-        visible: source.toString() !== ""
+        visible: row.iconSource.toString() === "" && row.iconName !== ""
+        source: row.iconName ? "image://icon/" + row.iconName : ""
     }
     Text {
         id: label

@@ -4,10 +4,13 @@
 #include <QCommandLineParser>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QPainter>
+#include <QUrl>
 #include <QQmlApplicationEngine>
 #include <QQuickImageProvider>
 #include <QQuickWindow>
 
+#include "shellcontrol.h"
 #include "testprobe.h"
 #include "trayitems.h"
 
@@ -30,6 +33,33 @@ public:
         if (size)
             *size = pixmap.size();
         return pixmap;
+    }
+};
+
+// image://tint/<rrggbb>/<icon name or file URL>: a glyph recoloured (light mode: Fenestra's white
+// line-art glyphs drawn in #1a1a1a), with QPainter so it works with every scene graph backend.
+class TintProvider : public QQuickImageProvider
+{
+public:
+    TintProvider() : QQuickImageProvider(QQuickImageProvider::Image) {}
+    QImage requestImage(const QString &id, QSize *size, const QSize &requested) override
+    {
+        const QColor color(QLatin1Char('#') + id.section(QLatin1Char('/'), 0, 0));
+        const QString what = QUrl::fromPercentEncoding(id.section(QLatin1Char('/'), 1).toUtf8());
+        const QSize want = requested.isValid() ? requested : QSize(16, 16);
+        QImage img;
+        if (what.startsWith(QLatin1String("file:")))
+            img = QIcon(QUrl(what).toLocalFile()).pixmap(want).toImage();
+        else
+            img = QIcon::fromTheme(what).pixmap(want).toImage();
+        img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        QPainter p(&img);
+        p.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        p.fillRect(img.rect(), color);
+        p.end();
+        if (size)
+            *size = img.size();
+        return img;
     }
 };
 }
@@ -60,10 +90,12 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("icon"), new IconProvider);
     engine.addImageProvider(QStringLiteral("sni"), new TrayImageProvider);
+    engine.addImageProvider(QStringLiteral("tint"), new TintProvider);
     TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("Fenestra.Shell", "Main");
+    ShellControl::instance()->registerOnBus();
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }

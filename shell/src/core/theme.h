@@ -25,6 +25,9 @@ class Theme : public QObject
     // Flyouts and menus: rgba(32,32,36,.80) / rgba(249,249,249,.85), border .10 / .08 (stylesheet.css, light.css).
     Q_PROPERTY(QColor flyout READ flyout NOTIFY changed)
     Q_PROPERTY(QColor flyoutBorder READ flyoutBorder NOTIFY changed)
+    // Start / Search surface: the acrylic of the GNOME layer is a blurred, luminosity-remapped
+    // backdrop; KWin's blur + this tint approximate it (dark ~#202020, light ~#f3f3f3).
+    Q_PROPERTY(QColor acrylic READ acrylic NOTIFY changed)
     Q_PROPERTY(QColor text READ text NOTIFY changed)
     Q_PROPERTY(QColor textSecondary READ textSecondary NOTIFY changed)
     Q_PROPERTY(QColor textDisabled READ textDisabled NOTIFY changed)
@@ -47,6 +50,7 @@ public:
     QColor taskbarBorder() const { return m_dark ? QColor(255, 255, 255, 26) : QColor(0, 0, 0, 20); }
     QColor flyout() const { return m_dark ? QColor(32, 32, 36, 204) : QColor(249, 249, 249, 217); }
     QColor flyoutBorder() const { return m_dark ? QColor(255, 255, 255, 26) : QColor(0, 0, 0, 20); }
+    QColor acrylic() const { return m_dark ? QColor(32, 32, 32, 235) : QColor(243, 243, 243, 235); }
     QColor text() const { return m_dark ? QColor(Qt::white) : QColor(0x1a, 0x1a, 0x1a); }
     QColor textSecondary() const { return m_dark ? QColor(255, 255, 255, 200) : QColor(0, 0, 0, 158); }
     QColor textDisabled() const { return m_dark ? QColor(255, 255, 255, 93) : QColor(0, 0, 0, 92); }

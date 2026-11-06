@@ -25,7 +25,6 @@ Window {
     height: body.childrenRect.height + 2 * padding
     visible: false
 
-    LayerShell.Window.screenConfiguration: LayerShell.Window.ScreenFromQWindow
     LayerShell.Window.scope: "fenestra-flyout"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom

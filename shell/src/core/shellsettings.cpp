@@ -64,9 +64,11 @@ void ShellSettings::load()
     if (!QColor::isValidColorName(accent))
         accent = kDefaultAccent;
     const QString wallpaper = s.value(QStringLiteral("Appearance/Wallpaper"), kDefaultWallpaper).toString();
+    const bool reduceMotion = s.value(QStringLiteral("Appearance/ReduceMotion"), false).toBool();
 
+    Q_EMIT fileChanged();
     if (alignment == m_alignment && search == m_searchMode && weather == m_showWeather && pinned == m_pinned
-        && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper)
+        && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper && reduceMotion == m_reduceMotion)
         return;
     m_alignment = alignment;
     m_searchMode = search;
@@ -75,6 +77,7 @@ void ShellSettings::load()
     m_scheme = scheme;
     m_accent = accent;
     m_wallpaper = wallpaper;
+    m_reduceMotion = reduceMotion;
     Q_EMIT changed();
 }
 
@@ -100,4 +103,9 @@ void ShellSettings::unpin(const QString &storageId)
     QStringList p = m_pinned;
     if (p.removeAll(storageId))
         setPinnedApps(p);
+}
+
+QVariant ShellSettings::value(const QString &key, const QVariant &fallback) const
+{
+    return QSettings(path(), QSettings::IniFormat).value(key, fallback);
 }

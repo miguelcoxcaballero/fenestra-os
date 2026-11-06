@@ -12,7 +12,6 @@ Window {
     // Shown only once the screen is set: a layer surface binds to its output when it is created.
     visible: false
     Component.onCompleted: { ShellUtil.placeOnScreen(win, targetScreen.name); visible = true }
-    LayerShell.Window.screenConfiguration: LayerShell.Window.ScreenFromQWindow
     LayerShell.Window.scope: "fenestra-wallpaper"
     LayerShell.Window.layer: LayerShell.Window.LayerBackground
     LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
