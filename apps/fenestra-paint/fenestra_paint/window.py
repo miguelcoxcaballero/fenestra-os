@@ -423,29 +423,19 @@ class PaintWindow(Gtk.ApplicationWindow):
             self.set_secondary(rgba)
 
     def edit_colors(self):
-        dlg = Gtk.ColorDialog()
-        dlg.set_title(_("Edit colors"))
-        dlg.set_with_alpha(False)
+        from .colordialog import edit_colors
         cur = self.primary if self.active_slot == 0 else self.secondary
-        c = Gdk.RGBA()
-        c.red, c.green, c.blue, c.alpha = cur
-        dlg.choose_rgba(self, c, None, self._color_chosen)
+        return edit_colors(self, cur, self.set_active_color)
 
-    def _color_chosen(self, dlg, res):
-        try:
-            c = dlg.choose_rgba_finish(res)
-        except GLib.Error:
-            return
-        self.add_custom_color((c.red, c.green, c.blue, 1.0))
-
-    def add_custom_color(self, rgba):
+    def add_custom_color(self, rgba, activate=True):
         hx = rgba_hex(rgba)
         cols = [x for x in self.custom_colors if x != hx]
         cols.insert(0, hx)
         self.custom_colors = cols[:10]
         util.opts().set("custom_colors", self.custom_colors)
         self.ribbon.refresh_custom()
-        self.set_active_color(rgba)
+        if activate:
+            self.set_active_color(rgba)
 
     # ================================================================== text
     def show_text_bar(self, on):

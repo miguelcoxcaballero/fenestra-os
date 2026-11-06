@@ -36,6 +36,7 @@ LIGHT = {
     "tool-hover": "#f9f9f9", "tool-hover-line": "#eaeaea", "tool-press": "#f9f9f9",
     "radio-fill": "rgba(0,0,0,0.0241)", "radio-line": "rgba(0,0,0,0.4458)", "input-focus": "#ffffff",
     "dialog-line": "rgba(0,0,0,0.27)", "checker-a": "#efefef", "checker-b": "#d2d2d2",
+    "dot-empty": "#a9a9a9", "dot-line": "rgba(0,0,0,0.33)",
     "bg-tile": "#eeeeee", "bg-tile-line": "#eaeaea", "dialog-sep": "rgba(0,0,0,0.0578)",
 }
 DARK = {
@@ -54,6 +55,7 @@ DARK = {
     "tool-hover": "#3a3a3a", "tool-hover-line": "#373737", "tool-press": "#2e2e2e",
     "radio-fill": "rgba(0,0,0,0.1)", "radio-line": "rgba(255,255,255,0.5442)", "input-focus": "#1f1f1f",
     "dialog-line": "rgba(0,0,0,0.33)", "checker-a": "#a9a9a9", "checker-b": "#979797",
+    "dot-empty": "#737373", "dot-line": "rgba(0,0,0,0.3)",
     "bg-tile": "#1c1c1c", "bg-tile-line": "#373737", "dialog-sep": "rgba(0,0,0,0.1)",
 }
 

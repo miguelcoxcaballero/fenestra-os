@@ -31,7 +31,7 @@ def parse_args(argv):
                    "selection, rotate, flip, brushes, outline, fill, file-saveas")
     p.add_argument("--layers", action="store_true", help="(screenshot) show the layers panel")
     p.add_argument("--settings", action="store_true", help="(screenshot) show the settings page")
-    p.add_argument("--dialog", default=None, help="(screenshot) resize, properties, unsaved, rotate")
+    p.add_argument("--dialog", default=None, help="(screenshot) resize, properties, unsaved, rotate, colors")
     p.add_argument("--demo", action="store_true", help="(screenshot) draw a demo picture")
     p.add_argument("--text", action="store_true", help="(screenshot) leave a text box open")
     p.add_argument("--select", action="store_true", help="(screenshot) leave a moved selection")
@@ -117,6 +117,8 @@ class App(Gtk.Application):
                 dialogs.unsaved(win, lambda: None, lambda: None)
             elif d == "rotate":
                 win.rotate_custom_dialog()
+            elif d == "colors":
+                win.edit_colors()
         if o.menu:
             m = o.menu
             if m in ("file", "edit", "view", "view-zoom", "file-saveas"):
