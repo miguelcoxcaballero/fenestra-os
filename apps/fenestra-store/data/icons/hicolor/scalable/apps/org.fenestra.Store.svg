@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Fenestra Store: a four-pane window ("fenestra") receiving a download. Original artwork, GPL-3.0-or-later. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f7fe0"/>
+      <stop offset="1" stop-color="#1b4fa8"/>
+    </linearGradient>
+    <linearGradient id="pane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dbe8fa"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3fd3b4"/>
+      <stop offset="1" stop-color="#14a088"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)"/>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="2"/>
+  <g fill="url(#pane)">
+    <rect x="26" y="28" width="34" height="30" rx="6"/>
+    <rect x="66" y="28" width="34" height="30" rx="6"/>
+    <rect x="26" y="64" width="34" height="34" rx="6"/>
+    <rect x="66" y="64" width="22" height="22" rx="6" opacity="0.55"/>
+  </g>
+  <circle cx="88" cy="88" r="24" fill="url(#badge)" stroke="#1b4fa8" stroke-width="5"/>
+  <path d="M85 74h6v14l6-6 4.2 4.2L88 99.4 74.8 86.2 79 82l6 6z" fill="#ffffff"/>
+</svg>
