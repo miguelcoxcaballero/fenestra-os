@@ -79,6 +79,13 @@ main() {
 
     echo "STEP configure"
     /usr/libexec/fenestra/fenestra-post-install
+    # Fenestra session installed («Migrar a KDE»): its fenestra-shell build for this commit
+    # (boot-tested; the previous build stays if it fails). Never fails the update.
+    if rpm -q fenestra-shell >/dev/null 2>&1 && [ -x /usr/libexec/fenestra/fenestra-migrate ]; then
+        echo "STEP shell"
+        /usr/libexec/fenestra/fenestra-migrate update-shell ||
+            echo "warning: Fenestra Shell not updated (see /var/log/fenestra-migrate.log)"
+    fi
     rm -rf "$WORK/src" "$WORK/rootfs" "$WORK/src.tar.gz"
     echo "== done"
 }

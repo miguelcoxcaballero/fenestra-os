@@ -1322,6 +1322,7 @@ STRINGS = {
     'Everything is ready. Download: {0} MB': 'Todo está listo. Descarga: {0} MB',
     'Checking this device': 'Comprobando este dispositivo',
     'Checking compatibility and free space': 'Comprobando la compatibilidad y el espacio libre',
+    'Downloading the new desktop': 'Descargando el nuevo escritorio',
     'Checking that the new desktop can be installed': 'Comprobando que el nuevo escritorio se puede instalar',
     'Downloading and installing the new desktop': 'Descargando e instalando el nuevo escritorio',
     'Adding the new desktop to the sign-in screen': 'Añadiendo el nuevo escritorio a la pantalla de inicio de sesión',

@@ -10,11 +10,12 @@ from .. import util
 
 HELPER = "/usr/libexec/fenestra/fenestra-migrate"
 STATE = "/var/lib/fenestra/migrate.json"
-PHASES = ["detect", "check", "backup", "simulate", "install", "register", "boottest", "available"]
+PHASES = ["detect", "check", "backup", "download", "simulate", "install", "register", "boottest", "available"]
 PHASE_TEXT = {
     "detect": "Checking this device",
     "check": "Checking compatibility and free space",
     "backup": "Backing up system settings",
+    "download": "Downloading the new desktop",
     "simulate": "Checking that the new desktop can be installed",
     "install": "Downloading and installing the new desktop",
     "register": "Adding the new desktop to the sign-in screen",
