@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Runs at login (autostart). First: what the login-screen guard changed (every login).
+# Then, after a Fenestra release upgrade finished at boot, redo the per-user parts once: extensions on, Explorer layer for the new Nautilus, health check,
+# and a notification with the result.
+set -u
+# Login-screen safety net (fenestra-login-guard): turn off, for this user, the lock-screen
+# extensions it could not validate, and say once what it changed on the login screen.
+guard_state=/var/lib/fenestra/login-guard.json
+guard_done="$HOME/.local/state/fenestra/login-guard-seen"
+if [ -r "$guard_state" ]; then
+    mkdir -p "$(dirname "$guard_done")"; touch "$guard_done"
+    python3 - "$guard_state" "$guard_done" "$(id -un)" <<'PY' | while IFS=$'\t' read -r kind uuid reason; do
+import json, sys
+st, seen_f, me = json.load(open(sys.argv[1])), sys.argv[2], sys.argv[3]
+seen = set(open(seen_f).read().split())
+for d in st.get('disabled', []):
+    key = f"{d['uuid']}:{d.get('time')}"
+    if key in seen:
+        continue
+    if d.get('where') == f'user:{me}' and d.get('pending_user'):
+        print(f"user\t{d['uuid']}\t{d.get('reason', '')}")
+    elif d.get('where') == 'greeter':
+        print(f"greeter\t{d['uuid']}\t{d.get('reason', '')}")
+    with open(seen_f, 'a') as f:
+        f.write(key + '\n')
+PY
+        [ "$kind" = user ] && gnome-extensions disable "$uuid" 2>/dev/null
+        notify-send -a "Fenestra" -i dialog-warning "Fenestra turned off $uuid" \
+            "$reason. The standard sign-in stays available. To turn it back on: sudo /usr/libexec/fenestra/fenestra-login-guard revert $uuid" || true
+    done
+fi
+S=/var/lib/fenestra/release-upgrade.json
+[ -r "$S" ] || exit 0
+status=$(python3 -c 'import json;print(json.load(open("/var/lib/fenestra/release-upgrade.json")).get("status",""))' 2>/dev/null)
+case "$status" in done|post-failed) ;; *) exit 0 ;; esac
+stamp="$HOME/.local/state/fenestra/release-upgrade.done"
+started=$(python3 -c 'import json;print(json.load(open("/var/lib/fenestra/release-upgrade.json")).get("started",""))')
+[ -f "$stamp" ] && [ "$(cat "$stamp")" = "$started" ] && exit 0
+mkdir -p "$(dirname "$stamp")"
+gsettings set org.gnome.shell disable-user-extensions false
+# The desktop's extensions (Fenestra's and the ones it ships) declare the GNOME versions they were checked on. On a newer GNOME
+# that some of them don't declare yet, keep version validation off so the desktop keeps
+# its Fenestra look, and say so (a Fenestra update then brings the checked versions).
+shell=$(gnome-shell --version 2>/dev/null | grep -o '[0-9]\+' | head -1)
+undeclared=$(python3 - "$shell" "$(gsettings get org.gnome.shell enabled-extensions)" <<'PY'
+import ast, glob, json, sys
+v = sys.argv[1]
+try:
+    enabled = set(ast.literal_eval(sys.argv[2].replace('@as ', '')))
+except (ValueError, SyntaxError):
+    enabled = set()
+bad = []
+for m in glob.glob('/usr/share/gnome-shell/extensions/*/metadata.json') + \
+         glob.glob(__import__('os').path.expanduser('~/.local/share/gnome-shell/extensions/*/metadata.json')):
+    try:
+        d = json.load(open(m))
+    except (OSError, ValueError):
+        continue
+    if d.get('uuid') in enabled and v and v not in [str(x).split('.')[0] for x in d.get('shell-version', [])]:
+        bad.append(d['uuid'])
+print(' '.join(sorted(set(bad))))
+PY
+)
+if [ -n "$undeclared" ]; then
+    gsettings set org.gnome.shell disable-extension-version-validation true
+else
+    gsettings set org.gnome.shell disable-extension-version-validation false
+fi
+rm -f "/run/user/$(id -u)/gnome-shell-disable-extensions"
+# GTK >= 4.20 follows the desktop color scheme; the old key only makes GTK 4.24 warn
+# and pins GTK 4 apps to dark (GTK 3 keeps it: no color-scheme support there).
+sed -i '/^gtk-application-prefer-dark-theme=/d' "$HOME/.config/gtk-4.0/settings.ini" 2>/dev/null || true
+find_tool() { for d in "$HOME/Projects/fenestra-os/extras/fedora-upgrade" /usr/share/fenestra/upgrade; do [ -f "$d/$1" ] && { echo "$d/$1"; return; }; done; }
+r=$(find_tool nautilus-user-refresh.sh); [ -n "$r" ] && bash "$r" >/dev/null 2>&1
+c=$(find_tool check.sh)
+fails=0
+if [ -n "$c" ]; then
+    out=$(bash "$c" 2>&1); fails=$(printf '%s\n' "$out" | grep -c "FAIL")
+    printf '%s\n' "$out" > "$HOME/.local/state/fenestra/release-upgrade-check.txt"
+fi
+msg=$(python3 -c 'import json;print(json.load(open("/var/lib/fenestra/release-upgrade.json")).get("message",""))')
+ver=$(rpm -E %fedora)
+[ -n "$undeclared" ] && msg="${msg:+$msg }$(echo $undeclared | wc -w) desktop extensions have not been checked on GNOME $shell yet; they stay on. Fenestra Update brings checked versions."
+if [ "$status" = done ] && [ "$fails" = 0 ] && [ -z "$undeclared" ]; then
+    notify-send -a "Fenestra Update" -i fs-arrow-sync-symbolic "Fenestra is up to date" "Your PC now runs Fedora $ver. Everything checked out." || true
+else
+    notify-send -a "Fenestra Update" -u critical "Fedora $ver installed, with problems" "${msg:-$fails checks failed.} Open Settings › Fenestra Update for details." || true
+fi
+echo "$started" > "$stamp"

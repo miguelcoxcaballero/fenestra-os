@@ -1,12 +1,21 @@
 #!/usr/bin/bash
-# Launch Nautilus with Fenestra's Explorer layer (UI overlay + patched sidebar
-# icon names) when they match the installed Nautilus; otherwise run stock Nautilus.
+# Launch Nautilus with Fenestra's Explorer layer: the patched copy made by
+# fenestra-patch-nautilus plus the UI overlay for its major version
+# (/usr/share/fenestra/nautilus/overlay/<major>/). Runs stock Nautilus whenever the
+# patched copy is not derived from the installed /usr/bin/nautilus (e.g. right after
+# an update, before fenestra-patch-nautilus.service ran) or Fenestra has no overlay
+# for that Nautilus version, so Files always starts.
+STOCK=/usr/bin/nautilus
+PATCHED=/usr/libexec/fenestra/nautilus
 STAMP=/usr/libexec/fenestra/nautilus.stamp
-OVERLAY=/usr/share/fenestra/nautilus/overlay
-want=$(cat /usr/share/fenestra/nautilus/VERSION 2>/dev/null)
-have=$(python3 -c 'import json;print(json.load(open("'$STAMP'"))["version"])' 2>/dev/null)
-if [ -x /usr/libexec/fenestra/nautilus ] && [ -n "$want" ] && [ "${have%%.*}" = "${want%%.*}" ]; then
-    export G_RESOURCE_OVERLAYS="/org/gnome/nautilus=$OVERLAY${G_RESOURCE_OVERLAYS:+:$G_RESOURCE_OVERLAYS}"
-    exec /usr/libexec/fenestra/nautilus "$@"
+OVERLAYS=/usr/share/fenestra/nautilus/overlay
+
+field() { sed -n "s/.*\"$1\": *\"\([^\"]*\)\".*/\1/p" "$STAMP" 2>/dev/null; }
+source=$(field source)
+major=$(field major)
+if [ -x "$PATCHED" ] && [ -n "$source" ] && [ -n "$major" ] && [ -d "$OVERLAYS/$major" ] &&
+   [ "$(sha256sum "$STOCK" 2>/dev/null | cut -d' ' -f1)" = "$source" ]; then
+    export G_RESOURCE_OVERLAYS="/org/gnome/nautilus=$OVERLAYS/$major${G_RESOURCE_OVERLAYS:+:$G_RESOURCE_OVERLAYS}"
+    exec "$PATCHED" "$@"
 fi
-exec /usr/bin/nautilus "$@"
+exec "$STOCK" "$@"

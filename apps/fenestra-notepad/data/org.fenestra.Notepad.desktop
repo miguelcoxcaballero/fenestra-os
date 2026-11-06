@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Name=Notepad
+Name[es]=Bloc de notas
+GenericName=Text Editor
+GenericName[es]=Editor de texto
+Comment=Write and edit plain text files
+Comment[es]=Escribir y editar archivos de texto sin formato
+Exec=fenestra-notepad %F
+Icon=org.fenestra.Notepad
+Terminal=false
+StartupNotify=true
+StartupWMClass=org.fenestra.Notepad
+Categories=GTK;Utility;TextEditor;
+Keywords=notepad;text;editor;plain text;txt;notes;markdown;log;bloc de notas;texto;editor de texto;notas;
+MimeType=text/plain;text/markdown;text/x-markdown;text/x-log;text/csv;text/tab-separated-values;text/x-python;text/x-python3;application/x-python;application/json;application/xml;text/xml;text/html;text/css;text/javascript;application/javascript;application/x-shellscript;text/x-shellscript;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-java;text/x-rust;text/x-go;text/x-makefile;text/x-cmake;text/x-sql;application/sql;text/x-ini;text/x-desktop;application/x-desktop;application/x-yaml;text/x-yaml;application/toml;text/x-toml;text/x-readme;text/x-changelog;text/x-copying;text/x-install;text/x-authors;text/x-patch;text/x-diff;application/x-subrip;text/x-tex;text/x-lua;text/x-perl;application/x-perl;text/x-ruby;application/x-ruby;text/x-php;application/x-php;
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=New window
+Name[es]=Nueva ventana
+Exec=fenestra-notepad --new-window

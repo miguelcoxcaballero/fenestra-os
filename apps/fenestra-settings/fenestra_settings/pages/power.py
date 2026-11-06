@@ -135,7 +135,8 @@ class PowerPage(Page):
                 gb.add(SettingRow(_("Battery saver"),
                                   _("Turn battery saver on automatically when battery is low"),
                                   "fs-battery-10-symbolic",
-                                  control=gsetting_toggle(PWR, "power-saver-profile-on-low-battery")))
+                                  control=gsetting_toggle(PWR, "power-saver-profile-on-low-battery"),
+                                  key="battery-saver"))
         g2 = self.group(_("Related settings"))
         if util.has_key(PWR, "power-button-action"):
             dd = Dropdown([("suspend", _("Sleep")), ("hibernate", _("Hibernate")),

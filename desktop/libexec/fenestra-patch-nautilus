@@ -5,19 +5,24 @@ Nautilus hard-codes the icon names of its sidebar entries. Fenestra wants the
 coloured Windows-11-style place icons there, so this tool copies /usr/bin/nautilus
 to /usr/libexec/fenestra/nautilus and swaps those icon-name strings for aliases
 that exist only in the Fenestra icon theme (same length or shorter, NUL padded).
-It is re-run at boot whenever Nautilus changes (fenestra-patch-nautilus.service).
+It is re-run at boot whenever Nautilus changes (fenestra-patch-nautilus.service),
+and per user by extras/fedora-upgrade/nautilus-user-refresh.sh (--dest).
+
+The stamp (DEST/nautilus.stamp, one-line JSON) records the SHA-256 of the source
+binary and its major version; fenestra-nautilus only runs the patched copy (with
+the UI overlay for that major version) while the stamp matches /usr/bin/nautilus.
+
+    fenestra-patch-nautilus [--src /usr/bin/nautilus] [--dest DIR] [--force]
 """
+import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 
-SRC = '/usr/bin/nautilus'
-DEST_DIR = '/usr/libexec/fenestra'
-DEST = os.path.join(DEST_DIR, 'nautilus')
-STAMP = os.path.join(DEST_DIR, 'nautilus.stamp')
 TABLE = {
     b'user-trash-symbolic': b'twne', b'user-trash-full-symbolic': b'twnf',
     b'document-open-recent-symbolic': b'rwin', b'network-computer-symbolic': b'network-drvwin',
@@ -34,35 +39,71 @@ def sha(path):
     return hashlib.sha256(open(path, 'rb').read()).hexdigest()
 
 
-def main():
-    if not os.path.exists(SRC):
-        return 0
-    digest = sha(SRC)
+def nautilus_version(src):
+    """Full version of the Nautilus binary at src ('' if unknown)."""
     try:
-        if json.load(open(STAMP)).get('source') == digest and os.path.exists(DEST):
-            return 0
-    except (OSError, ValueError):
+        out = subprocess.run(['rpm', '-qf', '--qf', '%{VERSION}', src], capture_output=True, text=True, timeout=30)
+        if out.returncode == 0 and re.match(r'^\d+(\.\w+)*$', out.stdout.strip()):
+            return out.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
         pass
-    data = bytearray(open(SRC, 'rb').read())
-    count = 0
+    try:  # handled locally by GApplication: prints "GNOME nautilus 49.6" and exits
+        out = subprocess.run([src, '--version'], capture_output=True, text=True, timeout=30,
+                             env={**os.environ, 'DBUS_SESSION_BUS_ADDRESS': 'disabled:'})
+        m = re.search(r'(\d+(?:\.\w+)*)', out.stdout)
+        return m.group(1) if m else ''
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+def patch(data):
+    data = bytearray(data)
+    found = {}
     for old, new in TABLE.items():
         needle = b'\0' + old + b'\0'
         start = 0
+        found[old.decode()] = 0
         while (i := data.find(needle, start)) != -1:
             data[i + 1:i + 1 + len(old)] = new + b'\0' * (len(old) - len(new))
-            count += 1
+            found[old.decode()] += 1
             start = i + len(needle)
-    os.makedirs(DEST_DIR, exist_ok=True)
-    tmp = DEST + '.new'
-    open(tmp, 'wb').write(data)
-    shutil.copymode(SRC, tmp)
-    os.replace(tmp, DEST)
+    return bytes(data), found
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    ap.add_argument('--src', default='/usr/bin/nautilus')
+    ap.add_argument('--dest', default='/usr/libexec/fenestra', help='directory for nautilus + nautilus.stamp')
+    ap.add_argument('--force', action='store_true', help='re-create even if the stamp matches')
+    args = ap.parse_args()
+    dest = os.path.join(args.dest, 'nautilus')
+    stamp = os.path.join(args.dest, 'nautilus.stamp')
+    if not os.path.exists(args.src):
+        return 0
+    digest = sha(args.src)
     try:
-        version = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}', 'nautilus'], capture_output=True, text=True).stdout
-    except OSError:
-        version = ''
-    json.dump({'source': digest, 'replacements': count, 'version': version}, open(STAMP, 'w'))
-    print(f'fenestra-patch-nautilus: {count} replacements (nautilus {version})')
+        old = json.load(open(stamp))
+        if not args.force and old.get('source') == digest and old.get('major') and os.path.exists(dest):
+            return 0
+    except (OSError, ValueError):
+        pass
+    data, found = patch(open(args.src, 'rb').read())
+    os.makedirs(args.dest, exist_ok=True)
+    tmp = dest + '.new'
+    open(tmp, 'wb').write(data)
+    shutil.copymode(args.src, tmp)
+    os.replace(tmp, dest)
+    version = nautilus_version(args.src)
+    missing = sorted(k for k, n in found.items() if not n)
+    info = {'source': digest, 'version': version, 'major': version.split('.')[0] if version else '',
+            'replacements': sum(found.values()), 'missing': missing}
+    tmp = stamp + '.new'
+    with open(tmp, 'w') as f:
+        json.dump(info, f)
+        f.write('\n')
+    os.replace(tmp, stamp)
+    print(f'fenestra-patch-nautilus: {info["replacements"]} replacements (nautilus {version or "?"})'
+          + (f'; icon names not found: {", ".join(missing)}' if missing else ''))
     return 0
 
 

@@ -1,0 +1,1 @@
+{"uuid":"lockqa@local","name":"Lock QA","description":"Fenestra lock screen probe","shell-version":["49","50","51"],"session-modes":["user","unlock-dialog"]}

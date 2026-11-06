@@ -117,32 +117,36 @@ class WindowBehaviorPage(Page):
         fm = gsetting_dropdown(WM, "focus-mode", [("click", _("Click to focus")), ("sloppy", _("Focus on hover")),
                                                    ("mouse", _("Focus follows mouse"))])
         if fm:
-            g.add(SettingRow(_("Activate windows"), None, "fs-cursor-symbolic", control=fm))
+            g.add(SettingRow(_("Activate windows"), None, "fs-cursor-symbolic", control=fm, key="focus-mode"))
         ar = gsetting_toggle(WM, "auto-raise")
         if ar:
-            g.add(SettingRow(_("Raise windows when they are focused"), None, "fs-window-symbolic", control=ar))
+            g.add(SettingRow(_("Raise windows when they are focused"), None, "fs-window-symbolic", control=ar,
+                             key="auto-raise"))
         g2 = self.group(_("Title bars"))
         opts = [(k, _(v)) for k, v in self.TITLEBAR]
-        for key, title in (("action-double-click-titlebar", _("Double-click")),
-                           ("action-middle-click-titlebar", _("Middle-click")),
-                           ("action-right-click-titlebar", _("Secondary click"))):
+        for key, rkey, title in (("action-double-click-titlebar", "titlebar-double", _("Double-click")),
+                                 ("action-middle-click-titlebar", "titlebar-middle", _("Middle-click")),
+                                 ("action-right-click-titlebar", "titlebar-right", _("Secondary click"))):
             dd = gsetting_dropdown(WM, key, opts)
             if dd:
-                g2.add(SettingRow(title, None, "fs-window-symbolic", control=dd))
+                g2.add(SettingRow(title, None, "fs-window-symbolic", control=dd, key=rkey))
+        # button-layout is also read by GTK (client-side decorations), so it works in both sessions
         bl = gsetting_dropdown(WM, "button-layout", [(k, _(v)) for k, v in self.LAYOUTS])
         if bl:
-            g2.add(SettingRow(_("Title bar buttons"), None, "fs-window-symbolic", control=bl))
+            g2.add(SettingRow(_("Title bar buttons"), None, "fs-window-symbolic", control=bl, key="button-layout"))
         g3 = self.group(_("Windows"))
-        for schema, key, title in ((MUTTER, "center-new-windows", _("Center new windows")),
-                                   (MUTTER, "attach-modal-dialogs", _("Attach dialogs to their parent window")),
-                                   (WM, "resize-with-right-button", _("Resize windows with the secondary button"))):
+        for schema, key, rkey, title in (
+                (MUTTER, "center-new-windows", "center-new", _("Center new windows")),
+                (MUTTER, "attach-modal-dialogs", "attach-modal", _("Attach dialogs to their parent window")),
+                (WM, "resize-with-right-button", "resize-right", _("Resize windows with the secondary button"))):
             t = gsetting_toggle(schema, key)
             if t:
-                g3.add(SettingRow(title, None, "fs-window-symbolic", control=t))
+                g3.add(SettingRow(title, None, "fs-window-symbolic", control=t, key=rkey))
         mod = gsetting_dropdown(WM, "mouse-button-modifier", [("<Super>", "Super"), ("<Alt>", "Alt"),
                                                                ("", _("Disabled"))])
         if mod:
-            g3.add(SettingRow(_("Key to move windows with the mouse"), None, "fs-keyboard-symbolic", control=mod))
+            g3.add(SettingRow(_("Key to move windows with the mouse"), None, "fs-keyboard-symbolic", control=mod,
+                              key="move-modifier"))
 
 
 @register
@@ -296,7 +300,7 @@ class OnlineAccountsPage(Page):
     def build(self, box):
         g = self.group()
         g.add(SettingRow(_("Add an account"), _("Connect mail, calendar, contacts and files"), "fs-people-symbolic",
-                         control=button(_("Add account"), self._add, accent=True)))
+                         control=button(_("Add account"), self._add, accent=True), key="add-account"))
         self.list = self.group(_("Your accounts"))
         self.refresh()
 
@@ -341,7 +345,7 @@ class SharingPage(Page):
         g.add(SettingRow(_("Device name"), system_info.hostname(), "fs-laptop-symbolic", chevron=True,
                          on_click=lambda: self.go("about", "rename")))
         self.rdp = SettingRow(_("Remote desktop"), _("Let other devices control this desktop with RDP"),
-                              "fs-desktop-mac-symbolic", control=spinner())
+                              "fs-desktop-mac-symbolic", control=spinner(), key="remote-desktop")
         g.add(self.rdp)
         self.files = SettingRow(_("File sharing"), _("Share your Public folder on the local network"),
                                 "fs-folder-symbolic", control=spinner())
@@ -353,7 +357,8 @@ class SharingPage(Page):
             self.refresh()
 
     def refresh(self):
-        linux.remote_desktop_status(self._rdp)
+        if "remote-desktop" not in self.hidden_keys():
+            linux.remote_desktop_status(self._rdp)
         linux.file_sharing_status(self._fs)
 
     def _rdp(self, st):

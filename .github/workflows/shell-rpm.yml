@@ -1,0 +1,105 @@
+name: shell-rpm
+# The fenestra-shell RPM (packaging/fenestra-shell.spec) for every commit of main, built in a
+# Fedora container and published on the rolling release «fenestra-shell-latest» together with
+# index.json and SHA256SUMS (packaging/rpm-index.py). «Migrar a KDE» (migrator/fenestra-migrate)
+# downloads the build of the installed Fenestra commit from there (else the newest one for the
+# same Fedora version), verifies its SHA-256 and installs it with dnf. Other branches and pull
+# requests only build it (artifact); nothing is published from them.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ['packaging/**', 'shell/**', 'session/**', 'kwin/**', 'lnf/**', 'migrator/**', '.github/workflows/shell-rpm.yml']
+  workflow_dispatch:
+
+concurrency:
+  # Publishing edits one release: one run at a time, a running one is never cancelled (GitHub
+  # keeps only the newest waiting run; a commit skipped that way gets the next build).
+  group: shell-rpm-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TAG: fenestra-shell-latest
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fedora: ['45']
+    container:
+      image: registry.fedoraproject.org/fedora:${{ matrix.fedora }}
+    steps:
+      - name: Tools
+        run: dnf -y install --setopt=install_weak_deps=False git rpm-build python3
+      - uses: actions/checkout@v4
+      - name: Build dependencies
+        run: |
+          rpmspec -q --buildrequires packaging/fenestra-shell.spec > /tmp/builddeps
+          xargs -a /tmp/builddeps dnf -y install --setopt=install_weak_deps=False
+      - name: Migrator syntax
+        run: python3 -m py_compile migrator/fenestra-migrate packaging/rpm-index.py
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          FENESTRA_COMMIT=$GITHUB_SHA FENESTRA_COMMIT_DATE=$(git log -1 --format=%cI "$GITHUB_SHA") \
+              bash packaging/build-rpm.sh "$PWD/out"
+          rpm -qip out/fenestra-shell-[0-9]*.rpm
+          rpm -qlp out/fenestra-shell-[0-9]*.rpm | grep -q '^/usr/bin/fenestra-shell$'
+          # «Migrar a KDE» ships in the Fenestra overlay, never in this package.
+          if rpm -qlp out/fenestra-shell-[0-9]*.rpm | grep fenestra-migrate; then exit 1; fi
+          mkdir dist && cp out/fenestra-shell-[0-9]*.rpm dist/
+          git log -1 --format=%cI "$GITHUB_SHA" > dist/commit-date
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fenestra-shell-f${{ matrix.fedora }}
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      max-parallel: 1
+      matrix:
+        fedora: ['45']
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: packaging
+      - uses: actions/download-artifact@v4
+        with:
+          name: fenestra-shell-f${{ matrix.fedora }}
+          path: dist
+      - name: Rolling release
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 ||
+              gh release create "$TAG" --prerelease --latest=false --target "$GITHUB_SHA" \
+                  --title "Fenestra Shell (rolling builds)" \
+                  --notes "fenestra-shell RPMs for the latest commits of main, used by Settings › Fenestra Update › «Migrar a KDE». Files: index.json, SHA256SUMS, fenestra-shell-*.rpm. Built by .github/workflows/shell-rpm.yml."
+      - name: Index
+        run: |
+          mkdir -p old pub
+          gh release download "$TAG" -p index.json -D old --clobber || echo '{"builds": []}' > old/index.json
+          rpm=$(ls dist/fenestra-shell-[0-9]*.rpm)
+          python3 packaging/rpm-index.py old/index.json pub "$rpm" --commit "$GITHUB_SHA" \
+              --date "$(cat dist/commit-date)" --fedora ${{ matrix.fedora }} --keep 10
+      - name: Upload
+        run: |
+          # The RPM first, the index last: the index never lists a file that is not there yet.
+          gh release upload "$TAG" dist/fenestra-shell-[0-9]*.rpm --clobber
+          gh release upload "$TAG" pub/SHA256SUMS --clobber
+          gh release upload "$TAG" pub/index.json --clobber
+          while read -r f; do
+              if [ -n "$f" ]; then gh release delete-asset "$TAG" "$f" -y || echo "could not delete $f"; fi
+          done < pub/pruned
+          gh release view "$TAG" --json assets --jq '.assets[].name'

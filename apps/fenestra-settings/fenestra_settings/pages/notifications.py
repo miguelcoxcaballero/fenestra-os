@@ -4,6 +4,7 @@ from __future__ import annotations
 from gi.repository import Gio, GLib, Gtk
 
 from .. import util
+from ..backends import notifications as notif
 from ..i18n import _
 from ..widgets import SettingRow, ToggleSwitch, button, icon, label, not_available_row, toast
 from .base import Page, register
@@ -21,6 +22,14 @@ def _app_settings(app_id):
     return Gio.Settings.new_with_path(APP_SCHEMA, path)
 
 
+def _dnd_toggle():
+    """Do not disturb switch on the session's notification backend, following outside changes
+    (the shell's quick settings, other apps)."""
+    t = ToggleSwitch(notif.dnd(), notif.set_dnd)
+    notif.connect_dnd(lambda: t.set_active(notif.dnd()))
+    return t
+
+
 @register
 class NotificationsPage(Page):
     id = "notifications"
@@ -36,12 +45,13 @@ class NotificationsPage(Page):
 
     def build(self, box):
         g = self.group()
-        if not util.has_key(NOTIF, "show-banners"):
+        if not notif.available():
             g.add(not_available_row(_("Notifications")))
             return
-        # In the reference UI "Notifications" on/off is the master switch; on GNOME the closest
-        # equivalent is banners (do not disturb is the inverse of show-banners).
-        dnd = gsetting_toggle(NOTIF, "show-banners", invert=True)
+        # In the reference UI "Notifications" on/off is the master switch; the closest
+        # equivalent is do not disturb (GNOME: the inverse of show-banners; Fenestra Shell:
+        # shell.conf [Notifications] DoNotDisturb).
+        dnd = _dnd_toggle()
         r = SettingRow(_("Do not disturb"),
                        _("Notifications will be sent directly to the notification center"),
                        "fs-alert-symbolic", control=dnd, key="dnd")
@@ -53,12 +63,14 @@ class NotificationsPage(Page):
                             control=lt, key="lock")
             self.remember("lock", r2)
             g.add(r2)
-        g.add(SettingRow(_("Turn on do not disturb automatically"), _("Focus sessions and schedules"),
-                         "fs-timer-symbolic", chevron=True, on_click=lambda: self.go("focus")))
+        self.nav_row(g, "focus", _("Turn on do not disturb automatically"), _("Focus sessions and schedules"),
+                     "fs-timer-symbolic", key="focus-link")
 
         apps_group = self.group(_("Notifications from apps and other senders"))
         apps_group.key = "apps"
         self._rows["apps"] = apps_group
+        if "apps" in self.hidden_keys():
+            return  # the per-app list belonged to GNOME Shell
         apps = util.gget(NOTIF, "application-children", []) or []
         infos = {}
         for info in Gio.AppInfo.get_all():
@@ -117,7 +129,7 @@ class FocusPage(Page):
         self._timer = 0
         g = self.group(_("Focus settings"))
         g.set_margin_top(18)
-        dnd = gsetting_toggle(NOTIF, "show-banners", invert=True)
+        dnd = _dnd_toggle() if notif.available() else None
         if dnd:
             g.add(SettingRow(_("Turn on do not disturb"), _("Silence notifications during a focus session"),
                              "fs-alert-symbolic", control=dnd))
@@ -132,11 +144,11 @@ class FocusPage(Page):
         if self._timer:
             GLib.source_remove(self._timer)
             self._timer = 0
-            util.gset(NOTIF, "show-banners", True)
+            notif.set_dnd(False)
             self.start_btn.set_label(_("Start focus session"))
             self.time_lbl.set_label(str(self.focus_minutes))
             return
-        util.gset(NOTIF, "show-banners", False)
+        notif.set_dnd(True)
         self.remaining = self.focus_minutes * 60
         self.start_btn.set_label(_("Stop session"))
         self._timer = GLib.timeout_add_seconds(1, self._tick)
@@ -148,7 +160,7 @@ class FocusPage(Page):
         self.time_lbl.set_label(f"{m:02d}:{s:02d}")
         if self.remaining <= 0:
             self._timer = 0
-            util.gset(NOTIF, "show-banners", True)
+            notif.set_dnd(False)
             self.start_btn.set_label(_("Start focus session"))
             self.time_lbl.set_label(str(self.focus_minutes))
             return False

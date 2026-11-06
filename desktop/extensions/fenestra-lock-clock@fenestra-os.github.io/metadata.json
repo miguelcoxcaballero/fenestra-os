@@ -4,7 +4,8 @@
   "description": "Lock screen clock and date in the Windows 11 layout.",
   "shell-version": [
     "49",
-    "50"
+    "50",
+    "51"
   ],
   "session-modes": [
     "user",

@@ -18,9 +18,45 @@ const CLOSE_MS = 120;
 const SLIDE = 96;
 const GAP = 12;
 
+// Windows 11: every taskbar flyout's visible edge is 12 px above the taskbar.
+export const FLYOUT_GAP = 12;
+
+// Merge CSS declarations into an actor's inline style (keeps the others).
+export function mergeStyle(actor, props) {
+    const decls = new Map();
+    for (const part of (actor.style ?? '').split(';')) {
+        const i = part.indexOf(':');
+        if (i > 0)
+            decls.set(part.slice(0, i).trim(), part.slice(i + 1).trim());
+    }
+    for (const [k, v] of Object.entries(props))
+        decls.set(k, v);
+    const style = [...decls].map(([k, v]) => `${k}: ${v};`).join(' ');
+    if (style !== (actor.style ?? ''))
+        actor.style = style || null;
+}
+
+// No arrow and no arrow rise (Windows flyouts have none). The final position
+// (bottom edge FLYOUT_GAP px above the taskbar) is set for every taskbar
+// flyout by fenestra-tray's flyoutGap.js, after GNOME's own placement.
+export function placeFlyout(boxPointer) {
+    mergeStyle(boxPointer, {'-arrow-rise': '0px', '-arrow-base': '0px', '-boxpointer-gap': '0px'});
+}
+
 function surfaceOf(actor) {
     // BoxPointer -> bin -> .popup-menu-content
     return actor.bin?.get_child?.() ?? actor.get_first_child?.()?.get_first_child?.() ?? null;
+}
+
+// BoxPointer input muting: booleans up to GNOME 50, Clutter actions with .enabled from 51.
+function setMuted(actor, muted) {
+    for (const key of ['_muteKeys', '_muteInput']) {
+        const v = actor[key];
+        if (v && typeof v === 'object' && 'enabled' in v)
+            v.enabled = muted;
+        else
+            actor[key] = muted;
+    }
 }
 
 export function installWindowsPopupMotion(actor) {
@@ -68,6 +104,7 @@ export function installWindowsPopupMotion(actor) {
 
     actor.open = function (animate, onComplete) {
         ensureBlur();
+        placeFlyout(this);
         // Light mode: high base luminance (Windows light acrylic), dark: low.
         surfaceOf(this)?.get_effect('windows-acrylic-luminosity')?.setMap(...acrylicMap());
         // The background blur/luminosity must read the real screen: no
@@ -79,8 +116,7 @@ export function installWindowsPopupMotion(actor) {
         this.remove_all_transitions();
         reset();
         const ms = duration(animate, OPEN_MS);
-        this._muteKeys = false;
-        this._muteInput = false;
+        setMuted(this, false);
         if (ms) {
             this.translation_y = SLIDE * scale();
             startClip();
@@ -105,8 +141,7 @@ export function installWindowsPopupMotion(actor) {
         if (!this.visible)
             return;
         this.remove_all_transitions();
-        this._muteInput = true;
-        this._muteKeys = true;
+        setMuted(this, true);
         const ms = duration(animate, CLOSE_MS);
         if (!ms) {
             this.hide();

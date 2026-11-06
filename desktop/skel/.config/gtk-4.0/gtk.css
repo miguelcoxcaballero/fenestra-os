@@ -1,6 +1,7 @@
 /* Windows UI start */
 @import url("/usr/share/themes/Fenestra-Dark/gtk-4.0/gtk-auto.css");
 @import url("fenestra-accent.css");
+@import url("fenestra-caption-buttons.css");
 /* Windows UI end */
 
 /* Nautilus sidebar: keep custom colored icons vivid */
@@ -62,21 +63,8 @@ placessidebar row image {
 
 
 /* Windows Explorer and caption controls */
-/* Windows 11 caption controls. GTK owns all minimize/maximize/restore actions. */
-windowcontrols { border-spacing: 0; margin: 0; }
-windowcontrols > button,
-headerbar button.titlebutton {
- min-width: 46px; min-height: 32px; padding: 0; margin: 0;
- border: none; border-radius: 0; background-image: none; background-color: transparent; box-shadow: none;
-}
-windowcontrols > button > image,
-headerbar button.titlebutton > image { min-width: 16px; min-height: 16px; -gtk-icon-size: 16px; padding: 0; margin: 0; }
-windowcontrols > button:not(.close):hover,
-headerbar button.titlebutton:not(.close):hover { background-color: rgba(255,255,255,0.08); }
-windowcontrols > button.close:hover,
-headerbar button.titlebutton.close:hover { background-color: #c42b1c; color: white; }
-windowcontrols > button.close:active,
-headerbar button.titlebutton.close:active { background-color: #b3261e; color: white; }
+/* Caption buttons: fenestra-caption-buttons.css (imported above), a copy of
+   /usr/share/fenestra/gtk-4.0/caption-buttons.css kept current by fenestra-tray at login. */
 /* Native GTK menus retain keyboard navigation and accessible labels. */
 popover.menu > contents { background: rgba(44,44,44,0.96); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; padding: 4px; }
 popover.menu modelbutton { min-height: 30px; padding: 2px 10px; margin: 1px 0; border-radius: 4px; }
@@ -95,47 +83,6 @@ menu separator { min-height: 1px; margin: 4px 0; background-color: rgba(255,255,
 .desktopmenu .windows-menu-action image { margin: 0; }
 
 
-
-/* Original Windows caption glyphs, fixed Windows proportions */
-windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { min-width:46px; min-height:32px; padding:0; margin:0; border:0; border-radius:0; box-shadow:none; background-color:transparent; background-repeat:no-repeat; background-position:center; background-size:10px 10px; }
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity:1; }
-windowcontrols > button.minimize, headerbar button.titlebutton.minimize, .titlebar button.titlebutton.minimize { background-image:none; }
-windowcontrols > button.maximize, headerbar button.titlebutton.maximize, .titlebar button.titlebutton.maximize { background-image:none; }
-windowcontrols > button.close, headerbar button.titlebutton.close, .titlebar button.titlebutton.close { background-image:none; }
-window.maximized windowcontrols > button.maximize, window.maximized headerbar button.titlebutton.maximize, .maximized .titlebar button.titlebutton.maximize { background-image:none; }
-windowcontrols > button:hover, headerbar button.titlebutton:hover, .titlebar button.titlebutton:hover { background-color:rgba(255,255,255,0.08); }
-windowcontrols > button.close:hover, headerbar button.titlebutton.close:hover, .titlebar button.titlebutton.close:hover { background-color:#c42b1c; }
-windowcontrols > button.close:active, headerbar button.titlebutton.close:active, .titlebar button.titlebutton.close:active { background-color:#a51c28; }
-
-/* Caption hover must not inherit circular button styling from Fluent/libadwaita. */
-window windowcontrols > button.titlebutton,
-window windowcontrols > button.close,
-window windowcontrols > button.minimize,
-window windowcontrols > button.maximize,
-window headerbar button.titlebutton,
-window .titlebar button.titlebutton,
-window windowcontrols > button:hover,
-window windowcontrols > button:active,
-window headerbar button.titlebutton:hover,
-window headerbar button.titlebutton:active,
-window .titlebar button.titlebutton:hover,
-window .titlebar button.titlebutton:active {
- border-radius: 0; box-shadow: none; border: 0;
-}
-window windowcontrols > button.close:hover,
-window headerbar button.titlebutton.close:hover,
-window .titlebar button.titlebutton.close:hover { background-color: #c42b1c; }
-window windowcontrols > button.close:active,
-window headerbar button.titlebutton.close:active,
-window .titlebar button.titlebutton.close:active { background-color: #a51c28; }
-
-/* One native symbolic glyph per control, including Chromium/Electron. */
-windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { background-image: none; }
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity: 1; min-width: 16px; min-height: 16px; -gtk-icon-size: 16px; }
-
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image {
- background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; margin: 0;
-}
 
 /* Chromium measures the header padding before scaling caption buttons. */
 window.background.csd headerbar.header-bar.titlebar {
@@ -226,8 +173,11 @@ popover.menu modelbutton > image { margin-right: 10px; -gtk-icon-size: 16px; }
 
 .win11-explorer .win11-tabs .tab-close-button { min-width: 20px; min-height: 20px; padding: 0; margin: 0 4px; }
 .win11-explorer .win11-tabs .tab-close-button image { -gtk-icon-size: 10px; }
+/* After the regular-style rule below: GTK 4.24 drops "-symbolic" for regular icons and
+   would draw the icon theme's coloured window-close instead of the plain glyph. */
 .win11-explorer .win11-titlebar .win11-new-tab { min-width: 28px; min-height: 28px; padding: 0; margin: 2px 8px; }
 .win11-explorer .win11-tabs image { -gtk-icon-style: regular; -gtk-icon-size: 16px; }
+.win11-explorer .win11-tabs .tab-close-button image { -gtk-icon-style: symbolic; -gtk-icon-size: 10px; }
 popover.menu .windows-menu-icon { margin-right: 10px; -gtk-icon-style: regular; -gtk-icon-size: 16px; }
 
 /* AdwTab measures tabs independently from their title's natural width. Fill
@@ -313,6 +263,7 @@ window.win11-explorer {font-family:"Segoe UI"; font-size:13px; font-weight:400;}
 .win11-explorer .win11-commandbar image { -gtk-icon-style:regular; -gtk-icon-size:16px; }
 .win11-explorer placessidebar row {min-height:30px; padding:0 8px; margin:1px 4px; border-radius:3px;}
 .win11-explorer placessidebar row image {min-width:16px; -gtk-icon-size:16px; margin-right:8px; -gtk-icon-style:regular;}
+.win11-explorer placessidebar row button image { -gtk-icon-style: symbolic; } /* eject etc. (GTK 4.24) */
 .win11-explorer placessidebar row label {font-size:13px;font-weight:400;}
 .win11-explorer columnview header button {min-height:26px; padding:0 8px;font-weight:400;}
 .win11-explorer columnview row label {font-size:13px;font-weight:400;}
@@ -513,6 +464,235 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
 }
 /* ---- end Fenestra: Explorer special pages ---- */
 
+/* Nautilus 51 attaches sorters to the details columns; keep the 49 look (no arrow). */
+.win11-explorer columnview > header > button sort-indicator,
+.win11-explorer columnview > header > button sort-indicator.ascending,
+.win11-explorer columnview > header > button sort-indicator.descending { -gtk-icon-source: none; min-width: 0; min-height: 0; }
+
+/* ---- Fenestra: Explorer open / save dialog (Nautilus file chooser, overlay nautilus-file-chooser.ui).
+   Measured against the reference «Guardar como» / «Abrir» dialogs: design/reference/measurements.json
+   (file_dialog_save, file_dialog_open, file_dialog_menus) and dialogs.md. Coordinates below are
+   content pixels (reference minus its 1 px frame, which is the window outline here). Scoped to
+   window.win11-chooser.win11-explorer so the Explorer window keeps its own look; light colours are
+   written by hand in the @media block after these rules (tools/gtk-user-light.py skips this block). ---- */
+window.win11-chooser.win11-explorer, window.win11-chooser.win11-explorer label { font-size: 12px; }
+window.win11-chooser.win11-explorer.csd { box-shadow: 0 0 0 1px #3e3e3e, 0 4px 16px 2px rgba(0,0,0,0.30); }
+window.win11-chooser.win11-explorer { background: #191919; color: #ffffff; }
+/* Title bar 30 px: icon, title at x 30, close 31 x 30. */
+window.win11-chooser.win11-explorer .win11-dialog-titlebar { min-height: 30px; padding: 0; margin: 0; background: #202020; box-shadow: none; border: 0; }
+window.win11-chooser.win11-explorer .win11-dialog-titlebar image.win11-dialog-icon { margin: 0 6px 0 8px; -gtk-icon-style: regular; }
+window.win11-chooser.win11-explorer .win11-dialog-titlebar .win11-dialog-title { margin: 0; padding: 0; font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer .win11-dialog-titlebar windowcontrols { margin: 0; padding: 0; border-spacing: 0; }
+window.win11-chooser.win11-explorer .win11-dialog-titlebar windowcontrols > button { min-width: 31px; min-height: 30px; padding: 0; margin: 0; border: 0; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-dialog-titlebar windowcontrols > button > image { -gtk-icon-size: 20px; }
+/* Navigation row 55 px: Back, Forward, Up (33 x 32 at y 41), address box x 137 (581 x 34), search 202 x 34. */
+window.win11-chooser.win11-explorer .win11-navigation { min-height: 55px; padding: 0 12px 0 0; margin: 0; border: 0; box-shadow: none; background: #191919; }
+window.win11-chooser.win11-explorer .win11-navigation > windowhandle > box,
+window.win11-chooser.win11-explorer .win11-navigation box.start,
+window.win11-chooser.win11-explorer .win11-navigation box.end { padding: 0; margin: 0; border-spacing: 0; }
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-back,
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-forward,
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up { min-width: 33px; min-height: 32px; padding: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-back { margin-left: 4px; }
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-forward { margin-left: 2px; }
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up { margin-left: 28px; }
+window.win11-chooser.win11-explorer .win11-navigation button image { -gtk-icon-size: 16px; }
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-refresh image { -gtk-icon-size: 14px; }
+window.win11-chooser.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search image { -gtk-icon-size: 16px; margin-right: -1px; }
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up:hover { background: #434343; box-shadow: inset 0 0 0 1px #ffffff; }
+window.win11-chooser.win11-explorer .win11-navigation button:disabled image { opacity: 0.6; }
+window.win11-chooser.win11-explorer .win11-navigation .fenestra-dlg-address { min-height: 32px; padding: 0; margin: 0 0 0 4px; border: 1px solid #535353; border-radius: 0; background: #191919; box-shadow: none; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address > scrolledwindow, window.win11-chooser.win11-explorer .fenestra-dlg-address viewport { background: transparent; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address .fenestra-dlg-lead { margin-left: 9px; border-spacing: 0; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address .fenestra-dlg-lead > image { -gtk-icon-size: 16px; -gtk-icon-style: regular; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address label.fenestra-dlg-crumb-sep { margin: 0 6px; color: #ffffff; font-size: 12px; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address button.nautilus-path-button { min-height: 32px; padding: 0 1px 0 3px; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address button.nautilus-path-button label { color: #ffffff; font-size: 12px; opacity: 1; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address menubutton > button,
+window.win11-chooser.win11-explorer .fenestra-dlg-address button.fenestra-dlg-refresh { min-width: 34px; min-height: 32px; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address menubutton > button image { -gtk-icon-size: 10px; }
+window.win11-chooser.win11-explorer .fenestra-dlg-address menubutton > button:hover,
+window.win11-chooser.win11-explorer .fenestra-dlg-address button.fenestra-dlg-refresh:hover { background: #434343; box-shadow: inset 0 0 0 1px #ffffff; }
+window.win11-chooser.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search { min-width: 0; min-height: 32px; padding: 0 14px 0 8px; margin: 0; border: 1px solid #535353; border-radius: 0; background: #191919; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search label { font-size: 12px; color: #a0a0a0; }
+/* Command bar 30 px + 1 px line: Organize ▾ (95 x 25), New folder (106 x 25), view (27 x 26) and its chevron (19 x 25). */
+window.win11-chooser.win11-explorer .win11-commandbar { min-height: 30px; padding: 0 0 0 3px; margin: 0; background: #202020; border: 0; border-bottom: 1px solid #171615; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button,
+window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text { min-height: 25px; min-width: 0; padding: 0 12px 0 15px; margin: 2px 0 3px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text { padding: 0 15px 0 14px; }
+window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:hover,
+window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:hover { background: #4d4d4d; }
+window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:checked { background: transparent; box-shadow: inset 0 0 0 1px #ffffff; }
+window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:active,
+window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:active { background: #666666; }
+window.win11-chooser.win11-explorer .win11-commandbar .win11-cmd-label { font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer .win11-commandbar image.win11-cmd-chevron { margin: 0; opacity: 1; -gtk-icon-size: 16px; }
+window.win11-chooser.win11-explorer .win11-commandbar splitbutton { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; border-spacing: 0; }
+window.win11-chooser.win11-explorer .win11-commandbar splitbutton > button { min-width: 27px; min-height: 26px; padding: 0; margin: 2px 0 2px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-commandbar splitbutton > separator { min-width: 0; margin: 0; background: none; opacity: 0; }
+window.win11-chooser.win11-explorer .win11-commandbar splitbutton > menubutton > button { min-width: 19px; min-height: 25px; padding: 0; margin: 2px 0 3px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-commandbar splitbutton > button:hover,
+window.win11-chooser.win11-explorer .win11-commandbar splitbutton > menubutton > button:hover { background: #4d4d4d; }
+/* Navigation pane: 140 px + 16 px scrollbar, rows 32 px, Explorer entries; then the 1 px splitter. */
+window.win11-chooser.win11-explorer overlay-split-view > .sidebar-pane { min-width: 158px; background: #191919; box-shadow: inset -1px 0 #202020, inset -2px 0 #131313; }
+window.win11-chooser.win11-explorer overlay-split-view > .content-pane { border-left: 1px solid #2b2b2b; box-shadow: inset 1px 0 #202020; background: #191919; }
+window.win11-chooser.win11-explorer placessidebar, window.win11-chooser.win11-explorer placessidebar > scrolledwindow,
+window.win11-chooser.win11-explorer placessidebar viewport, window.win11-chooser.win11-explorer placessidebar .navigation-sidebar { background: transparent; border: 0; box-shadow: none; margin: 0; }
+window.win11-chooser.win11-explorer placessidebar > scrolledwindow { margin-right: 2px; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar { padding: 6px 0 0 0; }
+window.win11-chooser.win11-explorer placessidebar scrollbar.vertical { min-width: 16px; padding: 0; margin: 0; border: 0; background: #171717; box-shadow: none; }
+window.win11-chooser.win11-explorer placessidebar scrollbar.vertical > range > trough { min-width: 16px; margin: 17px 0; padding: 0; border: 0; background: transparent; }
+window.win11-chooser.win11-explorer placessidebar scrollbar.vertical > range > trough > slider { min-width: 2px; min-height: 40px; margin: 0 7px; border: 0; border-radius: 0; background: #959595; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row { min-height: 32px; margin: 0 1px 0 2px; padding: 0 2px 0 32px; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row label { font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row image.sidebarrow-icon { -gtk-icon-size: 16px; min-width: 16px; margin: 0; padding: 0; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row image.fenestra-pin { opacity: 1; margin: 0; min-width: 12px; -gtk-icon-size: 12px; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row > revealer, window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row > revealer > box { padding: 0; margin: 0; border-spacing: 0; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row label.sidebar-label { margin-left: 4px; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row:hover { background: #4d4d4d; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row:selected { background: #333333; box-shadow: inset 0 0 0 1px #2a2a2a; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar:focus-within row:selected { background: #505050; box-shadow: inset 0 0 0 1px #c3c3c3; }
+window.win11-chooser.win11-explorer placessidebar .navigation-sidebar separator.fenestra-sidebar-sep { min-height: 1px; margin: 16px 9px 15px 10px; background: #383838; }
+/* Details: header 27 px with 1 px dividers, rows 24 px from y 147, columns 273 / 144 / 120 / 80. */
+window.win11-chooser.win11-explorer .nautilus-list-view columnview { padding: 0; background: #191919; }
+window.win11-chooser.win11-explorer .nautilus-list-view columnview > header { min-height: 27px; padding: 0; margin: 0; border: 0; box-shadow: none; background: #191919; }
+window.win11-chooser.win11-explorer .nautilus-list-view columnview > header > button { min-height: 25px; padding: 0 5px 2px 5px; margin: 0; border: 0; border-right: 1px solid #636363; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .nautilus-list-view columnview > header > button:first-child { padding-left: 30px; }
+window.win11-chooser.win11-explorer .nautilus-list-view columnview > header > button:hover { background: #434343; }
+window.win11-chooser.win11-explorer .nautilus-list-view columnview > header > button label { font-size: 12px; font-weight: 400; color: #dedede; }
+window.win11-chooser.win11-explorer .nautilus-list-view columnview > listview { padding: 4px 0 0 0; margin: 0 0 0 0; border-spacing: 0; background: transparent; }
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable,
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable:nth-child(odd):not(:disabled):not(:selected):not(:hover),
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable:nth-child(even):not(:disabled):not(:selected):not(:hover) { min-height: 24px; margin: 0; padding: 0; border-radius: 0; background-color: transparent; background-image: none; box-shadow: none; }
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable > cell { min-height: 24px; padding: 0; margin: 0; }
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable > cell > widget#NautilusViewCell,
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable > cell > .nautilus-view-cell { min-height: 22px; padding: 2px 5px 0 5px; }
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable > cell:first-child > widget#NautilusViewCell,
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable > cell:first-child > .nautilus-view-cell { padding-left: 21px; }
+window.win11-chooser.win11-explorer .nautilus-list-view .nautilus-view-cell .column-name-labels-box { margin-left: 1px; }
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable label { font-size: 12px; color: #dedede; opacity: 1; }
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable > cell:first-child label { color: #ffffff; }
+/* Hover / selection paint x 175 to 772 of the window only (15 px in, as Windows does). */
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable:hover { background-color: transparent; background-image: linear-gradient(to right, transparent 15px, #4d4d4d 15px, #4d4d4d 613px, transparent 613px); }
+window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable:selected { background-color: transparent; background-image: linear-gradient(to right, transparent 15px, #777777 15px, #777777 613px, transparent 613px); }
+window.win11-chooser.win11-explorer .nautilus-list-view scrollbar { background: transparent; }
+/* Bottom (Save): fields area 100 px, buttons strip 57 px. (Open): one 81 px area. */
+window.win11-chooser.win11-explorer .win11-chooser-bottom { padding: 0; margin: 0; border: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-chooser-fields { padding: 11px 5px 41px 0; border-spacing: 5px 2px; background: #383838; }
+window.win11-chooser.win11-explorer label.win11-chooser-caption { min-width: 120px; padding: 0; margin: 0; font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons { min-height: 57px; padding: 0; background: #383838; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons.win11-chooser-open { min-height: 81px; }
+window.win11-chooser.win11-explorer .win11-chooser-open-row:first-child { margin: 9px 17px 0 0; }
+window.win11-chooser.win11-explorer .win11-chooser-open-row:last-child { margin-top: 7px; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom entry { min-height: 21px; padding: 0 6px; margin: 0; border: 1px solid #9b9b9b; border-radius: 0; background: #383838; color: #ffffff; box-shadow: none; outline: none; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom entry:focus-within { border-color: #ffffff; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom entry > text > selection { background-color: #0078d4; color: #ffffff; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button { min-height: 21px; padding: 0 6px 0 3px; margin: 0; border: 1px solid #9b9b9b; border-radius: 0; background: #333333; color: #ffffff; box-shadow: none; outline: none; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button:hover { background: #454545; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button label { font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button arrow { -gtk-icon-source: -gtk-icontheme("win11-explorer-chevron-down"); -gtk-icon-size: 10px; min-width: 10px; }
+/* Nautilus' choices menu (portal "choices"): a 24 px button in the row, where the reference has Encoding. */
+window.win11-chooser.win11-explorer .win11-chooser-bottom .win11-chooser-buttons menubutton > button { min-width: 22px; min-height: 22px; padding: 0; margin: 0 14px 0 0; border: 1px solid #9b9b9b; border-radius: 3px; background: #333333; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom .win11-chooser-buttons menubutton { margin-top: 15px; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons .win11-chooser-open-row menubutton { margin-top: 0; }
+/* Nautilus' floating status bar ("… selected"): the reference dialog has none. */
+window.win11-chooser.win11-explorer .floating-bar { opacity: 0; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide { min-height: 20px; min-width: 0; padding: 0 4px 0 3px; margin: 19px 0 0 10px; border: 0; border-radius: 3px; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide > box { border-spacing: 8px; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide label { font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide:hover { background: #434343; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide image { -gtk-icon-size: 8px; }
+window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide image.fenestra-dlg-flip { -gtk-icon-transform: rotate(180deg); }
+window.win11-chooser.win11-explorer button.win11-dialog-button { min-width: 84px; min-height: 22px; padding: 0; margin: 15px 14px 0 0; border: 1px solid #9b9b9b; border-bottom-color: #8b8b8b; border-radius: 3px; background: #333333; background-image: none; box-shadow: none; color: #ffffff; outline: none; }
+window.win11-chooser.win11-explorer button.win11-dialog-button label { font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer button.win11-dialog-button.win11-chooser-cancel { margin-right: 18px; }
+window.win11-chooser.win11-explorer .win11-chooser-open-row button.win11-dialog-button { margin-top: 0; }
+window.win11-chooser.win11-explorer button.win11-dialog-button.default { border-color: #ffffff; border-bottom-color: #e5e5e5; }
+window.win11-chooser.win11-explorer button.win11-dialog-button:hover { background: #454545; }
+window.win11-chooser.win11-explorer button.win11-dialog-button:active { background: #666666; }
+/* Organize menu 185 px: rows 22 px from 2 px under its top border, separators 9 px, highlight 6 px in. */
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu { padding: 0; margin: 0; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu > contents { min-width: 183px; padding: 2px 0 2px 0; margin: 0; border: 1px solid #808080; border-radius: 0; background: #2b2b2b; box-shadow: none; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton { min-height: 22px; padding: 0 8px 0 3px; margin: 0 5px; border-radius: 0; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton label { font-size: 12px; color: #ffffff; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:disabled label { color: #6d6d6d; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:disabled image { opacity: 0.45; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:hover { background: #353535; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton > image { margin-right: 13px; -gtk-icon-size: 16px; }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { min-height: 1px; margin: 4px 6px 4px 8px; background: #3e3e3e; }
+@media (prefers-color-scheme: light) {
+  window.win11-chooser.win11-explorer.csd { box-shadow: 0 0 0 1px #aeaeae, 0 4px 16px 2px rgba(0,0,0,0.18); }
+  window.win11-chooser.win11-explorer { background: #ffffff; color: #000000; }
+  window.win11-chooser.win11-explorer .win11-dialog-titlebar { background: #f3f3f3; }
+  window.win11-chooser.win11-explorer .win11-dialog-titlebar .win11-dialog-title { color: #000000; }
+  window.win11-chooser.win11-explorer .win11-navigation { background: #ffffff; }
+  window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up:hover { background: #cce8ff; box-shadow: none; }
+  window.win11-chooser.win11-explorer .win11-navigation button:disabled image { opacity: 0.35; }
+  window.win11-chooser.win11-explorer .win11-navigation .fenestra-dlg-address { border-color: #d9d9d9; background: #ffffff; }
+  window.win11-chooser.win11-explorer .fenestra-dlg-address label.fenestra-dlg-crumb-sep,
+  window.win11-chooser.win11-explorer .fenestra-dlg-address button.nautilus-path-button label { color: #000000; }
+  window.win11-chooser.win11-explorer .fenestra-dlg-address menubutton > button:hover,
+  window.win11-chooser.win11-explorer .fenestra-dlg-address button.fenestra-dlg-refresh:hover { background: #e5f3ff; box-shadow: none; }
+  window.win11-chooser.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search { border-color: #d9d9d9; background: #ffffff; }
+  window.win11-chooser.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search label { color: #6d6d6d; }
+  window.win11-chooser.win11-explorer .win11-commandbar { background: #f5f6f7; border-bottom-color: #e8e9ea; }
+  window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:hover,
+  window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:hover,
+  window.win11-chooser.win11-explorer .win11-commandbar splitbutton > button:hover,
+  window.win11-chooser.win11-explorer .win11-commandbar splitbutton > menubutton > button:hover { background: #dcebf4; box-shadow: inset 0 0 0 1px #0078d4; }
+  window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:checked { background: transparent; box-shadow: inset 0 0 0 1px #000000; }
+  window.win11-chooser.win11-explorer .win11-commandbar menubutton.win11-cmd-text > button:active,
+  window.win11-chooser.win11-explorer .win11-commandbar button.win11-cmd-text:active { background: #c3e1f0; }
+  window.win11-chooser.win11-explorer .win11-commandbar .win11-cmd-label { color: #1e395b; }
+  window.win11-chooser.win11-explorer overlay-split-view > .sidebar-pane { background: #ffffff; box-shadow: none; }
+  window.win11-chooser.win11-explorer overlay-split-view > .content-pane { border-left-color: #f7f7f7; box-shadow: none; background: #ffffff; }
+  window.win11-chooser.win11-explorer placessidebar scrollbar.vertical { background: #f0f0f0; }
+  window.win11-chooser.win11-explorer placessidebar scrollbar.vertical > range > trough > slider { background: #858585; }
+  window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row label { color: #000000; }
+  window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row:hover { background: #e5f3ff; }
+  window.win11-chooser.win11-explorer placessidebar .navigation-sidebar row:selected { background: #d9d9d9; box-shadow: inset 0 0 0 1px #949494; }
+  window.win11-chooser.win11-explorer placessidebar .navigation-sidebar:focus-within row:selected { background: #cce8ff; box-shadow: inset 0 0 0 1px #000000; }
+  window.win11-chooser.win11-explorer placessidebar .navigation-sidebar separator.fenestra-sidebar-sep { background: #d6d6d6; }
+  window.win11-chooser.win11-explorer .nautilus-list-view columnview, window.win11-chooser.win11-explorer .nautilus-list-view columnview > header { background: #ffffff; }
+  window.win11-chooser.win11-explorer .nautilus-list-view columnview > header > button { border-right-color: #e5e5e5; }
+  window.win11-chooser.win11-explorer .nautilus-list-view columnview > header > button:hover { background: #d9ebf9; }
+  window.win11-chooser.win11-explorer .nautilus-list-view columnview > header > button label { color: #4c607a; }
+  window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable label { color: #6d6d6d; }
+  window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable > cell:first-child label { color: #000000; }
+  window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable:hover { background-image: linear-gradient(to right, transparent 15px, #e5f3ff 15px, #e5f3ff 613px, transparent 613px); }
+  window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.activatable:selected { background-image: linear-gradient(to right, transparent 15px, #cce8ff 15px, #cce8ff 613px, transparent 613px); }
+  window.win11-chooser.win11-explorer .win11-chooser-fields { background: #f9f9f9; }
+  window.win11-chooser.win11-explorer label.win11-chooser-caption { color: #000000; }
+  window.win11-chooser.win11-explorer .win11-chooser-buttons { background: #f0f0f0; }
+  window.win11-chooser.win11-explorer .win11-chooser-bottom entry { border-color: #d2d2d2; border-bottom-color: #bcbcbc; background: #ffffff; color: #000000; }
+  window.win11-chooser.win11-explorer .win11-chooser-bottom entry:focus-within { border-color: #0078d4; }
+  window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button { border-color: #d2d2d2; border-bottom-color: #bcbcbc; background: #fdfdfd; color: #000000; }
+  window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button:hover { background: #e5f1fb; border-color: #0078d4; }
+  window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button label { color: #000000; }
+  window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button arrow { -gtk-icon-filter: invert(0.9); }
+  window.win11-chooser.win11-explorer .win11-chooser-bottom .win11-chooser-buttons menubutton > button { border-color: #d0d0d0; border-bottom-color: #bababa; background: #fdfdfd; }
+  window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide label { color: #000000; }
+  window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide:hover { background: #e5f3ff; }
+  window.win11-chooser.win11-explorer button.win11-dialog-button { border-color: #d0d0d0; border-bottom-color: #bababa; background: #fdfdfd; color: #000000; }
+  window.win11-chooser.win11-explorer button.win11-dialog-button label { color: #000000; }
+  window.win11-chooser.win11-explorer button.win11-dialog-button.default { border-color: #0078d4; border-bottom-color: #006bbe; }
+  window.win11-chooser.win11-explorer button.win11-dialog-button:hover { background: #e0eef9; border-color: #0078d4; }
+  window.win11-chooser.win11-explorer button.win11-dialog-button:active { background: #cce4f7; border-color: #005499; }
+  window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu > contents { border-color: #e5e5e5; background: #f9f9f9; }
+  window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton label { color: #000000; }
+  window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:disabled label { color: #9f9f9f; }
+  window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton:hover { background: #f0f0f0; }
+  window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { background: #d7d7d7; }
+  window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide image { -gtk-icon-filter: invert(0.9); }
+  window.win11-chooser.win11-explorer .fenestra-dlg-address .fenestra-dlg-lead > image { -gtk-icon-filter: none; }
+  window.win11-chooser.win11-explorer .win11-commandbar menubutton image.win11-cmd-chevron { -gtk-icon-filter: none; color: #1e395b; }
+}
+/* ---- end Fenestra: Explorer open / save dialog ---- */
+/* Nautilus 51 attaches sorters to the details columns; keep the 49 look (no arrow). */
+.win11-explorer columnview > header > button sort-indicator,
+.win11-explorer columnview > header > button sort-indicator.ascending,
+.win11-explorer columnview > header > button sort-indicator.descending { -gtk-icon-source: none; min-width: 0; min-height: 0; }
+
 /* ---- Fenestra light mode + accent (generated by tools/gtk-user-light.py; do not edit) ---- */
 @media (prefers-color-scheme: dark) {
   .win11-explorer .fenestra-pill.active, .win11-explorer .fenestra-pill:checked { background: @fenestra_accent_dark; border-color: @fenestra_accent_dark; }
@@ -520,15 +700,12 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
   .win11-explorer .fenestra-accent-button:hover { background: shade(@fenestra_accent_dark, 0.92); }
 }
 @media (prefers-color-scheme: light) {
-  windowcontrols > button:not(.close):hover,
-headerbar button.titlebutton:not(.close):hover { background-color: rgba(0,0,0,0.048); }
   popover.menu > contents { background: rgba(249,249,249,0.96); border: 1px solid rgba(0,0,0,0.06); }
   popover.menu modelbutton:hover { background: rgba(0,0,0,0.039); }
   popover.menu separator { background-color: rgba(0,0,0,0.042); }
   menu { background-color: rgba(249,249,249,0.96); color: #1a1a1a; border: 1px solid rgba(0,0,0,0.06); }
   menu menuitem:hover { background-color: rgba(0,0,0,0.039); }
   menu separator { background-color: rgba(0,0,0,0.042); }
-  windowcontrols > button:hover, headerbar button.titlebutton:hover, .titlebar button.titlebutton:hover { background-color: rgba(0,0,0,0.048); }
   window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton,
 window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton > image { color: #1a1a1a; }
   window.background.csd headerbar.header-bar.titlebar windowcontrols button.titlebutton.minimize:hover,

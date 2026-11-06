@@ -109,7 +109,9 @@ class NavPane(Gtk.Box):
         self.list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.rows = {}
         for pid in NAV_ORDER:
-            cls = PAGES[pid]
+            cls = PAGES.get(pid)
+            if cls is None:  # not available in this session
+                continue
             row = Gtk.ListBoxRow()
             row.page_id = pid
             row.add_css_class("nav-item")

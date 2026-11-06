@@ -29,4 +29,13 @@ fi
 if page=$(fenestra-settings --resolve-page "$panel" 2>/dev/null) && [ -n "$page" ]; then
     exec fenestra-settings --page "$page"
 fi
+# In the Fenestra session (KWin) GNOME Settings' panels mostly do nothing: open Fenestra
+# Settings instead, except Online Accounts, which has no Fenestra page.
+case ":${XDG_CURRENT_DESKTOP:-}:" in
+*:Fenestra:*)
+    case "$panel" in
+        online-accounts) XDG_CURRENT_DESKTOP=GNOME exec "$REAL" "$@" ;;
+        *) exec fenestra-settings ;;
+    esac ;;
+esac
 exec "$REAL" "$@"

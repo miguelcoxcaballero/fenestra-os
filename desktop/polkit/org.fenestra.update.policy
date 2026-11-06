@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Fenestra</vendor>
+  <vendor_url>https://github.com/miguelcoxcaballero/fenestra-os</vendor_url>
+  <action id="org.fenestra.update">
+    <description>Install Fenestra updates</description>
+    <description xml:lang="es">Instalar actualizaciones de Fenestra</description>
+    <message>Authentication is required to install Fenestra updates</message>
+    <message xml:lang="es">Se necesita autenticación para instalar actualizaciones de Fenestra</message>
+    <icon_name>system-software-update</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/fenestra/fenestra-update</annotate>
+  </action>
+</policyconfig>

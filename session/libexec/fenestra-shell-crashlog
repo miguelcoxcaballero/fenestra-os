@@ -1,0 +1,9 @@
+#!/bin/bash
+# ExecStopPost of fenestra-shell.service: keeps a short record of every abnormal end
+# (also in the journal: journalctl --user -u fenestra-shell).
+[ "${SERVICE_RESULT:-success}" = success ] && exit 0
+dir=${XDG_STATE_HOME:-$HOME/.local/state}/fenestra
+mkdir -p "$dir"
+printf '%s result=%s code=%s status=%s\n' "$(date -Is)" "$SERVICE_RESULT" "${EXIT_CODE:-}" "${EXIT_STATUS:-}" >> "$dir/shell-crash.log"
+# Keep the last 200 lines.
+tail -n 200 "$dir/shell-crash.log" > "$dir/shell-crash.log.tmp" && mv "$dir/shell-crash.log.tmp" "$dir/shell-crash.log"

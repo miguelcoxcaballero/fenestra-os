@@ -219,5 +219,5 @@ class ScreenLockPage(Page):
                            control=Dropdown(opts, cur, lambda v: util.gset(SS, "lock-delay", int(v))), key="lock-delay")
             self.remember("lock-delay", r)
             g.add(r)
-        g.add(SettingRow(_("Screen timeout"), None, "fs-desktop-symbolic", chevron=True,
-                         on_click=lambda: self.go("power", "screen-sleep")))
+        self.nav_row(g, "power", _("Screen timeout"), None, "fs-desktop-symbolic", key="screen-timeout",
+                     focus="screen-sleep")

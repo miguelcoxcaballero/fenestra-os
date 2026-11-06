@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "Compatibility matrix for the extensions that run on the login screen (session mode gdm) or the lock screen (unlock-dialog).",
+    "validated: GNOME Shell majors where the extension was actually tested: 'bench' = tests/greeter/bench.sh passed,",
+    "'real' = used on a real machine. Fenestra Update turns off every login/lock extension that is not validated for",
+    "the target GNOME before it restarts into the new release, so the standard GNOME login always remains.",
+    "To validate a new GNOME: run tests/greeter/bench.sh in a fedora:N image, then add N here with the evidence."
+  ],
+  "extensions": {
+    "fenestra-login@fenestra-os.github.io": {"modes": ["gdm"], "validated": {"49": "real", "51": "bench"}},
+    "fenestra-spotlight@fenestra-os.github.io": {"modes": ["gdm", "user", "unlock-dialog"], "validated": {"49": "real", "51": "bench"}},
+    "fenestra-lock-clock@fenestra-os.github.io": {"modes": ["user", "unlock-dialog"], "validated": {"49": "real", "51": "bench"}},
+    "fenestra-direct-unlock@fenestra-os.github.io": {"modes": ["user", "unlock-dialog"], "validated": {"49": "real", "51": "headless"}},
+    "fenestra-user-lock-prompt@fenestra-os.github.io": {"modes": ["user", "unlock-dialog"], "validated": {"49": "real", "51": "headless"}},
+    "single-user-gdm@local": {"modes": ["gdm"], "validated": {"49": "real", "51": "bench"}},
+    "windows-spotlight@local": {"modes": ["gdm", "user", "unlock-dialog"], "validated": {"49": "real", "51": "bench"}}
+  }
+}

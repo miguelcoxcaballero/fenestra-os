@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/WindowSwitcher",
+    "KPlugin": {
+        "Id": "fenestra",
+        "Name": "Fenestra",
+        "Name[es]": "Fenestra",
+        "Description": "Fenestra window switcher: a centred row of window thumbnails with their titles",
+        "Description[es]": "Cambiador de ventanas de Fenestra: una fila centrada de miniaturas con sus títulos",
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0"
+    },
+    "X-Plasma-API": "declarativeappletscript"
+}

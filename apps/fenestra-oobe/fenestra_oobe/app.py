@@ -92,13 +92,13 @@ class OobeApp(Gtk.Application):
             os.environ["GSK_RENDERER"] = "cairo"
             log.info("software GL detected: using the cairo renderer")
         settings = Gtk.Settings.get_default()
-        settings.props.gtk_application_prefer_dark_theme = False
-        # GTK >= 4.20 follows the desktop color scheme; the OOBE is always light.
-        if hasattr(Gtk, "InterfaceColorScheme"):
-            try:
-                settings.set_property("gtk-interface-color-scheme", Gtk.InterfaceColorScheme.LIGHT)
-            except TypeError:
-                pass
+        # The OOBE is always light. GTK >= 4.20 has gtk-interface-color-scheme (it follows
+        # the desktop scheme otherwise); gtk-application-prefer-dark-theme is deprecated
+        # there (GTK 4.24 warns), so it is only used on older GTK.
+        if hasattr(Gtk, "InterfaceColorScheme") and settings.find_property("gtk-interface-color-scheme"):
+            settings.set_property("gtk-interface-color-scheme", Gtk.InterfaceColorScheme.LIGHT)
+        else:
+            settings.props.gtk_application_prefer_dark_theme = False
         # Symbolic icons must be predictable whatever theme the session uses.
         settings.props.gtk_icon_theme_name = os.environ.get("FENESTRA_OOBE_ICON_THEME", "Adwaita")
         provider = Gtk.CssProvider()

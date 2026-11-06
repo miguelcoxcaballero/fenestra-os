@@ -1,0 +1,26 @@
+[Desktop Entry]
+Type=Application
+Name=Fenestra Store
+Name[es]=Fenestra Store
+GenericName=Software center
+GenericName[es]=Centro de software
+Comment=Find, install and update apps from Flathub and Fedora
+Comment[es]=Busca, instala y actualiza aplicaciones de Flathub y Fedora
+Exec=fenestra-store %U
+Icon=org.fenestra.Store
+Terminal=false
+StartupNotify=true
+StartupWMClass=org.fenestra.Store
+Categories=GTK;System;PackageManager;
+Keywords=store;software;apps;install;update;flatpak;flathub;rpm;tienda;aplicaciones;instalar;actualizar;
+Actions=Updates;Library;
+
+[Desktop Action Updates]
+Name=Updates
+Name[es]=Actualizaciones
+Exec=fenestra-store --page updates
+
+[Desktop Action Library]
+Name=Library
+Name[es]=Biblioteca
+Exec=fenestra-store --page library

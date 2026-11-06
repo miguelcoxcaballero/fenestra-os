@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later
+     Fenestra Explorer layer: Nautilus 51's file chooser (the FileChooser portal dialog) laid out as
+     the Explorer's open / save dialog: title bar with a close button, address bar and search,
+     command bar (Organize, New folder, view), navigation pane + files, then the reference's
+     bottom: Save = fields area ("File name", "Save as type") over a strip with "Hide folders",
+     Save / Cancel; Open = the type filter right of the (absent) file name, Open / Cancel below
+     (layout "wide-open"). Every id, handler and binding Nautilus' code uses is kept from the
+     stock nautilus-file-chooser.ui; fenestra_chooser.py adds the labels' translations, the
+     Organize menu, the Open layout switch and "Hide folders". Sizes: the "Explorer open / save
+     dialog" block of gtk.css. -->
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="NautilusFileChooser" parent="AdwWindow">
+    <property name="width-request">360</property>
+    <property name="height-request">348</property>
+    <property name="default-widget">accept_button</property>
+    <property name="content">
+      <object class="NautilusShortcutManager">
+        <property name="child">
+          <object class="AdwToastOverlay">
+            <property name="child">
+              <object class="AdwToolbarView">
+                <property name="top-bar-style">flat</property>
+                <property name="bottom-bar-style">flat</property>
+                <child type="top">
+                  <object class="GtkWindowHandle">
+                    <property name="child">
+                      <object class="GtkBox">
+                        <style>
+                          <class name="win11-titlebar"/>
+                          <class name="win11-dialog-titlebar"/>
+                          <class name="titlebar"/>
+                        </style>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">system-file-manager</property>
+                            <property name="pixel-size">16</property>
+                            <style>
+                              <class name="win11-dialog-icon"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="title_widget">
+                            <property name="hexpand">true</property>
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">3</property>
+                            <property name="single-line-mode">true</property>
+                            <property name="has-tooltip">true</property>
+                            <property name="label" bind-source="NautilusFileChooser" bind-property="title"/>
+                            <style>
+                              <class name="win11-dialog-title"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkWindowControls">
+                            <property name="side">end</property>
+                            <property name="decoration-layout">:close</property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child type="top">
+                  <object class="NautilusToolbar" id="toolbar">
+                    <property name="show-history-controls">true</property>
+                    <property name="show-view-controls">false</property>
+                    <property name="window-slot" bind-source="slot_container" bind-property="child" bind-flags="sync-create"/>
+                  </object>
+                </child>
+                <child type="top">
+                  <object class="GtkBox">
+                    <style>
+                      <class name="win11-commandbar"/>
+                    </style>
+                    <child>
+                      <object class="GtkMenuButton" id="organize_button">
+                        <property name="child">
+                          <object class="GtkBox">
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Organize</property>
+                                <style>
+                                  <class name="win11-cmd-label"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">pan-down-symbolic</property>
+                                <style>
+                                  <class name="win11-cmd-chevron"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                        <style>
+                          <class name="flat"/>
+                          <class name="win11-cmd-text"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="new_folder_button">
+                        <property name="visible">false</property>
+                        <property name="action-name">view.new-folder</property>
+                        <property name="focus-on-click">false</property>
+                        <property name="child">
+                          <object class="GtkLabel">
+                            <property name="label">New folder</property>
+                            <style>
+                              <class name="win11-cmd-label"/>
+                            </style>
+                          </object>
+                        </property>
+                        <style>
+                          <class name="flat"/>
+                          <class name="win11-cmd-text"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="hexpand">true</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="NautilusViewControls" id="view_controls">
+                        <property name="window-slot" bind-source="slot_container" bind-property="child" bind-flags="sync-create"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <property name="content">
+                  <object class="AdwOverlaySplitView" id="split_view">
+                    <property name="enable-show-gesture">false</property>
+                    <property name="enable-hide-gesture">false</property>
+                    <property name="max-sidebar-width">158</property>
+                    <property name="min-sidebar-width">158</property>
+                    <property name="sidebar-width-unit">px</property>
+                    <property name="sidebar-width-fraction">0.2</property>
+                    <property name="sidebar">
+                      <object class="NautilusSidebar" id="places_sidebar">
+                        <property name="vexpand">true</property>
+                        <property name="window-slot" bind-source="slot_container" bind-property="child" bind-flags="sync-create"/>
+                      </object>
+                    </property>
+                    <property name="content">
+                      <object class="AdwBin" id="slot_container"/>
+                    </property>
+                  </object>
+                </property>
+                <child type="bottom">
+                  <object class="AdwMultiLayoutView" id="bottom_toolbar">
+                    <style>
+                      <class name="win11-chooser-bottom"/>
+                    </style>
+                    <child>
+                      <object class="AdwLayout">
+                        <!-- Save: fields area (file name, type) over the buttons strip. -->
+                        <property name="name">wide</property>
+                        <property name="content">
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <child>
+                              <object class="GtkGrid">
+                                <style><class name="win11-chooser-fields"/></style>
+                                <child>
+                                  <object class="GtkLabel" id="filename_caption">
+                                    <property name="label">File name:</property>
+                                    <property name="xalign">1</property>
+                                    <property name="use-underline">true</property>
+                                    <property name="visible" bind-source="filename_widget" bind-property="visible" bind-flags="sync-create"/>
+                                    <style><class name="win11-chooser-caption"/></style>
+                                    <layout><property name="column">0</property><property name="row">0</property></layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">filename-widget</property><property name="hexpand">true</property><property name="visible" bind-source="filename_widget" bind-property="visible" bind-flags="sync-create"/><layout><property name="column">1</property><property name="row">0</property></layout></object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="filter_caption">
+                                    <property name="label">Save as type:</property>
+                                    <property name="xalign">1</property>
+                                    <property name="use-underline">true</property>
+                                    <property name="visible" bind-source="filters_dropdown" bind-property="visible" bind-flags="sync-create"/>
+                                    <style><class name="win11-chooser-caption"/></style>
+                                    <layout><property name="column">0</property><property name="row">1</property></layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">filter-dropdown</property><property name="hexpand">true</property><property name="visible" bind-source="filters_dropdown" bind-property="visible" bind-flags="sync-create"/><layout><property name="column">1</property><property name="row">1</property></layout></object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <style><class name="win11-chooser-buttons"/></style>
+                                <child>
+                                  <object class="GtkToggleButton" id="fenestra_hide_folders">
+                                    <property name="valign">start</property>
+                                    <property name="child">
+                                      <object class="GtkBox">
+                                        <child>
+                                          <object class="GtkImage">
+                                            <property name="icon-name">win11-explorer-chevron-down</property>
+                                            <property name="pixel-size">8</property>
+                                            <style><class name="win11-cmd-chevron"/></style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Hide Folders</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </property>
+                                    <style><class name="flat"/><class name="win11-chooser-hide"/></style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkBox"><property name="hexpand">true</property></object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">choices-menu-button</property><property name="valign">start</property><property name="visible" bind-source="choices_menu_button" bind-property="visible" bind-flags="sync-create"/></object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">accept-button</property><property name="valign">start</property></object>
+                                </child>
+                                <child>
+                                  <object class="GtkButton" id="cancel_button">
+                                    <property name="label">Cancel</property>
+                                    <property name="valign">start</property>
+                                    <property name="action-name">window.close</property>
+                                    <style>
+                                      <class name="win11-dialog-button"/>
+                                      <class name="win11-chooser-cancel"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwLayout">
+                        <!-- Open: one area, the type filter right of the file name, buttons below
+                             (fenestra_chooser.py picks this layout when there is no file name). -->
+                        <property name="name">wide-open</property>
+                        <property name="content">
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <style><class name="win11-chooser-buttons"/><class name="win11-chooser-open"/></style>
+                            <child>
+                              <object class="GtkBox">
+                                <style><class name="win11-chooser-open-row"/></style>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">filename-widget</property><property name="hexpand">true</property><property name="visible" bind-source="filename_widget" bind-property="visible" bind-flags="sync-create"/></object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">filter-dropdown</property><property name="hexpand">true</property><property name="halign">end</property><property name="visible" bind-source="filters_dropdown" bind-property="visible" bind-flags="sync-create"/></object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <style><class name="win11-chooser-open-row"/></style>
+                                <child>
+                                  <object class="GtkBox"><property name="hexpand">true</property></object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">choices-menu-button</property><property name="valign">start</property><property name="visible" bind-source="choices_menu_button" bind-property="visible" bind-flags="sync-create"/></object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">accept-button</property><property name="valign">start</property></object>
+                                </child>
+                                <child>
+                                  <object class="GtkButton">
+                                    <property name="label">Cancel</property>
+                                    <property name="valign">start</property>
+                                    <property name="action-name">window.close</property>
+                                    <style>
+                                      <class name="win11-dialog-button"/>
+                                      <class name="win11-chooser-cancel"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwLayout">
+                        <property name="name">narrow</property>
+                        <property name="content">
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="AdwLayoutSlot"><property name="id">filename-widget</property><property name="visible" bind-source="filename_widget" bind-property="visible" bind-flags="sync-create"/></object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">filter-dropdown</property><property name="visible" bind-source="filters_dropdown" bind-property="visible" bind-flags="sync-create"/></object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">choices-menu-button</property><property name="visible" bind-source="choices_menu_button" bind-property="visible" bind-flags="sync-create"/></object>
+                                </child>
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="hexpand">true</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="AdwLayoutSlot"><property name="id">accept-button</property></object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                        <child type="filename-widget">
+                          <object class="GtkStack" id="filename_widget">
+                            <child>
+                              <object class="GtkOverlay" id="filename_button_container">
+                                <property name="valign">3</property>
+                                <child>
+                                  <object class="GtkButton">
+                                    <property name="tooltip-text" translatable="yes">Edit File Name</property>
+                                    <accessibility>
+                                      <relation name="labelled-by">filename_label</relation>
+                                    </accessibility>
+                                    <signal name="clicked" handler="open_filename_entry" object="NautilusFileChooser"/>
+                                    <property name="child">
+                                      <object class="GtkCenterBox">
+                                        <child type="start">
+                                          <object class="AdwBin" id="filename_button_start"/>
+                                        </child>
+                                        <child type="center">
+                                          <object class="GtkLabel" id="filename_label">
+                                            <property name="single-line-mode">true</property>
+                                            <property name="label" bind-source="filename_entry" bind-property="text" bind-flags="sync-create"/>
+                                            <property name="ellipsize">2</property>
+                                          </object>
+                                        </child>
+                                        <child type="end">
+                                          <object class="GtkImage" id="filename_button_end">
+                                            <property name="margin-start">12</property>
+                                            <property name="icon-name">document-edit-symbolic</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </property>
+                                  </object>
+                                </child>
+                                <child type="overlay">
+                                  <object class="GtkButton" id="filename_undo_button">
+                                    <property name="tooltip-text" translatable="yes">Reset File Name</property>
+                                    <property name="icon-name">edit-undo-symbolic</property>
+                                    <property name="visible">false</property>
+                                    <property name="halign">1</property>
+                                    <signal name="clicked" handler="on_filename_undo_button_clicked" object="NautilusFileChooser"/>
+                                    <style>
+                                      <class name="flat"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkEntry" id="filename_entry">
+                                <property name="tooltip-text" translatable="yes">File Name</property>
+                                <property name="valign">3</property>
+                                <property name="hexpand">true</property>
+                                <property name="activates-default">true</property>
+                                <signal name="changed" handler="on_filename_entry_changed" object="NautilusFileChooser"/>
+                                <child>
+                                  <object class="GtkEventControllerFocus">
+                                    <signal name="leave" handler="on_filename_entry_focus_leave" object="NautilusFileChooser"/>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child type="accept-button">
+                          <object class="GtkButton" id="accept_button">
+                            <property name="label">_Select</property>
+                            <property name="use-underline">true</property>
+                            <property name="action-name">chooser.accept</property>
+                            <style>
+                              <class name="suggested-action"/>
+                              <class name="win11-dialog-button"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child type="choices-menu-button">
+                          <object class="GtkMenuButton" id="choices_menu_button">
+                            <property name="icon-name">nautilus-file-chooser-options-symbolic</property>
+                            <property name="tooltip-text" translatable="yes" context="File Chooser tooltips">Show Options</property>
+                          </object>
+                        </child>
+                        <child type="filter-dropdown">
+                          <object class="GtkDropDown" id="filters_dropdown">
+                            <property name="valign">3</property>
+                            <property name="tooltip-text" translatable="yes">Visible Files Filter</property>
+                            <property name="factory">
+                              <object class="GtkBuilderListItemFactory">
+                                <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="xalign">0</property>
+        <property name="ellipsize">2</property>
+        <binding name="label">
+          <lookup name="name" type="GtkFileFilter">
+            <lookup name="item" type="GtkListItem">GtkListItem</lookup>
+          </lookup>
+        </binding>
+        <binding name="width-chars">
+          <closure function="get_filter_width_chars" type="gint">
+            <lookup name="name" type="GtkFileFilter">
+              <lookup name="item" type="GtkListItem">GtkListItem</lookup>
+            </lookup>
+          </closure>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                              </object>
+                            </property>
+                            <property name="hexpand">true</property>
+                            <style>
+                              <class name="win11-chooser-field"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkDropTarget">
+                            <property name="actions">1</property>
+                            <property name="formats">GdkFileList</property>
+                            <signal name="drop" handler="on_file_drop"/>
+                          </object>
+                        </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </property>
+      </object>
+    </property>
+    <child>
+      <object class="AdwBreakpoint" id="breakpoint">
+        <condition>max-width: 520sp</condition>
+        <setter object="split_view" property="collapsed">true</setter>
+        <setter object="split_view" property="sidebar-width-unit">0</setter>
+        <setter object="toolbar" property="show-new-folder-button">false</setter>
+        <setter object="toolbar" property="show-view-controls">false</setter>
+        <setter object="bottom_toolbar" property="layout-name">narrow</setter>
+        <setter object="filters_dropdown" property="show-arrow">false</setter>
+        <setter object="filters_dropdown" property="factory">builder_list_item_image</setter>
+      </object>
+    </child>
+    <child>
+      <object class="GtkShortcutController">
+        <property name="scope">1</property>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">Escape</property>
+            <property name="action">action(window.close)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <style>
+      <class name="nautilus-file-chooser"/>
+      <class name="view"/>
+      <class name="win11-explorer"/>
+      <class name="win11-chooser"/>
+    </style>
+  </template>
+  <object class="NautilusFilenameValidator" id="validator">
+    <property name="allow-overwrite">true</property>
+    <property name="new-name" bind-source="filename_entry" bind-property="text" bind-flags="sync-create"/>
+    <signal name="notify::has-feedback" handler="on_validator_has_feedback_changed" swapped="True"/>
+    <signal name="notify::will-overwrite" handler="on_validator_will_overwrite_changed" swapped="True"/>
+  </object>
+  <object class="GtkBuilderListItemFactory" id="builder_list_item_image">
+    <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkImage">
+        <property name="icon-name">funnel-outline-symbolic</property>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+  </object>
+  <object class="GtkSizeGroup">
+    <widgets>
+      <widget name="filename_button_start"/>
+      <widget name="filename_button_end"/>
+      <widget name="filename_undo_button"/>
+    </widgets>
+  </object>
+</interface>

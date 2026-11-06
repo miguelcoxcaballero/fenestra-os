@@ -1,0 +1,15 @@
+[Unit]
+Description=Fenestra: keep the login screen usable (turns off a login extension that breaks it)
+Documentation=file:///usr/libexec/fenestra/fenestra-login-guard
+After=gdm.service
+PartOf=gdm.service
+ConditionPathIsDirectory=/etc/dconf/db/gdm.d
+
+[Service]
+Type=simple
+# Watches the greeter's GNOME Shell for 3 minutes after every GDM start, then exits.
+ExecStart=/usr/libexec/fenestra/fenestra-login-guard watch --seconds 180
+Nice=10
+
+[Install]
+WantedBy=gdm.service

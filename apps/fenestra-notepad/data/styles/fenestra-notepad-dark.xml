@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fenestra Notepad: Markdown formatting styles (dark). Text and background colours come
+     from the application stylesheet; only Markdown elements are styled here. -->
+<style-scheme id="fenestra-notepad-dark" name="Fenestra Notepad Dark" version="1.0">
+  <author>Fenestra</author>
+  <description>Markdown formatting for Fenestra Notepad</description>
+  <color name="heading" value="#ffffff"/>
+  <color name="marker" value="#9a9a9a"/>
+  <color name="link" value="#4cc2ff"/>
+  <color name="code" value="#ce9178"/>
+  <style name="def:heading" foreground="heading" bold="true" scale="1.25"/>
+  <style name="def:emphasis" italic="true"/>
+  <style name="def:strong-emphasis" bold="true"/>
+  <style name="def:link-text" foreground="link" underline="single"/>
+  <style name="def:link-destination" foreground="marker"/>
+  <style name="def:link-symbol" foreground="marker"/>
+  <style name="def:list-marker" foreground="marker" bold="true"/>
+  <style name="def:thematic-break" foreground="marker"/>
+  <style name="def:inline-code" foreground="code"/>
+  <style name="def:preformatted-section" foreground="code"/>
+  <style name="def:special-char" foreground="marker"/>
+  <style name="def:preprocessor" foreground="marker"/>
+  <style name="def:note" foreground="marker"/>
+  <style name="def:constant" foreground="marker"/>
+  <style name="def:shebang" foreground="marker"/>
+</style-scheme>

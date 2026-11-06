@@ -5,6 +5,7 @@ from gi.repository import GLib, Gtk
 
 from .. import util
 from ..backends import apps as appsb
+from ..backends import session
 from ..i18n import N_, _
 from ..widgets import (ContentDialog, Dropdown, SettingRow, ToggleSwitch, clear, icon, label,
                        show_dialog, toast)
@@ -139,9 +140,11 @@ class InstalledAppsPage(Page):
         pop.add_css_class("fluent-popover")
         pop.set_has_arrow(False)
         pb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        for text, cb, sensitive in ((_("Open"), lambda: appsb.launch_app(a), True),
-                                    (_("Advanced options"), lambda: util.open_control_center("applications"), True),
-                                    (_("Uninstall"), lambda: self._uninstall(a), a.source != "user")):
+        items = [(_("Open"), lambda: appsb.launch_app(a), True)]
+        if session.panel_available("applications"):
+            items.append((_("Advanced options"), lambda: session.open_panel("applications", self.window), True))
+        items.append((_("Uninstall"), lambda: self._uninstall(a), a.source != "user"))
+        for text, cb, sensitive in items:
             b = Gtk.Button(label=text)
             b.add_css_class("menu-item")
             b.set_sensitive(sensitive)

@@ -5,7 +5,7 @@ from gi.repository import Gdk, GLib
 
 from .. import util
 from ..backends import display as displayb
-from ..backends import power
+from ..backends import power, session
 from ..i18n import _
 from ..widgets import (ContentDialog, Dropdown, ExpanderRow, SettingRow, Slider, button, label, show_dialog,
                        spinner, toast,
@@ -73,7 +73,7 @@ class DisplayPage(Page):
             g.add(not_available_row(_("Night light")))
 
         hdr = SettingRow(_("HDR"), _("More about HDR"), "fs-brightness-high-symbolic", chevron=True,
-                         on_click=lambda: util.open_control_center("display"))
+                         on_click=lambda: session.open_panel("display", self.window), key="hdr")
         g.add(hdr)
 
         g2 = self.group(_("Scale & layout"))
@@ -99,7 +99,7 @@ class DisplayPage(Page):
         mr = SettingRow(_("Multiple displays"),
                         _("{0} display(s) connected. Choose the presentation mode for your displays").format(n),
                         "fs-dual-screen-symbolic", chevron=True,
-                        on_click=lambda: util.open_control_center("display"), key="multiple")
+                        on_click=lambda: session.open_panel("display", self.window), key="multiple")
         self.remember("multiple", mr)
         g2.add(mr)
         displayb.get_state(self._got_state)
@@ -118,7 +118,8 @@ class DisplayPage(Page):
                 sub += f" · {m.get_connector()}"
             adv.add(SettingRow(name, sub, None))
         adv.add(SettingRow(_("Open advanced display settings"), None, None,
-                           control=button(_("Open"), lambda: util.open_control_center("display"))))
+                           control=button(_("Open"), lambda: session.open_panel("display", self.window)),
+                           key="advanced-open"))
         g3.add(adv)
         self.ext_row(g3, _("Graphics"), _("Default GPU, per-app GPU preference"), "fs-developer-board-symbolic",
                      ["gnome-control-center", "display"])

@@ -14,6 +14,7 @@ import * as MW from '../menuWidgets.js';
 import {getOrientationProp} from '../utils.js';
 
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {FLYOUT_GAP} from '../windowsPopupMotion.js';
 
 const Spacing = 6;
 
@@ -255,7 +256,10 @@ export class Layout extends BaseMenuLayout {
         let positionY = rect.y;
         if (ArcMenuManager.settings.get_enum('runner-position') === 1)
             positionY = Math.round(rect.y + (rect.height / 2) - (runnerHeight / 2));
-        if(this.is_standalone_runner)positionY=Math.max(rect.y,rect.y+rect.height-runnerHeight-18);
+        // Windows Search: bottom edge 12 px above the taskbar, like Start
+        // (outer box = runnerHeight - 13 content + 2 px border, see below).
+        if (this.is_standalone_runner)
+            positionY = Math.max(rect.y, rect.y + rect.height - FLYOUT_GAP - (runnerHeight - 13) - 2);
         Main.layoutManager.setDummyCursorGeometry(positionX, positionY, 0, 0);
 
         if (!this.topBox)
@@ -265,7 +269,7 @@ export class Layout extends BaseMenuLayout {
         // Windows Search: same outer box as Start (no inner padding).
         if (this.is_standalone_runner) {
             this.style = `${height}: ${runnerHeight - 13}px; padding: 0px; spacing: 0px; width: ${runnerWidth}px;`;
-            this.arcMenu.box.style = 'padding-bottom: 0px; padding-left: 0px; padding-right: 0px;';
+            this.arcMenu.box.style = 'padding: 0px;';
         }
         this.searchEntry.style = '';
         if (runnerFontSize > 0) {

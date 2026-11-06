@@ -3,7 +3,15 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import {AuthPrompt} from 'resource:///org/gnome/shell/gdm/authPrompt.js';
-import {ShellUserVerifier, MessageType} from 'resource:///org/gnome/shell/gdm/util.js';
+// GNOME 51 moved the verifier to gdm/userVerifier.js; 49/50 have it in gdm/util.js.
+let ShellUserVerifier, MessageType;
+// (Checked first, so GNOME 49 doesn't log a failed import every start.)
+const hasResource = path => { try { Gio.resources_get_info(path, 0); return true; } catch { return false; } };
+if (hasResource('/org/gnome/shell/gdm/userVerifier.js')) {
+    ({ShellUserVerifier, MessageType} = await import('resource:///org/gnome/shell/gdm/userVerifier.js'));
+} else {
+    ({ShellUserVerifier, MessageType} = await import('resource:///org/gnome/shell/gdm/util.js'));
+}
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 const fenestraAsset=rel=>{for(const base of [GLib.build_filenamev([GLib.get_user_data_dir(),'fenestra','assets']),'/usr/share/fenestra/assets']){const p=GLib.build_filenamev([base,rel]);if(GLib.file_test(p,GLib.FileTest.EXISTS))return p;}return GLib.build_filenamev(['/usr/share/fenestra/assets',rel]);};
 
@@ -55,10 +63,12 @@ export function installHelloFeedback(injections, path) {
     else if(Main.screenShield)shieldId=Main.screenShield.connect('active-changed',()=>{if(Main.screenShield.active)warmUp();});
     // Preserve native queues and completion callbacks, shortening only the two
     // informational Howdy notices. Password, fingerprint and errors are intact.
-    injections.overrideMethod(ShellUserVerifier.prototype,'_queueMessage',original=>function(service,message,type){
+    injections.overrideMethod(ShellUserVerifier.prototype,'_queueMessage',original=>function(...args){
+        const obj=args.length===1&&args[0]&&typeof args[0]==='object';
+        const [service,message,type]=obj?[args[0].serviceName,args[0].message,args[0].messageType]:args;
         const mode=faceMessage(service,message);
-        if(!mode || type!==MessageType.INFO)return original.call(this,service,message,type);
-        this._messageQueue.push({serviceName:service,text:message,type,interval:mode==='searching'?0:SUCCESS_MESSAGE_MS});
+        if(!mode || type!==MessageType.INFO)return original.apply(this,args);
+        this._messageQueue.push({serviceName:service,text:message,type,wiggle:obj?args[0].wiggle:undefined,interval:mode==='searching'?0:SUCCESS_MESSAGE_MS});
         this._queueMessageTimeout();
     });
     const prompts=new Map();

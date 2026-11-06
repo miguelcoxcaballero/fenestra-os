@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Fenestra snipping overlay: full screen mode. A display on a short stand. -->
+<g fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="1.2" y="2.2" width="13.6" height="9" rx="1.2"/><path d="M8 11.2v2.4M5.2 14h5.6"/>
+</g></svg>

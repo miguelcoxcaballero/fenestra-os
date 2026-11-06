@@ -34,17 +34,43 @@ log "Fenestra assets, libraries and helpers"
 install -d "$OUT/usr/share/fenestra/assets" "$OUT/usr/share/fenestra/lib" "$OUT/usr/libexec/fenestra"
 cp -a "$REPO/assets/generated/." "$OUT/usr/share/fenestra/assets/"
 cp -a "$D/lib/folder-icons/folder_icons.py" "$OUT/usr/share/fenestra/lib/"
-install -m755 "$D/libexec/fenestra-patch-nautilus" "$D/libexec/fenestra-nautilus" "$OUT/usr/libexec/fenestra/"
+install -m755 "$D/libexec/fenestra-patch-nautilus" "$D/libexec/fenestra-nautilus" "$D/libexec/fenestra-release-upgrade" \
+    "$D/libexec/fenestra-release-upgrade-user" "$D/libexec/fenestra-plymouth-theme" "$OUT/usr/libexec/fenestra/"
+# Re-run by the release upgrade after every upgrade (Python / GDM PAM paths of local services).
+install -m755 "$REPO/extras/fedora-upgrade/fix-local-services.sh" "$OUT/usr/libexec/fenestra/fenestra-fix-local-services"
+# Login screen safety net: compatibility matrix + greeter guard (see docs/login-safety.md).
+install -m755 "$D/libexec/fenestra-login-guard" "$D/libexec/fenestra-search" "$OUT/usr/libexec/fenestra/"
+install -Dm644 "$D/systemd/fenestra-greeter-guard.service" "$OUT/usr/lib/systemd/system/fenestra-greeter-guard.service"
+install -Dm644 "$REPO/extras/compat/login-extensions.json" "$OUT/usr/share/fenestra/compat/login-extensions.json"
+install -Dm644 "$REPO/extras/compat/fenestra-shell.json" "$OUT/usr/share/fenestra/compat/fenestra-shell.json"
+install -Dm644 "$D/systemd/fenestra-post-upgrade.service" "$OUT/usr/lib/systemd/system/fenestra-post-upgrade.service"
+install -Dm644 "$D/autostart/fenestra-release-upgrade-user.desktop" "$OUT/etc/xdg/autostart/fenestra-release-upgrade-user.desktop"
+install -d "$OUT/usr/share/fenestra/upgrade"
+cp "$REPO/extras/fedora-upgrade/check.sh" "$REPO/extras/fedora-upgrade/nautilus-user-refresh.sh" "$OUT/usr/share/fenestra/upgrade/"
 install -Dm755 "$REPO/tools/fenestra-import-windows-assets" "$OUT/usr/bin/fenestra-import-windows-assets"
 install -Dm644 "$D/systemd/fenestra-patch-nautilus.service" "$OUT/usr/lib/systemd/system/fenestra-patch-nautilus.service"
+# Settings > System > Recovery > Reset this PC (runs at the next boot, before GDM).
+install -m755 "$D/libexec/fenestra-reset" "$OUT/usr/libexec/fenestra/"
+# Settings > Fenestra Update: newer Fenestra builds from GitHub (fenestra-update),
+# and the steps every install and update ends with (fenestra-post-install).
+install -m755 "$D/libexec/fenestra-update" "$D/libexec/fenestra-post-install" "$OUT/usr/libexec/fenestra/"
+install -Dm644 "$D/polkit/org.fenestra.update.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.update.policy"
+# Settings > Fenestra Update > «Migrar a KDE»: installs the Fenestra session (KWin) next to GNOME.
+# Here, not in the fenestra-shell RPM: it must exist on a GNOME-only install, and removing the
+# RPM (its rollback) must not remove it.
+install -m755 "$REPO/migrator/fenestra-migrate" "$OUT/usr/libexec/fenestra/"
+install -Dm644 "$REPO/migrator/org.fenestra.migrate.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.migrate.policy"
+install -Dm644 "$D/systemd/fenestra-reset.service" "$OUT/usr/lib/systemd/system/fenestra-reset.service"
+install -Dm644 "$D/polkit/org.fenestra.reset.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.reset.policy"
 install -d "$OUT/usr/lib/systemd/user"
 cp -a "$D/systemd/user/." "$OUT/usr/lib/systemd/user/"   # e.g. gnome-shell CPU/IO priority drop-in
 
 log "Files (Nautilus) Explorer layer"
 install -d "$OUT/usr/share/nautilus-python/extensions" "$OUT/usr/share/fenestra/nautilus"
 cp -a "$D/nautilus/python/"*.py "$OUT/usr/share/nautilus-python/extensions/"
+# One UI overlay per supported Nautilus major version (overlay/<major>/{ui,menu}/);
+# fenestra-nautilus picks the one matching the installed Nautilus, else runs it stock.
 cp -a "$D/nautilus/overlay" "$OUT/usr/share/fenestra/nautilus/overlay"
-cp "$D/nautilus/VERSION" "$OUT/usr/share/fenestra/nautilus/VERSION"
 install -Dm644 "$D/applications/org.gnome.Nautilus.dbus.service" "$OUT/usr/local/share/dbus-1/services/org.gnome.Nautilus.service"
 
 log "Desktop entries, backgrounds, skeleton"
@@ -64,31 +90,60 @@ cp "$D/dconf/gdm.d/"* "$OUT/etc/dconf/db/gdm.d/"
 install -Dm644 "$D/fontconfig/60-fenestra.conf" "$OUT/etc/fonts/conf.d/60-fenestra.conf"
 
 log "GTK theme"
+# Windows 11 caption buttons for every GTK 3/4 window (imported by the user CSS).
+install -Dm644 "$D/gtk/caption-buttons-gtk4.css" "$OUT/usr/share/fenestra/gtk-4.0/caption-buttons.css"
+install -Dm644 "$D/gtk/caption-buttons-gtk3.css" "$OUT/usr/share/fenestra/gtk-3.0/caption-buttons.css"
+for v in 3 4; do
+    # Per-user copy (Flatpak apps cannot read /usr/share/fenestra); fenestra-tray refreshes it at login.
+    install -Dm644 "$D/gtk/caption-buttons-gtk$v.css" "$OUT/etc/skel/.config/gtk-$v.0/fenestra-caption-buttons.css"
+    # Fallback for every account and session: three caption buttons on the right.
+    install -Dm644 "$D/gtk/settings-gtk$v.ini" "$OUT/etc/gtk-$v.0/settings.ini"
+done
+# Qt apps: XWayland first, so mutter draws Windows 11 caption buttons for them
+# (Qt's own Wayland decorations cannot be themed). Wayland stays as fallback.
+install -Dm644 "$D/gtk/60-fenestra-qt.conf" "$OUT/usr/lib/environment.d/60-fenestra-qt.conf"
 install -d "$OUT/usr/share/themes"
 cp -a "$D/themes/Fenestra-Dark" "$D/themes/Fenestra-Light" "$OUT/usr/share/themes/"
 
 log "Icon theme (Win11 by yeyushengfan258 + Fenestra aliases)"
-if [ ! -d "$CACHE/Win11-icon-theme/.git" ]; then
-    git clone -q https://github.com/yeyushengfan258/Win11-icon-theme.git "$CACHE/Win11-icon-theme"
+# Downloads are pinned; a file only reaches the cache once it is complete, so an
+# interrupted download (Fenestra Update on a flaky network) is retried next time.
+fetch() {  # URL FILE
+    [ -f "$2" ] && return 0
+    curl -fsSL --retry 3 --connect-timeout 20 -o "$2.part" "$1"
+    mv -f "$2.part" "$2"
+}
+if command -v git >/dev/null; then
+    ICONS_SRC="$CACHE/Win11-icon-theme"
+    if [ ! -d "$ICONS_SRC/.git" ]; then
+        rm -rf "$ICONS_SRC"
+        git clone -q https://github.com/yeyushengfan258/Win11-icon-theme.git "$ICONS_SRC"
+    fi
+    git -C "$ICONS_SRC" fetch -q --depth 1 origin "$WIN11_ICONS_COMMIT" 2>/dev/null || true
+    git -C "$ICONS_SRC" checkout -q "$WIN11_ICONS_COMMIT"
+else
+    # No git (Fedora Workstation does not ship git-core; installs from older images
+    # lack it): the same pinned commit as a tarball.
+    ICONS_SRC="$CACHE/Win11-icon-theme-$WIN11_ICONS_COMMIT"
+    if [ ! -x "$ICONS_SRC/install.sh" ]; then
+        fetch "https://codeload.github.com/yeyushengfan258/Win11-icon-theme/tar.gz/$WIN11_ICONS_COMMIT" "$ICONS_SRC.tar.gz"
+        rm -rf "$ICONS_SRC" && mkdir -p "$ICONS_SRC"
+        tar -xzf "$ICONS_SRC.tar.gz" -C "$ICONS_SRC" --strip-components=1 --no-same-owner
+        rm -f "$ICONS_SRC.tar.gz"
+    fi
 fi
-git -C "$CACHE/Win11-icon-theme" fetch -q --depth 1 origin "$WIN11_ICONS_COMMIT" 2>/dev/null || true
-git -C "$CACHE/Win11-icon-theme" checkout -q "$WIN11_ICONS_COMMIT"
 install -d "$OUT/usr/share/icons"
-(cd "$CACHE/Win11-icon-theme" && ./install.sh -d "$OUT/usr/share/icons" -t default >/dev/null)
+(cd "$ICONS_SRC" && ./install.sh -d "$OUT/usr/share/icons" -t default >/dev/null)
 python3 "$REPO/tools/build-fenestra-icons.py" "$OUT/usr/share/icons"
 
 log "Cursor theme (Bibata Original Classic)"
-if [ ! -f "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz" ]; then
-    curl -sSL -o "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz" \
-        "https://github.com/ful1e5/Bibata_Cursor/releases/download/$BIBATA_VERSION/Bibata-Original-Classic.tar.xz"
-fi
+fetch "https://github.com/ful1e5/Bibata_Cursor/releases/download/$BIBATA_VERSION/Bibata-Original-Classic.tar.xz" \
+    "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz"
 tar -xJf "$CACHE/Bibata-Original-Classic-$BIBATA_VERSION.tar.xz" -C "$OUT/usr/share/icons"
 
 log "Fonts (Selawik, OFL)"
-if [ ! -f "$CACHE/Selawik-$SELAWIK_VERSION.zip" ]; then
-    curl -sSL -o "$CACHE/Selawik-$SELAWIK_VERSION.zip" \
-        "https://github.com/microsoft/Selawik/releases/download/$SELAWIK_VERSION/Selawik_Release.zip"
-fi
+fetch "https://github.com/microsoft/Selawik/releases/download/$SELAWIK_VERSION/Selawik_Release.zip" \
+    "$CACHE/Selawik-$SELAWIK_VERSION.zip"
 install -d "$OUT/usr/share/fonts/selawik"
 python3 - "$CACHE/Selawik-$SELAWIK_VERSION.zip" "$OUT/usr/share/fonts/selawik" <<'PY'
 import sys, zipfile, os
@@ -108,6 +163,25 @@ for app in "$REPO"/apps/*/; do
         log "  installed $(basename "$app")"
     fi
 done
+
+log "Portal backend (print dialog)"
+# xdg-desktop-portal-fenestra: org.freedesktop.impl.portal.Print for both sessions;
+# session/portals/*.conf route Print to it.
+(cd "$D/portal" && DESTDIR="$OUT" PREFIX=/usr ./install.sh >/dev/null)
+# GNOME session: GNOME's portal defaults + Fenestra's print dialog.
+install -Dm644 "$REPO/session/portals/gnome-portals.conf" "$OUT/etc/xdg-desktop-portal/gnome-portals.conf"
+# Firefox: always use the portal's file dialog (the Explorer's), also outside Flatpak.
+install -Dm644 "$D/firefox/fenestra-portals.js" "$OUT/usr/lib64/firefox/defaults/pref/fenestra-portals.js"
+
+log "Release stamp"
+# Which Fenestra build this is; Settings > Fenestra Update compares it with GitHub.
+COMMIT="${FENESTRA_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo unknown)}"
+COMMIT_DATE="${FENESTRA_COMMIT_DATE:-$(git -C "$REPO" log -1 --format=%cI 2>/dev/null || date -u +%FT%TZ)}"
+python3 - "$OUT/usr/share/fenestra/release.json" "$COMMIT" "$COMMIT_DATE" <<'PY'
+import json, sys
+json.dump({"repo": "miguelcoxcaballero/fenestra-os", "branch": "main",
+           "commit": sys.argv[2], "date": sys.argv[3]}, open(sys.argv[1], "w"), indent=1)
+PY
 
 log "Licenses"
 install -d "$OUT/usr/share/licenses/fenestra"

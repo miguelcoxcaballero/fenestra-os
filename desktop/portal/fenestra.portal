@@ -1,0 +1,4 @@
+[portal]
+DBusName=org.freedesktop.impl.portal.desktop.fenestra
+Interfaces=org.freedesktop.impl.portal.Print;
+UseIn=gnome;Fenestra

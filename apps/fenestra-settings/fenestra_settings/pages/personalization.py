@@ -6,6 +6,8 @@ import os
 from gi.repository import Gdk, Gio, GLib, Gtk, Pango
 
 from .. import theme, util
+from ..backends import appearance, session, shell_options
+from ..backends.shell_options import gnome as dtp
 from ..i18n import N_, _
 from ..widgets import (Dropdown, ExpanderRow, SettingRow, Slider, ToggleSwitch, button, label,
                        not_available_row, toast)
@@ -53,10 +55,7 @@ def find_backgrounds(limit=40):
 
 
 def set_wallpaper(path):
-    uri = Gio.File.new_for_path(path).get_uri()
-    a = util.gset(BG, "picture-uri", uri)
-    b = util.gset(BG, "picture-uri-dark", uri)
-    return a and b
+    return appearance.set_wallpaper(path)
 
 
 def preview_card(width=300, height=188):
@@ -118,8 +117,7 @@ class PersonalizationPage(Page):
             if dark == dark_now:
                 b.add_css_class("selected")
             b.set_child(theme_preview(dark, 128, 80))
-            b.connect("clicked", lambda _b, d=dark: util.gset(IFACE, "color-scheme",
-                                                              "prefer-dark" if d else "default"))
+            b.connect("clicked", lambda _b, d=dark: appearance.set_color_scheme("dark" if d else "light"))
             b.set_tooltip_text(_("Dark") if dark else _("Light"))
             flow.append(b)
         right.append(flow)
@@ -152,9 +150,11 @@ class BackgroundPage(Page):
         self.preview_holder.append(preview_card(300, 188))
         box.append(self.preview_holder)
         g = self.group()
-        mode = "none" if util.gget(BG, "picture-options") == "none" else "picture"
-        dd = Dropdown([("picture", _("Picture")), ("none", _("Solid color"))], mode,
-                      lambda v: util.gset(BG, "picture-options", "none" if v == "none" else "zoom"))
+        mode = appearance.background_mode()
+        modes = [("picture", _("Picture")), ("solid", _("Solid color"))]
+        if session.supports("wallpaper-spotlight"):
+            modes.append(("spotlight", _("Spotlight")))
+        dd = Dropdown(modes, mode, lambda v: self._mode(v))
         r = SettingRow(_("Personalize your background"),
                        _("A picture background applies to your current desktop"), "fs-image-symbolic",
                        control=dd, key="bg-type")
@@ -191,11 +191,16 @@ class BackgroundPage(Page):
             self.remember("fit", fr)
             g.add(fr)
 
+    def _mode(self, v):
+        if not appearance.set_background_mode(v) and util.READ_ONLY:
+            toast(self.box, _("This action is disabled in read-only mode"))
+        GLib.timeout_add(150, self._refresh_preview)
+
     def _apply(self, path):
         if util.READ_ONLY:
             toast(self.box, _("This action is disabled in read-only mode"))
             return
-        set_wallpaper(path)
+        appearance.set_wallpaper(path)
         for b, p in self.thumbs:
             (b.add_css_class if p == path else b.remove_css_class)("selected")
         GLib.timeout_add(150, self._refresh_preview)
@@ -235,8 +240,7 @@ def _current_path():
     if util.DEMO:
         from ..backends import demo
         return demo.wallpaper(theme.get().dark)
-    uri = util.gget(BG, "picture-uri-dark" if theme.get().dark else "picture-uri") or ""
-    return Gio.File.new_for_uri(uri).get_path() if uri else None
+    return appearance.wallpaper(theme.get().dark)
 
 
 @register
@@ -253,15 +257,13 @@ class ColorsPage(Page):
 
     def build(self, box):
         g = self.group()
-        cur = util.gget(IFACE, "color-scheme", "default")
-        dd = Dropdown([("default", _("Light")), ("prefer-dark", _("Dark"))],
-                      "prefer-dark" if cur == "prefer-dark" else "default",
-                      lambda v: util.gset(IFACE, "color-scheme", v))
+        dd = Dropdown([("light", _("Light")), ("dark", _("Dark"))], appearance.color_scheme(),
+                      appearance.set_color_scheme)
         r = SettingRow(_("Choose your mode"), _("Change the colors that appear in Fenestra and your apps"),
                        "fs-dark-theme-symbolic", control=dd, key="mode")
         self.remember("mode", r)
         g.add(r)
-        if not util.has_key(IFACE, "accent-color"):
+        if not appearance.has("accent-color"):
             g.add(not_available_row(_("Accent color")))
             return
         exp = ExpanderRow(_("Accent color"), None, "fs-color-symbolic", key="accent", expanded=True)
@@ -312,23 +314,14 @@ class ColorsPage(Page):
                           on_click=lambda: self.go("themes")))
 
     def _pick(self, hexc):
-        """Windows accent: exact hex in org.fenestra.desktop (shell, taskbar, GTK) and the
-        nearest GNOME accent-color for libadwaita apps."""
-        util.gset(theme.FENESTRA, "accent-color-custom", hexc)
-        util.gset(IFACE, "accent-color", _nearest_gnome_accent(hexc))
+        """Exact hex for the shell, the taskbar and GTK, nearest GNOME accent-color for
+        libadwaita apps (backends/appearance)."""
+        appearance.set_accent(hexc)
         for b, h in self.swatches:
             (b.add_css_class if h == hexc else b.remove_css_class)("selected")
 
 
-def _nearest_gnome_accent(hexc):
-    import colorsys
-    r, g, b = (int(hexc[i:i + 2], 16) / 255 for i in (1, 3, 5))
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
-    if s < 0.18:
-        return "slate"
-    hues = {"red": 0, "orange": 25, "yellow": 48, "green": 120, "teal": 178, "blue": 210, "purple": 270, "pink": 320}
-    deg = h * 360
-    return min(hues, key=lambda k: min(abs(deg - hues[k]), 360 - abs(deg - hues[k])))
+_nearest_gnome_accent = appearance.gnome.nearest_gnome_accent
 
 
 def _list_themes(sub):
@@ -358,6 +351,11 @@ def _list_icon_themes(cursor=False):
     return sorted(found, key=str.lower)
 
 
+THEME_KEYS = {"gtk-theme": (appearance.gtk_theme, appearance.set_gtk_theme),
+              "icon-theme": (appearance.icon_theme, appearance.set_icon_theme),
+              "cursor-theme": (appearance.cursor_theme, appearance.set_cursor_theme)}
+
+
 @register
 class ThemesPage(Page):
     id = "themes"
@@ -380,7 +378,8 @@ class ThemesPage(Page):
                 ("icons", "icon-theme", _("Icons"), None, "fs-apps-symbolic", _list_icon_themes()),
                 ("cursor", "cursor-theme", _("Mouse cursor"), None, "fs-cursor-symbolic",
                  _list_icon_themes(cursor=True))):
-            cur = util.gget(IFACE, sk)
+            getter, setter = THEME_KEYS[sk]
+            cur = getter()
             if cur is None:
                 continue
             if util.DEMO:
@@ -390,7 +389,7 @@ class ThemesPage(Page):
             opts = [(t, t) for t in items]
             if cur not in items:
                 opts.insert(0, (cur, cur))
-            dd = Dropdown(opts, cur, lambda v, sk=sk: util.gset(IFACE, sk, v), width=220)
+            dd = Dropdown(opts, cur, setter, width=220)
             r = SettingRow(title, sub, ic, control=dd, key=key)
             self.remember(key, r)
             g.add(r)
@@ -444,10 +443,10 @@ class LockScreenPage(Page):
             self.remember("ls-notif", r)
             g.add(r)
         g2 = self.group(_("Related settings"))
-        g2.add(SettingRow(_("Screen timeout"), None, "fs-timer-symbolic", chevron=True,
-                          on_click=lambda: self.go("power", "screen-sleep")))
-        g2.add(SettingRow(_("Screen lock"), _("Lock automatically and require a password"), "fs-lock-shield-symbolic",
-                          chevron=True, on_click=lambda: self.go("screenlock")))
+        self.nav_row(g2, "power", _("Screen timeout"), None, "fs-timer-symbolic", key="screen-timeout",
+                     focus="screen-sleep")
+        self.nav_row(g2, "screenlock", _("Screen lock"), _("Lock automatically and require a password"),
+                     "fs-lock-shield-symbolic")
 
     def _browse(self):
         dlg = Gtk.FileDialog()
@@ -495,10 +494,7 @@ class StartPage(Page):
 
     def build(self, box):
         g = self.group()
-        if util.settings(ARCMENU) is None:
-            g.add(not_available_row(_("Start menu"), _("The Start menu extension is not installed"),
-                                    "fs-grid-symbolic"))
-        else:
+        if util.settings(ARCMENU) is not None:
             cur = util.gget(ARCMENU, "menu-layout")
             opts = [(k, _(v)) for k, v in START_LAYOUTS]
             if cur not in [o[0] for o in opts]:
@@ -507,20 +503,24 @@ class StartPage(Page):
                            control=gsetting_dropdown(ARCMENU, "menu-layout", opts), key="start-layout")
             self.remember("start-layout", r)
             g.add(r)
-            for key, title, sub in (("eleven-show-frequent-apps", _("Show most used apps"), None),
-                                    ("show-recently-installed-apps", _("Show recently added apps"), None),
-                                    ("show-user-avatar", _("Show my account picture"), None)):
+            for key, rkey, title in (("eleven-show-frequent-apps", "start-frequent", _("Show most used apps")),
+                                     ("show-recently-installed-apps", "start-recent-installed",
+                                      _("Show recently added apps")),
+                                     ("show-user-avatar", "start-avatar", _("Show my account picture"))):
                 t = gsetting_toggle(ARCMENU, key)
                 if t:
-                    g.add(SettingRow(title, sub, "fs-apps-symbolic", control=t))
+                    g.add(SettingRow(title, None, "fs-apps-symbolic", control=t, key=rkey))
+        elif not shell_options.supports("start-pins"):
+            g.add(not_available_row(_("Start menu"), _("The Start menu extension is not installed"),
+                                    "fs-grid-symbolic"))
         t = gsetting_toggle(PRIVACY, "remember-recent-files")
         if t:
             r = SettingRow(_("Show recommended files in Start and recent files in the file manager"),
                            None, "fs-document-symbolic", control=t, key="recent-items")
             self.remember("recent-items", r)
             g.add(r)
-        if util.settings(ARCMENU) is not None:
-            n = len(util.gget(ARCMENU, "pinned-apps", []) or [])
+        if shell_options.supports("start-pins"):
+            n = shell_options.pinned_count()
             self.pin_row = SettingRow(_("Pinned apps"), _("{0} apps pinned to Start").format(n), "fs-star-symbolic",
                                       control=button(_("Reset"), self._reset_pins), key="pinned-reset")
             self.remember("pinned-reset", self.pin_row)
@@ -531,80 +531,18 @@ class StartPage(Page):
 
     def _reset_pins(self):
         def go():
-            if not util.greset(ARCMENU, "pinned-apps"):
+            if not shell_options.reset_start_pins():
                 toast(self.box, _("This action is disabled in read-only mode"))
                 return
-            n = len(util.gget(ARCMENU, "pinned-apps", []) or [])
-            self.pin_row.set_subtitle(_("{0} apps pinned to Start").format(n))
+            self.pin_row.set_subtitle(_("{0} apps pinned to Start").format(shell_options.pinned_count()))
         from ..widgets import confirm
         confirm(self.box, _("Reset pinned apps?"), _("Start will go back to the default set of pinned apps."),
                 _("Reset"), go)
 
 
-def _dtp_json(key):
-    import json
-    try:
-        return json.loads(util.gget(DTP, key, "{}") or "{}")
-    except ValueError:
-        return {}
-
-
-def _dtp_set_all(key, value):
-    """Per-monitor JSON keys: apply the value to every known monitor."""
-    import json
-    d = _dtp_json(key) or {"0": value}
-    for mon in d:
-        d[mon] = value
-    return util.gset(DTP, key, json.dumps(d))
-
-
-def _dtp_first(key, default):
-    d = _dtp_json(key)
-    return next(iter(d.values()), default) if d else default
-
-
-DTP_DEFAULT_ELEMENTS = [
-    {"element": "showAppsButton", "visible": False, "position": "stackedTL"},
-    {"element": "activitiesButton", "visible": False, "position": "stackedTL"},
-    {"element": "leftBox", "visible": True, "position": "stackedTL"},
-    {"element": "taskbar", "visible": True, "position": "stackedTL"},
-    {"element": "centerBox", "visible": True, "position": "stackedBR"},
-    {"element": "rightBox", "visible": True, "position": "stackedBR"},
-    {"element": "dateMenu", "visible": True, "position": "stackedBR"},
-    {"element": "systemMenu", "visible": True, "position": "stackedBR"},
-    {"element": "desktopButton", "visible": True, "position": "stackedBR"},
-]
-
-
-def _dtp_elements():
-    """Per-monitor element layout; synthesised from Dash to Panel's defaults when unset."""
-    import copy
-    d = _dtp_json("panel-element-positions")
-    if not d:
-        mons = list(_dtp_json("panel-positions")) or ["0"]
-        d = {m: copy.deepcopy(DTP_DEFAULT_ELEMENTS) for m in mons}
-    return d
-
-
-def _dtp_element(name):
-    for mon in _dtp_elements().values():
-        for e in mon:
-            if e.get("element") == name:
-                return e
-    return None
-
-
-def _dtp_update_element(names, **changes):
-    import json
-    names = [names] if isinstance(names, str) else names
-    d = _dtp_elements()
-    if not d:
-        return False
-    for mon in d.values():
-        for e in mon:
-            if e.get("element") in names:
-                e.update(changes)
-    return util.gset(DTP, "panel-element-positions", json.dumps(d))
+# Dash to Panel helpers moved to backends/shell_options/gnome.py.
+_dtp_json, _dtp_set_all, _dtp_first = dtp.dtp_json, dtp.dtp_set_all, dtp.dtp_first
+_dtp_elements, _dtp_element, _dtp_update_element = dtp.dtp_elements, dtp.dtp_element, dtp.dtp_update_element
 
 
 @register
@@ -621,43 +559,47 @@ class TaskbarPage(Page):
              ("weekday", "Show the day of the week in the clock", "clock"),
              ("seconds", "Show seconds in system tray clock", "clock seconds")]
 
+    SEARCH = [("hide", N_("Hide")), ("icon", N_("Search icon only")), ("icon-label", N_("Search icon and label")),
+              ("box", N_("Search box"))]
+
+    def _ro(self, ok):
+        if not ok:
+            toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
+                  else _("The change was not applied"))
+
     def build(self, box):
         # Taskbar items: Search and Widgets (weather), like the reference page.
         gi_ = self.group(_("Taskbar items"))
-        search = gsetting_dropdown("org.fenestra.desktop", "taskbar-search",
-                                   [("hide", _("Hide")), ("icon", _("Search icon only")),
-                                    ("icon-label", _("Search icon and label")), ("box", _("Search box"))])
-        if search:
+        shown = False
+        if shell_options.supports("search-mode"):
+            search = Dropdown([(k, _(v)) for k, v in self.SEARCH], shell_options.search_mode(),
+                              lambda v: self._ro(shell_options.set_search_mode(v)))
             r = SettingRow(_("Search"), None, "fs-search-symbolic", control=search, key="tb-search")
             self.remember("tb-search", r)
             gi_.add(r)
-        widgets = gsetting_toggle("org.fenestra.desktop", "taskbar-widgets")
-        if widgets:
+            shown = True
+        if shell_options.supports("weather"):
+            widgets = ToggleSwitch(shell_options.weather(), lambda v: self._ro(shell_options.set_weather(v)))
             r = SettingRow(_("Widgets"), _("Weather at the left end of the taskbar"), "fs-weather-sunny-symbolic",
                            control=widgets, key="tb-widgets")
             self.remember("tb-widgets", r)
             gi_.add(r)
-        if not search and not widgets:
+            shown = True
+        if not shown:
             gi_.add(not_available_row(_("Taskbar items")))
         g = self.group(_("Taskbar behaviors"))
-        if util.settings(DTP) is None:
-            r = not_available_row(_("Taskbar behaviors"), _("The taskbar extension is not installed"),
-                                  "fs-panel-bottom-symbolic")
-            g.add(r)
-        else:
-            tb = _dtp_element("taskbar") or {}
-            align = "center" if tb.get("position", "centerMonitor").startswith("center") else "left"
-
-            def set_align(v):
-                pos = "centerMonitor" if v == "center" else "stackedTL"
-                ok = _dtp_update_element(["taskbar", "leftBox"], position=pos)
-                if not ok:
-                    toast(self.box, _("This action is disabled in read-only mode"))
+        if shell_options.supports("alignment"):
             r = SettingRow(_("Taskbar alignment"), None, "fs-panel-bottom-symbolic",
-                           control=Dropdown([("center", _("Center")), ("left", _("Left"))], align, set_align),
+                           control=Dropdown([("center", _("Center")), ("left", _("Left"))],
+                                            shell_options.alignment(),
+                                            lambda v: self._ro(shell_options.set_alignment(v))),
                            key="tb-align")
             self.remember("tb-align", r)
             g.add(r)
+        else:
+            g.add(not_available_row(_("Taskbar behaviors"), _("The taskbar extension is not installed"),
+                                    "fs-panel-bottom-symbolic"))
+        if util.settings(DTP) is not None:
             pos = _dtp_first("panel-positions", "BOTTOM")
             r = SettingRow(_("Taskbar position on screen"), None, "fs-panel-bottom-symbolic",
                            control=Dropdown([("BOTTOM", _("Bottom")), ("TOP", _("Top")), ("LEFT", _("Left")),
@@ -670,7 +612,8 @@ class TaskbarPage(Page):
             if size not in [o[0] for o in opts]:
                 opts.append((size, f"{size} px"))
             g.add(SettingRow(_("Taskbar size"), None, "fs-zoom-fit-symbolic",
-                             control=Dropdown(opts, size, lambda v: _dtp_set_all("panel-sizes", int(v)))))
+                             control=Dropdown(opts, size, lambda v: _dtp_set_all("panel-sizes", int(v))),
+                             key="tb-size"))
             ah = gsetting_toggle(DTP, "intellihide")
             if ah:
                 r = SettingRow(_("Automatically hide the taskbar"), None, "fs-panel-bottom-symbolic", control=ah,
@@ -679,21 +622,24 @@ class TaskbarPage(Page):
                 g.add(r)
             grp = gsetting_toggle(DTP, "group-apps")
             if grp:
-                g.add(SettingRow(_("Combine taskbar buttons"), None, "fs-apps-symbolic", control=grp))
+                g.add(SettingRow(_("Combine taskbar buttons"), None, "fs-apps-symbolic", control=grp,
+                                 key="tb-combine"))
             desk = _dtp_element("desktopButton")
             if desk is not None:
                 g.add(SettingRow(_("Select the far corner of the taskbar to show the desktop"), None,
                                  "fs-desktop-symbolic",
                                  control=ToggleSwitch(bool(desk.get("visible", True)),
-                                                      lambda v: _dtp_update_element("desktopButton", visible=v))))
+                                                      lambda v: _dtp_update_element("desktopButton", visible=v)),
+                                 key="tb-show-desktop"))
             tr = gsetting_toggle(DTP, "trans-use-custom-opacity")
             if tr:
-                g.add(SettingRow(_("Taskbar transparency"), None, "fs-circle-half-fill-symbolic", control=tr))
+                g.add(SettingRow(_("Taskbar transparency"), None, "fs-circle-half-fill-symbolic", control=tr,
+                                 key="tb-transparency"))
                 op = util.gget(DTP, "trans-panel-opacity", 0.8)
                 g.add(SettingRow(_("Taskbar opacity"), None, "fs-circle-half-fill-symbolic",
                                  control=Slider(0, 100, round(op * 100),
                                                 lambda v: util.gset(DTP, "trans-panel-opacity", round(v) / 100.0),
-                                                fmt="{:.0f}%", width=200)))
+                                                fmt="{:.0f}%", width=200), key="tb-opacity"))
         g2 = self.group(_("Clock"))
         for key, sk, t in (("weekday", "clock-show-weekday", _("Show the day of the week in the clock")),
                            ("date", "clock-show-date", _("Show the date in the clock")),
@@ -705,7 +651,7 @@ class TaskbarPage(Page):
                 g2.add(r)
         fmt = gsetting_dropdown(IFACE, "clock-format", [("24h", _("24-hour")), ("12h", _("12-hour"))])
         if fmt:
-            g2.add(SettingRow(_("Time format"), None, "fs-clock-symbolic", control=fmt))
+            g2.add(SettingRow(_("Time format"), None, "fs-clock-symbolic", control=fmt, key="tb-clock-format"))
 
 
 @register
@@ -719,10 +665,11 @@ class FontsPage(Page):
 
     def build(self, box):
         g = self.group(_("Font settings"))
-        for key, sk, t in (("font-ui", "font-name", _("Interface text")),
-                           ("font-doc", "document-font-name", _("Document text")),
-                           ("font-mono", "monospace-font-name", _("Monospace text"))):
-            cur = util.gget(IFACE, sk)
+        fonts = appearance.fonts()
+        for key, kind, sk, t in (("font-ui", "ui", "font-name", _("Interface text")),
+                                 ("font-doc", "document", "document-font-name", _("Document text")),
+                                 ("font-mono", "monospace", "monospace-font-name", _("Monospace text"))):
+            cur = fonts.get(kind)
             if cur is None:
                 continue
             if util.DEMO:
@@ -732,7 +679,8 @@ class FontsPage(Page):
             fb.set_font_desc(Pango.FontDescription.from_string(cur))
             fb.add_css_class("fluent-fontbutton")
             fb.set_valign(Gtk.Align.CENTER)
-            fb.connect("notify::font-desc", lambda b, _p, sk=sk: util.gset(IFACE, sk, b.get_font_desc().to_string()))
+            fb.connect("notify::font-desc",
+                       lambda b, _p, kind=kind: appearance.set_font(kind, b.get_font_desc().to_string()))
             r = SettingRow(t, None, "fs-text-font-symbolic", control=fb, key=key)
             self.remember(key, r)
             g.add(r)

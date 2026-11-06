@@ -70,12 +70,30 @@ The app icon defaults to Fenestra's own gear. `tools/fenestra-import-windows-ass
 user's own Settings logo from a Windows partition into `~/.local/share/icons/hicolor` (never into
 the repo); screenshot/demo mode always uses the bundled icon.
 
+## GNOME and Fenestra sessions
+
+Settings runs in the GNOME Shell session and in the Fenestra session (KWin + Fenestra Shell,
+`XDG_CURRENT_DESKTOP=Fenestra`). `fenestra_settings/backends/session.py` decides, in one place,
+which pages and rows exist: under Fenestra every control that only GNOME Shell, Mutter or
+gnome-settings-daemon would read is hidden (pages, rows, links and search results), never left
+as a dead switch. Appearance, taskbar/Start options and do not disturb go through
+`backends/appearance`, `backends/shell_options` and `backends/notifications`, which write
+`~/.config/fenestra/shell.conf` (read live by the shell) under Fenestra and the GNOME keys
+otherwise. Both sessions regenerate the GTK accent theme; `--sync-appearance` does that from
+the command line. See `docs/fenestra-shell/APPS.md` §9.
+
+```sh
+XDG_CURRENT_DESKTOP=Fenestra python3 -m fenestra_settings --list-pages   # pages shown under Fenestra
+```
+
 ## Tests
 
 ```sh
-# every toggle/dropdown/slider on every page, isolated keyfile GSettings, D-Bus sandboxed
+# every toggle/dropdown/slider on every page, isolated keyfile GSettings, D-Bus sandboxed;
+# run it once per session (XDG_CURRENT_DESKTOP=GNOME and XDG_CURRENT_DESKTOP=Fenestra)
 WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland python3 tests/control_audit.py --out /tmp/audit.md
 python3 tests/check_translations.py   # every UI string has a Spanish translation
+python3 tools/test_session_backends.py  # session split + shell.conf writes, temporary HOME
 ```
 
 ## Installing

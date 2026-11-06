@@ -85,7 +85,8 @@ class WindowsAcrylicEffect extends Clutter.Effect {
                 const w = Math.round(ext.size.width * scale);
                 const h = Math.round(ext.size.height * scale);
                 if (w > 0 && h > 0) {
-                    const ctx = Clutter.get_default_backend().get_cogl_context();
+                    // Clutter.get_default_backend() was removed in GNOME 51: use the actor's context.
+                    const ctx = (actor.get_context?.() ?? global.stage.context).get_backend().get_cogl_context();
                     this._ensure(ctx, w, h);
                     const layer = Clutter.LayerNode.new_to_framebuffer(this._fb, this._copyPipeline);
                     node.add_child(layer);

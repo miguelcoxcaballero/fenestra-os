@@ -1,0 +1,41 @@
+name: shell-kwin
+# Fenestra Shell on KWin: builds shell/ on Fedora and runs the headless session bench
+# (tests/shell-kwin: KWin --virtual, the shell, GTK 4 and X11 clients, Start, Search, tray,
+# crash and relaunch), with one and two outputs. Screenshots are uploaded as artifacts.
+on:
+  push:
+    branches: [main, 'feature/**']
+    paths: ['shell/**', 'session/**', 'tests/shell-kwin/**', 'apps/**', 'assets/generated/**', '.github/workflows/shell-kwin.yml']
+  pull_request:
+    paths: ['shell/**', 'session/**', 'tests/shell-kwin/**', 'apps/**', '.github/workflows/shell-kwin.yml']
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora: ['45']
+        outputs: ['1', '2']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lab image (Fedora ${{ matrix.fedora }} + KWin + Qt 6)
+        run: docker build -f tests/shell-kwin/Containerfile --build-arg FEDORA=${{ matrix.fedora }} -t fenestra-kwinlab .
+      - name: Session scripts and units
+        run: |
+          for f in session/libexec/fenestra-session session/libexec/fenestra-session-inner session/libexec/fenestra-shell-crashlog tests/shell-kwin/*.sh; do bash -n "$f"; done
+          python3 -m py_compile session/libexec/fenestra-shell-failed tests/shell-kwin/compose.py tests/shell-kwin/sni-item.py
+      - name: Build and bench
+        run: |
+          mkdir -p out build
+          OUTPUTS=${{ matrix.outputs }} TIMEOUT=400 BUILD=$PWD/build OUT=$PWD/out ENGINE=docker bash tests/shell-kwin/build.sh
+          grep -q "QA_RESULT PASS" out/result.txt
+      - name: Screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shell-kwin-f${{ matrix.fedora }}-outputs${{ matrix.outputs }}
+          path: |
+            out/*.png
+            out/*.log
+            out/checks.txt

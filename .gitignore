@@ -15,3 +15,4 @@ apps/fenestra-icon-extractor/out/
 
 # Side-by-side comparisons with the reference OS stay local
 **/compare-*.png
+packaging/out/

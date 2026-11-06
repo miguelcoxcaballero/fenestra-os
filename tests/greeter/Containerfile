@@ -1,0 +1,10 @@
+# Image for tests/greeter/bench.sh: GNOME Shell + GDM of one Fedora release, nothing of
+# Fenestra (the bench copies the extensions under test).
+#   docker build --build-arg FEDORA=45 -t fenestra-greeterlab -f tests/greeter/Containerfile tests/greeter
+ARG FEDORA=45
+FROM registry.fedoraproject.org/fedora:${FEDORA}
+RUN dnf -y --setopt=install_weak_deps=False install gnome-shell mutter gdm accountsservice gjs \
+        python3-gobject python3-pillow dconf dbus-daemon dbus-tools glib2 gsettings-desktop-schemas \
+        gnome-settings-daemon mesa-dri-drivers xorg-x11-server-Xwayland glycin-loaders \
+        adwaita-icon-theme google-noto-sans-fonts libgweather4 shadow-utils util-linux procps-ng \
+    && dnf clean all

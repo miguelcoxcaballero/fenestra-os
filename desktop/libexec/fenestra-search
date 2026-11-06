@@ -1,0 +1,8 @@
+#!/bin/sh
+# Taskbar / launcher "Search": Fenestra Shell's Search in the Fenestra session, ArcMenu's in GNOME.
+case ":$XDG_CURRENT_DESKTOP:" in
+*:Fenestra:*)
+    exec gdbus call --session --dest org.fenestra.Shell --object-path /org/fenestra/Shell --method org.fenestra.Shell.ToggleSearch ;;
+*)
+    exec gdbus call --session --dest com.Extensions.ArcMenu --object-path /com/Extensions/ArcMenu --method com.Extensions.ArcMenu.ToggleStandaloneRunner ;;
+esac

@@ -38,12 +38,17 @@ ALIASES = {
 
 
 def resolve_page(page):
-    from .pages.base import PAGES
+    """Page id for a page id, alias or GNOME panel name. A page that does not exist in this
+    session (backends/session.py) resolves to its nearest shown parent page."""
+    from .pages.base import HIDDEN_PAGES, PAGES, visible_ancestor
     if not page:
         return None
     if page in PAGES:
         return page
-    return ALIASES.get(page.lower())
+    if page in HIDDEN_PAGES:
+        return visible_ancestor(page)
+    target = ALIASES.get(page.lower())
+    return visible_ancestor(target) if target else None
 
 
 def parse_args(argv):
@@ -65,6 +70,13 @@ def parse_args(argv):
     p.add_argument("--resolve-page", default=None, metavar="NAME",
                    help="print the page id for a page id / GNOME panel name and exit (1 if unknown)")
     p.add_argument("--list-pages", action="store_true", help="print page ids and exit")
+    p.add_argument("--export-search-index", action="store_true",
+                   help="print the search index (pages and indexed rows, in the UI language) as JSON and exit;"
+                        " Fenestra Shell's Search uses it")
+    p.add_argument("--sync-appearance", action="store_true",
+                   help="regenerate the GTK accent theme and caption buttons for the current mode and accent"
+                        " (in the Fenestra session also copy shell.conf's mode/accent/wallpaper to GSettings)"
+                        " and exit")
     p.add_argument("page_pos", nargs="?", default=None, help=argparse.SUPPRESS)
     return p.parse_args(argv[1:])
 
@@ -85,6 +97,12 @@ class App(Gtk.Application):
         override = "dark" if self.opts.dark else "light" if self.opts.light else None
         theme.init(override)
         from . import pages  # noqa: F401  (registers pages)
+        from .backends import session
+        if session.is_fenestra() and not util.READ_ONLY:
+            # the shell can change the mode/accent itself (quick settings): keep GTK apps in step
+            from .backends import shellconf
+            from .backends.appearance import fenestra as fen_appearance
+            shellconf.watch(fen_appearance.sync_from_shell)
 
     def do_command_line(self, cmdline):
         args = cmdline.get_arguments()
@@ -200,6 +218,16 @@ def main(argv=None):
         from .pages.base import PAGES
         for pid, cls in PAGES.items():
             print(f"{pid:22} {cls.title}  (parent: {cls.parent or '-'})")
+        return 0
+    if opts.sync_appearance:
+        from .backends import appearance
+        return 0 if appearance.sync() else 1
+    if opts.export_search_index:
+        import json
+        from . import pages  # noqa: F401
+        from .search import build_index
+        json.dump([{"page": e.page_id, "key": e.key, "title": e.title, "where": e.where, "icon": e.icon, "hay": e.hay}
+                   for e in build_index()], sys.stdout, ensure_ascii=False)
         return 0
     if opts.screenshot or opts.demo_data or os.environ.get("FENESTRA_SETTINGS_DEMO"):
         util.DEMO = True

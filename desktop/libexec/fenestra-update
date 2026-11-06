@@ -1,0 +1,95 @@
+#!/usr/bin/bash
+# Fenestra updates from GitHub (Settings > Fenestra Update).
+#
+#   fenestra-update apply COMMIT [DATE]   (root, via pkexec from Settings)
+#
+# Settings checks GitHub itself (no privileges needed) and passes the exact
+# commit it showed the user. This script downloads that commit's source from
+# GitHub, builds the Fenestra overlay from it (build/build-overlay.sh, the same
+# build the installer image uses), installs it over the running system and
+# runs fenestra-post-install, the same steps as a fresh install. Fedora's own
+# packages are updated separately (PackageKit). A restart finishes the update.
+#
+# Files a newer build no longer ships are removed (only under /usr, only files
+# an earlier Fenestra update installed). User state under /var is never
+# overwritten; /etc gets the new system defaults (dconf, skel, GTK settings).
+set -euo pipefail
+
+main() {
+    local REL=/usr/share/fenestra/release.json
+    local MANIFEST=/usr/share/fenestra/overlay-manifest
+    local WORK=/var/cache/fenestra/update
+    local LOG=/var/log/fenestra-update.log
+
+    die() { echo "fenestra-update: $*" >&2; exit 1; }
+    [ "$(id -u)" = 0 ] || die "must run as root"
+    [ "${1:-}" = apply ] || { sed -n 2,15p "$0"; exit 1; }
+    local commit=${2:-} date=${3:-}
+    [[ $commit =~ ^[0-9a-f]{40}$ ]] || die "COMMIT must be a full 40-character commit id"
+    [[ -z $date || $date =~ ^[0-9T:+.Z-]+$ ]] || die "bad DATE"
+
+    local repo=miguelcoxcaballero/fenestra-os
+    if [ -f "$REL" ]; then
+        local r
+        r=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("repo", ""))' "$REL" 2>/dev/null || true)
+        [[ $r =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] && repo=$r
+    fi
+
+    exec > >(tee -a "$LOG") 2>&1
+    echo "== $(date -Is) Fenestra update to $repo@$commit"
+    install -d -m 0755 "$WORK"
+    rm -rf "$WORK/src" "$WORK/rootfs" "$WORK/src.tar.gz"
+    mkdir -p "$WORK/src"
+
+    echo "STEP download"
+    if [ -n "${FENESTRA_UPDATE_TARBALL:-}" ]; then
+        # Tests only (pkexec clears the environment).
+        cp "$FENESTRA_UPDATE_TARBALL" "$WORK/src.tar.gz"
+    else
+        curl -fsSL --retry 3 --connect-timeout 20 -o "$WORK/src.tar.gz" \
+            "https://codeload.github.com/$repo/tar.gz/$commit"
+    fi
+    tar -xzf "$WORK/src.tar.gz" -C "$WORK/src" --strip-components=1 --no-same-owner
+    [ -x "$WORK/src/build/build-overlay.sh" ] || die "the download does not contain build/build-overlay.sh"
+
+    echo "STEP build"
+    HOME=/root FENESTRA_CACHE=/var/cache/fenestra/build FENESTRA_COMMIT=$commit FENESTRA_COMMIT_DATE=$date \
+        bash "$WORK/src/build/build-overlay.sh" "$WORK/rootfs"
+    [ -f "$WORK/rootfs/usr/share/fenestra/release.json" ] || die "the build did not produce an overlay"
+
+    echo "STEP install"
+    (cd "$WORK/rootfs" && find . -mindepth 1 ! -type d | sed 's|^\.||' | LC_ALL=C sort) > "$WORK/manifest.new"
+    if [ -f "$MANIFEST" ]; then
+        LC_ALL=C comm -23 "$MANIFEST" "$WORK/manifest.new" | grep '^/usr/' | while IFS= read -r f; do
+            rm -f -- "$f"
+        done || true
+    fi
+    # --unlink-first: new files get new inodes, so running programs (the shell,
+    # Settings, this script) keep reading the version they started with.
+    # Files only (directories are created as needed, never unlinked).
+    copy() {  # $1 extra tar option, $2... top-level directories
+        local opt=$1; shift
+        (cd "$WORK/rootfs" && find "$@" ! -type d -print0) |
+            tar -C "$WORK/rootfs" --null --no-recursion -T - -cf - |
+            tar -C / -xf - "$opt" --no-same-owner
+    }
+    copy --unlink-first usr etc
+    if [ -d "$WORK/rootfs/var" ]; then copy --skip-old-files var; fi
+    install -m644 "$WORK/manifest.new" "$MANIFEST"
+
+    echo "STEP configure"
+    /usr/libexec/fenestra/fenestra-post-install
+    # Fenestra session installed («Migrar a KDE»): its fenestra-shell build for this commit
+    # (boot-tested; the previous build stays if it fails). Never fails the update.
+    if rpm -q fenestra-shell >/dev/null 2>&1 && [ -x /usr/libexec/fenestra/fenestra-migrate ]; then
+        echo "STEP shell"
+        /usr/libexec/fenestra/fenestra-migrate update-shell ||
+            echo "warning: Fenestra Shell not updated (see /var/log/fenestra-migrate.log)"
+    fi
+    rm -rf "$WORK/src" "$WORK/rootfs" "$WORK/src.tar.gz"
+    echo "== done"
+}
+
+# One line: bash has parsed the whole call and the exit before the update
+# replaces this file.
+main "$@"; exit $?

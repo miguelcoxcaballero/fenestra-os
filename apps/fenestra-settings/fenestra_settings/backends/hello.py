@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import configparser
 import os
+import re
 
 from gi.repository import Gio, GLib
 
@@ -57,6 +58,51 @@ def howdy_device() -> str | None:
         return None
     dev = howdy_config().get("video", "device_path", fallback="")
     return dev if dev and os.path.exists(dev) else None
+
+
+def _v4l_parent(node):
+    """The physical camera (USB device) a /dev/videoN node belongs to."""
+    try:
+        path = os.path.realpath(f"/sys/class/video4linux/{node}/device")
+    except OSError:
+        return None
+    # .../usb1/1-5/1-5:1.0 -> .../usb1/1-5 (interfaces of one camera module)
+    return os.path.dirname(path) if re.search(r":\d+\.\d+$", path) else path
+
+
+def preview_device(busy) -> str | None:
+    """A camera that can show the user's face while Howdy uses `busy` (its IR camera).
+
+    Laptops with face sign-in usually have a colour and an IR camera in one
+    module; prefer the colour camera of the same module, then any other camera.
+    """
+    if util.DEMO or not busy:
+        return None
+    base = "/sys/class/video4linux"
+    try:
+        nodes = sorted(os.listdir(base))
+    except OSError:
+        return None
+    busy_node = os.path.basename(os.path.realpath(busy))
+    busy_parent = _v4l_parent(busy_node)
+    best = None
+    for n in nodes:
+        if n == busy_node or not n.startswith("video"):
+            continue
+        try:
+            with open(f"{base}/{n}/index") as f:
+                if f.read().strip() != "0":  # metadata nodes have index 1
+                    continue
+            with open(f"{base}/{n}/name") as f:
+                name = f.read().strip().lower()
+        except OSError:
+            continue
+        if "ir" in re.split(r"[^a-z]+", name) or "infrared" in name:
+            continue
+        rank = 0 if _v4l_parent(n) == busy_parent else 1
+        if best is None or rank < best[0]:
+            best = (rank, f"/dev/{n}")
+    return best[1] if best and os.path.exists(best[1]) else None
 
 
 def howdy_enrolled() -> bool:

@@ -26,6 +26,13 @@ rm -rf "$WORK"
 mkdir -p "$WORK/add/fenestra"
 tar -C "$REPO/build/out/rootfs" --owner=0 --group=0 -czf "$WORK/add/fenestra/rootfs.tar.gz" .
 cp "$REPO/kickstart/fenestra-base.ks" "$WORK/add/fenestra/"
+# Fenestra session (KWin): the fenestra-shell RPM, when it can be built here (rpm-build and the
+# BuildRequires of packaging/fenestra-shell.spec, e.g. inside tests/shell-kwin/Containerfile).
+if command -v rpmbuild >/dev/null && [ "${FENESTRA_SHELL:-1}" = 1 ]; then
+    bash "$REPO/packaging/build-rpm.sh" "$WORK/add/fenestra/rpms" || echo "warning: fenestra-shell RPM not built; the ISO installs GNOME only" >&2
+else
+    echo "note: rpmbuild not found; the ISO installs the GNOME session only (FENESTRA_SHELL=0 or no rpm-build)" >&2
+fi
 
 # Installer branding: an Anaconda updates image (overlaid on the installer's
 # root) with the product name, Fenestra artwork instead of Fedora's logos,

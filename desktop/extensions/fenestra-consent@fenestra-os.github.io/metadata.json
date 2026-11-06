@@ -4,7 +4,8 @@
   "description": "Windows-11-style administrator consent (UAC-like) prompt over the native polkit dialog.",
   "shell-version": [
     "49",
-    "50"
+    "50",
+    "51"
   ],
   "session-modes": [
     "user"

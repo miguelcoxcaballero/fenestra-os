@@ -432,8 +432,13 @@ class Group(Gtk.Box):
         self.rows.add_css_class("group-rows")
         self.append(self.rows)
 
+    hidden_keys: set = frozenset()  # row keys hidden in this session (set by Page.group())
+
     def add(self, w):
         self.rows.append(w)
+        if getattr(w, "key", None) in self.hidden_keys:
+            w.set_visible(False)
+            w.session_hidden = True
         return w
 
     def clear(self):

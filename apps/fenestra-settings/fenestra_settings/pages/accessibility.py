@@ -4,8 +4,9 @@ from __future__ import annotations
 from gi.repository import Gtk, Pango
 
 from .. import util
+from ..backends import appearance
 from ..i18n import N_, _
-from ..widgets import Dropdown, SettingRow, Slider, button, label
+from ..widgets import Dropdown, SettingRow, Slider, ToggleSwitch, button, label
 from .base import Page, register
 from .common import gsetting_toggle
 
@@ -69,10 +70,10 @@ class TextSizePage(Page):
         box.append(prev)
         g = self.group()
         g.set_margin_top(4)
-        cur = util.gget(IFACE, "text-scaling-factor", 1.0)
+        cur = appearance.text_scale()
         sl = Slider(100, 225, round(cur * 100), None, step=5, width=280, fmt="{:.0f}%")
         sl.scale.connect("value-changed", lambda s: self._preview(s.get_value()))
-        apply = button(_("Apply"), lambda: util.gset(IFACE, "text-scaling-factor", round(sl.get_value()) / 100.0))
+        apply = button(_("Apply"), lambda: appearance.set_text_scale(round(sl.get_value()) / 100.0))
         sl.apply_button = apply  # like the reference UI, the size is applied with "Apply"
         ctrl = Gtk.Box(spacing=12)
         ctrl.append(sl)
@@ -104,7 +105,8 @@ class VisualEffectsPage(Page):
             r = SettingRow(_("Always show scrollbars"), None, "fs-options-symbolic", control=sb, key="scrollbars")
             self.remember("scrollbars", r)
             g.add(r)
-        an = gsetting_toggle(IFACE, "enable-animations")
+        an = ToggleSwitch(appearance.animations(), appearance.set_animations) if appearance.has("enable-animations") \
+            else None
         if an:
             r = SettingRow(_("Animation effects"), None, "fs-sparkle-symbolic", control=an, key="animations")
             self.remember("animations", r)
@@ -128,12 +130,12 @@ class PointerPage(Page):
 
     def build(self, box):
         g = self.group(_("Mouse pointer"))
-        cur = util.gget(IFACE, "cursor-size", 24)
+        cur = appearance.cursor_size()
         opts = [(v, _(t)) for v, t in self.SIZES]
         if cur not in [o[0] for o in opts]:
             opts.insert(0, (cur, str(cur)))
         r = SettingRow(_("Size"), None, "fs-cursor-symbolic",
-                       control=Dropdown(opts, cur, lambda v: util.gset(IFACE, "cursor-size", int(v))), key="cursor-size")
+                       control=Dropdown(opts, cur, lambda v: appearance.set_cursor_size(int(v))), key="cursor-size")
         self.remember("cursor-size", r)
         g.add(r)
         lp = gsetting_toggle(IFACE, "locate-pointer")

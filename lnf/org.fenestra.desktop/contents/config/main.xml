@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
+  <kcfgfile name=""/>
+  <group name="General">
+    <!-- Written by Fenestra Shell: the picture of the desktop or today's Spotlight picture. -->
+    <entry name="Background" type="String"><default>/usr/share/backgrounds/fenestra/fenestra-bloom-dark.jpg</default></entry>
+    <entry name="Network" type="String"><default></default></entry>
+    <entry name="Battery" type="Int"><default>-1</default></entry>
+  </group>
+</kcfg>

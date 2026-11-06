@@ -1,0 +1,17 @@
+[Unit]
+Description=Fenestra Shell (taskbar, Start, quick settings, desktop)
+PartOf=fenestra-session.target
+# Three crashes in two minutes: stop relaunching and show the minimal notice instead.
+StartLimitIntervalSec=120
+StartLimitBurst=3
+OnFailure=fenestra-shell-failed.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/fenestra-shell
+# Layer-shell needs native Wayland (environment.d may say xcb first for the GNOME session).
+Environment=QT_QPA_PLATFORM=wayland
+Restart=on-failure
+RestartSec=1
+Slice=session.slice
+ExecStopPost=/usr/libexec/fenestra/fenestra-shell-crashlog

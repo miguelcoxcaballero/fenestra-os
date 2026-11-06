@@ -1,0 +1,502 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <menu id="app_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">New _Window</attribute>
+        <attribute name="action">app.clone-window</attribute>
+        <attribute name="verb-icon">window-new-symbolic</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">New _Tab</attribute>
+        <attribute name="action">win.new-tab</attribute>
+        <attribute name="verb-icon">tab-new-symbolic</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Show All Ta_bs</attribute>
+        <attribute name="action">win.open-tab-overview</attribute>
+      </item>
+    </section>
+    <section id="undo_redo_section">
+      <item>
+        <attribute name="label" translatable="yes">_Undo</attribute>
+        <attribute name="action">win.undo</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Redo</attribute>
+        <attribute name="action">win.redo</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Preferences</attribute>
+        <attribute name="action">app.preferences</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
+        <attribute name="action">app.shortcuts</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Help</attribute>
+        <attribute name="action">app.help</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_About Files</attribute>
+        <attribute name="action">app.about</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="tab_menu_model">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_New Tab</attribute>
+        <attribute name="action">win.new-tab</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Re_store Closed Tab</attribute>
+        <attribute name="action">win.restore-tab</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Move Tab to New _Window</attribute>
+        <attribute name="action">win.tab-move-new-window</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Move Tab _Left</attribute>
+        <attribute name="action">win.tab-move-left</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Move Tab _Right</attribute>
+        <attribute name="action">win.tab-move-right</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Close Tab</attribute>
+        <attribute name="action">win.close-current-view</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Close _Other Tabs</attribute>
+        <attribute name="action">win.close-other-tabs</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="tab_overview_menu_model">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">New _Window</attribute>
+        <attribute name="action">app.clone-window</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Re_store Closed Tab</attribute>
+        <attribute name="action">win.restore-tab</attribute>
+      </item>
+    </section>
+  </menu>
+  <template class="NautilusWindow" parent="AdwApplicationWindow">
+    <property name="default-height">550</property>
+    <property name="default-width">890</property>
+    <property name="height-request">294</property>
+    <property name="width-request">360</property>
+    <property name="show-menubar">false</property>
+    <binding name="title">
+      <lookup name="title" type="NautilusWindowSlot">
+        <lookup name="active-slot" type="NautilusWindow">NautilusWindow</lookup>
+      </lookup>
+    </binding>
+    <style>
+      <class name="view" />
+      <class name="win11-explorer" />
+    </style>
+    <child>
+      <object class="NautilusShortcutManager">
+        <property name="child">
+          <object class="AdwToastOverlay" id="toast_overlay">
+            <property name="child">
+              <object class="AdwTabOverview" id="tab_overview">
+                <property name="view">tab_view</property>
+                <property name="enable-new-tab">true</property>
+                <property name="secondary-menu">tab_overview_menu_model</property>
+                <signal name="create-tab" handler="create_tab_cb" swapped="True" />
+                <property name="child">
+                  <object class="AdwToolbarView">
+                    <child type="top">
+                      <object class="GtkWindowHandle">
+                        <property name="child">
+                          <object class="GtkBox">
+                            <style>
+                              <class name="win11-titlebar" />
+                              <class name="titlebar" />
+                            </style>
+                            <child>
+                              <object class="AdwTabBar" id="tab_bar">
+                                <property name="view">tab_view</property>
+                                <property name="autohide">false</property>
+                                <property name="expand-tabs">true</property>
+                                <style>
+                                  <class name="win11-tabs" />
+                                </style>
+                                <property name="hexpand">false</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton">
+                                <property name="action-name">win.new-tab</property>
+                                <property name="icon-name">list-add-symbolic</property>
+                                <property name="tooltip-text">Nueva pestaña (Ctrl+T)</property>
+                                <style>
+                                  <class name="flat" />
+                                  <class name="win11-new-tab" />
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="hexpand">true</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkWindowControls">
+                                <property name="side">end</property>
+                                <property name="decoration-layout">:minimize,maximize,close</property>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child type="top">
+                      <object class="NautilusToolbar" id="toolbar">
+                        <property name="show-view-controls">false</property>
+                        <property name="show-history-controls">true</property>
+                        <property name="sidebar-button-active" bind-source="split_view" bind-property="show-sidebar" bind-flags="bidirectional|sync-create" />
+                        <property name="window-slot" bind-source="NautilusWindow" bind-property="active-slot" bind-flags="sync-create" />
+                      </object>
+                    </child>
+                    <child type="top">
+                      <object class="GtkBox">
+                        <style>
+                          <class name="win11-commandbar" />
+                        </style>
+                        <property name="spacing">0</property>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.new-folder</property>
+                            <property name="tooltip-text">New folder</property>
+                            <property name="child">
+                              <object class="GtkBox">
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">win11-explorer-add</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">New</property>
+                                    <style>
+                                      <class name="win11-cmd-label" />
+                                    </style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">win11-explorer-chevron-down</property>
+                                    <property name="pixel-size">8</property>
+                                    <style>
+                                      <class name="win11-cmd-chevron" />
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-text" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSeparator">
+                            <property name="orientation">vertical</property>
+                            <style>
+                              <class name="win11-cmd-separator" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.cut</property>
+                            <property name="tooltip-text">Cut</property>
+                            <property name="icon-name">win11-menu-cut</property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-icon" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.copy</property>
+                            <property name="tooltip-text">Copy</property>
+                            <property name="icon-name">win11-menu-copy</property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-icon" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.paste</property>
+                            <property name="tooltip-text">Paste</property>
+                            <property name="icon-name">win11-menu-paste</property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-icon" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.rename</property>
+                            <property name="tooltip-text">Rename</property>
+                            <property name="icon-name">win11-menu-rename</property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-icon" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.open-with-other-application</property>
+                            <property name="tooltip-text">Share</property>
+                            <property name="icon-name">win11-explorer-share</property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-icon" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.move-to-trash</property>
+                            <property name="tooltip-text">Delete</property>
+                            <property name="icon-name">win11-menu-delete</property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-icon" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSeparator">
+                            <property name="orientation">vertical</property>
+                            <style>
+                              <class name="win11-cmd-separator" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="NautilusViewControls">
+                            <property name="window-slot" bind-source="NautilusWindow" bind-property="active-slot" bind-flags="sync-create" />
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">slot.search-visible</property>
+                            <property name="tooltip-text">Filter</property>
+                            <property name="child">
+                              <object class="GtkBox">
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">win11-explorer-filter</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">Filter</property>
+                                    <style>
+                                      <class name="win11-cmd-label" />
+                                    </style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">win11-explorer-chevron-down</property>
+                                    <property name="pixel-size">8</property>
+                                    <style>
+                                      <class name="win11-cmd-chevron" />
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-text" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSeparator">
+                            <property name="orientation">vertical</property>
+                            <style>
+                              <class name="win11-cmd-separator" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuButton">
+                            <property name="tooltip-text">See more</property>
+                            <property name="icon_name">win11-explorer-more</property>
+                            <property name="menu-model">app_menu</property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-icon" />
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="hexpand">True</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">view.current-directory-properties</property>
+                            <property name="tooltip-text">Details</property>
+                            <property name="child">
+                              <object class="GtkBox">
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">win11-explorer-details</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">Details</property>
+                                    <style>
+                                      <class name="win11-cmd-label" />
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                            <style>
+                              <class name="flat" />
+                              <class name="win11-cmd-text" />
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="bottom">
+                      <object class="GtkLabel">
+                        <property name="xalign">0</property>
+                        <style>
+                          <class name="win11-status" />
+                        </style>
+                      </object>
+                    </child>
+                    <property name="content">
+                      <object class="AdwOverlaySplitView" id="split_view">
+                        <property name="enable-show-gesture">False</property>
+                        <property name="enable-hide-gesture">False</property>
+                        <property name="max-sidebar-width">157</property>
+                        <property name="min-sidebar-width">157</property>
+                        <property name="sidebar-width-unit">px</property>
+                        <property name="sidebar-width-fraction">0.2</property>
+                        <property name="sidebar">
+                          <object class="AdwToolbarView">
+                            <property name="reveal-bottom-bars" bind-source="progress_indicator" bind-property="reveal" bind-flags="sync-create" />
+                            <child type="bottom">
+                              <object class="GtkBox">
+                                <style>
+                                  <class name="toolbar" />
+                                </style>
+                                <child>
+                                  <object class="NautilusProgressIndicator" id="progress_indicator" />
+                                </child>
+                              </object>
+                            </child>
+                            <property name="content">
+                              <object class="NautilusSidebar" id="places_sidebar">
+                                <property name="vexpand">True</property>
+                                <property name="window-slot" bind-source="NautilusWindow" bind-property="active-slot" bind-flags="sync-create" />
+                              </object>
+                            </property>
+                          </object>
+                        </property>
+                        <property name="content">
+                          <object class="AdwToolbarView">
+                            <property name="content">
+                              <object class="AdwTabView" id="tab_view">
+                                <property name="menu-model">tab_menu_model</property>
+                                <signal name="close-page" handler="tab_view_close_page_cb" />
+                                <signal name="setup-menu" handler="tab_view_setup_menu_cb" />
+                                <signal name="notify::selected-page" handler="tab_view_notify_selected_page_cb" />
+                                <signal name="create-window" handler="tab_view_create_window_cb" />
+                                <signal name="page-attached" handler="tab_view_page_attached_cb" />
+                                <signal name="page-detached" handler="tab_view_page_detached_cb" />
+                              </object>
+                            </property>
+                            <child type="bottom">
+                              <object class="NautilusNetworkAddressBar" id="network_address_bar">
+                                <property name="visible">False</property>
+                              </object>
+                            </child>
+                            <child type="bottom">
+                              <object class="GtkActionBar" id="action_bar">
+                                <property name="revealed">False</property>
+                                <child type="start">
+                                  <object class="NautilusHistoryControls">
+                                    <property name="window-slot" bind-source="NautilusWindow" bind-property="active-slot" bind-flags="sync-create" />
+                                  </object>
+                                </child>
+                                <child type="end">
+                                  <object class="NautilusViewControls">
+                                    <property name="window-slot" bind-source="NautilusWindow" bind-property="active-slot" bind-flags="sync-create" />
+                                  </object>
+                                </child>
+                                <child type="end">
+                                  <object class="AdwTabButton">
+                                    <property name="view">tab_view</property>
+                                    <property name="action-name">win.open-tab-overview</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+              </object>
+            </property>
+          </object>
+        </property>
+      </object>
+    </child>
+    <child>
+      <object class="AdwBreakpoint">
+        <condition>max-width: 682sp</condition>
+        <setter object="split_view" property="collapsed">true</setter>
+        <setter object="split_view" property="enable-show-gesture">true</setter>
+        <setter object="split_view" property="enable-hide-gesture">true</setter>
+        <setter object="split_view" property="sidebar-width-unit">0</setter>
+        <setter object="toolbar" property="show-sidebar-button">true</setter>
+        <setter object="toolbar" property="show-view-controls">false</setter>
+        <setter object="toolbar" property="show-history-controls">false</setter>
+        <setter object="action_bar" property="revealed">true</setter>
+        <setter object="progress_indicator" property="popover-position">2</setter>
+      </object>
+    </child>
+  </template>
+</interface>

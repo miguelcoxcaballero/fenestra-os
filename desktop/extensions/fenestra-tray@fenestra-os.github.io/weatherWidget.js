@@ -19,8 +19,14 @@ let iconTheme = null;
 function shortText(info) {
     // "18°C" like the reference, not GWeather's "18 °C".
     const temp = (info.get_temp_summary() || '').replace(/\s+/g, '');
-    let cond = info.get_conditions();
-    if (!cond || cond === '-')
+    // Only real data: GWeather returns the text "Unknown" (localised) when it
+    // has no sky or phenomenon value.
+    let cond = '';
+    const [okCond] = info.get_value_conditions?.() ?? [false];
+    const [okSky] = info.get_value_sky?.() ?? [false];
+    if (okCond)
+        cond = info.get_conditions();
+    if ((!cond || cond === '-') && okSky)
         cond = info.get_sky();
     if (!cond || cond === '-')
         cond = '';
@@ -107,7 +113,7 @@ export function installWeatherWidget(settings) {
                 // Follow taskbar alignment / size changes right away.
                 for (const actor of [panel.panelBox, panel._leftBox].filter(Boolean))
                     actor.connectObject('notify::allocation', queue, button.actor);
-                Main.layoutManager.addChrome(button.actor, {affectsInputRegion: true, trackFullscreen: true});
+                Main.layoutManager.addChrome(button.actor, {trackFullscreen: true});
                 buttons.set(panel, button);
             }
             const box = panel.panelBox;

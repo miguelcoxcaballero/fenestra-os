@@ -391,13 +391,44 @@ def import_taskbar_icons(win, dry):
     log(f'taskbar: start logo {"imported" if logo else "not found"}, search icon {"imported" if search else "not found"}')
 
 
+def shell_conf_set(section, key, value):
+    """One key of ~/.config/fenestra/shell.conf (Fenestra Shell, KWin session); other lines kept."""
+    path = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'fenestra' / 'shell.conf'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = path.read_text().splitlines() if path.exists() else []
+    out, current, done = [], None, False
+    for line in lines:
+        st = line.strip()
+        if st.startswith('[') and st.endswith(']'):
+            if current == section and not done:
+                out.append(f'{key}={value}')
+                done = True
+            current = st[1:-1]
+        elif current == section and st.split('=', 1)[0].strip() == key:
+            if not done:
+                out.append(f'{key}={value}')
+                done = True
+            continue
+        out.append(line)
+    if not done:
+        if current != section:
+            out += ([''] if out and out[-1].strip() else []) + [f'[{section}]']
+        out.append(f'{key}={value}')
+    tmp = path.with_suffix('.conf.tmp')
+    tmp.write_text('\n'.join(out) + '\n')
+    os.replace(tmp, path)
+
+
 def apply_start_logo(path):
-    """Use ``path`` as the taskbar Start button (ArcMenu menu button icon)."""
+    """Use ``path`` as the taskbar Start button: ArcMenu's menu button icon (GNOME session) and
+    Fenestra Shell's StartIcon (Fenestra session)."""
     gsettings_set('org.gnome.shell.extensions.arcmenu', 'menu-button-icon', str(path))
+    shell_conf_set('Appearance', 'StartIcon', str(path))
 
 
 def apply_search_icon(path):
-    """User copy of fenestra-search.desktop pointing at ``path``."""
+    """User copy of fenestra-search.desktop pointing at ``path`` (and Fenestra Shell's SearchIcon)."""
+    shell_conf_set('Appearance', 'SearchIcon', str(path))
     src_desktop = Path('/usr/share/applications/fenestra-search.desktop')
     if src_desktop.exists():
         apps = DATA / 'applications'

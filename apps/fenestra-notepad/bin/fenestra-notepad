@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Launcher for Fenestra Notepad (works from the source tree and when installed).
+
+A second launch only forwards its arguments to the running instance (single instance):
+files open as new tabs of the running window (or in a new window, see Settings)."""
+import os
+import sys
+
+here = os.path.dirname(os.path.realpath(__file__))
+for c in (os.path.dirname(here),
+          os.path.join(os.path.dirname(here), "share", "fenestra-notepad"),
+          "/usr/share/fenestra-notepad"):
+    if os.path.isdir(os.path.join(c, "fenestra_notepad")):
+        sys.path.insert(0, c)
+        break
+
+from fenestra_notepad.app import main  # noqa: E402
+
+sys.exit(main(sys.argv))

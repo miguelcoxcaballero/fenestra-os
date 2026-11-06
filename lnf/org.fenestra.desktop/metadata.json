@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Id": "org.fenestra.desktop",
+        "Name": "Fenestra",
+        "Description": "Fenestra lock screen for the Fenestra session (KWin)",
+        "Description[es]": "Pantalla de bloqueo de Fenestra para la sesión Fenestra (KWin)",
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0"
+    },
+    "X-Plasma-APIVersion": "2",
+    "X-Plasma-MainScript": "defaults"
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Fenestra Shell
+Comment=Taskbar, Start, quick settings and desktop of the Fenestra session
+Exec=/usr/bin/fenestra-shell
+NoDisplay=true
+OnlyShowIn=Fenestra;
+X-KDE-Wayland-Interfaces=org_kde_plasma_window_management
+# Screenshots (Print) through KWin
+X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2

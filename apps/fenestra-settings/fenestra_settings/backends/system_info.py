@@ -218,8 +218,15 @@ def rename(name: str, callback=None):
 
 
 def wallpaper_path(dark: bool) -> str | None:
+    """Desktop picture shown in previews (the session's wallpaper backend decides)."""
     if util.DEMO:
         return demo.wallpaper(dark)
+    from . import appearance
+    return appearance.wallpaper(dark)
+
+
+def gnome_wallpaper_path(dark: bool) -> str | None:
+    """Picture from org.gnome.desktop.background (GNOME session, and the mirror in Fenestra)."""
     key = "picture-uri-dark" if dark else "picture-uri"
     uri = util.gget("org.gnome.desktop.background", key) or util.gget(
         "org.gnome.desktop.background", "picture-uri")

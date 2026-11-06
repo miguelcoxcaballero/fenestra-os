@@ -71,25 +71,33 @@ export function createClockFace(parent) {
     return {actor:box,destroy:()=>{dispose();box.destroy();}};
 }
 
+// GNOME 51 removed Meta.Background.set_file(): backgrounds are textures loaded with glycin.
+// Where set_file() exists, keep Meta's native background; elsewhere paint the same image with
+// St (background-size: cover), which works on every GNOME version.
+const HAS_SET_FILE = typeof Meta.Background?.prototype?.set_file === 'function';
+function coverStyle(path) {
+    return `background-image: url("file://${path}"); background-size: cover; background-position: center;`;
+}
+
 export function createNativeBackground(container,monitorIndex) {
     const m=Main.layoutManager.monitors[monitorIndex];
-    const actor=new Meta.BackgroundActor({meta_display:global.display,monitor:monitorIndex,request_mode:Clutter.RequestMode.CONTENT_SIZE});
+    const actor=HAS_SET_FILE?new Meta.BackgroundActor({meta_display:global.display,monitor:monitorIndex,request_mode:Clutter.RequestMode.CONTENT_SIZE}):new St.Widget({reactive:false});
     actor.set_position(m.x,m.y);actor.set_size(m.width,m.height);
-    const background=new Meta.Background({meta_display:global.display});
+    const background=HAS_SET_FILE?new Meta.Background({meta_display:global.display}):null;
     const [,bytes]=GLib.file_get_contents('/var/lib/fenestra-spotlight/current.json');
     const path=JSON.parse(new TextDecoder().decode(bytes)).image;
     if(!/^\/(var\/lib\/fenestra-spotlight\/images\/[a-f0-9]{64}|usr\/share\/backgrounds\/fenestra\/[A-Za-z0-9._-]+)\.jpg$/.test(path))throw Error('Invalid background path');
-    background.set_file(Gio.File.new_for_path(path),GDesktopEnums.BackgroundStyle.ZOOM);
+    if(HAS_SET_FILE)background.set_file(Gio.File.new_for_path(path),GDesktopEnums.BackgroundStyle.ZOOM);else actor.set_style(coverStyle(path));
     let loadedPath=path;
     actor._windowsReload=()=>{
         const [,updated]=GLib.file_get_contents('/var/lib/fenestra-spotlight/current.json');
         const current=JSON.parse(new TextDecoder().decode(updated)).image;
         if(current!==loadedPath && /^\/(var\/lib\/fenestra-spotlight\/images\/[a-f0-9]{64}|usr\/share\/backgrounds\/fenestra\/[A-Za-z0-9._-]+)\.jpg$/.test(current)) {
-            background.set_file(Gio.File.new_for_path(current),GDesktopEnums.BackgroundStyle.ZOOM);
+            if(HAS_SET_FILE)background.set_file(Gio.File.new_for_path(current),GDesktopEnums.BackgroundStyle.ZOOM);else actor.set_style(coverStyle(current));
             loadedPath=current;
         }
     };
-    actor.content.background=background;
+    if(HAS_SET_FILE)actor.content.background=background;
     container.add_child(actor);
     return actor;
 }

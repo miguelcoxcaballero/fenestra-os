@@ -1,0 +1,402 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <menu id="background-menu">
+    <section>
+      <submenu>
+        <attribute name="label" translatable="yes">_View</attribute>
+        <attribute name="icon">win11-menu-view</attribute>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">Extra large icons</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">extra-large</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Large icons</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">large</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Medium icons</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">medium</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Small icons</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">small</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">List</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">list</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Details</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">details</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Tiles</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">tiles</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Content</attribute>
+            <attribute name="action">win.windows-view</attribute>
+            <attribute name="target">content</attribute>
+          </item>
+        </section>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">Compact view</attribute>
+            <attribute name="action">win.windows-row-spacing</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Show _Hidden Files</attribute>
+            <attribute name="action">view.show-hidden-files</attribute>
+          </item>
+        </section>
+      </submenu>
+      <submenu>
+        <attribute name="label" translatable="yes">_Sort by</attribute>
+        <attribute name="icon">win11-menu-sort</attribute>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">Name</attribute>
+            <attribute name="action">view.sort</attribute>
+            <attribute name="target" type="(sb)">('name', false)</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Date modified</attribute>
+            <attribute name="action">view.sort</attribute>
+            <attribute name="target" type="(sb)">('date_modified', true)</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Type</attribute>
+            <attribute name="action">view.sort</attribute>
+            <attribute name="target" type="(sb)">('type', false)</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Size</attribute>
+            <attribute name="action">view.sort</attribute>
+            <attribute name="target" type="(sb)">('size', true)</attribute>
+          </item>
+        </section>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">Ascending</attribute>
+            <attribute name="action">win.fenestra-sort-order</attribute>
+            <attribute name="target">ascending</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Descending</attribute>
+            <attribute name="action">win.fenestra-sort-order</attribute>
+            <attribute name="target">descending</attribute>
+          </item>
+        </section>
+      </submenu>
+      <submenu>
+        <attribute name="label" translatable="yes">Group by</attribute>
+        <attribute name="icon">win11-menu-groupby</attribute>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">(None)</attribute>
+            <attribute name="action">win.fenestra-group</attribute>
+            <attribute name="target">none</attribute>
+          </item>
+        </section>
+      </submenu>
+    </section>
+    <section>
+      <submenu>
+        <attribute name="label" translatable="yes">Ne_w</attribute>
+        <attribute name="show-in-mode">browse</attribute>
+        <attribute name="icon">win11-menu-new</attribute>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">_Folder</attribute>
+            <attribute name="action">view.new-folder</attribute>
+            <attribute name="icon">win11-menu-newfolder</attribute>
+          </item>
+        </section>
+        <section id="templates-submenu" />
+      </submenu>
+      <item>
+        <attribute name="label" translatable="yes">_Paste</attribute>
+        <attribute name="action">view.paste</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-paste</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Empty _Trash…</attribute>
+        <attribute name="action">view.empty-trash</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-delete</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">P_roperties</attribute>
+        <attribute name="action">view.current-directory-properties</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="accel">&lt;alt&gt;Return</attribute>
+        <attribute name="icon">win11-menu-properties</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Open in Terminal</attribute>
+        <attribute name="action">view.current-directory-console</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-terminal</attribute>
+      </item>
+    </section>
+    <section id="background-extensions-section" />
+  </menu>
+  <menu id="selection-menu">
+    <section>
+      <attribute name="display-hint">horizontal-buttons</attribute>
+      <attribute name="show-in-mode">browse</attribute>
+      <attribute name="show-in-view">normal</attribute>
+      <item>
+        <attribute name="label" translatable="yes">Cu_t</attribute>
+        <attribute name="action">view.cut</attribute>
+        <attribute name="verb-icon">win11-menu-cut</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Copy</attribute>
+        <attribute name="action">view.copy</attribute>
+        <attribute name="verb-icon">win11-menu-copy</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Rena_me…</attribute>
+        <attribute name="action">view.rename</attribute>
+        <attribute name="verb-icon">win11-menu-rename</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Mo_ve to Trash</attribute>
+        <attribute name="action">view.move-to-trash</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="verb-icon">win11-menu-delete</attribute>
+      </item>
+    </section>
+    <section id="new-folder-with-selection-section" />
+    <section id="open-with-application-section">
+      <item>
+        <attribute name="label" translatable="yes">_Extract</attribute>
+        <attribute name="action">view.extract-here</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-zipfolder</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">E_xtract to…</attribute>
+        <attribute name="action">view.extract-to</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-zipfolder</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Open _with…</attribute>
+        <attribute name="action">view.open-with-other-application</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="nautilus-menu-item">open_with_in_main_menu</attribute>
+        <attribute name="icon">win11-menu-openwith</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Run as a Program</attribute>
+        <attribute name="action">view.run-in-terminal</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-commandprompt</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Open</attribute>
+        <attribute name="nautilus-menu-item">open_in_view_submenu</attribute>
+        <attribute name="show-in-mode">browse</attribute>
+        <link name="submenu">
+          <section>
+            <item>
+              <attribute name="label" translatable="yes">Open</attribute>
+              <attribute name="action">view.open-with-default-application</attribute>
+              <attribute name="hidden-when">action-disabled</attribute>
+              <attribute name="icon">win11-menu-openfile</attribute>
+            </item>
+            <item>
+              <attribute name="label" translatable="yes">Open in New _Tab</attribute>
+              <attribute name="action">view.open-item-new-tab</attribute>
+              <attribute name="hidden-when">action-disabled</attribute>
+              <attribute name="icon">win11-menu-openinnewwindow</attribute>
+            </item>
+            <item>
+              <attribute name="label" translatable="yes">Open in New _Window</attribute>
+              <attribute name="action">view.open-item-new-window</attribute>
+              <attribute name="hidden-when">action-disabled</attribute>
+              <attribute name="icon">win11-menu-openinnewwindow</attribute>
+            </item>
+          </section>
+          <section>
+            <item>
+              <attribute name="label" translatable="yes">Open _With…</attribute>
+              <attribute name="action">view.open-with-other-application</attribute>
+              <attribute name="hidden-when">action-disabled</attribute>
+              <attribute name="icon">win11-menu-openfile</attribute>
+            </item>
+            <item>
+              <attribute name="label" translatable="yes">Open in Consol_e</attribute>
+              <attribute name="action">view.console</attribute>
+              <attribute name="hidden-when">action-disabled</attribute>
+              <attribute name="icon">win11-menu-commandprompt</attribute>
+            </item>
+          </section>
+        </link>
+        <attribute name="icon">win11-menu-openfile</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Open Item Location</attribute>
+        <attribute name="action">view.open-item-location</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-folderopen</attribute>
+      </item>
+      <submenu>
+        <attribute name="show-in-mode">browse</attribute>
+        <attribute name="show-in-view">normal</attribute>
+        <attribute name="label" translatable="yes">_Scripts</attribute>
+        <attribute name="nautilus-menu-item">scripts-submenu</attribute>
+        <section id="scripts-submenu-section" />
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">_Open Scripts Folder</attribute>
+            <attribute name="action">view.open-scripts-folder</attribute>
+            <attribute name="hidden-when">action-disabled</attribute>
+            <attribute name="icon">win11-menu-folderopen</attribute>
+          </item>
+        </section>
+        <attribute name="icon">win11-menu-openfile</attribute>
+      </submenu>
+    </section>
+    <section id="drive-section">
+      <item>
+        <attribute name="label" translatable="yes">_Mount</attribute>
+        <attribute name="action">view.mount-volume</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-harddrive</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Unmount</attribute>
+        <attribute name="action">view.unmount-volume</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-eject</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Eject</attribute>
+        <attribute name="action">view.eject-volume</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-eject</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Start</attribute>
+        <attribute name="action">view.start-volume</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-play</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Stop</attribute>
+        <attribute name="action">view.stop-volume</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-stop</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Detect Media</attribute>
+        <attribute name="action">view.detect-media</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-refresh</attribute>
+      </item>
+    </section>
+    <section id="file-actions-section">
+      <attribute name="show-in-view">normal</attribute>
+      <item>
+        <attribute name="label" translatable="yes">_Paste Into Folder</attribute>
+        <attribute name="action">view.paste-into</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-paste</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">C_ompress to ZIP file</attribute>
+        <attribute name="action">view.compress</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-zipfolder</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Set as desktop background</attribute>
+        <attribute name="action">view.set-as-wallpaper</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-personalize</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Delete From Trash…</attribute>
+        <attribute name="action">view.delete-from-trash</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-delete</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Delete Permanently…</attribute>
+        <attribute name="action">view.delete-permanently-menu-item</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-delete</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Delete Permanently…</attribute>
+        <attribute name="action">view.permanent-delete-permanently-menu-item</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-delete</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Restore From Trash</attribute>
+        <attribute name="action">view.restore-from-trash</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-undo</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Remove From Recent</attribute>
+        <attribute name="action">view.remove-from-recent</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-cancel</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes" comments="Unmarks a file as starred (starred)">Unstar</attribute>
+        <attribute name="action">view.unstar</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-favoritestar</attribute>
+      </item>
+    </section>
+    <section id="network-view-section">
+      <attribute name="show-in-view">network</attribute>
+      <item>
+        <attribute name="label" translatable="yes">_Copy Address</attribute>
+        <attribute name="action">view.copy-network-address</attribute>
+        <attribute name="icon">win11-menu-copy</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Remove</attribute>
+        <attribute name="action">view.remove-recent-server</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-cancel</attribute>
+      </item>
+    </section>
+    <section id="selection-extensions-section" />
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">P_roperties</attribute>
+        <attribute name="action">view.properties</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-properties</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Open in Terminal</attribute>
+        <attribute name="action">view.console</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+        <attribute name="icon">win11-menu-terminal</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>

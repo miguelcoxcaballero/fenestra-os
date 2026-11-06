@@ -104,7 +104,7 @@ function buildHome(layout) {
             const b=new St.Button({can_focus:true,style_class:'button',style:'width: 224px; min-height: 40px; padding: 4px 8px; margin: 0px 16px 8px 0px; border-radius: 4px; background-color: transparent;'});
             const row=new St.BoxLayout({style:'spacing: 12px;',x_expand:true,x_align:Clutter.ActorAlign.START});
             row.add_child(new St.Icon({gicon:Gio.content_type_get_icon(mime||'application/octet-stream'),icon_size:32}));
-            const text=new St.BoxLayout({vertical:true,x_expand:true});
+            const text=new St.BoxLayout({orientation:Clutter.Orientation.VERTICAL,x_expand:true});
             const name=label(recentFile.get_basename(),'font-size: 12px; font-weight: normal;');name.clutter_text.ellipsize=3;
             const modified=layout.recentFilesManager._bookmarksFile.get_modified(uri);
             const days=Math.max(0,Math.floor((Date.now()/1000-modified)/86400));
@@ -126,7 +126,7 @@ function buildHome(layout) {
         const cols=layout._allView===1?8:2;
         apps.forEach((app,i)=>{
             const b=new St.Button({can_focus:true,style_class:'popup-menu-item arcmenu-menu-item',style:layout._allView===1?'width: 66px; min-height: 76px; padding: 6px; border-radius: 4px;':'width: 306px; min-height: 32px; padding: 6px; border-radius: 4px;'});
-            const row=new St.BoxLayout({vertical:layout._allView===1,style:'spacing: 6px;'});row.add_child(app.create_icon_texture(layout._allView===1?32:24));
+            const row=new St.BoxLayout({orientation:layout._allView===1?Clutter.Orientation.VERTICAL:Clutter.Orientation.HORIZONTAL,style:'spacing: 6px;'});row.add_child(app.create_icon_texture(layout._allView===1?32:24));
             const name=label(app.get_name(),'font-size: 12px;');name.clutter_text.ellipsize=3;row.add_child(name);b.set_child(row);
             b.connect('clicked',()=>{app.activate();layout.arcMenu.close();});grid.layout_manager.attach(b,i%cols,Math.floor(i/cols),1,1);
         });
@@ -134,7 +134,7 @@ function buildHome(layout) {
     }
     const cards=add(new St.Widget({layout_manager:new Clutter.GridLayout(),x_expand:true,style:'margin: 5px 59px 0px 45px; min-height: 320px;'}));
     buckets.filter(g=>g.apps.length).forEach((group,i)=>{
-        const column=new St.BoxLayout({vertical:true,style:'width: 154px; margin: 0px 14px 18px 15px; spacing: 11px;'});
+        const column=new St.BoxLayout({orientation:Clutter.Orientation.VERTICAL,style:'width: 154px; margin: 0px 14px 18px 15px; spacing: 11px;'});
         const b=new St.Button({can_focus:true,style_class:'button',style:`width: 154px; height: 154px; min-height: 154px; padding: 0px; border-radius: 8px; border: 1px solid ${pick('rgba(255,255,255,0.05)', 'rgba(0,0,0,0.05)')}; background-color: ${pick('rgba(255,255,255,0.04)', 'rgba(255,255,255,0.6)')};`});
         const icons=new St.Widget({layout_manager:new Clutter.GridLayout()});
         group.apps.slice(0,4).forEach((app,n)=>{const icon=app.create_icon_texture(32);icon.set_style?.('margin: 26px 18px 18px 18px;');icons.layout_manager.attach(icon,n%2,Math.floor(n/2),1,1);});

@@ -1,0 +1,15 @@
+[Unit]
+Description=Fenestra: reset this PC (requested in Settings)
+Documentation=file:///usr/libexec/fenestra/fenestra-reset
+ConditionPathExists=/var/lib/fenestra/reset-pending
+DefaultDependencies=no
+After=local-fs.target systemd-remount-fs.service
+Before=display-manager.service systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/fenestra/fenestra-reset run
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,78 @@
+# Regression checklist
+
+Every feature Fenestra has today, checked twice in a KVM VM: **A** = current GNOME session (reference),
+**B** = Fenestra session (KWin + Fenestra Shell). Values: PASS, FAIL, NO-APLICA, SOLO-PORTÁTIL. Until a VM
+run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin), PARTIAL, CODE
+(written, not run), TODO. A feature is migrated only when B is PASS in the VM. Screenshots: demo data,
+1920×1080 and 2560×1600 at 150 %, light and dark.
+
+| ID | Feature | A (GNOME) | B (Fenestra/KWin) | Evidence / notes |
+|---|---|---|---|---|
+| B01 | Centred and left-aligned icons (Settings › Personalization › Taskbar) | pending (VM) | PASS-CONTAINER | tests/shell-kwin check B01-left-aligned, 05-left-icon.png |
+| B02 | Pinned apps, open windows with indicator, grouping, pin/unpin, jump list | pending (VM) | PASS-CONTAINER | checks B02-pinned-buttons, -launch-from-pinned, -window-grouped-with-pinned, -unpinned-app-button, -app-menu, -unpin; 44 px cells with a 40 px plate, dash 5 px above the bottom; jump list 296 px with the app's recent files (by MIME type) like the reference: Δx/Δw 0, Δh +32 only from two recent files instead of one |
+| B03 | Live preview on hover; click activates/minimizes; close from the preview | pending (VM) | PARTIAL | check B03-preview; card per window 201 × 160 at the reference place (Δ 0/±1 px), title row + window area; the window area shows the app icon: live thumbnails need OpenGL (VM) |
+| B04 | Press animation (icon shrinks) and acrylic taskbar | pending (VM) | PARTIAL | press animation done; acrylic needs KWin blur (OpenGL, VM) |
+| B05 | Weather at the left (icon, temperature, condition) opens Weather; hidden when left-aligned or without data; Settings option | pending (VM) | CODE | libgweather service; needs a real location (VM) |
+| B06 | Search in four modes (hidden, icon, icon + label, box), live, light and dark | pending (VM) | PASS-CONTAINER | checks B06-icon-label, light-mode; screenshots 01, 05, 06, 07; box 220 × 32 at x 785 as the reference, shows the query while Search is open (Δ 0) |
+| B07 | Empty-area right click: Task Manager, Taskbar settings; no context menu on Start | pending (VM) | PASS-CONTAINER | check B07-taskbar-menu; opens at the pointer on the taskbar's edge, 35 px rows and a full-width line: Δx/Δy/Δw/Δh 0 vs the reference, dark and light |
+| B08 | Tray: overflow ^, language/keyboard, Wi-Fi, volume, battery, clock and date; mic/camera/location in use | pending (VM) | PARTIAL | app tray (StatusNotifierItem host + dbusmenu) and keyboard layout: checks B08-*; Wi-Fi/volume/battery glyphs written (NetworkManagerQt, PulseAudioQt, UPower), need the VM; privacy glyphs in H4 |
+| B09 | Show desktop corner | pending (VM) | CODE | show_desktop request; not clicked in the bench yet |
+| B10 | Multi-monitor and scaling (taskbar per monitor, flyouts on the right monitor) | pending (VM) | PASS-CONTAINER | OUTPUTS=2 bench: check B10-taskbar-per-output (one taskbar and wallpaper per output); scaling in the VM |
+| B11 | Every taskbar flyout 12 px above the taskbar and 12 px from the screen edge, no arrow | pending (VM) | PASS-CONTAINER | Flyout.qml (flyout.gap 12, flyout.edge 12) + layer-shell exclusive zone; menus that open at the pointer (taskbar menu) or from Start sit where the reference puts them; screenshots 02–04 |
+| S01 | Start: search box, Pinned, Recommended, All apps (list; category and grid kept as views), account and power menus | pending (VM) | PASS-CONTAINER | checks S01-* incl. S01-start-size (642 × 726); reference geometry (tests/visual/compare.py vs reference-shots/solid, dark and light 100 %): Start, All apps, power and account menus Δ 0, 3–8 % pixels differ (other apps, Selawik instead of Segoe UI); power menu shows Sleep only when the system can suspend |
+| S02 | Start open/close animation, acrylic, no strip above the search box, no accent underline on focus | pending (VM) | PARTIAL | rises 141 px in 180 ms on the decelerate curve (reference motion), Search fades in place; flat reference fill (acrylic fallback): blur needs KWin OpenGL (VM) |
+| S03 | Start works for a new account | pending (VM) | CODE | defaults (Start pins, taskbar pins) apply without shell.conf; check with a new account in the VM |
+| S04 | Search flyout: suggested, quick searches (Settings pages), top apps, chips (All, Apps, Documents, Settings, Folders, Photos, Web), best match, preview pane | pending (VM) | PASS-CONTAINER | checks S04-* incl. S04-search-at-box (flyout on the taskbar's box); 776 × 726, home and query pages Δ 0 vs the reference, 3–5 % pixels differ (content, font) |
+| S05 | Search finds and opens apps, documents, folders and Settings pages | pending (VM) | PASS-CONTAINER | checks S05-finds-photo, -finds-settings-page (Fenestra Settings --export-search-index), -finds-app, -opens-app; documents via a folder index (localsearch not used yet) |
+| Q01 | Quick settings tiles with subpages; volume, brightness, audio output | pending (VM) | PARTIAL | checks Q01-quick-settings (tiles, sliders, subpages written); Wi-Fi, Bluetooth, battery, brightness need real devices (VM). Visual: 360 × 335 card as dark/light-100-12-quick, Δ 0 px box, 9 % pixels (other tiles, no audio device in the bench) |
+| Q02 | Media panel (MPRIS): play/pause, previous, next | pending (VM) | PASS-CONTAINER | checks Q02-media-player, Q02-play-pause (test MPRIS player). Visual: separate 360 × 178 card 12 px above Quick Settings, Δ 0 px vs dark/light-100-14-quick-media |
+| Q03 | Volume and brightness OSD (keys and wheel) | pending (VM) | PARTIAL | OSD drawn (check Q03-osd); media keys via KGlobalAccel need the VM |
+| Q04 | Screenshots: snipping overlay (Super+Shift+S and Print) with rectangle, window, full screen and freeform modes; clipboard, ~/Pictures/Screenshots and the notice | pending (VM) | PARTIAL | checks Q04-snip-* (overlay on every output in the OVERLAY layer, toolbar ES/EN, rectangle / window / output / freeform with alpha mask saved at the right size and pixels, toast, cancel), Q04-image-notification; screenshots 31–32 (dark), 34–35 (light). Toolbar, scrim (0.6) and outlines as snip_toolbar / snip_overlay (48 px bar at y 12, 32 px buttons, mode button + menu, dashed 1 px rectangle outline). The frozen screen comes from a test picture: KWin ScreenShot2 CaptureWorkspace, the clipboard, real keys and Esc need the VM |
+| Q05 | Ctrl+Alt+Del security screen: Lock, Switch user, Sign out, Change a password, Task Manager, power; mouse works on every button | pending (VM) | PASS-CONTAINER | checks Q05-security-screen, Q05-power-menu; Ctrl+Alt+Del binding in the VM. Visual: option column, focus frame, Cancel and corner buttons at the dark-100-20 positions |
+| Q06 | Administrator prompts (polkit) in the Fenestra account-control style; the password is always asked | pending (VM) | CODE | polkit agent + consent dialog written; needs polkitd and a logind session (VM) |
+| N01 | Two separate cards: notification centre (Clear all, Do not disturb) and calendar (focus timer) | pending (VM) | PASS-CONTAINER | checks N01-center-and-calendar, -history, -do-not-disturb, -focus-session, -clear-all, -center-empty, -calendar-collapsed, -center-light. Visual: Δ 0 px boxes vs dark/light-100-15-notifications(-2) and -16-calendar(-collapsed), 2–6 % pixels |
+| N02 | Notification banners; grouping by app; working actions; history | pending (VM) | PASS-CONTAINER | checks N02-server-registered, -banner, -banner-light, -action-invoked (real D-Bus notifications). Visual: 364 × 109 toast, Δ 0 px vs dark/light-100-17-toast |
+| D01 | Desktop icons with Fenestra folder icons; select, drag and drop | pending (VM) | PASS-CONTAINER | checks D01-* (icons, new folder + rename, move remembered, trash) |
+| D02 | Desktop context menu like the Explorer's | pending (VM) | PASS-CONTAINER | checks D02-background-menu, D02-item-menu (glyphs of the GNOME layer) |
+| D03 | Wallpapers: Fenestra originals, solid palette colours, Spotlight | pending (VM) | PASS-CONTAINER | checks D03-solid-colour, D03-spotlight (current.json, same allow-list) |
+| W01 | Fenestra caption buttons (45 × 29, close #c42b1c on hover) on GTK 4/libadwaita, GTK 3, Qt, X11/Xwayland, Flatpak, Electron; always three buttons | pending (VM) | PARTIAL | server-side windows: Fenestra decoration loaded by KWin (check W01-decoration-loaded); GTK CSD keep the existing CSS; Flatpak / Electron in the VM |
+| W02 | Rounded corners; square when snapped or maximized | pending (VM) | TODO | rounded corners need a KWin effect (OpenGL); the decoration has rounded top corners |
+| W03 | Snap to edges and quarters; layouts over maximize | pending (VM) | PASS-CONTAINER | Snap Layouts flyout (Super+Z, 344 × 244 under the active window's Maximize button, the reference's eight layouts) + exact placement (check W03-snap-left-half, 1 and 2 outputs); edge snapping = KWin quick tiling (VM) |
+| W04 | Alt+Tab, Task View, virtual desktops | pending (VM) | PARTIAL | Alt+Tab theme kwin/tabbox/fenestra (dark-100-25-alt-tab geometry: 39 px strip + 244 px thumbnail, accent ring) and Super+Tab → KWin Overview written; thumbnails need OpenGL (VM) |
+| W05 | First login: never a half-built desktop (black → setup → black → desktop when smooth) | pending (VM) | PASS-CONTAINER | checks W05-curtain-shown, W05-curtain-lifts |
+| L01 | Lock screen: Fenestra clock in the system language, Spotlight, network and battery state; really locks (Super+L, suspend) | pending (VM) | PARTIAL | lock screen rendered with a fake authenticator (tests/lockscreen: clock, sign-in, wrong password, success); real lock via kscreenlocker in the VM |
+| L02 | Direct fast unlock; user password prompt | pending (VM) | PARTIAL | success unlocks at once in the lock screen; real PAM timing in the VM |
+| L03 | Login screen: clock over the background; key → the single account with its password; standard login if anything fails | pending (VM) | TODO |  |
+| L04 | Fenestra Hello: face and fingerprint animations, live face while scanning, fingerprint fills bottom-up (real unlock SOLO-PORTÁTIL) | pending (VM) | TODO |  |
+| L05 | Login guard turns off only the culprit, notifies, can be reverted; forced-failure test | pending (VM) | TODO |  |
+| E01 | Explorer Home (Quick access; Recent, Favorites, Shared), Gallery, This PC with drive bars | pending (VM) | TODO |  |
+| E02 | Sidebar icons, pins and separators; tabs in the title bar | pending (VM) | TODO |  |
+| E03 | Command bar (New, Sort, View, Filter, Details); menus anchored under their button; details and preview panes | pending (VM) | TODO |  |
+| E04 | Per-folder views, details view without sort arrow, status bar view buttons | pending (VM) | TODO |  |
+| E05 | Context menus with icons, New ▸ templates, Copy as path, Open | pending (VM) | TODO |  |
+| E06 | Address bar: path, edit mode, search | pending (VM) | TODO |  |
+| C01 | Settings Home, System, Display (resolution, scale, orientation, multiple monitors, night light) | pending (VM) | TODO |  |
+| C02 | Sound, Notifications, Power and battery (profiles), Storage, Multitasking, Clipboard, Project | pending (VM) | TODO |  |
+| C03 | Bluetooth and devices (pairing), mouse and touchpad, keyboard, printers | pending (VM) | TODO |  |
+| C04 | Network and internet (Wi-Fi, Ethernet, VPN, proxy, airplane mode) | pending (VM) | TODO |  |
+| C05 | Personalization: light/dark, 48 accents + custom (#0078D4 default) everywhere; backgrounds; taskbar (B01, B05, B06); Start; lock screen; icon pack import | pending (VM) | TODO |  |
+| C06 | Apps (installed, defaults, startup), Accounts (users, autologin, sign-in options with the Hello wizard) | pending (VM) | TODO |  |
+| C07 | Time and language, Gaming, Accessibility, Privacy and security | pending (VM) | TODO |  |
+| C08 | Fenestra Update: Fedora + Flatpak updates, Fenestra builds from GitHub with changelog, next Fedora release with checks and screens, «Migrar a KDE» | pending (VM) | PARTIAL | «Migrar a KDE»: overlay ships the migrator, so the section shows on GNOME; RPM from the CI rolling release, check / dry run / install / boot test / rollback tested in a Fedora 45 GNOME container; real PC (pkexec, GitHub download) pending |
+| C09 | Recovery: Reset this PC (keep files, remove everything) — VM only | pending (VM) | TODO |  |
+| C10 | «Fenestra» section with the former GNOME options | pending (VM) | TODO |  |
+| C11 | Read-only and demo modes; gnome-control-center <panel> opens the Fenestra Settings page | pending (VM) | TODO |  |
+| T01 | Task Manager: Processes, Performance (CPU, memory, disk, network, GPU), App history, Startup apps, Users, Details, Services | pending (VM) | TODO |  |
+| T02 | Ctrl+Shift+Esc and from Ctrl+Alt+Del; single instance; end task (VM only) | pending (VM) | TODO |  |
+| O01 | OOBE on first boot: region, keyboard, network, device name, account, autologin, privacy, icon import, «Hi… this can take a few minutes» on black | pending (VM) | TODO |  |
+| O02 | Works without a GPU (VM without acceleration) | pending (VM) | TODO |  |
+| O03 | Anaconda installer with Fenestra name, art and boot menu; no account screens | pending (VM) | PARTIAL | kickstart installs the Fenestra session RPM from the media (ksvalidator OK); full ISO install in the VM |
+| O04 | Plymouth «fenestra»: boot, reboot, shutdown, offline update with progress | pending (VM) | TODO |  |
+| A01 | Notepad: tabs in the title bar, menus, Find/Replace, Go to, zoom, CRLF/LF/CR, encodings, Markdown preview, sessions, light/dark, printing | pending (VM) | TODO |  |
+| A02 | Paint: tools, brushes, shapes, colours, layers, text, resize/skew, rotate/flip, zoom, image properties, light/dark | pending (VM) | TODO |  |
+| A03 | Icon Extractor (on Windows): the pack is imported from Settings and the OOBE | pending (VM) | TODO |  |
+| A04 | All apps: portal file chooser, notifications, printing, Fenestra icons and cursor, same sizes and fonts | pending (VM) | PARTIAL | Notepad starts from the taskbar under KWin (Wayland); portals and printing in H7 |
+| M01 | Fedora release upgrade end to end in the VM (backup, simulation, download, offline restart, post-boot) | pending (VM) | TODO | release upgrade must also carry fenestra-shell (matrix KWin/Qt versions) — VM |
+| M02 | Reset this PC in both modes, in the VM | pending (VM) | TODO |  |
+| M03 | Laptop services: howdy-preload, galaxy-book-guard, camera relay watchdog, Howdy in GDM PAM, DKMS ov02c10, ipu-bridge-fix, max98390-hda (SOLO-PORTÁTIL) | SOLO-PORTÁTIL | SOLO-PORTÁTIL |  |
+| M04 | Language: Fenestra UI in Spanish and English by system locale | pending (VM) | PARTIAL | shell strings es/en (design/Strings.qml) |

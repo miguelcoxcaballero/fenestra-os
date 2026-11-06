@@ -4,7 +4,7 @@ from __future__ import annotations
 from gi.repository import Gdk, Gtk
 
 from .. import util
-from ..backends import system_info
+from ..backends import session, system_info
 from ..i18n import _
 from ..widgets import ExpanderRow, SettingRow, button, label, link, toast
 from .base import Page, register
@@ -89,7 +89,8 @@ class AboutPage(Page):
         links = Gtk.Box(spacing=24)
         links.add_css_class("plain")
         links.append(label(_("Related links"), "caption"))
-        links.append(link(_("Advanced system settings"), lambda: util.open_control_center("system")))
+        if session.panel_available("system"):
+            links.append(link(_("Advanced system settings"), lambda: session.open_panel("system", self.window)))
         links.append(link(_("System monitor"), lambda: util.launch(["gnome-system-monitor"])))
         dev.add(links)
         g.add(dev)

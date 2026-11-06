@@ -43,7 +43,7 @@ MONITOR_JSON = {'panel-anchors', 'panel-element-positions', 'panel-lengths', 'pa
 # Desktop files Fenestra ships by default (others are filtered out of pins/favorites).
 SHIPPED_APPS = {
     'org.gnome.Nautilus.desktop', 'firefox.desktop', 'org.mozilla.firefox.desktop',
-    'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop', 'org.gnome.Calendar.desktop',
+    'org.fenestra.Notepad.desktop', 'org.fenestra.Paint.desktop', 'org.gnome.Calculator.desktop', 'org.gnome.Calendar.desktop',
     'org.gnome.clocks.desktop', 'org.gnome.Snapshot.desktop', 'org.gnome.Loupe.desktop',
     'org.gnome.Contacts.desktop', 'org.gnome.Weather.desktop', 'org.gnome.Maps.desktop',
     'libreoffice-writer.desktop', 'libreoffice-calc.desktop', 'libreoffice-impress.desktop',

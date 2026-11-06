@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Fenestra Notepad icon (original artwork, CC0) -->
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e9eef5"/>
+    </linearGradient>
+    <linearGradient id="band" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3aa0f0"/>
+      <stop offset="1" stop-color="#1767c8"/>
+    </linearGradient>
+    <linearGradient id="pencil" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffc83d"/>
+      <stop offset="1" stop-color="#f29d12"/>
+    </linearGradient>
+  </defs>
+  <rect x="11" y="8" width="40" height="50" rx="5" fill="url(#page)"/>
+  <rect x="11" y="8" width="40" height="50" rx="5" fill="none" stroke="#1d4f91" stroke-opacity="0.35"/>
+  <path d="M16 8h30a5 5 0 0 1 5 5v5H11v-5a5 5 0 0 1 5-5z" fill="url(#band)"/>
+  <g fill="#0f3d7a" fill-opacity="0.55">
+    <circle cx="20" cy="13" r="2"/>
+    <circle cx="31" cy="13" r="2"/>
+    <circle cx="42" cy="13" r="2"/>
+  </g>
+  <g stroke="#8a9bb3" stroke-width="2" stroke-linecap="round">
+    <path d="M18 27h26"/>
+    <path d="M18 34h26"/>
+    <path d="M18 41h18"/>
+    <path d="M18 48h12"/>
+  </g>
+  <g transform="rotate(45 46 46)">
+    <rect x="42" y="27" width="8" height="24" rx="1.5" fill="url(#pencil)"/>
+    <rect x="42" y="27" width="8" height="4" rx="1.5" fill="#e0607e"/>
+    <path d="M42 51h8l-4 7z" fill="#f3d5a6"/>
+    <path d="M44.6 55.5h2.8L46 58z" fill="#3b3b3b"/>
+  </g>
+</svg>

@@ -106,6 +106,11 @@ def desktop_for_exec(name: str) -> str | None:
 FRIENDLY = {
     "systemd": "systemd (System and Service Manager)",
     "gnome-shell": "GNOME Shell",
+    "fenestra-shell": "Fenestra Shell",
+    "kwin_wayland": "Window Manager (KWin)",
+    "kwin_wayland_wrapper": "Window Manager (KWin)",
+    "kscreenlocker_greet": "Lock Screen",
+    "xdg-desktop-portal-kde": "Desktop Portal (KWin)",
     "gnome-session-binary": "GNOME Session Manager",
     "gnome-session-ctl": "GNOME Session Control",
     "gnome-session-service": "GNOME Session Manager",

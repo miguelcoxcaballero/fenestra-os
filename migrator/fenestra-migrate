@@ -1,0 +1,544 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Fenestra «Migrar a KDE»: installs the Fenestra session (KWin + Fenestra Shell) next to GNOME.
+
+Runs as root through polkit (org.fenestra.migrate); Fenestra Settings never runs as root, it
+reads the progress from /var/lib/fenestra/migrate.json. Phases (persisted, resumable):
+  detect → check → backup → download → simulate → install → register → boottest → available
+The runtime (KWin, Qt, KF6...) comes from Fedora's repositories. fenestra-shell itself is built by
+GitHub Actions (.github/workflows/shell-rpm.yml) for every commit of main and published on the
+rolling release «fenestra-shell-latest» of the Fenestra repository (index.json + SHA256SUMS +
+the RPMs): `check` picks the build of the installed Fenestra commit (release.json), else the
+newest one for this Fedora version; `download` fetches it and verifies its SHA-256; dnf installs
+the local file together with the Fedora packages.
+The session is offered as the default only after a real sign-in to it succeeded (the session
+writes ~/.local/state/fenestra/session-ok); `set-default USER` does it. GNOME and GDM are never
+removed or changed: GNOME stays as the fallback session.
+
+  fenestra-migrate status              JSON state
+  fenestra-migrate check               phases detect + check only (no changes)
+  fenestra-migrate run [--dry-run]     all phases; --dry-run stops after the simulation
+  fenestra-migrate set-default USER    make Fenestra USER's session (only after session-ok)
+  fenestra-migrate rollback [--remove-packages]
+  fenestra-migrate update-shell        newer fenestra-shell build, if installed (Fenestra Update);
+                                       boot-tested, the previous build is put back if it fails
+"""
+import datetime
+import hashlib
+import json
+import os
+import platform
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+import urllib.error
+import urllib.request
+
+STATE_DIR = "/var/lib/fenestra"
+STATE = os.path.join(STATE_DIR, "migrate.json")
+BACKUP_DIR = os.path.join(STATE_DIR, "migrate-backup")
+LOG = "/var/log/fenestra-migrate.log"
+SESSION_FILE = "/usr/share/wayland-sessions/fenestra.desktop"
+CACHE_DIR = "/var/cache/fenestra/migrate"
+RELEASE_JSON = "/usr/share/fenestra/release.json"
+SHELL_PKG = "fenestra-shell"
+SHELL_TAG = "fenestra-shell-latest"
+MAX_RPM_MB = 200
+# This program and its polkit action ship in the Fenestra overlay. Old fenestra-shell RPMs owned
+# them too, so a dnf transaction on those could delete them: they are put back after each one.
+OWN_FILES = ("/usr/libexec/fenestra/fenestra-migrate", "/usr/share/polkit-1/actions/org.fenestra.migrate.policy")
+# Runtime packages of the Fenestra session (Fedora names). fenestra-shell is the RPM built by
+# GitHub Actions (see above), downloaded and verified here; the rest come from Fedora.
+PACKAGES = [
+    "kwin", "xorg-x11-server-Xwayland", "layer-shell-qt", "kf6-kservice", "kf6-kio-gui", "kf6-kwindowsystem",
+    "kf6-networkmanager-qt", "kf6-bluez-qt", "pulseaudio-qt-qt6", "kf6-kglobalaccel", "kf6-kconfig",
+    "polkit-qt6-1", "libgweather", "qt6-qtdeclarative", "qt6-qtwayland", "qt6-qtsvg", "kscreenlocker", "kscreen",
+    "xdg-desktop-portal-kde", "xdg-desktop-portal-gtk", "fenestra-shell",
+]
+# Tests may replace the package list (FENESTRA_MIGRATE_PACKAGES="a b c").
+if os.environ.get("FENESTRA_MIGRATE_PACKAGES"):
+    PACKAGES = os.environ["FENESTRA_MIGRATE_PACKAGES"].split()
+PHASES = ["detect", "check", "backup", "download", "simulate", "install", "register", "boottest", "available"]
+MIN_FREE_MB = 1500
+
+
+def log(msg):
+    line = f"{datetime.datetime.now().isoformat(timespec='seconds')} {msg}"
+    print(line, file=sys.stderr, flush=True)
+    try:
+        with open(LOG, "a") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def load():
+    try:
+        with open(STATE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"phase": None, "done": [], "status": "idle", "error": None, "progress": 0}
+
+
+def save(state):
+    os.makedirs(STATE_DIR, exist_ok=True)
+    tmp = STATE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(state, f, indent=1)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, STATE)
+
+
+def run(cmd, check=True, **kw):
+    log("$ " + " ".join(cmd))
+    r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    if r.returncode and check:
+        raise RuntimeError(f"{cmd[0]} failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-400:]}")
+    return r
+
+
+def installed_release():
+    """release.json of the installed Fenestra build ({'repo', 'commit', ...}) or {}."""
+    try:
+        with open(RELEASE_JSON) as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def release_base():
+    """Where the fenestra-shell builds are published (a directory URL ending in /)."""
+    # Tests only (pkexec clears the environment): e.g. file:///srv/rpms/ or http://127.0.0.1:8000/
+    base = os.environ.get("FENESTRA_SHELL_RPM_BASE")
+    if not base:
+        repo = installed_release().get("repo", "")
+        if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
+            repo = "miguelcoxcaballero/fenestra-os"
+        base = f"https://github.com/{repo}/releases/download/{SHELL_TAG}/"
+    return base if base.endswith("/") else base + "/"
+
+
+def fetch(url, dest=None, limit_mb=2):
+    """Bytes of url (dest None) or the file dest. Clear errors for Settings."""
+    req = urllib.request.Request(url, headers={"User-Agent": "fenestra-migrate"})
+    last = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                length = int(r.headers.get("Content-Length") or 0)
+                if length > limit_mb * 1024 * 1024:
+                    raise RuntimeError(f"{url} is unexpectedly large ({length // 1048576} MB); not downloaded")
+                if dest is None:
+                    data = r.read(limit_mb * 1024 * 1024 + 1)
+                    if len(data) > limit_mb * 1024 * 1024:
+                        raise RuntimeError(f"{url} is unexpectedly large; not downloaded")
+                    return data
+                got = 0
+                with open(dest, "wb") as f:
+                    while chunk := r.read(1 << 20):
+                        got += len(chunk)
+                        if got > limit_mb * 1024 * 1024:
+                            raise RuntimeError(f"{url} is unexpectedly large; not downloaded")
+                        f.write(chunk)
+                return dest
+        except urllib.error.HTTPError as e:
+            if e.code in (403, 404, 410):
+                raise RuntimeError(f"The new desktop could not be downloaded: {url} answered {e.code} "
+                                   f"({e.reason}). The Fenestra Shell build may not be published yet; try again later.")
+            last = f"{e.code} {e.reason}"
+        except (urllib.error.URLError, OSError, TimeoutError) as e:
+            last = str(getattr(e, "reason", "") or e)
+        log(f"download attempt {attempt + 1} of {url} failed: {last}")
+        time.sleep(2 * attempt + 1)
+    raise RuntimeError(f"The new desktop could not be downloaded from {url}: {last}. "
+                       "Check the internet connection and try again.")
+
+
+def resolve_shell(state):
+    """The published fenestra-shell build for this system: index.json of the rolling release."""
+    base = release_base()
+    try:
+        idx = json.loads(fetch(base + "index.json"))
+        builds = [b for b in idx.get("builds", []) if isinstance(b, dict)]
+    except (ValueError, AttributeError) as e:
+        raise RuntimeError(f"The list of Fenestra Shell builds ({base}index.json) is not valid: {e}")
+    arch = platform.machine()
+    fit = [b for b in builds if str(b.get("fedora")) == state.get("fedora") and b.get("arch") == arch
+           and re.match(r"^fenestra-shell-[0-9][A-Za-z0-9._+~^-]*\.rpm$", str(b.get("rpm", "")))
+           and re.match(r"^[0-9a-f]{64}$", str(b.get("sha256", "")))]
+    if not fit:
+        raise RuntimeError(f"No Fenestra Shell build for Fedora {state.get('fedora')} ({arch}) is published yet "
+                           f"({base}index.json). Try again after the next Fenestra update.")
+    mine = installed_release().get("commit", "")
+    pick = next((b for b in fit if b.get("commit") == mine), None)
+    match = pick is not None
+    if not pick:
+        pick = max(fit, key=lambda b: str(b.get("date", "")))
+        log(f"no fenestra-shell build for the installed commit {mine[:12] or '(unknown)'}; "
+            f"using the newest one ({str(pick.get('commit', ''))[:12]})")
+    return {"rpm": pick["rpm"], "url": base + pick["rpm"], "sums": base + "SHA256SUMS", "sha256": pick["sha256"],
+            "size": int(pick.get("size") or 0), "commit": pick.get("commit", ""), "date": pick.get("date", ""),
+            "release": pick.get("release", ""), "matches_installed": match}
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(1 << 20):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def download_shell(shell):
+    """Downloads shell['url'] into CACHE_DIR and verifies it (index + SHA256SUMS + RPM header)."""
+    os.makedirs(CACHE_DIR, mode=0o755, exist_ok=True)
+    path = os.path.join(CACHE_DIR, shell["rpm"])
+    sums = fetch(shell["sums"]).decode("utf-8", "replace")
+    listed = {n.lstrip("*"): h.lower() for h, n in (ln.split(None, 1) for ln in sums.splitlines() if len(ln.split()) == 2)}
+    if listed.get(shell["rpm"]) != shell["sha256"]:
+        raise RuntimeError(f"{shell['rpm']} is not listed with the same checksum in {shell['sums']}; "
+                           "nothing was installed. Try again later.")
+    if not (os.path.exists(path) and sha256(path) == shell["sha256"]):
+        part = path + ".part"
+        try:
+            fetch(shell["url"], part, MAX_RPM_MB)
+            got = sha256(part)
+            if got != shell["sha256"]:
+                raise RuntimeError(f"The downloaded {shell['rpm']} is damaged (SHA-256 {got[:16]}…, expected "
+                                   f"{shell['sha256'][:16]}…); nothing was installed. Try again.")
+            os.replace(part, path)
+        finally:
+            if os.path.exists(part):
+                os.unlink(part)
+    q = run(["rpm", "-qp", "--nosignature", "--qf", "%{NAME} %{ARCH}", path], check=False)
+    if q.returncode or q.stdout.split() != [SHELL_PKG, platform.machine()]:
+        os.unlink(path)
+        raise RuntimeError(f"{shell['rpm']} is not a {SHELL_PKG} package for {platform.machine()}; not installed")
+    shell["path"] = path
+    return path
+
+
+def keep_own_files():
+    """Contents of this program's own files, put back by restore_own_files() after dnf."""
+    saved = {}
+    for p in OWN_FILES:
+        try:
+            with open(p, "rb") as f:
+                saved[p] = (f.read(), os.stat(p).st_mode & 0o777)
+        except OSError:
+            pass
+    return saved
+
+
+def restore_own_files(saved):
+    for p, (data, mode) in saved.items():
+        if not os.path.exists(p):
+            log(f"restoring {p} (removed by the package transaction)")
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "wb") as f:
+                f.write(data)
+            os.chmod(p, mode)
+
+
+def dnf(args, check=True):
+    saved = keep_own_files()
+    try:
+        return run(["dnf", *args], check=check)
+    finally:
+        restore_own_files(saved)
+
+
+def phase_detect(state):
+    rel = dict(line.strip().split("=", 1) for line in open("/etc/os-release") if "=" in line)
+    state["fedora"] = rel.get("VERSION_ID", "").strip('"')
+    state["gnome_session"] = os.path.exists("/usr/share/wayland-sessions/gnome.desktop")
+    state["gdm"] = shutil.which("gdm") is not None or os.path.exists("/usr/sbin/gdm")
+    if not state["gdm"]:
+        raise RuntimeError("GDM is not installed; the Fenestra session is offered through GDM")
+
+
+def phase_check(state):
+    free = shutil.disk_usage("/").free // (1024 * 1024)
+    state["free_mb"] = free
+    if free < MIN_FREE_MB:
+        raise RuntimeError(f"Not enough free space: {free} MB free, {MIN_FREE_MB} MB needed")
+    missing = [p for p in PACKAGES if run(["rpm", "-q", p], check=False).returncode]
+    state["missing"] = missing
+    # Read-only network check: is there a fenestra-shell build to install?
+    state["shell"] = resolve_shell(state) if SHELL_PKG in missing else None
+
+
+def phase_download(state):
+    if state.get("shell"):
+        try:
+            download_shell(state["shell"])
+        except Exception:
+            # The next attempt looks the build up again (a newer one may have replaced it).
+            state["done"] = [p for p in state.get("done", []) if p != "check"]
+            raise
+
+
+def targets(state):
+    """dnf arguments: the missing Fedora packages and the downloaded fenestra-shell file."""
+    shell = state.get("shell") or {}
+    names = [p for p in state.get("missing", []) if not (shell and p == SHELL_PKG)]
+    return names + ([shell["path"]] if shell.get("path") else [])
+
+
+def phase_backup(state):
+    os.makedirs(BACKUP_DIR, mode=0o700, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = os.path.join(BACKUP_DIR, f"{stamp}.tar.gz")
+    with tarfile.open(path, "w:gz") as tar:
+        for p in ("/etc/dconf", "/etc/gdm", "/etc/xdg", "/etc/pam.d", "/var/lib/AccountsService/users"):
+            if os.path.exists(p):
+                tar.add(p)
+    with open(os.path.join(BACKUP_DIR, f"{stamp}-packages.txt"), "w") as f:
+        f.write(run(["rpm", "-qa", "--qf", "%{NAME}\n"]).stdout)
+    state["backup"] = path
+
+
+def phase_simulate(state):
+    if not state.get("missing"):
+        state["download_mb"] = 0
+        return
+    r = dnf(["install", "--assumeno", *targets(state)], check=False)
+    out = r.stdout + r.stderr
+    m = re.search(r"Total size of inbound packages is ([\d.]+) ([KMG]i?B)", out) or re.search(r"Total download size: ([\d.]+) ([KMG])", out)
+    shell_mb = round((state.get("shell") or {}).get("size", 0) / 1048576)
+    if m:
+        factor = {"K": 1 / 1024, "M": 1, "G": 1024}[m.group(2)[0]]
+        state["download_mb"] = round(float(m.group(1)) * factor) + shell_mb
+    if re.search(r"No match for argument|Problem: |nothing provides", out):
+        raise RuntimeError("The packages cannot be installed: " + out.strip()[-600:])
+
+
+def phase_install(state):
+    if state.get("missing"):
+        # Recorded first: a rollback after a half-finished transaction still removes what came.
+        state["installed"] = state["missing"]
+        save(state)
+        dnf(["install", "-y", *targets(state)])
+        shell = state.get("shell") or {}
+        if shell.get("path"):
+            # Kept as the build to go back to if a later update-shell fails its boot test.
+            keep = os.path.join(CACHE_DIR, "installed.rpm")
+            os.replace(shell.pop("path"), keep)
+            shell["kept"] = keep
+
+
+def phase_register(state):
+    if not os.path.exists(SESSION_FILE):
+        raise RuntimeError(f"{SESSION_FILE} is missing after installing fenestra-shell")
+
+
+def phase_boottest(state):
+    """Headless KWin + Fenestra Shell as an unprivileged user: the shell must report ready."""
+    ok, out = boottest(state.get("user"))
+    state["boottest"] = "PASS" if ok else "FAIL"
+    if not ok:
+        raise RuntimeError("Fenestra Shell did not start in the test session:\n" + out[-800:])
+
+
+def boottest(user):
+    """(passed, output) of a headless KWin + Fenestra Shell start as user."""
+    user = user or "nobody"
+    script = r"""
+export XDG_RUNTIME_DIR=$(mktemp -d) KWIN_COMPOSE=Q QT_QUICK_BACKEND=software QT_FORCE_STDERR_LOGGING=1
+export WAYLAND_DISPLAY=fenestra-boottest QT_QPA_PLATFORM=wayland HOME=$(mktemp -d)
+kwin_wayland --virtual --socket fenestra-boottest --width 1280 --height 800 >/dev/null 2>&1 & K=$!
+for i in $(seq 1 60); do [ -S $XDG_RUNTIME_DIR/fenestra-boottest ] && break; sleep 0.5; done
+timeout 30 fenestra-shell > $XDG_RUNTIME_DIR/shell.log 2>&1 & S=$!
+for i in $(seq 1 60); do grep -q FENESTRA_SHELL_READY $XDG_RUNTIME_DIR/shell.log && break; sleep 0.5; done
+grep -q FENESTRA_SHELL_READY $XDG_RUNTIME_DIR/shell.log && echo BOOTTEST_PASS || { echo BOOTTEST_FAIL; tail -20 $XDG_RUNTIME_DIR/shell.log; }
+kill $S $K 2>/dev/null; wait 2>/dev/null
+"""
+    r = run(["runuser", "-u", user, "--", "dbus-run-session", "--", "bash", "-c", script], check=False, timeout=120)
+    if "BOOTTEST_PASS" not in r.stdout:
+        log("boot test failed:\n" + r.stdout[-800:])
+    return "BOOTTEST_PASS" in r.stdout, r.stdout
+
+
+def phase_available(state):
+    state["available"] = True  # GDM lists /usr/share/wayland-sessions; nothing is made default here
+
+
+def cmd_run(dry_run=False):
+    state = load()
+    state.update(status="running", error=None)
+    state.setdefault("done", [])
+    sudo_user = os.environ.get("PKEXEC_UID") or os.environ.get("SUDO_UID")
+    if sudo_user:
+        state["user"] = pwd.getpwuid(int(sudo_user)).pw_name
+    save(state)
+    for i, name in enumerate(PHASES):
+        if name in state["done"]:
+            continue
+        if dry_run and name == "install":
+            break
+        state["phase"], state["progress"] = name, int(100 * i / len(PHASES))
+        save(state)
+        log(f"phase {name}")
+        try:
+            globals()[f"phase_{name}"](state)
+        except Exception as e:  # noqa: BLE001 — reported to Settings as text
+            state.update(status="failed", error=str(e))
+            save(state)
+            log(f"FAILED in {name}: {e}")
+            return 1
+        state["done"].append(name)
+        save(state)
+    if dry_run:
+        # Nothing was installed: a real run starts again from the beginning.
+        state.update(status="dry-run-ok", phase=None, done=[])
+    else:
+        state.update(status="done", progress=100, phase=None)
+    save(state)
+    return 0
+
+
+def cmd_check():
+    state = load()
+    try:
+        phase_detect(state)
+        phase_check(state)
+        state["check"] = "ok"
+    except Exception as e:  # noqa: BLE001
+        state["check"] = str(e)
+    save(state)
+    print(json.dumps(state, indent=1))
+    return 0 if state["check"] == "ok" else 1
+
+
+def accounts_set_session(user, session):
+    uid = pwd.getpwnam(user).pw_uid
+    path = run(["busctl", "--system", "call", "org.freedesktop.Accounts", "/org/freedesktop/Accounts",
+                "org.freedesktop.Accounts", "FindUserById", "x", str(uid)]).stdout.split()[1].strip('"')
+    for method in ("SetSession", "SetXSession"):
+        run(["busctl", "--system", "call", "org.freedesktop.Accounts", path, "org.freedesktop.Accounts.User",
+             method, "s", session])
+
+
+def cmd_set_default(user):
+    home = pwd.getpwnam(user).pw_dir
+    marker = os.path.join(home, ".local/state/fenestra/session-ok")
+    if not os.path.exists(marker):
+        print("The Fenestra session has not been used successfully yet; not making it the default.", file=sys.stderr)
+        return 2
+    accounts_set_session(user, "fenestra")
+    state = load()
+    state.setdefault("default_for", [])
+    if user not in state["default_for"]:
+        state["default_for"].append(user)
+    save(state)
+    return 0
+
+
+def cmd_rollback(remove_packages):
+    state = load()
+    for user in state.get("default_for", []):
+        try:
+            accounts_set_session(user, "gnome")
+        except Exception as e:  # noqa: BLE001
+            log(f"could not set GNOME for {user}: {e}")
+    state["default_for"] = []
+    if remove_packages and state.get("installed"):
+        # Only what this tool installed; dnf keeps what other packages still need.
+        dnf(["remove", "-y", *state["installed"]], check=False)
+        state["installed"] = []
+        state["shell"] = None
+        shutil.rmtree(CACHE_DIR, ignore_errors=True)
+        # The backup stays; a new run checks again and downloads the build again.
+        state["done"] = [p for p in state.get("done", []) if p in ("detect", "backup")]
+    state.update(status="rolled-back", phase=None)
+    save(state)
+    return 0
+
+
+def rpm_release(name):
+    r = run(["rpm", "-q", "--qf", "%{RELEASE}", name], check=False)
+    return None if r.returncode else r.stdout.strip()
+
+
+def newer(rel_a, rel_b):
+    """Release a ('<UTC stamp>.git<id>.fcNN') is a later build than release b."""
+    def stamp(rel):
+        m = re.match(r"^(\d{14})\.git", rel or "")
+        return int(m.group(1)) if m else 0
+    return stamp(rel_a) > stamp(rel_b)
+
+
+def cmd_update_shell():
+    """After a Fenestra update: the fenestra-shell build of the new commit, when newer."""
+    have = rpm_release(SHELL_PKG)
+    if have is None:
+        print("fenestra-shell is not installed; nothing to update")
+        return 0
+    state = load()
+    up = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "from": have}
+    state["shell_update"] = up
+    try:
+        phase_detect(state)
+        shell = resolve_shell(state)
+        up["to"] = shell["release"] or shell["rpm"]
+        if shell["release"] and not newer(shell["release"], have):
+            up["result"] = "up-to-date"
+            save(state)
+            print(f"fenestra-shell {have} is up to date")
+            return 0
+        path = download_shell(shell)
+        prev = os.path.join(CACHE_DIR, "installed.rpm")
+        dnf(["install", "-y", path])
+        if not boottest(state.get("user"))[0]:
+            if os.path.exists(prev):
+                dnf(["downgrade", "-y", prev], check=False)
+                up["result"] = "boottest failed; previous build restored"
+            else:
+                up["result"] = "boottest failed; no previous build kept"
+            os.unlink(path)
+            raise RuntimeError(f"fenestra-shell {up['to']} did not start in the test session")
+        os.replace(path, prev)
+        up["result"] = "updated"
+        save(state)
+        print(f"fenestra-shell updated: {have} -> {up['to']}")
+        return 0
+    except Exception as e:  # noqa: BLE001
+        up.setdefault("result", "failed")
+        up["error"] = str(e)
+        save(state)
+        log(f"update-shell: {e}")
+        print(f"fenestra-shell not updated: {e}", file=sys.stderr)
+        return 1
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
+    if argv[0] == "status":
+        print(json.dumps(load(), indent=1))
+        return 0
+    if os.geteuid() != 0:
+        print("fenestra-migrate must run as root (pkexec /usr/libexec/fenestra/fenestra-migrate …)", file=sys.stderr)
+        return 1
+    if argv[0] == "check":
+        return cmd_check()
+    if argv[0] == "run":
+        return cmd_run("--dry-run" in argv)
+    if argv[0] == "set-default" and len(argv) == 2:
+        return cmd_set_default(argv[1])
+    if argv[0] == "rollback":
+        return cmd_rollback("--remove-packages" in argv)
+    if argv[0] == "update-shell":
+        return cmd_update_shell()
+    print(__doc__, file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

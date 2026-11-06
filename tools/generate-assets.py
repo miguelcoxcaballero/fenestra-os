@@ -361,7 +361,27 @@ def gen_explorer():
     write('menu-icons/win11-explorer-gallery-empty.svg', GALLERY_EMPTY)
 
 
-STEPS = {'osd': gen_osd, 'explorer': gen_explorer, 'menu': gen_menu, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,
+CAPTION = {
+    # 16x16 symbolic icons with a 10x10 glyph, 1px strokes drawn as fills so GTK 3
+    # and GTK 4 recolour them (hover/pressed/backdrop/light/dark) like text.
+    'minimize': '<rect x="3" y="8" width="10" height="1"/>',
+    'maximize': '<path fill-rule="evenodd" d="M4.5 3h7A1.5 1.5 0 0 1 13 4.5v7a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 11.5v-7A1.5 1.5 0 0 1 4.5 3zm0 1a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.5-.5z"/>',
+    'restore': '<path fill-rule="evenodd" d="M4.5 5h5A1.5 1.5 0 0 1 11 6.5v5A1.5 1.5 0 0 1 9.5 13h-5A1.5 1.5 0 0 1 3 11.5v-5A1.5 1.5 0 0 1 4.5 5zm0 1a.5.5 0 0 0-.5.5v5a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-5a.5.5 0 0 0-.5-.5z"/>'
+               '<path d="M6.5 3h5A1.5 1.5 0 0 1 13 4.5v5a1.5 1.5 0 0 1-1 1.41V4.5a.5.5 0 0 0-.5-.5H5.09A1.5 1.5 0 0 1 6.5 3z"/>',
+    'close': '<path d="M3.35 2.65 8 7.29l4.65-4.64.7.7L8.71 8l4.64 4.65-.7.7L8 8.71l-4.65 4.64-.7-.7L7.29 8 2.65 3.35z"/>',
+}
+
+
+def gen_caption():
+    # Original caption glyphs (minimize, maximize, restore, close) for every GTK
+    # window control and mutter's X11 frames; installed into the Fenestra icon theme.
+    for name, body in CAPTION.items():
+        write(f'menu-icons/window-{name}-symbolic.svg',
+              '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">'
+              f'<g fill="#bebebe">{body}</g></svg>\n')
+
+
+STEPS = {'caption': gen_caption, 'osd': gen_osd, 'explorer': gen_explorer, 'menu': gen_menu, 'battery': gen_battery, 'power': gen_power, 'consent': gen_consent, 'search': gen_search,
          'privacy': gen_privacy, 'folders': gen_folders, 'hello': gen_hello, 'logos': gen_logos, 'wallpapers': gen_wallpapers}
 
 

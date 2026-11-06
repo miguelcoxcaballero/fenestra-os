@@ -183,7 +183,6 @@ ${sel('.windows-consent-details')} { color:${p.text}; }
 ${sel('.arcmenu-menu .windows-search-layout .win-search-filter:checked')} { background-color:${p.text} !important; color:${p.textOn}; border:1px solid ${p.text} !important; }
 ${sel('.arcmenu-menu .windows-search-layout .win-search-filter:checked StLabel')} { color:${p.textOn}; }
 ${sel('.arcmenu-menu .windows-search-layout .win-result:selected .win-result-indicator')} { background-color:${p.text}; }
-${sel('.arcmenu-menu .windows-search-layout #ArcMenuSearchEntry:focus, .arcmenu-menu StEntry:focus')} { box-shadow:inset 0 -2px ${p.text} !important; }
 ${sel('.arcmenu-menu .windows-search-layout .win-preview-button:first-child')} { background-color:${p.fill}; color:${p.on}; }
 ${sel('.arcmenu-menu .windows-search-layout .win-preview-button:first-child:hover')} { background-color:${p.hover}; }
 `;

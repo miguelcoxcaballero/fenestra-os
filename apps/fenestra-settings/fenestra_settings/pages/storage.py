@@ -77,7 +77,8 @@ class StoragePage(Page):
         if util.has_key(PRIVACY, "old-files-age"):
             g2.add(SettingRow(_("Delete files in my trash if they have been there for over"), None,
                               "fs-delete-symbolic",
-                              control=value_label(_("{0} days").format(util.gget(PRIVACY, "old-files-age", 30)))))
+                              control=value_label(_("{0} days").format(util.gget(PRIVACY, "old-files-age", 30))),
+                              key="old-files-age"))
         dr = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         for v in vols:
             r = SettingRow(v.label, f"{util.human_size(v.free)} " + _("free of") + f" {util.human_size(v.total)}"

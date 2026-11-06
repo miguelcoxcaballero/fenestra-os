@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Fenestra
+Comment=Fenestra desktop (KWin, Wayland)
+Exec=/usr/libexec/fenestra/fenestra-session
+TryExec=/usr/bin/fenestra-shell
+DesktopNames=Fenestra
+X-GDM-SessionRegisters=false
