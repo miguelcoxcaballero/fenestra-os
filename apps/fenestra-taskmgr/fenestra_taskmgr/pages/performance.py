@@ -205,15 +205,16 @@ class PerformancePage(Page):
         m.add_separator()
 
     def _graph_menu(self, g, n, x, y):
-        if self.current != "cpu":
+        if self.current is None:
             return
-        m = Menu(self.detail_stack)
-        m.add(_("Overall utilization"), lambda: self._cpu_mode("overall"),
-              check=util.opts()["cpu_graph"] == "overall")
-        m.add(_("Logical processors"), lambda: self._cpu_mode("logical"),
-              check=util.opts()["cpu_graph"] == "logical")
-        m.add_separator()
-        m.add(_("Copy"), self.copy, icon_name="tm-copy-symbolic")
+        m = Menu(self.detail_stack, classic=True)
+        if self.current == "cpu":
+            m.add(_("Overall utilization"), lambda: self._cpu_mode("overall"),
+                  check=util.opts()["cpu_graph"] == "overall")
+            m.add(_("Logical processors"), lambda: self._cpu_mode("logical"),
+                  check=util.opts()["cpu_graph"] == "logical")
+            m.add_separator()
+        m.add(_("Copy"), self.copy, shortcut="Ctrl+C")
         m.popup_at(x, y)
 
     def _cpu_mode(self, mode):

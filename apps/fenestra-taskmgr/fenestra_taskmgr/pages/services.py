@@ -167,7 +167,7 @@ class ServicesPage(Page):
         s = self._sel()
         if s is None:
             return
-        m = Menu(table)
+        m = Menu(table, classic=True)
         m.add(_("Start"), lambda: self._act("start"), sensitive=not s["running"])
         m.add(_("Stop"), lambda: self._act("stop"), sensitive=s["running"])
         m.add(_("Restart"), lambda: self._act("restart"), sensitive=s["running"])

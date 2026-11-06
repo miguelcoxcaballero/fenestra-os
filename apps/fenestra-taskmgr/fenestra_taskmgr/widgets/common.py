@@ -125,12 +125,26 @@ def separator():
     return s
 
 
+def _children(w):
+    c = w.get_first_child()
+    while c is not None:
+        yield c
+        c = c.get_next_sibling()
+
+
 class Menu(Gtk.Popover):
     """Fluent context/flyout menu built from plain buttons (avoids GMenu styling)."""
 
-    def __init__(self, parent):
+    last = None         # most recent menu
+    shot_window = None  # screenshot mode: menus are drawn inside this window instead of a popup
+    shot_point = None   # screenshot mode: window point where a context menu opens
+
+    def __init__(self, parent, classic=False):
+        """classic=True: the Win32 context menu Task Manager shows for list rows and graphs
+        (square, 1 px grey border, 24 px items, 12 px text)."""
         super().__init__()
-        self.add_css_class("fluent-menu")
+        Menu.last = self
+        self.add_css_class("classic-menu" if classic else "fluent-menu")
         self.set_has_arrow(False)
         self.set_parent(parent)
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -142,11 +156,20 @@ class Menu(Gtk.Popover):
             self.unparent()
         return False
 
-    def add(self, text, cb=None, icon_name=None, sensitive=True, check=None, shortcut=None):
+    def add(self, text, cb=None, icon_name=None, sensitive=True, check=None, shortcut=None, default=False,
+            selected=None):
+        """selected (True/False): combo-box list item, the current one marked with an accent pill."""
         b = Gtk.Button()
         b.add_css_class("menu-item")
         box = Gtk.Box(spacing=12)
-        if check is not None:
+        if selected is not None:
+            box.set_spacing(7)
+            pill = Gtk.Box(css_classes=["menu-pill"], valign=Gtk.Align.CENTER)
+            box.append(pill)
+            if selected:
+                b.add_css_class("selected")
+                self.selected_index = len(list(_children(self.box)))
+        elif check is not None:
             im = icon("tm-check-symbolic", 20)
             im.set_opacity(1.0 if check else 0.0)
             box.append(im)
@@ -154,9 +177,9 @@ class Menu(Gtk.Popover):
             box.append(icon(icon_name, 20))
         else:
             sp = Gtk.Box()
-            sp.set_size_request(16, 16)
+            sp.set_size_request(20, 16)  # same width as a check mark or icon
             box.append(sp)
-        box.append(label(text))
+        box.append(label(text, "menu-default" if default else None))
         if shortcut:
             sh = label(shortcut, "menu-shortcut", xalign=1.0)
             sh.set_hexpand(True)
@@ -178,12 +201,77 @@ class Menu(Gtk.Popover):
         self.box.append(s)
 
     def popup_at(self, x, y):
+        self._at = (x, y)
         r = Gdk.Rectangle()
         r.x, r.y, r.width, r.height = int(x), int(y), 1, 1
         self.set_pointing_to(r)
         self.set_position(Gtk.PositionType.BOTTOM)
         self.set_halign(Gtk.Align.START)
         self.popup()
+
+    def popup(self):
+        win = Menu.shot_window
+        if win is None:
+            return Gtk.Popover.popup(self)
+        # screenshot mode: a headless compositor cannot capture popups, so the menu is drawn
+        # inside the window, where the popup would open
+        frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        frame.add_css_class("menu-shot")
+        frame.add_css_class("classic-menu" if self.has_css_class("classic-menu") else "fluent-menu")
+        self.set_child(None)
+        frame.append(self.box)
+        frame.selected_index = getattr(self, "selected_index", None)
+        if self.has_css_class("combo-menu"):
+            frame.add_css_class("combo-menu")
+        layer = getattr(win, "_shot_layer", None)
+        if layer is None:
+            layer = win._shot_layer = ShotLayer()
+            win.overlay.add_overlay(layer)
+        if Menu.shot_point is not None:
+            layer.add(frame, win, Menu.shot_point)
+        else:
+            layer.add(frame, self.get_parent(), None)
+
+
+class ShotLayer(Gtk.Widget):
+    """Screenshot mode only: places menus next to their anchor during layout."""
+    __gtype_name__ = "FenestraTaskShotLayer"
+
+    def __init__(self):
+        super().__init__()
+        self.items = []
+        self.set_can_target(False)
+
+    def add(self, frame, anchor, point):
+        frame.set_parent(self)
+        self.items.append((frame, anchor, point))
+        self.queue_resize()
+
+    def do_measure(self, orientation, for_size):
+        return 0, 0, -1, -1
+
+    def do_size_allocate(self, w, h, baseline):
+        from gi.repository import Graphene, Gsk
+        for frame, anchor, point in self.items:
+            if point is not None:
+                p = Graphene.Point()
+                p.x, p.y = point
+                ok, q = anchor.compute_point(self, p)
+                x, y = (q.x, q.y) if ok else point
+            else:
+                ok, b = anchor.compute_bounds(self)
+                x, y = (b.get_x(), b.get_y() + b.get_height() + 8) if ok else (0, 0)
+            fw = frame.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+            fh = frame.measure(Gtk.Orientation.VERTICAL, fw)[1]
+            idx = getattr(frame, "selected_index", None)
+            if point is None and idx is not None and ok:
+                # a combo box list opens over its button, the current item on top of it
+                x, y = b.get_x() + 2, b.get_y() - 8 - 37 * idx
+            if point is None:  # flyouts stay inside the window; context menus may overhang it
+                x, y = max(0, min(x, w - fw)), max(0, min(y, h - fh))
+            p = Graphene.Point()
+            p.x, p.y = int(x), int(y)
+            frame.allocate(fw, fh, -1, Gsk.Transform().translate(p))
 
 
 class Dialog(Gtk.Box):

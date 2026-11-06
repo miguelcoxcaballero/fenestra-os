@@ -114,8 +114,9 @@ class SettingsPage(Page):
 
         def open_menu(*_a):
             m = Menu(btn)
+            m.add_css_class("combo-menu")
             for val, text in choices:
-                m.add(_(text), lambda v=val, t=text: pick(v, t), check=util.opts()[key] == val)
+                m.add(_(text), lambda v=val, t=text: pick(v, t), selected=util.opts()[key] == val)
             m.set_position(Gtk.PositionType.BOTTOM)
             m.popup()
         btn.connect("clicked", open_menu)

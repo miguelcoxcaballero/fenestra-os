@@ -116,14 +116,14 @@ scrollbar.horizontal slider { min-width: 40px; }
 scrollbar:hover slider { min-width: 6px; min-height: 6px; }
 
 /* ------------------------------------------------------------- menus */
-popover.fluent-menu > contents {
+popover.fluent-menu > contents, .menu-shot.fluent-menu {
   background-color: var(--popover);
   border: 1px solid var(--popover-border);
   border-radius: 8px;
   padding: 4px 0;
   box-shadow: 0 8px 16px var(--shadow);
 }
-popover.fluent-menu button.menu-item {
+popover.fluent-menu button.menu-item, .menu-shot.fluent-menu button.menu-item {
   min-height: 30px; min-width: 200px;
   padding: 0 12px;
   margin: 1px 4px;
@@ -131,8 +131,8 @@ popover.fluent-menu button.menu-item {
   background: none;
   font-size: 14px;
 }
-popover.fluent-menu button.menu-item:hover { background-color: var(--hover); }
-popover.fluent-menu button.menu-item:disabled { color: var(--fg3); }
+.fluent-menu button.menu-item:hover { background-color: var(--hover); }
+.fluent-menu button.menu-item:disabled { color: var(--fg3); }
 .menu-shortcut { color: var(--fg2); font-size: 12px; }
 .menu-sep { min-height: 1px; background-color: var(--line); margin: 4px 0; }
 
@@ -244,3 +244,24 @@ checkbutton check:not(:checked) { -gtk-icon-source: none; background-image: none
 
 /* Segoe UI Variable's small optical size runs ~2 % wider than Selawik at 12 px */
 button.tool-button label, .title-label { letter-spacing: 0.12px; }
+
+/* classic (Win32) context menu of list rows and graphs, measured */
+popover.classic-menu > contents, .menu-shot.classic-menu {
+  background-color: var(--classic-menu); border: 1px solid #a0a0a0; border-radius: 0;
+  padding: 4px 2px; box-shadow: none;
+}
+.classic-menu button.menu-item {
+  min-height: 24px; min-width: 160px; padding: 0 20px 0 2px; margin: 0;
+  border: none; border-radius: 0; box-shadow: none; background: none; font-size: 12px;
+}
+.classic-menu button.menu-item:hover { background-color: var(--classic-menu-hover); }
+.classic-menu button.menu-item:disabled { color: var(--classic-menu-disabled); }
+.classic-menu .menu-sep { min-height: 1px; background-color: var(--classic-menu-sep); margin: 3px 2px; }
+.menu-default { font-weight: 700; }
+/* combo-box lists (Settings): no check marks, current item highlighted with an accent pill */
+.fluent-menu.combo-menu button.menu-item, .combo-menu button.menu-item {
+  min-height: 33px; min-width: 150px; margin: 2px 4px 2px 4px; padding: 0 8px 0 1px;
+}
+.combo-menu button.menu-item.selected { background-color: var(--ctl); }
+.menu-pill { min-width: 3px; min-height: 16px; border-radius: 2px; }
+button.menu-item.selected .menu-pill { background-color: var(--accent); }

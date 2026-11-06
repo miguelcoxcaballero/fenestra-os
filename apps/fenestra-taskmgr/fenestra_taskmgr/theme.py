@@ -26,7 +26,9 @@ DARK = {
     "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.35)", "shadow": "rgba(0,0,0,0.30)",
     "close-hover": "#c42b1c", "dialog": "#202020", "dialog-foot": "#2b2b2b", "smoke": "rgba(0,0,0,0.3)",
     "check-border": "rgba(255,255,255,0.55)", "graph-border": "#757575", "mini-bg": "#292929", "grid": "#2c2c2c",
-    "link": "#99ebff", "head-sep": "#636363", "list-sep": "#1e1e1e", "warn": "#fce100", "leaf": "#6ccb5f",
+    "link": "#99ebff", "head-sep": "#636363", "list-sep": "#1e1e1e",
+    "classic-menu": "#2c2c2c", "classic-menu-sep": "#3e3e3e", "classic-menu-disabled": "#797979",
+    "classic-menu-hover": "#414141", "warn": "#fce100", "leaf": "#6ccb5f",
 }
 LIGHT = {
     "bg": "#f3f3f3", "panel": "#ffffff", "panel-edge": "#e5e5e5", "fg": "#1b1b1b", "fg2": "#5d5d5d",
@@ -35,10 +37,12 @@ LIGHT = {
     "search": "#fbfbfb", "search-border": "#e5e5e5", "search-edge": "#e5e5e5", "search-bottom": "#cccccc", "search-focus": "#ffffff", "item-sel": "#f6f6f6",
     "card": "#fbfbfb", "card-line": "#e5e5e5", "expander-head": "#fbfbfb", "combo-edge": "#ececec",
     "combo-top": "#ececec", "combo-bottom": "#d3d3d3", "ctl": "#fefefe", "ctl-hover": "#f6f6f6",
-    "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.12)", "shadow": "rgba(0,0,0,0.14)",
+    "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.14)", "shadow": "rgba(0,0,0,0.14)",
     "close-hover": "#c42b1c", "dialog": "#f3f3f3", "dialog-foot": "#ffffff", "smoke": "rgba(0,0,0,0.3)",
     "check-border": "rgba(0,0,0,0.55)", "graph-border": "#757575", "mini-bg": "#ffffff", "grid": "#ebebeb",
-    "link": "#003e92", "head-sep": "#e5e5e5", "list-sep": "#f2f2f2", "warn": "#9d5d00", "leaf": "#0f7b0f",
+    "link": "#003e92", "head-sep": "#e5e5e5", "list-sep": "#f2f2f2",
+    "classic-menu": "#f9f9f9", "classic-menu-sep": "#e5e5e5", "classic-menu-disabled": "#9f9f9f",
+    "classic-menu-hover": "#e5f3ff", "warn": "#9d5d00", "leaf": "#0f7b0f",
 }
 
 # heat-map levels (lowest .. hot); dark tones sampled from Windows 11 Task Manager

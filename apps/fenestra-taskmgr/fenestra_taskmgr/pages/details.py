@@ -105,7 +105,7 @@ class DetailsPage(Page):
         p = self._sel()
         if p is None:
             return
-        m = Menu(table)
+        m = Menu(table, classic=True)
         m.add(_("End task"), self.end_task, sensitive=p.kind != "kernel")
         m.add(_("End process tree"), lambda: actions.end_task(self._tree(p.pid)), sensitive=p.kind != "kernel")
         m.add(_("Efficiency mode"), lambda: actions.set_efficiency([p.pid], not p.efficiency),

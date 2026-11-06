@@ -235,7 +235,7 @@ class StartupPage(Page):
         e = self._sel()
         if e is None:
             return
-        m = Menu(table)
+        m = Menu(table, classic=True)
         m.add(_("Disable") if e["enabled"] else _("Enable"), lambda: self._set(not e["enabled"]))
         m.add(_("Properties"), self.properties)
         m.popup_at(x, y)
