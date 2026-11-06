@@ -20,6 +20,9 @@ Name=org.gnome.Nautilus
 Exec=/usr/libexec/fenestra/fenestra-nautilus --gapplication-service
 SVC
 id alex >/dev/null 2>&1 || useradd -m -u 1000 -c "Alex Morgan" alex
+# No RealtimeKit on the system bus (see tests/shell-kwin/session.sh): in a container it never
+# answers, and xdg-desktop-portal blocks 3 x 25 s on it before exporting the FileChooser.
+rm -f /usr/share/dbus-1/system-services/org.freedesktop.RealtimeKit1.service
 mkdir -p /run/dbus /run/systemd/seats; rm -f /run/dbus/system_bus_socket /run/dbus/pid
 dbus-daemon --system --fork; sleep 0.5
 python3 /src/tests/greeter/fakelogind.py & sleep 1

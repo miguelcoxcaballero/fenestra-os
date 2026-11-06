@@ -81,6 +81,13 @@ conf() { mkdir -p ~/.config/fenestra; printf '%s\n' "$@" > ~/.config/fenestra/sh
 session() {
     export WAYLAND_DISPLAY=wayland-fen
     # System bus + AccountsService (Start's account name), as on a real system.
+    # No RealtimeKit on the bench's system bus: rtkit-daemon caps RLIMIT_NPROC for its uid (992),
+    # which the kernel counts across every container on the host, so its threads fail to start
+    # and it never answers. xdg-desktop-portal reads three rtkit properties synchronously at
+    # startup (25 s timeout each) before exporting any portal, and every client asking a portal
+    # (Qt's host Registry, GTK's Settings: the launched apps, Search) timed out with it.
+    # Without the service file the lookup fails at once (no Realtime portal, nothing uses it).
+    rm -f /usr/share/dbus-1/system-services/org.freedesktop.RealtimeKit1.service
     mkdir -p /run/dbus; rm -f /run/dbus/system_bus_socket; dbus-daemon --system --fork 2>/dev/null
     /usr/libexec/accounts-daemon >/dev/null 2>&1 &
     # Two keyboard layouts (KWin reads kxkbrc at start): the tray shows the layout indicator.
