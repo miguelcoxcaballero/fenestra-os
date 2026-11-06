@@ -128,7 +128,7 @@ window 852×734 (frame 1 px), body light #f9f9f9 · dark #282828
 ├─ close X (hover 47 × 34 #c42b1c) · preview header: ◀ ▶ (disabled), fit-page button (40 × 40 focus box)
 ├─ left column (x 25 … 292)
 │  ├─ «Impresora» 14 px
-│  ├─ printer combo 267 × 32, radius ≈4, fill #fefefe / #414141, border #eeeeee (bottom #d4d4d4) / #484848;
+│  ├─ printer combo 267 × 32 (radius 3 on the orientation combo, diagonal estimate), fill #fefefe / #414141, border #eeeeee (bottom #d4d4d4) / #484848;
 │  │  3 px accent pill (#0067c0 / #4cc2ff) left of the value; initial keyboard focus ring:
 │  │  2 px #1a1a1a / #ffffff + 2 px inner gap, 4 px outside the border box
 │  ├─ «＋ Agregar una impresora» link #003e92 / #99ebff (hover bg #f0f0f0 / #353535, 167 × 22)
@@ -138,16 +138,16 @@ window 852×734 (frame 1 px), body light #f9f9f9 · dark #282828
 │  │  label «Desactivado» → «Activado»; hover track #eaeaea / #313131 (knob grows, covered by the pointer)
 │  ├─ «Stores printing output to a file» #8a8a8a / #9d9d9d
 │  └─ «Más opciones de configuración» link
-├─ preview area x 316, 511 × 548, 1 px #d1d1d1 / #3c3c3c, radius ≈4
+├─ preview area x 316, 511 × 548, 1 px #d1d1d1 / #3c3c3c, radius 3 (estimate)
 └─ footer y 652: 1 px separator #eaeaea / #373737, background #f3f3f3 / #202020 (82 px incl. frame)
-   ├─ checkbox 20 × 20 radius ≈4, checked #0067c0 / #4cc2ff (hover #1875c5 / #47b2e9),
+   ├─ checkbox 20 × 20 radius 3 (estimate), checked #0067c0 / #4cc2ff (hover #1875c5 / #47b2e9),
    │  «Permitir que la aplicación cambie las preferencias de / impresión.» (two lines, 18 px apart)
-   └─ «Imprimir» 193 × 32 · «Cancelar» 192 × 32, gap 8, radius ≈4: #fbfbfb / #2d2d2d,
+   └─ «Imprimir» 193 × 32 · «Cancelar» 192 × 32, gap 8, radius 3 (estimate): #fbfbfb / #2d2d2d,
       hover #f6f6f6 / #323232, pressed #f5f5f5 / #272727, border #e5e5e5 + bottom #cccccc (light)
 ```
 
 Menus (`print_dialog_menus`): both pop-ups open *over* their combo (selected entry aligned with it), 267 wide,
-radius ≈8, flat #f9f9f9 / #2c2c2c (acrylic not rendered), border #eaeaea / #202020. Printer: «Microsoft Print to
+radius 7 (from the changed-pixel corner), flat #f9f9f9 / #2c2c2c (acrylic not rendered), border #eaeaea / #202020. Printer: «Microsoft Print to
 PDF» (selected, row 33 px #f3f3f3 / #343434 + pill). Orientation: «Landscape», «Portrait» (selected), 50 px pitch
 (icon rows, selected row 40 px).
 
@@ -184,7 +184,7 @@ English UI, screen coordinates. Win+Mayús+S and Impr Pant give the same overlay
 - **Rectangle in progress**: the selection is shown undimmed with a **1 px white dashed outline (4 on / 3 off)**
   just outside it; no fill tint. **Window mode**: the window under the pointer is undimmed with a 1 px white
   outline just outside its frame.
-- **Toolbar** (`snip_toolbar.bar`): fill 330 × 48 at (795, 13), centred (centre x 960), radius ≈8, background
+- **Toolbar** (`snip_toolbar.bar`): fill 330 × 48 at (795, 13), centred (centre x 960), radius 7 (diagonal estimate), background
   #1f1f1f dark / #e6e6e6 light (acrylic flattened, unreliable), 1 px outline #3d3d3d visible only in dark;
   shadow not visible on the dimmed screen.
   - Snapshot / Video segmented control at x 803, 76 × 32 (two 38 × 32 segments): selected #292929 / #f6f6f6
@@ -192,11 +192,11 @@ English UI, screen coordinates. Win+Mayús+S and Impr Pant give the same overlay
     flat (#1c1c1c / #e1e1e1 in video mode).
   - Mode button 56 × 32 (rectangle icon + chevron), Quick markup 32 × 32 (disabled in Video mode), separator,
     Color picker, Text extractor (both with a blue «new» dot), separator, Close. Separators x 987 and 1076,
-    1 × 24 at y 25, #313131 / #d4d4d4. Buttons radius ≈4; hover #2c2c2c / #dddddd.
+    1 × 24 at y 25, #313131 / #d4d4d4. Buttons radius 3 (estimate); hover #2c2c2c / #dddddd.
   - Tooltips (32 px tall, #2c2c2c / #f9f9f9, 12 px): «Snip» (photo; the video one was captured before it
     updated), «Snipping area», «Quick markup (Ctrl + E)», «Color picker», «Text extractor ( ⊞ + Shift + T)»,
     «Close (Esc)».
-  - Mode menu: 125 × 158 at (887, 15), radius ≈8, #2c2c2c / #f9f9f9, rows 35 px: Rectangle (selected, 33 px
+  - Mode menu: 125 × 158 at (887, 15), radius 7–10 (estimate), #2c2c2c / #f9f9f9, rows 35 px: Rectangle (selected, 33 px
     #383838 / #f0f0f0 row + accent pill), Window, Full screen, Freeform; 14 px.
   - First-run teaching tip (dark pass only): «Annotate live on your screen» / «Quick markup lets you draw on your
     screen in real time.» / [Got it], 309 × 134 incl. beak, #282828.
