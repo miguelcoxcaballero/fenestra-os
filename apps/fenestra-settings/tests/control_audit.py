@@ -10,8 +10,12 @@ GSettings backend (GSETTINGS_BACKEND=keyfile, temporary XDG_CONFIG_HOME):
   real system is never touched; the table shows which backend each control drives;
 * read-only backend probes (UPower, hostnamed, NetworkManager, BlueZ, …) are called directly.
 
-Usage (always on a nested/headless compositor, never the real desktop):
+* Fenestra Shell options (shell.conf) are written to the temporary XDG_CONFIG_HOME and read
+  back; controls hidden in the current session (backends/session.py) are not operated.
+
+Usage (always on a nested/headless compositor, never the real desktop), once per session:
     WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland python3 tests/control_audit.py [--out report.md]
+    XDG_CURRENT_DESKTOP=Fenestra WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland python3 tests/control_audit.py
 """
 import os
 import sys
@@ -83,9 +87,14 @@ def describe(calls):
 
 
 def verify(calls):
+    from fenestra_settings.backends import shellconf
     ok = None
     for c in calls:
-        if c[0] == "gsettings" and c[2] is not None:
+        if c[0] == "shellconf":
+            want = None if c[2] is None else shellconf.encode(c[2])
+            good = shellconf.raw(c[1]) == want
+            ok = good if ok is None else (ok and good)
+        elif c[0] == "gsettings" and c[2] is not None:
             schema, key = c[1].split(" ", 1)
             if schema.startswith("org.gnome.desktop.notifications.application"):
                 ok = True if ok is None else ok
@@ -95,9 +104,18 @@ def verify(calls):
                 (isinstance(got, (list, tuple)) and list(map(tuple, got)) == list(map(tuple, c[2]))
                  if got and isinstance(got[0], (list, tuple)) else got == c[2])
             ok = good if ok is None else (ok and good)
-        elif c[0] in ("gsettings-reset", "mimeapps", "autostart"):
+        elif c[0] in ("gsettings-reset", "mimeapps", "autostart", "config", "gtk-accent"):
             ok = True if ok is None else ok
     return ok
+
+
+def shown(w, top):
+    """False when w or a parent up to the page is hidden (e.g. hidden in this session)."""
+    while w is not None and w is not top:
+        if not w.get_visible():
+            return False
+        w = w.get_parent()
+    return True
 
 
 def operate(ctrl):
@@ -136,7 +154,7 @@ def audit(app):
         seen = set()
         for _round in range(2):  # pages may rebuild controls after async loads
             ctrls = [w for w in walk(page.widget) if isinstance(w, (ToggleSwitch, Dropdown, Slider))
-                     and id(w) not in seen]
+                     and id(w) not in seen and shown(w, page.widget)]
             for ctrl in reversed(ctrls):  # master switches come first; operate them last
                 seen.add(id(ctrl))
                 if getattr(ctrl, "ui_only", None):
@@ -227,7 +245,10 @@ def main():
     app.run([])
     util.SANDBOX = False
     prob = probes()
+    from fenestra_settings.backends import session
     lines = ["# Fenestra Settings control audit", "",
+             f"Session: {'Fenestra (KWin + Fenestra Shell)' if session.is_fenestra() else 'GNOME'}"
+             f" (XDG_CURRENT_DESKTOP={session.desktop() or '-'})", "",
              "GSettings writes go to an isolated keyfile backend and are read back; D-Bus calls and",
              "commands are recorded, not executed (they run for real in normal mode).", "",
              "| Page | Control | Type | Real backend | Verified |", "|---|---|---|---|---|"]

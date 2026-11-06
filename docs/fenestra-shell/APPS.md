@@ -1,6 +1,8 @@
 # Fenestra apps in the KWin session
 
-Status: audit for the `feature/fenestra-shell-kwin` branch. Nothing here is implemented yet.
+Status: audit for the `feature/fenestra-shell-kwin` branch. Fenestra Settings items 1, 4, 5 and 6
+of the backend split (§9) are implemented; see "Implementation status" at the end of §9. Nothing
+else here is implemented yet.
 
 In the new session (`session/libexec/fenestra-session:6` exports
 `XDG_CURRENT_DESKTOP=Fenestra`), KWin 6.8 is the compositor and Fenestra Shell (Qt,
@@ -711,3 +713,63 @@ below exists in both implementations (or the Fenestra one returns "unsupported")
 Order of work: 1 → 4 → 5 → 2/3 → 6 → 7/8 → 9 → 10-15 → 16-24. Items 1, 4 and 5 remove the
 largest number of dead controls. Until 2/3 and 10-15 are done, `session.supports()` must
 return False for those areas so their rows are hidden under Fenestra.
+
+### Implementation status (Fenestra Settings)
+
+Done: items **1, 4, 5 and 6**. Under `XDG_CURRENT_DESKTOP=GNOME` (or any value without
+`Fenestra`) Settings behaves exactly as before: same pages, same search index, same controls
+(checked with `--list-pages`, `--export-search-index` and `tests/control_audit.py`).
+
+* **1.** `fs/backends/session.py` holds the whole policy: `GNOME_ONLY` features, `PAGE_FEATURES`
+  (page → feature) and `ROW_FEATURES` (page → row key → feature). `pages/base.py` `register()` keeps
+  hidden pages (and their children) out of `PAGES` (they go to `HIDDEN_PAGES`), `Page.get_widget()`
+  and `Group.add()` hide rows whose `key` is listed, `nav_row()` hides links to hidden pages/rows,
+  `ext_row()` maps `gnome-control-center <panel>` to a Fenestra page or a standalone tool
+  (`FENESTRA_PANELS`) or hides the row, and hides Tweaks / extension managers. `search.py` skips
+  hidden rows; `app.py resolve_page()` sends a hidden page or alias to its nearest shown parent.
+  `util.open_control_center()` callers use `session.open_panel()` / `panel_available()`.
+  Hidden under Fenestra, pages: `fx-extensions`, `fx-desktop-icons`, `fx-shortcuts`,
+  `fx-workspaces`, `fx-search`, `multitasking`, `autoplay`, `mouse`, `touchpad`, `magnifier`,
+  `narrator`, `a11y-audio`, `a11y-keyboard`, `typing`, `screenlock`, `lockscreen`, `location`,
+  `proxy`. Rows: display brightness / night light / HDR / scale / resolution / orientation /
+  refresh / multiple displays / advanced (GNOME Settings); power screen and sleep, power button,
+  battery percentage, battery saver; notification lock screen + per-app list; Storage Sense and
+  old-files age; trash/temp housekeeping and "show my name"; automatic time zone, week numbers;
+  over-amplification; locate pointer; wallpaper fit; ArcMenu layout / frequent / recently added /
+  avatar; every Dash to Panel row except alignment; panel clock rows; window focus mode, auto
+  raise, title bar actions, center new windows, attach modal dialogs, resize with secondary
+  button, move modifier (title bar buttons stays: GTK reads it); remote desktop; online accounts
+  "Add account"; password change (GNOME users panel); clipboard-extension row; every GNOME
+  Settings / Tweaks / extension-manager row without a Fenestra target. Areas 2/3 and 7-24 stay
+  unsupported (hidden) until their backends exist.
+* **4.** `fs/backends/appearance/` (`gnome.py`, `fenestra.py`, `gtkaccent.py`). Fenestra writes
+  shell.conf `[Appearance] ColorScheme, Accent, Wallpaper (path | #RRGGBB | spotlight),
+  ReduceMotion` and mirrors to GSettings (`color-scheme`, `accent-color` +
+  `org.fenestra.desktop accent-color-custom`, background `picture-uri(-dark)`, themes, cursor,
+  fonts, `text-scaling-factor`, `enable-animations`); the cursor also goes to `kcminputrc [Mouse]`
+  with a `org.kde.kconfig.notify ConfigChanged` signal **(verify on KWin)**. `gtkaccent.py` is a
+  byte-identical Python port of `fenestra-tray` `appearance.js` (`palette()`, `_gtk()`) and
+  `captionSync.js`; it runs from Settings in both sessions after every mode/accent/theme change.
+  `fenestra-settings --sync-appearance` copies shell.conf's mode/accent/wallpaper to GSettings and
+  regenerates those files (to be run by the session at login and by the shell after its own
+  mode/accent changes); while Settings runs it does this whenever shell.conf changes.
+* **5.** `fs/backends/shell_options/`: `alignment`, `search_mode` (`hide|icon|icon-label|box` ↔
+  `hidden|icon|iconLabel|box`), `weather`, `taskbar_pins`, `start_pins`, `reset_start_pins`,
+  `pinned_count`, `supports()`. Other taskbar/Start options are GNOME-only for now.
+* **6.** `fs/backends/notifications/`: `dnd`/`set_dnd` (Fenestra: `[Notifications]
+  DoNotDisturb`), used by System › Notifications and Focus. Lock-screen notifications and the
+  per-app list are unsupported under Fenestra.
+
+Open points found while doing it:
+
+* Fenestra Shell reads `Notifications/DoNotDisturb` only at start-up
+  (`shell/src/services/notifications.cpp`); it should reload it on `ShellSettings::fileChanged`
+  so the Settings switch applies live.
+* An empty `Start/Pinned` list is written as `@Invalid()` (QSettings' own encoding), which the
+  shell reads as "not set" and replaces with its defaults.
+* Paint's `fileio.set_wallpaper` still writes only the GNOME keys.
+* Solid colour wallpaper uses `org.gnome.desktop.background primary-color`; there is no colour
+  picker yet.
+* Tests: `apps/fenestra-settings/tools/test_session_backends.py` (both sessions, temporary HOME;
+  cross-checks the colour maths against `appearance.js` with gjs and shell.conf with Qt's
+  QSettings when available) and `tests/control_audit.py` run with each `XDG_CURRENT_DESKTOP`.
