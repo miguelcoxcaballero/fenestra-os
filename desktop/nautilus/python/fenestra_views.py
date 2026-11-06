@@ -12,7 +12,8 @@ from fenestra_menus import CommandMenus
 from fenestra_sidebar import _L, tr
 _L.setdefault('es', {}).update({'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
     'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar', 'Compact view': 'Vista compacta', 'View': 'Ver', '1 item': '1 elemento', '%d items': '%d elementos',
-    'Date modified': 'Fecha de modificación', 'This folder is empty.': 'Esta carpeta está vacía.', 'Collection': 'Colección', 'Add a folder': 'Agregar una carpeta'})
+    'Date modified': 'Fecha de modificación', 'This folder is empty.': 'Esta carpeta está vacía.',
+    '1 item selected': '1 elemento seleccionado', '%d items selected': '%d elementos seleccionados', '%d bytes': '%d bytes', 'Collection': 'Colección', 'Add a folder': 'Agregar una carpeta'})
 VIEWS = [(k, tr(v)) for k, v in [('extra-large','Extra large icons'),('large','Large icons'),('medium','Medium icons'),('small','Small icons'),('list','List'),('details','Details'),('tiles','Tiles'),('content','Content')]]
 
 def walk(w):
@@ -86,6 +87,19 @@ def details_cell(cell,role):
         label.connect('notify::label',lambda l,_p:_reformat(l,l._windows_role,cell))
     label._windows_role=role
     _reformat(label,role,cell)
+
+
+def status_size(n):
+    """Explorer's status-bar size: bytes below 1 KB, else three significant digits (1,23 KB, 12,3 KB, 123 KB)."""
+    if n<1024:return tr('%d bytes')%n
+    value=float(n)
+    for unit in ('KB','MB','GB','TB'):
+        value/=1024.0
+        if value<1000 or unit=='TB':break
+    digits=2 if value<10 else 1 if value<100 else 0  # truncated, not rounded, like Explorer
+    value=int(value*10**digits)/10**digits
+    text=f'{value:.{digits}f}'
+    return text.replace('.',',' if tr('View')!='View' else '.')+' '+unit
 
 
 class FenestraViews:
@@ -401,6 +415,11 @@ class FenestraViews:
         parent.insert_child_after(bar,label);parent.remove(label);bar.append(label)
         label.set_hexpand(False)
         sep=Gtk.Separator(orientation=Gtk.Orientation.VERTICAL);bar.append(sep)
+        # "1 elemento seleccionado  79 bytes |" while something is selected.
+        self.sel_label=Gtk.Label();self.sel_label.add_css_class('win11-status');self.sel_label.add_css_class('fenestra-status-selection')
+        self.sel_sep=Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
+        bar.append(self.sel_label);bar.append(self.sel_sep)
+        self.sel_label.set_visible(False);self.sel_sep.set_visible(False)
         bar.append(Gtk.Box(hexpand=True))
         self.status_buttons={}
         for mode,glyph in (('details','win11-view-details'),('large','win11-view-large')):
@@ -408,6 +427,24 @@ class FenestraViews:
             b.set_tooltip_text(dict(VIEWS)[mode])
             b.connect('clicked',lambda btn,m=mode:self.select(m,remember=True) if btn.get_active() else None)
             bar.append(b);self.status_buttons[mode]=b
+
+    def selection_status(self,files):
+        label=getattr(self,'sel_label',None)
+        if label is None:return
+        n=len(files)
+        text=''
+        if n:
+            text=tr('1 item selected') if n==1 else tr('%d items selected')%n
+            total=0
+            for f in files:
+                try:
+                    info=f.query_info('standard::size,standard::type',Gio.FileQueryInfoFlags.NONE,None)
+                except GLib.Error:
+                    total=None;break
+                if info.get_file_type()!=Gio.FileType.REGULAR:total=None;break
+                total+=info.get_size()
+            if total is not None:text+='  '+status_size(total)
+        label.set_label(text);label.set_visible(bool(n));self.sel_sep.set_visible(bool(n))
 
     def _status(self,slot,special=None):
         label=next((w for w in walk(self.window) if isinstance(w,Gtk.Label) and w.has_css_class('win11-status')),None)

@@ -250,7 +250,8 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
         if location and location.get_uri_scheme() == 'computer':
             page.set_title(tr('This PC'))
         window = slot.get_root()
-        if window:
+        # A search keeps the box's "Search <folder>" text (the tab title becomes the query).
+        if window and not (location and location.get_uri_scheme() == 'x-nautilus-search'):
             title = tr('Home') if location and location.get_path() == os.path.expanduser('~') else page.get_title()
             if location and location.get_path() == os.path.expanduser('~'):
                 page.set_title(tr('Home'))
