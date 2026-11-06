@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 """Validates a Fenestra icon pack against docs/ICON-PACK-FORMAT.md (v1).
 
-Usage: validate-pack.py PACK.zip [--sheet out.png]   (exit 0 = valid)
+Usage: validate-pack.py PACK.zip [--sheet out.png] [--report]   (exit 0 = valid)
+--report prints the status of every icons.json entry (glyphs, apps, modules, bitmaps): names, ids
+and sources only, no artwork.
 """
 import argparse
 import io
@@ -59,6 +61,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('pack')
     ap.add_argument('--sheet')
+    ap.add_argument('--report', action='store_true')
     a = ap.parse_args()
     errors, warnings = [], []
     z = zipfile.ZipFile(a.pack)
@@ -124,6 +127,11 @@ def main():
                     for e in entries.values():
                         counts[e.get('status')] = counts.get(e.get('status'), 0) + 1
                     print(f'{idx_name} {section}: ' + ', '.join(f'{k} {v}' for k, v in sorted(counts.items(), key=str)))
+                    if a.report:
+                        for en, e in entries.items():
+                            detail = e.get('source') or e.get('reason') or e.get('note') or e.get('error') or ''
+                            extra = f" apps={e['applications']}" if 'applications' in e else ''
+                            print(f"  {section[:-1]:6} {en:28} {e.get('status', '?'):10} {detail}{extra}")
     if 'icons' in tops and m.get('icon_theme') != 'Fenestra-Windows':
         errors.append('icon_theme missing')
     if 'cursors' in tops and m.get('cursor_theme') != 'Fenestra-Windows-Cursors':

@@ -24,6 +24,7 @@ public sealed partial class Exporter
     {
         WriteIndented = true,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
     };
 
     void AddJson(string entry, JsonNode node) =>
@@ -439,7 +440,7 @@ public sealed partial class Exporter
             var dir = Resolve(@"C:\ProgramData\Microsoft\User Account Pictures");
             var found = new JsonArray();
             foreach (var f in new[] { "user.png", "user-32.png", "user-40.png", "user-48.png", "user-192.png" })
-                if (AddFile($"assets/account/{f}", Path.Combine(dir, f))) found.Add(f);
+                if (AddFile($"assets/account/{f}", Path.Combine(dir, f))) found.Add((JsonNode)JsonValue.Create(f)!);
             if (found.Count == 0) return new JsonObject { ["status"] = "missing", ["reason"] = $"no user*.png in {dir}" };
             var big = FirstExisting(Path.Combine(dir, "user.png"), Path.Combine(dir, "user-192.png"));
             foreach (var size in Sizes)
