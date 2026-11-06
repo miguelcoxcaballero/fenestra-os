@@ -23,6 +23,17 @@ function surfaceOf(actor) {
     return actor.bin?.get_child?.() ?? actor.get_first_child?.()?.get_first_child?.() ?? null;
 }
 
+// BoxPointer input muting: booleans up to GNOME 50, Clutter actions with .enabled from 51.
+function setMuted(actor, muted) {
+    for (const key of ['_muteKeys', '_muteInput']) {
+        const v = actor[key];
+        if (v && typeof v === 'object' && 'enabled' in v)
+            v.enabled = muted;
+        else
+            actor[key] = muted;
+    }
+}
+
 export function installWindowsPopupMotion(actor) {
     const originalOpen = actor.open;
     const originalClose = actor.close;
@@ -79,8 +90,7 @@ export function installWindowsPopupMotion(actor) {
         this.remove_all_transitions();
         reset();
         const ms = duration(animate, OPEN_MS);
-        this._muteKeys = false;
-        this._muteInput = false;
+        setMuted(this, false);
         if (ms) {
             this.translation_y = SLIDE * scale();
             startClip();
@@ -105,8 +115,7 @@ export function installWindowsPopupMotion(actor) {
         if (!this.visible)
             return;
         this.remove_all_transitions();
-        this._muteInput = true;
-        this._muteKeys = true;
+        setMuted(this, true);
         const ms = duration(animate, CLOSE_MS);
         if (!ms) {
             this.hide();
