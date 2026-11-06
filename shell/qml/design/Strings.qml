@@ -53,6 +53,8 @@ QtObject {
         "Sort by": "Ordenar por", "Name": "Nombre", "Type": "Tipo", "Date modified": "Fecha de modificación", "Refresh": "Actualizar",
         "Paste": "Pegar", "New folder": "Nueva carpeta", "New": "Nuevo", "Open in Terminal": "Abrir en Terminal",
         "Display settings": "Configuración de pantalla", "Personalize": "Personalizar", "Cut": "Cortar", "Copy": "Copiar",
+        "Rectangle mode": "Modo de rectángulo", "Window mode": "Modo de ventana",
+        "Full screen mode": "Modo de pantalla completa", "Freeform mode": "Modo de forma libre",
         "Rename": "Cambiar nombre", "Delete": "Eliminar", "Copy as path": "Copiar como ruta de acceso", "Properties": "Propiedades",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }

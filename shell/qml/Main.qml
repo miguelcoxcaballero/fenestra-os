@@ -24,6 +24,11 @@ Item {
             property QuickSettings quick: QuickSettings { targetScreen: modelData; rightAligned: true }
             property NotificationCenter center: NotificationCenter { targetScreen: modelData; rightAligned: true }
             property Osd osd: Osd { targetScreen: modelData }
+            // Snipping overlay (Q04): one per output, toolbar on the first; opened by Snip.start().
+            property SnipOverlay snip: SnipOverlay {
+                targetScreen: modelData
+                hasToolbar: modelData.name === Qt.application.screens[0].name
+            }
         }
     }
 

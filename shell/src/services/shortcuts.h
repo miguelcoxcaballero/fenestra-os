@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Global shortcuts of the session (KGlobalAccel, served by KWin): media keys with the OSD (Q03),
-// Ctrl+Alt+Del (Q05), Ctrl+Shift+Esc (T02), Super+N / Super+A / Super+S, Print (Q04).
+// Ctrl+Alt+Del (Q05), Ctrl+Shift+Esc (T02), Super+N / Super+A / Super+S,
+// Print and Super+Shift+S (snipping overlay, Q04).
 #pragma once
 
 #include <QObject>
@@ -17,6 +18,7 @@ public:
     static Shortcuts *instance();
     static Shortcuts *create(QQmlEngine *, QJSEngine *);
     void install();
+    // The whole workspace without the overlay (the Print behaviour before the snipping overlay).
     Q_INVOKABLE void takeScreenshot();
 
 Q_SIGNALS:

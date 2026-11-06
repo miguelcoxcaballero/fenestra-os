@@ -53,6 +53,7 @@ qt_add_executable(fenestra-shell
     src/services/kwinintegration.cpp src/services/kwinintegration.h
     src/services/camerawatch.cpp src/services/camerawatch.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
+    src/services/snip.cpp src/services/snip.h
 )
 
 # org_kde_plasma_window_management: window list and control. KWin only offers it to clients whose
@@ -95,6 +96,9 @@ qt_add_qml_module(fenestra-shell
         qml/search/SearchFlyout.qml
         qml/security/ConsentDialog.qml
         qml/security/SecurityScreen.qml
+        qml/snip/SnipButton.qml
+        qml/snip/SnipOverlay.qml
+        qml/snip/SnipToolbar.qml
         qml/start/AppTile.qml
         qml/start/SectionHeader.qml
         qml/start/StartMenu.qml
@@ -107,6 +111,12 @@ qt_add_qml_module(fenestra-shell
         qml/taskview/SnapLayouts.qml
         qml/tray/Tray.qml
         qml/tray/TrayButton.qml
+    RESOURCES
+        qml/snip/icons/snip-rectangle.svg
+        qml/snip/icons/snip-window.svg
+        qml/snip/icons/snip-screen.svg
+        qml/snip/icons/snip-freeform.svg
+        qml/snip/icons/snip-close.svg
 )
 
 # design/tokens.json, built in (see src/core/tokens.h).

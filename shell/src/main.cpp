@@ -15,6 +15,7 @@
 #include "polkitagent.h"
 #include "shellcontrol.h"
 #include "shortcuts.h"
+#include "snip.h"
 #include "testprobe.h"
 #include "trayitems.h"
 
@@ -40,7 +41,7 @@ public:
     }
 };
 
-// image://tint/<rrggbb>/<icon name or file URL>: a glyph recoloured (light mode: Fenestra's white
+// image://tint/<rrggbb>/<icon name, file or qrc URL>: a glyph recoloured (light mode: Fenestra's white
 // line-art glyphs drawn in #1a1a1a), with QPainter so it works with every scene graph backend.
 class TintProvider : public QQuickImageProvider
 {
@@ -54,6 +55,8 @@ public:
         QImage img;
         if (what.startsWith(QLatin1String("file:")))
             img = QIcon(QUrl(what).toLocalFile()).pixmap(want).toImage();
+        else if (what.startsWith(QLatin1String("qrc:"))) // glyphs built into the shell (qml/snip/icons)
+            img = QIcon(QLatin1Char(':') + QUrl(what).path()).pixmap(want).toImage();
         else
             img = QIcon::fromTheme(what).pixmap(want).toImage();
         img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
@@ -96,6 +99,7 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("sni"), new TrayImageProvider);
     engine.addImageProvider(QStringLiteral("tint"), new TintProvider);
     engine.addImageProvider(QStringLiteral("notification"), new NotificationImageProvider);
+    engine.addImageProvider(QStringLiteral("snip"), new SnipImageProvider);
     TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
