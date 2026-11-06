@@ -7,6 +7,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
       qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtwayland-devel qt6-qtsvg \
       plasma-wayland-protocols-devel wayland-devel extra-cmake-modules cmake gcc-c++ ninja-build \
       dbus-daemon dbus-tools glib2 procps-ng python3-pillow python3-gobject gtk3 gtk4 libadwaita \
-      gtksourceview5 adwaita-icon-theme google-noto-sans-fonts systemd \
+      gtksourceview5 adwaita-icon-theme google-noto-sans-fonts systemd accountsservice shadow-utils \
+      python3-cairo xdg-desktop-portal xdg-desktop-portal-gtk kf6-kconfig \
       kf6-kservice-devel kf6-kio-devel kf6-networkmanager-qt-devel kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-solid-devel kf6-kwindowsystem-devel kf6-kglobalaccel-devel kf6-kconfig-devel kf6-kcoreaddons-devel kf6-kdbusaddons-devel kf6-kiconthemes-devel kf6-kidletime-devel kf6-kholidays-devel dbusmenu-qt-devel kpipewire-devel libgweather-devel NetworkManager-libnm-devel \
     && dnf clean all
