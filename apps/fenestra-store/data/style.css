@@ -22,7 +22,7 @@ button.back-button:disabled { color: var(--fg3); background: none; }
 .title-icon { margin: 0 12px 0 8px; -gtk-icon-style: regular; }
 .title-label { font-size: 12px; margin-right: 28px; }
 .demo-pill {
-  font-size: 11px; padding: 1px 8px; margin-right: 12px; border-radius: 4px;
+  font-size: 12px; padding: 1px 8px; margin-right: 12px; border-radius: 4px;
   background-color: var(--caution-bg); color: var(--warning);
 }
 
@@ -126,7 +126,7 @@ image.app-icon { -gtk-icon-style: regular; }
 .badge-fedora { background-color: var(--badge-fedora); color: var(--badge-fedora-fg); }
 .chip, .source-badge { font-feature-settings: "liga" 0; }
 .chip {
-  font-size: 11px; padding: 2px 7px; border-radius: 4px; color: var(--fg2);
+  font-size: 12px; padding: 2px 7px; border-radius: 4px; color: var(--fg2);
   background-color: var(--ctl); border: 1px solid var(--ctl-border);
 }
 
