@@ -13,6 +13,7 @@ Python 3 + PyGObject + **GTK 4** + **GtkSourceView 5** (no libadwaita, no pip de
 | ![Light](screenshots/main-light.png) | ![Dark](screenshots/main-dark.png) |
 | ![File menu](screenshots/menu-file-light.png) | ![Replace](screenshots/replace-dark.png) |
 | ![Settings](screenshots/settings-light.png) | ![Markdown](screenshots/markdown-dark.png) |
+| ![Tabs](screenshots/tabs-light.png) | ![Go to line](screenshots/goto-dark.png) |
 
 Every state is in [`screenshots/`](screenshots/).
 
@@ -48,8 +49,8 @@ the running window (or in a new window, see *Settings > Opening files*).
 * **Context menu** – Cut / Copy / Paste / Select all / Delete row, Undo, and for Markdown
   tabs Insert table / Insert link. Menu key and Shift+F10 open it at the cursor.
 * **Encodings** – detected on open: UTF-8, UTF-8 with BOM, UTF-16 LE / BE (with or without
-  BOM), fallback ISO-8859-1. **Line endings** – first line break decides: `Windows (CRLF)`,
-  `Unix (LF)`, `Macintosh (CR)`. Both are kept when saving; click them in the status bar to
+  BOM), fallback ISO-8859-1. **Line endings** – first line break decides: `CRLF`,
+  `LF`, `CR`. Both are kept when saving; click them in the status bar to
   convert. Text that does not fit ISO-8859-1 is saved as UTF-8 instead of being lost.
   Saving is atomic (temporary file + rename) and keeps the file mode.
 * **Large files** – the file is read and decoded in a worker thread and inserted in
