@@ -22,19 +22,19 @@ class AccountsPage(Page):
 
     def build(self, box):
         u = accounts.current_user()
-        hero = Gtk.Box(spacing=20)
-        hero.add_css_class("hero")
+        hero = Gtk.Box(spacing=17)
+        hero.add_css_class("accounts-hero")
         from ..nav import Avatar  # here, not at import time: nav imports the page registry
-        av = Avatar(96)
+        av = Avatar(92)
         av.set_user(u)
         hero.append(av)
         tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
-        tb.append(label(u.real_name, "hero-name"))
-        tb.append(label(_("Local Account"), "hero-model"))
-        tb.append(label(_("Administrator") if u.is_admin else _("Standard user"), "hero-model"))
+        tb.append(label(u.real_name, "accounts-name"))
+        tb.append(label(_("Local Account"), "accounts-sub"))
+        tb.append(label(_("Administrator") if u.is_admin else _("Standard user"), "accounts-sub"))
         hero.append(tb)
         box.append(hero)
-        g = self.group(_("Account settings"))
+        g = self.group()
         for pid, t, s, ic in self.ROWS:
             self.nav_row(g, pid, _(t), _(s), ic)
         self.ext_row(g, _("Email & accounts"), _("Online accounts used by email, calendar, and contacts"),

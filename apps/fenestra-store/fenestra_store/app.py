@@ -120,8 +120,6 @@ class App(Gtk.Application):
                 w, h = (int(x) for x in o.size.lower().split("x"))
                 self.win.set_default_size(w, h)
                 self.win.preset_width(w)
-                if o.screenshot:
-                    self.win.set_resizable(False)
             except ValueError:
                 pass
         if self.screenshot:

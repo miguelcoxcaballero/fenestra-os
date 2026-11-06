@@ -1,0 +1,12 @@
+@scheme light
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+click 653 384
+wait 500
+key alt+shift+P
+wait 1200
+move 1900 30
+wait 400
+shot light-folder-details-click-details-pane

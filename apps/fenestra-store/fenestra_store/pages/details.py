@@ -7,7 +7,7 @@ from gi.repository import Gtk
 from .. import util
 from ..i18n import N_, _
 from ..model import CATEGORY_TITLES, PERMISSIONS, SOURCES
-from ..widgets import ActionArea, Carousel, app_icon, button, chip, clear, icon, label, section_header, source_badge
+from ..widgets import ActionArea, Carousel, app_icon, button, clear, icon, label, status_text
 from .base import Page
 
 
@@ -15,6 +15,11 @@ class DetailsPage(Page):
     id = "details"
     nav = None
     title = N_("App")
+    max_width = 100000
+
+    def __init__(self, win):
+        super().__init__(win)
+        self.box.add_css_class("details")
 
     def tr_title(self):
         app = self.store.get(self.arg)
@@ -36,45 +41,79 @@ class DetailsPage(Page):
         self.store.load_details(uid)
         self.win.watch(uid, self)
 
-        # ------------------------------------------------------------ header card
-        head = Gtk.Box(spacing=24)
+        # ------------------------------------------------------------ header (over a gradient of the app's colour)
+        head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         head.add_css_class("app-head")
-        self.head_icon = app_icon(app, 96)
-        self.head_icon.set_halign(Gtk.Align.START)
+        self._tint(head, app)
+        top = Gtk.Box(spacing=0)
+        self.head_icon = app_icon(app, 84)
         self.head_icon.set_valign(Gtk.Align.START)
-        head.append(self.head_icon)
-        info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True, valign=Gtk.Align.CENTER)
+        self.head_icon.add_css_class("app-head-icon")
+        top.append(self.head_icon)
+        info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0, hexpand=True)
+        info.add_css_class("app-head-info")
         info.append(label(app.name, "app-title", wrap=True))
         if app.developer:
             dev = Gtk.Button(label=app.developer)
-            dev.add_css_class("hyperlink")
+            dev.add_css_class("dev-link")
             dev.set_halign(Gtk.Align.START)
             dev.set_tooltip_text(_("Search for apps by this developer"))
             dev.connect("clicked", lambda *_: self.win.search_for(app.developer))
             info.append(dev)
-        info.append(label(app.summary, "app-summary", wrap=True))
-        chips = Gtk.Box(spacing=6, margin_top=6)
-        chips.append(source_badge(app))
-        chips.append(chip(_("Flatpak") if app.packaging == "flatpak" else _("RPM package")))
-        for c in app.categories[:2]:
-            chips.append(chip(_(CATEGORY_TITLES.get(c, c))))
-        info.append(chips)
-        head.append(info)
-        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, valign=Gtk.Align.CENTER)
-        side.add_css_class("app-head-side")
-        self.action = ActionArea(self.win, app)
-        self.action.set_halign(Gtk.Align.END)
-        side.append(self.action)
-        self.remove_btn = button(_("Uninstall"), "fluent-button", lambda: self.win.confirm_remove(app.uid),
-                                 "st-trash-symbolic")
-        self.remove_btn.set_halign(Gtk.Align.END)
-        side.append(self.remove_btn)
-        self.state_line = label("", "caption", xalign=1.0)
-        side.append(self.state_line)
-        head.append(side)
+        meta = Gtk.Box(spacing=0)
+        meta.add_css_class("app-meta")
+        meta.append(label(_(SOURCES.get(app.source, app.source)), "app-meta-text"))
+        sep = Gtk.Box()
+        sep.add_css_class("meta-sep")
+        meta.append(sep)
+        meta.append(label(_("Flatpak") if app.packaging == "flatpak" else _("RPM package"), "app-meta-text"))
+        for c in app.categories[:1]:
+            sep = Gtk.Box()
+            sep.add_css_class("meta-sep")
+            meta.append(sep)
+            cb = Gtk.Button(label=_(CATEGORY_TITLES.get(c, c)))
+            cb.add_css_class("meta-link")
+            if c == "games":
+                cb.connect("clicked", lambda *_: self.win.navigate("games"))
+            else:
+                cb.connect("clicked", lambda _b, c=c: self.win.navigate("category", c))
+            meta.append(cb)
+        info.append(meta)
+        top.append(info)
+        head.append(top)
+        summ = label(app.summary, "app-summary", wrap=True)
+        summ.set_max_width_chars(62)
+        head.append(summ)
+        actions = Gtk.Box(spacing=0)
+        actions.add_css_class("app-actions")
+        self.action = ActionArea(self.win, app, big=True)
+        actions.append(self.action)
+        self.remove_btn = button("", "icon-action", lambda: self.win.confirm_remove(app.uid), "st-trash-symbolic",
+                                 _("Uninstall"))
+        self.remove_btn.set_valign(Gtk.Align.CENTER)
+        actions.append(self.remove_btn)
+        head.append(actions)
+        src = Gtk.Box(spacing=0)
+        src.add_css_class("source-block")
+        mark = Gtk.Box()
+        mark.add_css_class("source-mark")
+        mark.add_css_class(f"badge-{app.source}")
+        mark.append(icon("st-perm-shield-symbolic" if app.packaging != "flatpak" else "st-sources-symbolic", 20))
+        mark.set_valign(Gtk.Align.CENTER)
+        src.append(mark)
+        st = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
+        st.append(label(_("From %s") % _(SOURCES.get(app.source, app.source)), "source-block-title"))
+        self.state_line = label("", "source-block-text")
+        st.append(self.state_line)
+        st.append(label(app.license or _("Unknown licence"), "source-block-text"))
+        src.append(st)
+        head.append(src)
         self.head = head
-        self.head_side = side
         self.box.append(head)
+
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        body.add_css_class("app-body")
+        self.box.append(body)
 
         alts = self.store.alternatives(app)
         if alts:
@@ -88,42 +127,78 @@ class DetailsPage(Page):
                             (" · " + (_("Flatpak") if alt.packaging == "flatpak" else _("RPM package"))))
                 b.connect("clicked", lambda _b, u=alt.uid: self.win.show_app(u, record=False))
                 row.append(b)
-            self.box.append(row)
+            body.append(row)
 
         # ------------------------------------------------------------ screenshots
         if app.screenshots:
             self.carousel = Carousel(app)
-            self.box.append(self.carousel)
+            body.append(self._section(_("Screenshots"), self.carousel, chevron=True))
 
-        # ------------------------------------------------------------ description + side cards
-        self.columns = Gtk.Box(spacing=24)
-        self.columns.add_css_class("detail-columns")
-        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, hexpand=True)
-        left.append(label(_("About this app"), "section-title"))
+        # ------------------------------------------------------------ description, details, permissions
+        desc = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for para in app.description or [app.summary]:
             lb = label(para, "desc-bullet" if para.startswith("• ") else "desc-text", wrap=True)
             lb.set_selectable(True)
-            left.append(lb)
-        self.columns.append(left)
-        self.right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        self.right.set_size_request(320, -1)
-        self.columns.append(self.right)
-        self.box.append(self.columns)
+            desc.append(lb)
+        body.append(self._section(_("Description"), desc))
+        self.details_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        body.append(self._section(_("Details"), self.details_box))
+        self.perm_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        body.append(self._section(_("Permissions"), self.perm_box))
+        self.right = self.details_box
         self._fill_side(app)
 
         # ------------------------------------------------------------ same developer
         others = self.store.by_developer(app)
         if others:
-            self.box.append(section_header(_("Other apps by %s") % app.developer))
-            self.box.append(self.grid_of(others, 4, 8))
+            body.append(self._section(_("Other apps by %s") % app.developer, self.grid_of(others, 3, 6)))
         self.sync(app)
         self.set_narrow(self.win.narrow)
 
+    def _section(self, title, child, chevron=False):
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        card.add_css_class("section-card")
+        head = Gtk.Box()
+        head.add_css_class("section-card-head")
+        head.append(label(title, "section-card-title", ellipsize=True, xalign=0.0))
+        head.get_first_child().set_hexpand(True)
+        if chevron:
+            ch = icon("st-chevron-right-symbolic", 16, "section-card-chevron")
+            ch.set_valign(Gtk.Align.CENTER)
+            head.append(ch)
+        card.append(head)
+        div = Gtk.Box()
+        div.add_css_class("section-card-divider")
+        card.append(div)
+        child.add_css_class("section-card-body")
+        card.append(child)
+        return card
+
+    _tint_providers: dict = {}
+
+    def _tint(self, widget, app):
+        """Gradient from the app's colour (top) to the page background, as a per-page provider."""
+        from .. import art, theme
+        hue, _g = art.art_for(app)
+        dark = theme.get().dark
+        r, g, b = (int(v * 255) for v in art.rgb(hue, 0.30 if dark else 0.86, 0.45 if dark else 0.9))
+        name = "app-tint-%d" % (round(hue * 360) % 360) + ("-d" if dark else "-l")
+        widget.add_css_class(name)
+        if name not in self._tint_providers:
+            prov = Gtk.CssProvider()
+            prov.load_from_string(f".app-head.{name} {{ background-image: linear-gradient(to bottom, "
+                                  f"rgb({r},{g},{b}) 0px, rgba({r},{g},{b},0.55) 250px, "
+                                  f"rgba({r},{g},{b},0) 420px); }}")
+            from gi.repository import Gdk
+            Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov,
+                                                      Gtk.STYLE_PROVIDER_PRIORITY_USER + 3)
+            self._tint_providers[name] = prov
+
     def _fill_side(self, app):
-        clear(self.right)
-        self.right.append(label(_("Details"), "section-title"))
-        card = Gtk.Grid(column_spacing=16, row_spacing=10)
-        card.add_css_class("info-card")
+        clear(self.details_box)
+        clear(self.perm_box)
+        card = Gtk.Grid(column_spacing=24, row_spacing=10)
+        card.add_css_class("info-grid")
         rows = [
             (_("Version"), app.version + (f"  →  {app.update_version}" if app.has_update and
                                           app.update_version != "*" else "")),
@@ -136,39 +211,38 @@ class DetailsPage(Page):
             (_("Format"), _("Flatpak") if app.packaging == "flatpak" else _("RPM package")),
             (_("Developer"), app.developer),
         ]
-        r = 0
+        cells = []
         for k, v in rows:
-            if not v:
-                continue
-            card.attach(label(k, "info-key"), 0, r, 1, 1)
-            val = label(v, "info-value", wrap=True)
-            val.set_selectable(True)
-            card.attach(val, 1, r, 1, 1)
-            r += 1
+            if v:
+                val = label(v, "info-value", wrap=True)
+                val.set_selectable(True)
+                cells.append((k, val))
         if app.homepage:
             link = Gtk.LinkButton(uri=app.homepage, label=_("Website"))
             link.add_css_class("hyperlink")
             link.set_halign(Gtk.Align.START)
             if util.DEMO or util.READ_ONLY:
                 link.set_sensitive(False)
-            card.attach(label(_("Website"), "info-key"), 0, r, 1, 1)
-            card.attach(link, 1, r, 1, 1)
-        self.right.append(card)
+            cells.append((_("Website"), link))
+        cols = 1 if getattr(self.win, "narrow", False) else 3
+        for i, (k, w) in enumerate(cells):
+            col, row = i % cols, i // cols
+            cell = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+            cell.append(label(k, "info-key"))
+            cell.append(w)
+            card.attach(cell, col, row, 1, 1)
+        self.details_box.append(card)
 
-        self.right.append(label(_("Permissions"), "section-title"))
-        perm = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        perm.add_css_class("info-card")
         if app.packaging != "flatpak":
-            perm.append(self._perm_row("st-perm-shield-symbolic",
-                                       _("Not sandboxed"),
-                                       _("System packages can use everything your account can."), True))
+            self.perm_box.append(self._perm_row("st-perm-shield-symbolic",
+                                                _("Not sandboxed"),
+                                                _("System packages can use everything your account can."), True))
         elif app.permissions is None:
-            perm.append(label(_("Loading…"), "caption"))
+            self.perm_box.append(label(_("Loading…"), "caption"))
         else:
             for key in app.permissions:
                 text, icon_name, sensitive = PERMISSIONS.get(key, (key, "st-perm-shield-symbolic", False))
-                perm.append(self._perm_row(icon_name, _(text), None, sensitive))
-        self.right.append(perm)
+                self.perm_box.append(self._perm_row(icon_name, _(text), None, sensitive))
 
     @staticmethod
     def _perm_row(icon_name, title, sub, warn):
@@ -188,26 +262,24 @@ class DetailsPage(Page):
             return
         self.remove_btn.set_visible(app.installed and not app.busy)
         if app.busy:
-            self.state_line.set_label("")
+            self.state_line.set_label(status_text(app))
         elif app.installed:
             size = util.human_size(app.installed_size)
             self.state_line.set_label(_("Installed") + (f" · {size}" if size else ""))
         else:
             size = util.human_size(app.download_size)
-            self.state_line.set_label(_("Download: %s") % size if size else "")
+            self.state_line.set_label(_("Download: %s") % size if size else _("Free"))
         self._fill_side(app)
 
     def progress(self, frac, text):
         pass
 
     def set_narrow(self, narrow):
-        cols = getattr(self, "columns", None)
-        if cols is None:
+        super().set_narrow(narrow)
+        head = getattr(self, "head", None)
+        if head is None:
             return
-        cols.set_orientation(Gtk.Orientation.VERTICAL if narrow else Gtk.Orientation.HORIZONTAL)
-        self.right.set_size_request(-1 if narrow else 320, -1)
-        self.head.set_orientation(Gtk.Orientation.VERTICAL if narrow else Gtk.Orientation.HORIZONTAL)
-        self.head_side.set_halign(Gtk.Align.START if narrow else Gtk.Align.FILL)
-        for w in (self.action, self.remove_btn):
-            w.set_halign(Gtk.Align.START if narrow else Gtk.Align.END)
-        self.state_line.set_xalign(0.0 if narrow else 1.0)
+        (head.add_css_class if narrow else head.remove_css_class)("narrow")
+        body = head.get_next_sibling()
+        if body is not None:
+            (body.add_css_class if narrow else body.remove_css_class)("narrow")

@@ -23,6 +23,23 @@ LABEL_ICONS = {'Copy as path': 'win11-menu-copypath', 'Copiar como ruta de acces
                'Open': 'win11-menu-openfile', 'Abrir': 'win11-menu-openfile'}
 
 
+# The overlay's context-menu labels have no entry in Nautilus' catalogue; Explorer's wording.
+MENU_ES = {'View': 'Ver', 'Sort by': 'Ordenar por', 'Group by': 'Agrupar por', 'New': 'Nuevo', 'Folder': 'Carpeta',
+           'Open in Terminal': 'Abrir en Terminal', 'Open With…': 'Abrir con', 'Open with…': 'Abrir con',
+           'Cut': 'Cortar', 'Copy': 'Copiar', 'Paste': 'Pegar', 'Rename…': 'Cambiar nombre', 'Move to Trash': 'Eliminar',
+           'Compress to ZIP file': 'Comprimir en archivo ZIP', 'Extract to…': 'Extraer en…', 'Extract': 'Extraer todo',
+           'Open in New Tab': 'Abrir en una pestaña nueva', 'Open in New Window': 'Abrir en una ventana nueva',
+           'Name': 'Nombre', 'Date modified': 'Fecha de modificación', 'Type': 'Tipo', 'Size': 'Tamaño',
+           'Ascending': 'Ascendente', 'Descending': 'Descendente', '(None)': '(Ninguno)',
+           'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
+           'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos',
+           'Content': 'Contenido', 'Compact view': 'Vista compacta', 'Show Hidden Files': 'Mostrar archivos ocultos',
+           'Set as desktop background': 'Establecer como fondo de escritorio', 'Properties': 'Propiedades',
+           'Copy Address': 'Copiar dirección', 'Open Item Location': 'Abrir ubicación del elemento',
+           'Paste Into Folder': 'Pegar en la carpeta', 'Unstar': 'Quitar de Favoritos', 'Delete Permanently…': 'Eliminar permanentemente…',
+           'Empty Trash…': 'Vaciar papelera de reciclaje…', 'Restore From Trash': 'Restaurar', 'Remove From Recent': 'Quitar de Reciente'}
+
+
 def decorate_menu(widget):
     for button in walk(widget):
         if GObject.type_name(button.__gtype__) != 'GtkModelButton':
@@ -30,6 +47,9 @@ def decorate_menu(widget):
         if button.get_property('iconic'):
             continue
         text = (button.get_property('text') or '').replace('_', '')
+        if text in MENU_ES and tr('View') != 'View':
+            text = MENU_ES[text]
+            button.set_property('text', text)
         accel = button.get_property('accel') or ''
         # Nautilus' default-application item ("Open With Text Editor", Return) is Windows' plain "Open".
         if accel == 'Return' and text and text != tr('Open'):
@@ -46,6 +66,9 @@ def decorate_menu(widget):
                 if child.get_css_name() == 'accelerator':
                     if 'Return' in child.get_label():
                         child.set_label(child.get_label().replace('Return', 'Enter'))
+                    if 'Intro' in child.get_label() and tr('View') != 'View':
+                        # GTK's Spanish name for Return; Explorer writes Entrar.
+                        child.set_label(child.get_label().replace('Intro', 'Entrar'))
                 else:
                     child.set_hexpand(True)
                     child.set_xalign(0)
@@ -227,7 +250,8 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
         if location and location.get_uri_scheme() == 'computer':
             page.set_title(tr('This PC'))
         window = slot.get_root()
-        if window:
+        # A search keeps the box's "Search <folder>" text (the tab title becomes the query).
+        if window and not (location and location.get_uri_scheme() == 'x-nautilus-search'):
             title = tr('Home') if location and location.get_path() == os.path.expanduser('~') else page.get_title()
             if location and location.get_path() == os.path.expanduser('~'):
                 page.set_title(tr('Home'))

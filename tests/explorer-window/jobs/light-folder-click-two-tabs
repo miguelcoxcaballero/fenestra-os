@@ -1,0 +1,11 @@
+@scheme light
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+key ctrl+t
+wait 1500
+shot light-folder-click-two-tabs
+move 530 229
+wait 800
+shot light-folder-tabs-hover-tab-inactive

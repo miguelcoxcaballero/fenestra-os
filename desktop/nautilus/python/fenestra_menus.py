@@ -21,7 +21,10 @@ _L.setdefault('es', {}).update({
     'Options': 'Opciones', 'Date created': 'Fecha de creación', 'Cut': 'Cortar', 'Copy': 'Copiar', 'Paste': 'Pegar',
     'Rename': 'Cambiar nombre', 'Share': 'Compartir', 'Delete': 'Eliminar', 'No preview available.': 'No hay vista previa disponible.',
     'Select a single file to preview.': 'Selecciona un solo archivo para obtener una vista previa.',
-    '%d items selected': '%d elementos seleccionados', 'Sort': 'Ordenar', 'View': 'Ver',
+    '%d items selected': '%d elementos seleccionados', 'Sort': 'Ordenar', 'View': 'Ver', 'File location': 'Ubicación del archivo',
+    'Folder': 'Carpeta', 'Text Document': 'Documento de texto', 'New Text Document': 'Nuevo Documento de texto',
+    'Compressed (zipped) Folder': 'Carpeta comprimida (en zip)',
+    'New Compressed (zipped) Folder': 'Nueva carpeta comprimida (en zip)',
 })
 
 
@@ -170,7 +173,8 @@ class InfoPane(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class('fenestra-infopane')
-        self.set_size_request(280, -1)
+        self.set_size_request(299, -1)
+        self.set_hexpand(False)  # its labels expand inside it, the pane keeps 299 px
         self.mode = 'details'
         self.icon = Gtk.Image()
         self.icon.set_pixel_size(96)
@@ -187,13 +191,40 @@ class InfoPane(Gtk.Box):
         self.facts.add_css_class('fenestra-infopane-facts')
         self.message = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER, vexpand=True)
         self.message.add_css_class('fenestra-infopane-message')
-        for w in (self.icon, self.picture, self.text, self.title, self.subtitle, self.facts, self.message):
+        # Details pane as Explorer lays it out: a 220 px preview band with the large icon, then
+        # small icon + name, Share, "Details" and key / value rows (values right aligned).
+        self.band = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.START, vexpand=False)
+        self.band.add_css_class('fenestra-infopane-band')
+        self.band_icon = Gtk.Image(pixel_size=96, vexpand=True, valign=Gtk.Align.CENTER)
+        self.band_icon.set_size_request(-1, 220)
+        self.band.append(self.band_icon)
+        self.head = Gtk.Box(spacing=0)
+        self.head.add_css_class('fenestra-infopane-head')
+        self.head_icon = Gtk.Image(pixel_size=24)
+        self.head_title = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END, hexpand=True)
+        self.head_title.add_css_class('fenestra-infopane-title')
+        self.head.append(self.head_icon)
+        self.head.append(self.head_title)
+        self.share = Gtk.Button(halign=Gtk.Align.START)
+        self.share.add_css_class('fenestra-infopane-share')
+        share = Gtk.Box(spacing=9)
+        share.append(Gtk.Image.new_from_icon_name('win11-explorer-share'))
+        share.append(Gtk.Label(label=tr('Share')))
+        self.share.set_child(share)
+        self.share.connect('clicked', lambda b: b.activate_action('view.open-with-other-application', None))
+        self.details_title = Gtk.Label(label=tr('Details'), xalign=0)
+        self.details_title.add_css_class('fenestra-infopane-heading')
+        self.rows = Gtk.Grid(column_spacing=8)
+        self.rows.add_css_class('fenestra-infopane-rows')
+        self.details = [self.band, self.head, self.share, self.details_title, self.rows]
+        for w in (self.icon, self.picture, self.text, self.title, self.subtitle, self.facts, self.message, *self.details):
             self.append(w)
 
     def show_files(self, files, folder):
         """files: list of Gio.File selected (may be empty → describe folder)."""
-        for w in (self.icon, self.picture, self.text, self.title, self.subtitle, self.facts, self.message):
+        for w in (self.icon, self.picture, self.text, self.title, self.subtitle, self.facts, self.message, *self.details):
             w.set_visible(False)
+        self.set_css_classes(['fenestra-infopane'] + (['fenestra-infopane-details'] if self.mode == 'details' else []))
         child = self.facts.get_first_child()
         while child:
             nxt = child.get_next_sibling()
@@ -232,6 +263,8 @@ class InfoPane(Gtk.Box):
             return
         if info is None:
             return
+        if self.details_view(target, info):
+            return
         self.icon.set_from_gicon(info.get_icon() or Gio.ThemedIcon.new('text-x-generic'))
         self.icon.set_visible(True)
         self.title.set_label(info.get_display_name())
@@ -256,6 +289,42 @@ class InfoPane(Gtk.Box):
             self.facts.attach(key, 0, i, 1, 1)
             self.facts.attach(val, 1, i, 1, 1)
         self.facts.set_visible(bool(rows))
+
+    def details_view(self, gfile, info):
+        gicon = info.get_icon() or Gio.ThemedIcon.new('text-x-generic')
+        self.band_icon.set_from_gicon(gicon)
+        self.head_icon.set_from_gicon(gicon)
+        name = info.get_display_name()
+        if info.get_file_type() == Gio.FileType.REGULAR:
+            name = os.path.splitext(name)[0] or name  # Explorer hides known extensions here
+        self.head_title.set_label(name)
+        child = self.rows.get_first_child()
+        while child:
+            nxt = child.get_next_sibling()
+            self.rows.remove(child)
+            child = nxt
+        ctype = info.get_content_type() or ''
+        rows = [(tr('Type'), Gio.content_type_get_description(ctype) if ctype else '')]
+        if info.get_file_type() != Gio.FileType.DIRECTORY:
+            size = info.get_size()
+            rows.append((tr('Size'), f'{size} bytes' if size < 1024 else GLib.format_size_full(size, GLib.FormatSizeFlags.IEC_UNITS)))
+        parent = gfile.get_parent()
+        if parent and parent.get_path():
+            rows.append((tr('File location'), parent.get_path()))
+        stamp = info.get_modification_date_time()
+        if stamp:
+            local = stamp.to_local()
+            rows.append((tr('Date modified'), f'{local.format("%d/%m/%Y")} {local.get_hour()}:{local.format("%M")}'))
+        for i, (k, v) in enumerate(rows):
+            key = Gtk.Label(label=k, xalign=0, ellipsize=Pango.EllipsizeMode.END, max_width_chars=1)
+            key.set_size_request(84, -1)
+            key.add_css_class('fenestra-infopane-key')
+            val = Gtk.Label(label=v, xalign=1, hexpand=True, ellipsize=Pango.EllipsizeMode.END, max_width_chars=1)
+            self.rows.attach(key, 0, i, 1, 1)
+            self.rows.attach(val, 1, i, 1, 1)
+        for w in self.details:
+            w.set_visible(True)
+        return True
 
     @staticmethod
     def _info(gfile):
@@ -391,11 +460,60 @@ class CommandMenus:
         menu.item(tr('Options'), 'win11-menu-settings', activate=lambda: Gio.Application.get_default().activate_action('preferences', None))
         return menu
 
+    def current_dir(self):
+        slot = self.slot()
+        location = slot.get_property('location') if slot else None
+        return location if location and location.get_path() else None
+
+    def create_file(self, name, ext, data=b''):
+        """Explorer's New > Text Document / Compressed folder: an empty file with the next free name."""
+        folder = self.current_dir()
+        if folder is None:
+            return
+        for n in range(1, 1000):
+            child = folder.get_child(f'{name}{"" if n == 1 else f" ({n})"}{ext}')
+            try:
+                stream = child.create(Gio.FileCreateFlags.NONE, None)
+            except GLib.Error:
+                continue
+            if data:
+                stream.write_bytes(GLib.Bytes.new(data), None)
+            stream.close(None)
+            return
+
+    def build_new_menu(self):
+        menu = WinMenu(marks=False)
+        # Explorer opens New's menu from the button's left edge (not centred, which would
+        # push it off the window's left side).
+        def align(popover):
+            # The menu's own width (its box + the 1 px borders), not the popover's shadow area.
+            width = popover.get_child().measure(Gtk.Orientation.HORIZONTAL, -1)[1] + 2
+            rect = Gdk.Rectangle()
+            rect.x, rect.y, rect.width = -1, 0, width
+            rect.height = popover.get_parent().get_height() if popover.get_parent() else 32
+            popover.set_pointing_to(rect)
+        menu.popover.connect('show', align)
+        menu.item(tr('Folder'), 'win11-menu-folder', activate=lambda: self.act('view.new-folder'))
+        menu.item(tr('Text Document'), 'win11-menu-document',
+                  activate=lambda: self.create_file(tr('New Text Document'), '.txt'))
+        # An empty ZIP archive is its 22-byte end-of-central-directory record.
+        menu.item(tr('Compressed (zipped) Folder'), 'win11-menu-zipfolder',
+                  activate=lambda: self.create_file(tr('New Compressed (zipped) Folder'), '.zip', b'PK\x05\x06' + bytes(18)))
+        return menu
+
     def ensure(self, bar):
         """Install the dropdown buttons in the command bar once per window."""
         if getattr(self.window, '_fenestra_menus', False):
             return
         self.window._fenestra_menus = True
+        # New is a dropdown in Explorer (Folder, ..., Text Document, Compressed folder).
+        new = next((w for w in walk(bar) if isinstance(w, Gtk.Actionable) and w.get_action_name() == 'view.new-folder'), None)
+        if new is not None and new.get_parent() is bar:
+            self.new_button = command_button('New', 'win11-explorer-add')
+            self.new_button.set_popover(self.build_new_menu().popover)
+            new.bind_property('sensitive', self.new_button, 'sensitive', GObject.BindingFlags.SYNC_CREATE)
+            bar.insert_child_after(self.new_button, new)
+            new.set_visible(False)
         controls = next((w for w in walk(bar) if GObject.type_name(w.__gtype__) == 'NautilusViewControls'), None)
         self.sort_button = command_button('Sort', 'win11-explorer-sort')
         self.sort_button.set_popover(self.build_sort_menu().popover)
@@ -420,6 +538,13 @@ class CommandMenus:
                 self.details_button = w
         if self.pane_mode != 'none':
             GLib.idle_add(lambda: (self.toggle_pane(self.pane_mode, force=True), False)[1])
+        # Explorer's pane shortcuts: Alt+Shift+P Details pane, Alt+P Preview pane.
+        keys = Gtk.ShortcutController()
+        keys.set_scope(Gtk.ShortcutScope.GLOBAL)
+        for trigger, mode in (('<Alt><Shift>p', 'details'), ('<Alt>p', 'preview')):
+            keys.add_shortcut(Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string(trigger),
+                                               Gtk.CallbackAction.new(lambda *_a, m=mode: (self.toggle_pane(m), True)[1])))
+        self.window.add_controller(keys)
 
     # ---- Details / Preview pane --------------------------------------------
     def _install_pane(self):
@@ -487,6 +612,7 @@ class CommandMenus:
         return files
 
     def update_pane(self):
+        self.views.selection_status(self.selected_files() if self.selection_model is not None else [])
         if self.pane is None or not self.pane.get_visible():
             return
         slot = self.slot()

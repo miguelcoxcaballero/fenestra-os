@@ -21,35 +21,37 @@ windowhandle.titlebar, .titlebar {
   min-height: 0; padding: 0; margin: 0; border: none; box-shadow: none; background-color: var(--strip);
 }
 .titlebar-row { min-height: 41px; background-color: var(--strip); }
-.title-icon { margin: 9px 6px 0 17px; }
+.title-icon { margin: 9px 8px 0 15px; }
 .settings-titlebar { min-height: 41px; }
+/* on the settings page the title bar takes the page colour */
+window.notepad.in-settings .titlebar, window.notepad.in-settings .titlebar-row { background-color: var(--page); }
 button.title-back {
-  min-width: 40px; min-height: 32px; margin: 4px 0 0 4px; padding: 0;
+  min-width: 30px; min-height: 22px; margin: 10px 0 0 5px; padding: 0;
   border: none; border-radius: 4px; background: none; box-shadow: none;
 }
 button.title-back:hover { background-color: var(--hover); }
 button.title-back image { -gtk-icon-size: 16px; }
-.title-icon2 { margin: 4px 9px 0 10px; }
-.title-label { font-size: 12px; margin-top: 4px; }
+.title-icon2 { margin: 13px 16px 0 13px; }
+.title-label { font-size: 12px; }
 
 .tab-scroller, .tab-scroller > viewport { background: none; }
 .tab-scroller scrollbar { opacity: 0; min-height: 0; }
-.tabs { padding: 0 8px; }
+.tabs { padding: 0 0 0 8px; }
 .tab {
   min-height: 32px; margin-top: 9px;
-  padding-left: 9px;
   background: none;
 }
-.tab-title { font-size: 12px; color: var(--fg); }
+.tab-title { font-size: 12px; color: var(--fg2); margin-left: 9px; }
+.tab.active .tab-title { color: var(--fg); font-weight: 600; }
 button.tab-close {
-  min-width: 24px; min-height: 24px; padding: 0; margin: 0 10px 0 4px;
+  min-width: 32px; min-height: 24px; padding: 0; margin: 0 6px 0 4px;
   border: none; border-radius: 4px; background: none; box-shadow: none;
 }
 button.tab-close:hover { background-color: var(--hover); }
 button.tab-close image { color: var(--fg); }
 .tab-dot { min-width: 6px; min-height: 6px; border-radius: 3px; background-color: var(--dot); }
 button.tab-new {
-  min-width: 28px; min-height: 28px; padding: 0; margin: 0 0 2px 0;
+  min-width: 32px; min-height: 24px; padding: 0; margin: 0 0 2px 6px;
   border: none; border-radius: 4px; background: none; box-shadow: none;
 }
 button.tab-new:hover { background-color: var(--hover); }
@@ -73,28 +75,30 @@ button.caption.close:hover { background-color: var(--close-hover); }
 }
 .menubar-items { padding-left: 4px; }
 button.menubar-item {
-  min-width: 0; min-height: 31px; padding: 0 11px; margin: 0 6px 1px 0;
+  min-width: 0; min-height: 32px; padding: 0 10px; margin: 0 8px 0 0;
   border: none; border-radius: 4px; background: none; box-shadow: none;
   font-size: 14px; font-weight: normal; color: var(--fg);
 }
 button.menubar-item > label, button.st-btn > label, button.tool-btn > label { min-width: 0; }
 button.menubar-item:hover, button.menubar-item:checked { background-color: var(--hover); }
 button.menubar-item:active { background-color: var(--press); }
-.menubar-right { padding-right: 7px; }
+.menubar-right { padding-right: 8px; }
+.menubar-right button.tool-btn { min-width: 30px; }
 button.tool-btn, button.flat-btn {
-  min-width: 32px; min-height: 30px; padding: 0; margin: 0 0 1px 0;
+  min-width: 32px; min-height: 32px; padding: 0; margin: 0;
   border: none; border-radius: 4px; background: none; box-shadow: none; color: var(--fg);
 }
 button.tool-btn:hover, button.flat-btn:hover { background-color: var(--hover); }
 button.tool-btn:active, button.flat-btn:active { background-color: var(--press); }
-button.tool-btn.tool-drop { padding: 0 7px 0 9px; margin-right: 8px; }
+button.tool-btn.tool-drop { padding: 0 11px 0 10px; }
 .tool-text { font-size: 14px; }
-.tool-chevron { margin-left: 8px; color: var(--fg2); }
+.tool-chevron { margin-left: 7px; color: var(--fg2); }
+.tool-text + .tool-chevron { margin-left: 5px; }
 .format-toolbar { }
 
 /* ------------------------------------------------------------------ editor */
 .editor-stack, scrolledwindow.editor-scroller { background-color: var(--editor); }
-textview.editor { line-height: 1.27; }
+textview.editor { line-height: 1.04; }
 textview.editor, textview.editor > text {
   background-color: var(--editor);
   color: var(--text);
@@ -115,7 +119,7 @@ textview.editor > border { background-color: var(--editor); }
   color: var(--fg2);
 }
 .st-text, window.notepad label.st-text { font-size: 12px; color: var(--fg2); }
-.st-sep { min-width: 1px; min-height: 16px; background-color: var(--line); }
+.st-sep { min-width: 1px; min-height: 16px; background-color: var(--st-sep); }
 .st-seg { padding-left: 11px; }
 .st-pos { padding-left: 22px; min-width: 74px; }
 .st-chars { padding-left: 8px; min-width: 199px; }
@@ -139,15 +143,17 @@ popover.fluent-menu > contents {
   border-bottom-color: var(--popover-bottom);
   border-radius: 8px;
   padding: 2px 0 1px 0;
-  min-width: 228px;
+  min-width: 230px;
   box-shadow: 0 8px 16px var(--shadow);
 }
 popover.fluent-menu.combo-menu > contents { min-width: 120px; }
+popover.fluent-menu.options-menu > contents { min-width: 196px; }
 popover.fluent-menu button.menu-item {
-  min-height: 29px; padding: 0 11px; margin: 2px 4px;
+  min-height: 29px; padding: 0 12px 0 11px; margin: 2px 4px;
   border: none; border-radius: 4px; box-shadow: none; background: none;
   font-size: 14px; font-weight: normal; color: var(--fg);
 }
+popover.fluent-menu button.menu-item.check-item { min-height: 28px; }
 popover.fluent-menu button.menu-item:hover, popover.fluent-menu button.menu-item:focus-visible {
   background-color: var(--hover);
 }
@@ -158,7 +164,7 @@ popover.fluent-menu button.menu-item:disabled, popover.fluent-menu button.menu-i
 .menu-label { font-size: 14px; }
 .menu-shortcut { font-size: 12px; color: var(--fg2); margin-left: 24px; }
 button.menu-item:disabled .menu-shortcut { color: var(--fg3); }
-.menu-check { margin-right: 12px; }
+.menu-check { margin: 2px 15px 0 -1px; }
 window.notepad image.menu-check, popover image.menu-check { color: var(--glyph2); }
 .menu-icon { margin-right: 12px; }
 .menu-chevron { margin-left: 24px; }
@@ -198,39 +204,39 @@ popover.table-picker > contents { min-width: 0; }
   margin-top: 12px;
   box-shadow: 0 8px 16px var(--shadow);
 }
-.find-row { padding: 7px 3px 7px 0; }
-.replace-row { padding: 0 8px 8px 48px; margin-top: -1px; }
+.find-row { padding: 8px; }
+.replace-row { padding: 0 8px 8px 49px; }
 button.find-btn {
-  min-width: 34px; min-height: 32px; padding: 0; margin: 0 0 0 6px;
+  min-width: 30px; min-height: 26px; padding: 0; margin: 0 0 0 10px;
   border: none; border-radius: 4px; background: none; box-shadow: none;
 }
 button.find-btn:hover { background-color: var(--hover); }
 button.find-btn:active { background-color: var(--press); }
-button.find-toggle { min-width: 36px; margin: 0 6px 0 5px; }
+button.find-toggle { margin: 0 10px 0 0; }
 entry.find-entry, entry.fluent-entry {
   min-height: 30px; padding: 0 10px 0 11px;
-  background-color: var(--input);
+  background-color: var(--input); background-clip: padding-box;
   border: 1px solid var(--input-border);
   border-bottom-color: var(--input-bottom);
   border-radius: 4px; box-shadow: none; outline: none;
   font-size: 14px; color: var(--fg); caret-color: var(--fg);
 }
-entry.find-entry > text > placeholder, entry.fluent-entry > text > placeholder { color: var(--fg2); }
+entry.find-entry > text > placeholder, entry.fluent-entry > text > placeholder { color: var(--fg2); opacity: 1; }
 entry.find-entry:focus-within, entry.fluent-entry:focus-within {
   background-color: var(--input-focus);
   border-bottom: 2px solid var(--accent);
   min-height: 29px;
 }
 entry.find-entry.no-match:focus-within, entry.find-entry.no-match { border-bottom: 2px solid #c42b1c; }
-entry.find-entry image { -gtk-icon-size: 12px; color: var(--fg2); margin-left: 8px; }
+entry.find-entry image { -gtk-icon-size: 14px; color: var(--fg2); margin-left: 8px; }
 entry selection { background-color: var(--selection); color: #ffffff; }
-button.replace-btn { margin-left: 12px; min-width: 64px; }
+button.replace-btn { margin-left: 10px; min-width: 66px; }
 
 /* ------------------------------------------------------------------ buttons */
 button.std-button, button.combo {
   min-height: 30px; padding: 0 11px;
-  background-color: var(--btn);
-  border: 1px solid var(--btn-border);
+  background-color: var(--btn); background-clip: padding-box;
+  border: 1px solid var(--btn-border); border-top-color: var(--btn-top);
   border-bottom-color: var(--btn-bottom);
   border-radius: 4px; box-shadow: none;
   font-size: 14px; font-weight: normal; color: var(--fg);
@@ -265,65 +271,74 @@ image.combo-chevron { color: var(--fg2); margin-left: 8px; }
 .dialog-foot {
   padding: 24px;
   background-color: var(--dialog-foot);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--dlg-line);
   border-radius: 0 0 8px 8px;
 }
 
 /* ------------------------------------------------------------------ settings page */
 .settings-page, .settings-page > viewport { background-color: var(--page); }
-.s-outer { padding: 25px 52px 40px 52px; }
+.s-outer { padding: 32px 52px 40px 52px; }
 .s-page-title {
   font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", "Selawik", sans-serif;
-  font-size: 40px; font-weight: 600; margin-bottom: 26px;
+  font-size: 40px; font-weight: 600; margin: 0 0 26px -1px;
 }
-.s-section { font-size: 14px; font-weight: 600; margin: 13px 0 11px 0; }
+.s-section { font-size: 14px; font-weight: normal; margin: 9px 0 13px 0; }
 .s-left > label.s-section:first-child { margin-top: 0; }
 .s-card {
   background-color: var(--scard);
   border: 1px solid var(--scard-border);
   border-radius: 4px;
-  min-height: 65px;
-  padding: 0 14px 0 16px;
+  min-height: 66px;
+  padding: 0 18px 0 14px;
   margin-bottom: 4px;
 }
 button.s-card { box-shadow: none; font-weight: normal; color: var(--fg); }
-button.s-card:hover { background-color: var(--btn-hover); }
+button.s-card:hover { background-color: var(--scard-hover); }
 .s-expander.open button.s-head { border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; }
 .s-body {
-  background-color: var(--scard);
+  background-color: var(--sbody); padding: 4px 0 8px 0;
   border: 1px solid var(--scard-border);
   border-top: none;
   border-radius: 0 0 4px 4px;
   margin-bottom: 4px;
 }
-.s-subrow { padding: 10px 14px 10px 48px; border-top: 1px solid var(--scard-border); min-height: 32px; }
-.s-icon { margin-right: 16px; }
+.s-subrow { padding: 10px 18px 10px 48px; border-top: 1px solid var(--scard-border); min-height: 32px; }
+/* radio choices: 40 px rows, no separators (reference App theme expander) */
+.s-subrow.s-radiorow { padding-top: 0; padding-bottom: 0; border-top: none; min-height: 40px; }
+.s-icon { margin-right: 14px; }
 .s-title { font-size: 14px; }
+/* two-line cards: title 1 px and subtitle 2 px lower than a centred pair */
+.s-title:not(:only-child) { margin-top: 1px; }
+.s-title:only-child { margin-top: 2px; }
+.s-sub { margin-top: 1px; margin-bottom: -2px; }
 .s-sub, window.notepad label.s-sub { font-size: 12px; color: var(--sub); }
-.s-onoff { font-size: 14px; min-width: 26px; }
+.s-onoff { font-size: 14px; min-width: 23px; margin-right: -9px; }
+.s-row button.combo { min-width: 137px; margin: 2px -6px 0 0; }
+.s-row image.combo-chevron { margin-right: 1px; }
 image.s-chevron { color: var(--fg); margin-left: 16px; }
 .s-preview { font-size: 14px; padding: 6px 0; }
 .s-cols { }
 .s-left { min-width: 300px; }
-.s-about { margin-left: 57px; min-width: 256px; }
+.s-about { margin-left: 56px; min-width: 256px; }
 .s-about.narrow { margin-left: 0; margin-top: 24px; }
 .s-about-title { font-size: 14px; font-weight: 600; margin: 0 0 10px 0; }
 .s-about-text { font-size: 14px; }
+label.s-about-text + label.s-about-text { margin-top: 1px; margin-bottom: 7px; }
 button.s-link {
-  min-height: 0; padding: 0; margin: 14px 0 0 0;
+  min-height: 0; padding: 0; margin: 17px 0 0 0;
   border: none; background: none; box-shadow: none;
   font-size: 14px; font-weight: normal; color: var(--link);
 }
 button.s-link label { color: var(--link); }
 button.s-link:hover label { text-decoration: underline; }
-button.s-about-btn { margin-top: 16px; min-width: 96px; }
+button.s-about-btn { margin-top: 25px; min-width: 96px; }
 button.s-about-btn + button.s-about-btn { margin-top: 16px; }
 
 checkbutton.fluent { font-size: 14px; color: var(--fg); padding: 2px 0; }
 checkbutton.fluent radio {
-  min-width: 18px; min-height: 18px; margin-right: 10px; padding: 0;
-  border: 1px solid var(--toggle-off); border-radius: 50%;
-  background: none; box-shadow: none; -gtk-icon-source: none;
+  min-width: 18px; min-height: 18px; margin-right: 4px; padding: 0;
+  border: 1px solid var(--radio-border); border-radius: 50%;
+  background: var(--radio-fill); box-shadow: none; -gtk-icon-source: none;
 }
 
 switch.fluent {

@@ -8,11 +8,11 @@ from gi.repository import Gdk, Gio, GLib, Gtk, Pango
 from .. import theme, util
 from ..backends import appearance, session, shell_options
 from ..backends.shell_options import gnome as dtp
-from ..i18n import N_, _
-from ..widgets import (Dropdown, ExpanderRow, SettingRow, Slider, ToggleSwitch, button, label,
+from ..i18n import C_, N_, _
+from ..widgets import (Dropdown, ExpanderRow, SettingRow, Slider, ToggleSwitch, button, icon, label,
                        not_available_row, toast)
 from .base import Page, register
-from .common import Thumb, gsetting_dropdown, gsetting_toggle, theme_preview, wallpaper_thumb
+from .common import Thumb, gsetting_dropdown, gsetting_toggle, theme_preview, theme_tiles, wallpaper_thumb
 
 BG = "org.gnome.desktop.background"
 SS = "org.gnome.desktop.screensaver"
@@ -58,34 +58,42 @@ def set_wallpaper(path):
     return appearance.set_wallpaper(path)
 
 
-def preview_card(width=300, height=188):
-    """Large desktop preview with a mini taskbar."""
+def preview_card(width=319, height=172):
+    """Desktop preview like the reference: 8 px black bezel around the wallpaper and a
+    96x96 mini window (four text lines and an accent button) near the bottom right."""
+    frame = Gtk.Box()
+    frame.add_css_class("preview-frame")
+    frame.set_halign(Gtk.Align.START)
+    frame.set_valign(Gtk.Align.START)
     ov = Gtk.Overlay()
     ov.add_css_class("preview-card")
-    ov.set_halign(Gtk.Align.START)
     ov.set_child(wallpaper_thumb(width, height, "preview-thumb"))
-    bar = Gtk.Box()
-    bar.add_css_class("mini-taskbar")
-    bar.set_valign(Gtk.Align.END)
-    bar.set_size_request(width, 14)
-    dots = Gtk.Box(spacing=4, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER, hexpand=True)
-    for i in range(4):
-        d = Gtk.Box()
-        d.add_css_class("mini-taskbar-icon")
-        if i == 0:
-            d.add_css_class("accent")
-        d.set_size_request(8, 8)
-        dots.append(d)
-    bar.append(dots)
-    ov.add_overlay(bar)
-    win = Gtk.Box()
-    win.add_css_class("mini-window")
+    win = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+    win.add_css_class("preview-window")
     win.add_css_class("dark" if theme.get().dark else "light")
-    win.set_size_request(width // 3, height // 3)
-    win.set_halign(Gtk.Align.CENTER)
-    win.set_valign(Gtk.Align.CENTER)
+    win.set_size_request(96, 96)
+    win.set_halign(Gtk.Align.END)
+    win.set_valign(Gtk.Align.END)
+    win.set_margin_end(9)
+    win.set_margin_bottom(22)
+    for i, w in enumerate((72, 72, 72, 42)):
+        ln = Gtk.Box()
+        ln.add_css_class("preview-line")
+        ln.set_size_request(w, 1)
+        ln.set_halign(Gtk.Align.START)
+        ln.set_margin_start(12)
+        ln.set_margin_top(12 if i == 0 else 8)
+        win.append(ln)
+    btn = Gtk.Box()
+    btn.add_css_class("preview-button")
+    btn.set_size_request(24, 8)
+    btn.set_halign(Gtk.Align.START)
+    btn.set_margin_start(60)
+    btn.set_margin_top(34)
+    win.append(btn)
     ov.add_overlay(win)
-    return ov
+    frame.append(ov)
+    return frame
 
 
 @register
@@ -104,23 +112,14 @@ class PersonalizationPage(Page):
     ]
 
     def build(self, box):
-        top = Gtk.Box(spacing=24)
-        top.add_css_class("hero")
-        top.append(preview_card(300, 188))
-        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, hexpand=True)
-        right.append(label(_("Select a theme to apply"), "body-strong"))
-        flow = Gtk.Box(spacing=8)
-        dark_now = theme.get().dark
-        for dark in (False, True):
-            b = Gtk.Button()
-            b.add_css_class("theme-thumb")
-            if dark == dark_now:
-                b.add_css_class("selected")
-            b.set_child(theme_preview(dark, 128, 80))
-            b.connect("clicked", lambda _b, d=dark: appearance.set_color_scheme("dark" if d else "light"))
-            b.set_tooltip_text(_("Dark") if dark else _("Light"))
-            flow.append(b)
-        right.append(flow)
+        top = Gtk.Box(spacing=46)
+        top.add_css_class("personalization-hero")
+        pv = preview_card()
+        pv.set_valign(Gtk.Align.CENTER)
+        top.append(pv)
+        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0, hexpand=True)
+        right.append(label(_("Select a theme to apply"), ["body-strong", "theme-tiles-label"]))
+        right.append(theme_tiles())
         top.append(right)
         box.append(top)
         g = self.group()
@@ -146,8 +145,8 @@ class BackgroundPage(Page):
 
     def build(self, box):
         self.preview_holder = Gtk.Box()
-        self.preview_holder.add_css_class("hero")
-        self.preview_holder.append(preview_card(300, 188))
+        self.preview_holder.add_css_class("preview-hero")
+        self.preview_holder.append(preview_card())
         box.append(self.preview_holder)
         g = self.group()
         mode = appearance.background_mode()
@@ -210,7 +209,7 @@ class BackgroundPage(Page):
         from . import common
         common._thumb_cache.clear()
         clear(self.preview_holder)
-        self.preview_holder.append(preview_card(300, 188))
+        self.preview_holder.append(preview_card())
         return False
 
     def _browse(self):
@@ -256,6 +255,10 @@ class ColorsPage(Page):
     ]
 
     def build(self, box):
+        top = Gtk.Box()
+        top.add_css_class("preview-hero")
+        top.append(preview_card())
+        box.append(top)
         g = self.group()
         dd = Dropdown([("light", _("Light")), ("dark", _("Dark"))], appearance.color_scheme(),
                       appearance.set_color_scheme)
@@ -358,6 +361,46 @@ THEME_KEYS = {"gtk-theme": (appearance.gtk_theme, appearance.set_gtk_theme),
 
 @register
 class ThemesPage(Page):
+    def _summary(self):
+        """What the current theme is made of (reference: the panel beside the preview)."""
+        grid = Gtk.Grid()
+        grid.add_css_class("theme-summary")
+        grid.set_valign(Gtk.Align.START)
+        mode = appearance.background_mode()
+        acc = theme.get().accent_custom or theme.get().accent_name
+        color = _(ACCENT_LABELS[acc]) if acc in ACCENT_LABELS else _("Custom")
+        icons = demo_cursor = None
+        if util.DEMO:
+            from ..backends import demo
+            icons, demo_cursor = demo.THEMES["icon-theme"][0], demo.THEMES["cursor-theme"][0]
+        items = [("fs-image-symbolic", C_("themes", "Background"),
+                  _("Solid color") if mode == "solid" else _("Picture"),
+                  "background"),
+                 ("fs-color-symbolic", _("Color"), color, "colors"),
+                 ("fs-apps-symbolic", _("Icons"), icons or appearance.icon_theme() or "", None),
+                 ("fs-cursor-symbolic", _("Mouse cursor"), demo_cursor or appearance.cursor_theme() or "", None)]
+        for i, (ic, title, value, target) in enumerate(items):
+            b = Gtk.Button()
+            b.add_css_class("theme-summary-item")
+            bx = Gtk.Box(spacing=12)
+            im = icon(ic, 24, "theme-summary-icon")
+            im.set_valign(Gtk.Align.START)
+            bx.append(im)
+            tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            tb.append(label(title, "theme-summary-title", ellipsize=True))
+            v = label(value, "theme-summary-value", ellipsize=True)
+            v.set_max_width_chars(18)
+            tb.append(v)
+            bx.append(tb)
+            b.set_child(bx)
+            b.set_size_request(207, -1)
+            if target:
+                b.connect("clicked", lambda _b, t=target: self.go(t))
+            else:
+                b.set_can_target(False)
+            grid.attach(b, i % 2, i // 2, 1, 1)
+        return grid
+
     id = "themes"
     parent = "personalization"
     title = "Themes"
@@ -367,9 +410,10 @@ class ThemesPage(Page):
              ("gtk", "App style", "gtk theme legacy apps")]
 
     def build(self, box):
-        top = Gtk.Box(spacing=24)
-        top.add_css_class("hero")
-        top.append(preview_card(300, 188))
+        top = Gtk.Box(spacing=32)
+        top.add_css_class("preview-hero")
+        top.append(preview_card())
+        top.append(self._summary())
         box.append(top)
         g = self.group(_("Current theme"))
         for key, sk, title, sub, ic, items in (
@@ -482,6 +526,118 @@ START_LAYOUTS = [("11", N_("Fenestra (centered, recommended)")), ("windows", N_(
                  ("arcmenu", N_("ArcMenu")), ("gnome-menu", N_("GNOME menu")), ("runner", N_("Runner (search only)"))]
 
 
+# Start layout picker (reference: three desktop previews with a radio under each).
+PICKER_LAYOUTS = [("windows", N_("Classic")), ("11", N_("Default")), ("redmond", N_("Classic with places"))]
+_PREVIEW_COLORS = {  # wallpaper, panel/taskbar, emphasised glyphs, dim glyphs, bezel
+    True: ((0, 10, 42), (0, 37, 88), (96, 204, 254), (98, 113, 140), (9, 9, 9)),
+    False: ((145, 209, 239), (223, 245, 255), (0, 94, 183), (140, 160, 175), (31, 31, 31)),
+}
+
+
+def _start_preview(layout, dark):
+    """257x167 drawing of a monitor with the Start menu of `layout`, own artwork."""
+    area = Gtk.DrawingArea()
+    area.set_content_width(257)
+    area.set_content_height(167)
+    wall, panel, acc, dim, bezel = (tuple(c / 255 for c in col) for col in _PREVIEW_COLORS[dark])
+
+    def rrect(cr, x, y, w, h, r):
+        import math
+        cr.new_sub_path()
+        cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+        cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+        cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+        cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+        cr.close_path()
+
+    def draw(_a, cr, w, h):
+        cr.set_source_rgb(*bezel)
+        rrect(cr, 0, 0, 257, 167, 8)
+        cr.fill()
+        cr.set_source_rgb(*wall)
+        cr.rectangle(8, 9, 241, 141)
+        cr.fill()
+        cr.set_source_rgb(*panel)
+        cr.rectangle(8, 150, 241, 8)  # taskbar
+        cr.fill()
+
+        def glyph(x, y, c, line=0):
+            cr.set_source_rgb(*c)
+            rrect(cr, x, y, 8, 8, 1.5)
+            cr.fill()
+            if line:
+                cr.rectangle(x + 12, y + 2, line, 1)
+                cr.rectangle(x + 12, y + 5, line * 0.6, 1)
+                cr.fill()
+
+        if layout == "11":  # centred: pinned grid, then recommended list
+            cr.set_source_rgb(*panel)
+            rrect(cr, 68, 18, 122, 126, 4)
+            cr.fill()
+            for r in range(3):
+                for c in range(6):
+                    glyph(78 + 18 * c, 30 + 21 * r, dim)
+            for r in range(3):
+                for c in range(2):
+                    glyph(78 + 46 * c, 94 + 15 * r, dim, 22)
+        else:  # classic: left-aligned menu with an app list (+ places column)
+            cr.set_source_rgb(*panel)
+            rrect(cr, 8, 18, 132 if layout == "redmond" else 110, 132, 4)
+            cr.fill()
+            for r in range(7):
+                glyph(18, 28 + 16 * r, acc if layout == "windows" else dim, 40)
+            if layout == "redmond":
+                for r in range(6):
+                    glyph(84, 28 + 16 * r, acc, 30)
+
+    area.set_draw_func(draw)
+    return area
+
+
+class StartLayoutPicker(Gtk.Box):
+    """Three previews with radio buttons; writes ArcMenu's menu-layout."""
+
+    def __init__(self, schema, key):
+        super().__init__(spacing=37)
+        self.add_css_class("start-picker")
+        self.schema, self.key = schema, key
+        self.radios = {}
+        dark = theme.get().dark
+        first = None
+        for lid, name in PICKER_LAYOUTS:
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+            prev = _start_preview(lid, dark)
+            prev.add_css_class("start-preview")
+            click = Gtk.GestureClick()
+            click.connect("released", lambda *_a, l=lid: self._pick(l))
+            prev.add_controller(click)
+            col.append(prev)
+            rb = Gtk.CheckButton(label=_(name))
+            rb.add_css_class("start-radio")
+            if first is None:
+                first = rb
+            else:
+                rb.set_group(first)
+            rb.connect("toggled", lambda b, l=lid: b.get_active() and not self._silent and self._pick(l))
+            col.append(rb)
+            self.radios[lid] = rb
+            self.append(col)
+        self._silent = False
+        self.sync()
+        util.gconnect(schema, key, self.sync)
+
+    def sync(self, *_a):
+        cur = util.gget(self.schema, self.key)
+        self._silent = True
+        for lid, rb in self.radios.items():
+            rb.set_active(lid == cur)
+        self._silent = False
+
+    def _pick(self, lid):
+        util.gset(self.schema, self.key, lid)
+        self.sync()
+
+
 @register
 class StartPage(Page):
     id = "start"
@@ -493,23 +649,28 @@ class StartPage(Page):
              ("pinned-reset", "Pinned apps", "reset pins")]
 
     def build(self, box):
-        g = self.group()
+        layout_row = None
         if util.settings(ARCMENU) is not None:
+            gp = self.group(_("Layout"))
+            gp.add(StartLayoutPicker(ARCMENU, "menu-layout"))
             cur = util.gget(ARCMENU, "menu-layout")
             opts = [(k, _(v)) for k, v in START_LAYOUTS]
             if cur not in [o[0] for o in opts]:
                 opts.append((cur, str(cur)))
-            r = SettingRow(_("Layout"), _("Choose how the Start menu looks"), "fs-grid-symbolic",
-                           control=gsetting_dropdown(ARCMENU, "menu-layout", opts), key="start-layout")
-            self.remember("start-layout", r)
-            g.add(r)
-            for key, rkey, title in (("eleven-show-frequent-apps", "start-frequent", _("Show most used apps")),
-                                     ("show-recently-installed-apps", "start-recent-installed",
-                                      _("Show recently added apps")),
-                                     ("show-user-avatar", "start-avatar", _("Show my account picture"))):
+            # every layout stays reachable: the picker shows three, this row all of them
+            layout_row = SettingRow(_("Layout"), _("Choose how the Start menu looks"), "fs-grid-symbolic",
+                                    control=gsetting_dropdown(ARCMENU, "menu-layout", opts), key="start-layout")
+            self.remember("start-layout", layout_row)
+        g = self.group()
+        if util.settings(ARCMENU) is not None:
+            for key, rkey, title, ic in (
+                    ("show-recently-installed-apps", "start-recent-installed", _("Show recently added apps"),
+                     "fs-arrow-download-symbolic"),
+                    ("eleven-show-frequent-apps", "start-frequent", _("Show most used apps"), "fs-star-symbolic"),
+                    ("show-user-avatar", "start-avatar", _("Show my account picture"), "fs-person-symbolic")):
                 t = gsetting_toggle(ARCMENU, key)
                 if t:
-                    g.add(SettingRow(title, None, "fs-apps-symbolic", control=t, key=rkey))
+                    g.add(SettingRow(title, None, ic, control=t, key=rkey))
         elif not shell_options.supports("start-pins"):
             g.add(not_available_row(_("Start menu"), _("The Start menu extension is not installed"),
                                     "fs-grid-symbolic"))
@@ -525,6 +686,8 @@ class StartPage(Page):
                                       control=button(_("Reset"), self._reset_pins), key="pinned-reset")
             self.remember("pinned-reset", self.pin_row)
             g.add(self.pin_row)
+        if layout_row is not None:
+            g.add(layout_row)
         g2 = self.group(_("Related settings"))
         g2.add(SettingRow(_("Installed apps"), None, "fs-apps-list-symbolic", chevron=True,
                           on_click=lambda: self.go("installed")))
@@ -568,13 +731,17 @@ class TaskbarPage(Page):
                   else _("The change was not applied"))
 
     def build(self, box):
-        # Taskbar items: Search and Widgets (weather), like the reference page.
-        gi_ = self.group(_("Taskbar items"))
+        # Expander sections like the reference page: Taskbar items (open), Taskbar
+        # behaviors, Clock; then Related settings.
+        top = self.group()
+        gi_ = ExpanderRow(_("Taskbar items"), _("Show or hide buttons that appear on the taskbar"),
+                          None, key="tb-items", expanded=True)
+        top.add(gi_)
         shown = False
         if shell_options.supports("search-mode"):
             search = Dropdown([(k, _(v)) for k, v in self.SEARCH], shell_options.search_mode(),
                               lambda v: self._ro(shell_options.set_search_mode(v)))
-            r = SettingRow(_("Search"), None, "fs-search-symbolic", control=search, key="tb-search")
+            r = SettingRow(C_("taskbar", "Search"), None, "fs-search-symbolic", control=search, key="tb-search")
             self.remember("tb-search", r)
             gi_.add(r)
             shown = True
@@ -587,7 +754,9 @@ class TaskbarPage(Page):
             shown = True
         if not shown:
             gi_.add(not_available_row(_("Taskbar items")))
-        g = self.group(_("Taskbar behaviors"))
+        g = ExpanderRow(_("Taskbar behaviors"),
+                        _("Taskbar alignment, automatically hide, multiple displays"), None, key="tb-behaviors")
+        top.add(g)
         if shell_options.supports("alignment"):
             r = SettingRow(_("Taskbar alignment"), None, "fs-panel-bottom-symbolic",
                            control=Dropdown([("center", _("Center")), ("left", _("Left"))],
@@ -640,7 +809,8 @@ class TaskbarPage(Page):
                                  control=Slider(0, 100, round(op * 100),
                                                 lambda v: util.gset(DTP, "trans-panel-opacity", round(v) / 100.0),
                                                 fmt="{:.0f}%", width=200), key="tb-opacity"))
-        g2 = self.group(_("Clock"))
+        g2 = ExpanderRow(_("Clock"), _("Day of the week, date, seconds, time format"), None, key="tb-clock")
+        top.add(g2)
         for key, sk, t in (("weekday", "clock-show-weekday", _("Show the day of the week in the clock")),
                            ("date", "clock-show-date", _("Show the date in the clock")),
                            ("seconds", "clock-show-seconds", _("Show seconds in system tray clock"))):
@@ -652,6 +822,11 @@ class TaskbarPage(Page):
         fmt = gsetting_dropdown(IFACE, "clock-format", [("24h", _("24-hour")), ("12h", _("12-hour"))])
         if fmt:
             g2.add(SettingRow(_("Time format"), None, "fs-clock-symbolic", control=fmt, key="tb-clock-format"))
+        rel = self.group(_("Related settings"))
+        rel.add(SettingRow(_("Date & time"), _("Time zones, automatic clock settings, calendar display"),
+                           "fs-calendar-symbolic", chevron=True, on_click=lambda: self.go("datetime")))
+        rel.add(SettingRow(_("Notifications"), _("Alerts from apps and system, do not disturb"),
+                           "fs-alert-symbolic", chevron=True, on_click=lambda: self.go("notifications")))
 
 
 @register

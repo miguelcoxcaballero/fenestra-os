@@ -9,9 +9,9 @@ from . import theme
 from .i18n import _
 from .widgets import icon
 
-TAB_MAX = 240
+TAB_MAX = 240     # Windows tabs have a fixed 240 px pitch (border to border)
 TAB_MIN = 96
-FOOT = 8          # radius of the curves joining the active tab to the menu bar
+FOOT = 4          # radius of the curves joining the active tab to the menu bar
 RADIUS = 8
 
 
@@ -85,9 +85,7 @@ class Tab(Gtk.Box):
         t = self.doc.title
         self.title.set_text(t)
         self.set_tooltip_text(self.doc.path or t)
-        layout = self.title.create_pango_layout(t)
-        w = layout.get_pixel_size()[0]
-        self.set_size_request(int(max(TAB_MIN, min(TAB_MAX, w + 9 + 40))), -1)
+        self.set_size_request(TAB_MAX, -1)
         self.refresh_close()
 
     def set_active(self, on):
@@ -104,7 +102,11 @@ class Tab(Gtk.Box):
             c = th.c["layer"]
             b = th.c["tab-border"]
             r, f = RADIUS, FOOT
-            cr = snap.append_cairo(Graphene.Rect().init(-f, 0, w + 2 * f, h + 1))
+            # cairo nodes with a negative origin are misplaced by some renderers: translate instead
+            snap.save()
+            snap.translate(Graphene.Point().init(-f, 0))
+            cr = snap.append_cairo(Graphene.Rect().init(0, 0, w + 2 * f, h + 1))
+            cr.translate(f, 0)
             # fill with feet
             cr.move_to(-f, h)
             cr.arc_negative(-f, h - f, f, math.pi / 2, 0)
@@ -129,16 +131,20 @@ class Tab(Gtk.Box):
             cr.arc_negative(w + f, h - f, f - 0.5, math.pi, math.pi / 2)
             Gdk.cairo_set_source_rgba(cr, b)
             cr.stroke()
+            snap.restore()
         elif self.hovered:
+            # rounded-top plate, 2 px in from the left edge, 1 px below the active tab's top
             c = th.c["tab-hover"]
-            rr = Gsk_rounded(0, 3, w, h - 6, 6)
+            rr = Gsk_rounded(2, 1, w - 3, h - 1 + RADIUS, RADIUS)
+            snap.push_clip(Graphene.Rect().init(0, 0, w, h))
             snap.push_rounded_clip(rr)
-            snap.append_color(c, Graphene.Rect().init(0, 3, w, h - 6))
+            snap.append_color(c, Graphene.Rect().init(2, 1, w - 3, h - 1 + RADIUS))
+            snap.pop()
             snap.pop()
         else:
             # separator after an inactive tab (unless the next one is active/hovered)
             if self.strip.separator_after(self):
-                snap.append_color(th.c["tab-sep"], Graphene.Rect().init(w - 1, 8, 1, h - 16))
+                snap.append_color(th.c["tab-sep"], Graphene.Rect().init(w - 1, 8, 1, h - 15))
         Gtk.Box.do_snapshot(self, snap)
 
 

@@ -142,7 +142,12 @@ class App(Gtk.Application):
             GLib.timeout_add(200, show_hello)
         if self.screenshot:
             if self.opts.search:
-                GLib.timeout_add(300, lambda: (self.win.nav.entry.set_text(self.opts.search), False)[1])
+                def type_search():
+                    self.win.nav.entry.grab_focus()
+                    self.win.nav.entry.set_text(self.opts.search)
+                    self.win.nav.entry.set_position(-1)
+                    return False
+                GLib.timeout_add(300, type_search)
             GLib.timeout_add(int(os.environ.get("FENESTRA_SHOT_DELAY", "1500")), self._shoot_first)
 
     def _shoot_first(self):
@@ -167,10 +172,14 @@ class App(Gtk.Application):
             return False
         pop = win.nav.popover
         if pop.get_visible():
-            ok, pt = win.nav.entry.compute_point(win, _pt(0, win.nav.entry.get_height() + 2))
+            # place the popover so that its child sits right under the entry, as the
+            # compositor does with the real popup surface
+            wrap = win.nav.search_wrap  # no padding/border: its origin is the box's outer edge
+            ok, pt = wrap.compute_point(win, _pt(0, wrap.get_height()))
+            ok2, off = pop.get_child().compute_point(pop, _pt(0, 0))
             s2 = Gtk.Snapshot()
             s2.append_node(node)
-            s2.translate(_pt(pt.x, pt.y))
+            s2.translate(_pt(pt.x - (off.x - 1 if ok2 else 0), pt.y - (off.y if ok2 else 0)))
             Gtk.WidgetPaintable.new(pop).snapshot(s2, pop.get_width(), pop.get_height())
             node = s2.to_node()
         rect = Graphene.Rect().init(0, 0, w, h)

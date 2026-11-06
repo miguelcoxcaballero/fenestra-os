@@ -1,0 +1,12 @@
+@scheme light
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+click 1380 269
+wait 800
+type informe
+wait 2500
+move 1900 30
+wait 500
+shot light-folder-click-search-typed

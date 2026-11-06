@@ -4,6 +4,7 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gio, GLib, GObject, Gtk, Pango
 from pathlib import Path
 import json
+import re
 from fenestra_sidebar import FenestraSidebar, GALLERY
 from fenestra_pages import SpecialPages, gallery_folders
 from fenestra_menus import CommandMenus
@@ -11,7 +12,8 @@ from fenestra_menus import CommandMenus
 from fenestra_sidebar import _L, tr
 _L.setdefault('es', {}).update({'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
     'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar', 'Compact view': 'Vista compacta', 'View': 'Ver', '1 item': '1 elemento', '%d items': '%d elementos',
-    'Date modified': 'Fecha de modificación', 'This folder is empty.': 'Esta carpeta está vacía.', 'Collection': 'Colección', 'Add a folder': 'Agregar una carpeta'})
+    'Date modified': 'Fecha de modificación', 'This folder is empty.': 'Esta carpeta está vacía.',
+    '1 item selected': '1 elemento seleccionado', '%d items selected': '%d elementos seleccionados', '%d bytes': '%d bytes', 'Collection': 'Colección', 'Add a folder': 'Agregar una carpeta'})
 VIEWS = [(k, tr(v)) for k, v in [('extra-large','Extra large icons'),('large','Large icons'),('medium','Medium icons'),('small','Small icons'),('list','List'),('details','Details'),('tiles','Tiles'),('content','Content')]]
 
 def walk(w):
@@ -32,6 +34,72 @@ def _count_items(location):
         return n
     except GLib.Error:
         return None
+
+
+_NAUTILUS_DATE=re.compile(r'^(\d{1,2})/(\d{1,2})/(\d{4}),? (\d{1,2}:\d{2})$')
+
+
+def _cell_file(cell):
+    """The Gio.File a Nautilus view cell shows (its item's NautilusFile is a Nautilus.FileInfo)."""
+    try:
+        item=cell.get_property('item')
+        nfile=item.get_property('file') if item else None
+        return nfile.get_location() if nfile else None
+    except (TypeError,AttributeError):
+        return None
+
+
+def windows_size(gfile):
+    """Explorer's Size column: whole KB rounded up (1 KB for 1..1024 bytes, 0 KB when empty),
+    nothing for folders."""
+    try:
+        info=gfile.query_info('standard::size,standard::type',Gio.FileQueryInfoFlags.NONE,None)
+    except GLib.Error:
+        return None
+    if info.get_file_type()==Gio.FileType.DIRECTORY:return ''
+    kb=(info.get_size()+1023)//1024
+    return f'{kb:,}'.replace(',','.')+' KB'
+
+
+def _reformat(label,role,cell):
+    if getattr(label,'_windows_busy',False):return
+    text=label.get_label() or ''
+    if role=='date':
+        m=_NAUTILUS_DATE.match(text)
+        new=f'{int(m.group(1)):02d}/{int(m.group(2)):02d}/{m.group(3)} {m.group(4)}' if m else text
+    else:
+        gfile=_cell_file(cell)
+        new=windows_size(gfile) if gfile else None
+        if new is None:new=text
+    if new!=text:
+        label._windows_busy=True;label.set_label(new);label._windows_busy=False
+
+
+def details_cell(cell,role):
+    """Details view cells as Explorer writes them: dd/mm/yyyy h:mm dates (left aligned) and
+    sizes in KB (right aligned). Nautilus updates the label after binding, so follow it."""
+    if cell is None:return
+    label=next((w for w in walk(cell) if isinstance(w,Gtk.Label)),None)
+    if label is None:return
+    label.set_xalign(1.0 if role=='size' else 0.0);label.set_halign(Gtk.Align.FILL);label.set_hexpand(True)
+    if not getattr(label,'_windows_cell',False):
+        label._windows_cell=True
+        label.connect('notify::label',lambda l,_p:_reformat(l,l._windows_role,cell))
+    label._windows_role=role
+    _reformat(label,role,cell)
+
+
+def status_size(n):
+    """Explorer's status-bar size: bytes below 1 KB, else three significant digits (1,23 KB, 12,3 KB, 123 KB)."""
+    if n<1024:return tr('%d bytes')%n
+    value=float(n)
+    for unit in ('KB','MB','GB','TB'):
+        value/=1024.0
+        if value<1000 or unit=='TB':break
+    digits=2 if value<10 else 1 if value<100 else 0  # truncated, not rounded, like Explorer
+    value=int(value*10**digits)/10**digits
+    text=f'{value:.{digits}f}'
+    return text.replace('.',',' if tr('View')!='View' else '.')+' '+unit
 
 
 class FenestraViews:
@@ -87,16 +155,18 @@ class FenestraViews:
         path=next((w for w in walk(self.window) if kind(w)=='NautilusPathBar'),None)
         stack=path.get_parent() if path else None
         if stack is not None:
-            search=max(150,min(269,int((width-560)*0.48)))
+            search=max(150,min(261,int((width-560)*0.48)))
             ok,b=stack.compute_bounds(self.window)
-            left=int(b.get_x()) if ok and b.get_x()>0 else 205
-            want=max(120,width-left-search-6-17)
+            left=int(b.get_x()) if ok and b.get_x()>0 else 201
+            # Address box, 6 px box spacing + the search box's 2 px margin (inside its request),
+            # the search box, then 12 px to the edge (header spacing around the empty end box).
+            want=max(120,width-left-search-18)
             if stack.get_size_request()[0]!=want:stack.set_size_request(want,-1)
         """Explorer shrinks the search box and folds command-bar buttons into "See more"
         instead of letting the window's minimum width grow past the screen."""
         for w in walk(self.window):
             if w.has_css_class('win11-search'):
-                w.set_size_request(max(150,min(269,int((width-560)*0.48))),-1)
+                w.set_size_request(max(150,min(261,int((width-560)*0.48))),-1)
                 break
         bar=next((a for a in walk(self.window) if a.has_css_class('win11-commandbar')),None)
         if not bar:return
@@ -257,6 +327,7 @@ class FenestraViews:
                 if not next((c for c in walk(box) if isinstance(c,Gtk.Image)),None):
                     box.prepend(Gtk.Image.new_from_icon_name('win11-explorer-gallery'))
             crumbs=crumbs[-1:]
+        self._home_crumb(crumbs,special)
         first=crumbs[0].get_child()
         image=None
         if isinstance(first,Gtk.Box):
@@ -269,11 +340,60 @@ class FenestraViews:
         if isinstance(first,Gtk.Box) and image:
             name=next((c.get_label() for c in walk(first) if isinstance(c,Gtk.Label) and not c.has_css_class('fenestra-crumb-sep')),'')
             glyph={tr('Home'):'win11-explorer-home',tr('This PC'):'win11-explorer-thispc',tr('Gallery'):'win11-explorer-gallery'}.get(name)
+            if any(isinstance(c,Gtk.Label) and getattr(c,'_fenestra_home',False) and not c.get_visible() for c in walk(first)):glyph=None
             if glyph:image.set_from_icon_name(glyph);image.set_pixel_size(16);image.set_visible(True);image.add_css_class('fenestra-mono')
         last=crumbs[-1].get_child()
-        if isinstance(last,Gtk.Box):
+        if isinstance(last,Gtk.Box) and self._has_subfolders(special):
             tail=Gtk.Label(label='›');tail.add_css_class('fenestra-crumb-sep');tail.add_css_class('fenestra-crumb-tail')
             last.append(tail)
+
+    def _history_icons(self):
+        """Back / Forward are Explorer's arrows, not Adwaita's chevrons (Up already is)."""
+        controls=next((w for w in walk(self.window) if kind(w)=='NautilusHistoryControls'),None)
+        if controls is None or getattr(controls,'_fenestra_icons',False):return
+        buttons=[w for w in walk(controls) if isinstance(w,Gtk.Button)]
+        for button,name in zip(buttons,('win11-explorer-back','win11-explorer-forward')):
+            button.set_icon_name(name)
+        controls._fenestra_icons=len(buttons)>=2
+
+    def _has_subfolders(self,special):
+        """Explorer ends the address with a chevron only when the folder has subfolders."""
+        if special:return True
+        slot=self.slot();location=slot.get_property('location') if slot else None
+        if not location or not location.get_path():return True
+        try:
+            for info in location.enumerate_children('standard::type,standard::is-hidden',Gio.FileQueryInfoFlags.NONE,None):
+                if info.get_file_type()==Gio.FileType.DIRECTORY and not info.get_is_hidden():return True
+        except GLib.Error:return True
+        return False
+
+    def _home_crumb(self,crumbs,special):
+        """Nautilus' home crumb ('Carpeta personal') is Explorer's Home; inside a known folder
+        (Documents, Music, ...) Explorer starts the address at that folder behind This PC's icon."""
+        home=crumbs[0];box=home.get_child()
+        if special or not isinstance(box,Gtk.Box):return
+        lab=next((c for c in walk(box) if isinstance(c,Gtk.Label) and not c.has_css_class('fenestra-crumb-sep')),None)
+        if lab is None:return
+        names={GLib.dgettext('nautilus','Home'),'Home',tr('Home')}
+        if lab.get_label() in names or getattr(lab,'_fenestra_home',False):
+            lab._fenestra_home=True;lab.set_label(tr('Home'))
+        else:return
+        slot=self.slot();location=slot.get_property('location') if slot else None
+        path=location.get_path() if location else None
+        known={GLib.get_user_special_dir(getattr(GLib.UserDirectory,k)) for k in ('DIRECTORY_DESKTOP','DIRECTORY_DOCUMENTS','DIRECTORY_DOWNLOAD','DIRECTORY_MUSIC','DIRECTORY_PICTURES','DIRECTORY_VIDEOS')}
+        known.discard(None);known.discard(GLib.get_home_dir())
+        inside=bool(path) and len(crumbs)>1 and any(path==k or path.startswith(k+'/') for k in known)
+        lab.set_visible(not inside)
+        image=next((c for c in walk(box) if isinstance(c,Gtk.Image)),None)
+        if image:
+            image.set_from_icon_name('win11-explorer-thispc' if inside else 'win11-explorer-home')
+            image.set_pixel_size(16);image.set_visible(True);image.add_css_class('fenestra-mono')
+        # The separator Nautilus puts before the second crumb doubles the lead chevron.
+        if len(crumbs)>1:(crumbs[1].add_css_class if inside else crumbs[1].remove_css_class)('fenestra-crumb-known')
+        nxt=crumbs[1].get_parent() if len(crumbs)>1 else None
+        if nxt is not None:
+            for w in walk(nxt):
+                if isinstance(w,Gtk.Label) and w.has_css_class('fenestra-crumb-sep') and not w.is_ancestor(crumbs[1]):w.set_visible(not inside)
 
     def _empty(self,slot):
         for w in walk(slot):
@@ -295,13 +415,36 @@ class FenestraViews:
         parent.insert_child_after(bar,label);parent.remove(label);bar.append(label)
         label.set_hexpand(False)
         sep=Gtk.Separator(orientation=Gtk.Orientation.VERTICAL);bar.append(sep)
+        # "1 elemento seleccionado  79 bytes |" while something is selected.
+        self.sel_label=Gtk.Label();self.sel_label.add_css_class('win11-status');self.sel_label.add_css_class('fenestra-status-selection')
+        self.sel_sep=Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
+        bar.append(self.sel_label);bar.append(self.sel_sep)
+        self.sel_label.set_visible(False);self.sel_sep.set_visible(False)
         bar.append(Gtk.Box(hexpand=True))
         self.status_buttons={}
         for mode,glyph in (('details','win11-view-details'),('large','win11-view-large')):
-            b=Gtk.ToggleButton();img=Gtk.Image.new_from_icon_name(glyph);img.set_pixel_size(12);b.set_child(img)
+            b=Gtk.ToggleButton();img=Gtk.Image.new_from_icon_name(glyph);img.set_pixel_size(12 if mode=='details' else 16);b.set_child(img)
             b.set_tooltip_text(dict(VIEWS)[mode])
             b.connect('clicked',lambda btn,m=mode:self.select(m,remember=True) if btn.get_active() else None)
             bar.append(b);self.status_buttons[mode]=b
+
+    def selection_status(self,files):
+        label=getattr(self,'sel_label',None)
+        if label is None:return
+        n=len(files)
+        text=''
+        if n:
+            text=tr('1 item selected') if n==1 else tr('%d items selected')%n
+            total=0
+            for f in files:
+                try:
+                    info=f.query_info('standard::size,standard::type',Gio.FileQueryInfoFlags.NONE,None)
+                except GLib.Error:
+                    total=None;break
+                if info.get_file_type()!=Gio.FileType.REGULAR:total=None;break
+                total+=info.get_size()
+            if total is not None:text+='  '+status_size(total)
+        label.set_label(text);label.set_visible(bool(n));self.sel_sep.set_visible(bool(n))
 
     def _status(self,slot,special=None):
         label=next((w for w in walk(self.window) if isinstance(w,Gtk.Label) and w.has_css_class('win11-status')),None)
@@ -319,6 +462,7 @@ class FenestraViews:
         slot=self.slot()
         if not slot:return False
         self.sidebar.refresh()
+        self._history_icons()
         if not getattr(slot,'_windows_views_signals',False):
             slot._windows_views_signals=True
             slot.connect('notify::loading',self.queue)
@@ -354,9 +498,21 @@ class FenestraViews:
                         column.set_title(tr('Date modified'));title=tr('Date modified')
                     if not getattr(column,'_windows_width_set',False):
                         # Windows 11 Details column widths.
-                        width={'Name':248,'Nombre':248,tr('Date modified'):144,'Type':120,'Tipo':120,'Size':80,'Tamaño':80}.get(title)
+                        width={'Name':258,'Nombre':258,tr('Date modified'):144,'Type':120,'Tipo':120,'Size':80,'Tamaño':80}.get(title)
                         if width:column.set_fixed_width(width);column.set_expand(False);column.set_resizable(True)
                         column._windows_width_set=True
+                    role={tr('Date modified'):'date','Size':'size','Tamaño':'size'}.get(title)
+                    factory=column.get_factory()
+                    if role and factory and not getattr(factory,'_windows_cells',False):
+                        factory._windows_cells=True
+                        factory.connect_after('bind',lambda _f,item,r=role:details_cell(item.get_child(),r))
+                        # Rows bound before the hook: cells sit in column order in each row.
+                        visible=[columns.get_item(i) for i in range(columns.get_n_items()) if columns.get_item(i).get_visible()]
+                        at=visible.index(column) if column in visible else -1
+                        for row in walk(w):
+                            if row.get_css_name()!='row' or kind(row)!='GtkColumnViewRowWidget':continue
+                            cells=[c for c in walk(row) if kind(c)=='GtkColumnViewCellWidget']
+                            if 0<=at<len(cells):details_cell(cells[at].get_first_child(),role)
             if kind(w)=='GtkGridView':
                 # Only alter widgets inside the active slot (is_ancestor is reversed).
                 if not w.is_ancestor(slot):continue

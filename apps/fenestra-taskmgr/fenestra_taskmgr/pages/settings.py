@@ -80,11 +80,13 @@ class SettingsPage(Page):
     def _card(self, icon_name, title, sub):
         card = Gtk.Box()
         card.add_css_class("card")
-        card.append(icon(icon_name, 20, "card-icon"))
+        card.append(icon(icon_name, 24, "card-icon"))
         t = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         t.set_valign(Gtk.Align.CENTER)
+        t.set_margin_top(14)  # a wrapped description grows the card like the reference
+        t.set_margin_bottom(14)
         t.append(label(title, "card-title"))
-        t.append(label(sub, "card-sub", ellipsize=True))
+        t.append(label(sub, "card-sub", wrap=True))
         t.set_hexpand(True)
         card.append(t)
         return card
@@ -99,6 +101,7 @@ class SettingsPage(Page):
         bx = Gtk.Box(spacing=16)
         cur = dict(choices).get(util.opts()[key], choices[0][1])
         lb = label(_(cur))
+        lb.set_hexpand(True)
         bx.append(lb)
         bx.append(icon("tm-chevron-down-symbolic", 12))
         btn.set_child(bx)
@@ -111,8 +114,9 @@ class SettingsPage(Page):
 
         def open_menu(*_a):
             m = Menu(btn)
+            m.add_css_class("combo-menu")
             for val, text in choices:
-                m.add(_(text), lambda v=val, t=text: pick(v, t), check=util.opts()[key] == val)
+                m.add(_(text), lambda v=val, t=text: pick(v, t), selected=util.opts()[key] == val)
             m.set_position(Gtk.PositionType.BOTTOM)
             m.popup()
         btn.connect("clicked", open_menu)
@@ -126,7 +130,7 @@ class SettingsPage(Page):
         arrow = Gtk.Button()
         arrow.add_css_class("flat-icon")
         arrow.set_valign(Gtk.Align.CENTER)
-        img = icon("tm-chevron-up-symbolic", 12)
+        img = icon("tm-chevron-up-symbolic", 18)
         arrow.set_child(img)
         head.append(arrow)
         box.append(head)

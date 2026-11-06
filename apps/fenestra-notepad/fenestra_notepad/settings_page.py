@@ -59,7 +59,7 @@ class Expander(Gtk.Box):
         self.head.add_css_class("s-card")
         self.head.add_css_class("s-head")
         row = Gtk.Box()
-        row.append(icon(icon_name, 16, "s-icon"))
+        row.append(icon(icon_name, 20, "s-icon"))
         row.append(_texts(title, subtitle))
         if trailing is not None:
             trailing.set_valign(Gtk.Align.CENTER)
@@ -97,6 +97,8 @@ class Expander(Gtk.Box):
     def add_row(self, w):
         r = Gtk.Box()
         r.add_css_class("s-subrow")
+        if isinstance(w, Gtk.CheckButton):
+            r.add_css_class("s-radiorow")
         r.append(w)
         self.body.append(r)
         return r
@@ -233,7 +235,7 @@ class SettingsPage(Gtk.ScrolledWindow):
     def _row(self, icon_name, title, subtitle, trailing):
         c = _card()
         c.add_css_class("s-row")
-        c.append(icon(icon_name, 16, "s-icon"))
+        c.append(icon(icon_name, 20, "s-icon"))
         c.append(_texts(title, subtitle))
         trailing.set_valign(Gtk.Align.CENTER)
         trailing.set_hexpand(False)

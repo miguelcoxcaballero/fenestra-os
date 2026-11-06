@@ -469,6 +469,137 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
 .win11-explorer columnview > header > button sort-indicator.ascending,
 .win11-explorer columnview > header > button sort-indicator.descending { -gtk-icon-source: none; min-width: 0; min-height: 0; }
 
+/* ---- Fenestra: Explorer pass 3, measured against reference-shots apps/*-100-40-explorer-*
+   (window 1125 x 634 at 100 %, both themes; tests/explorer-window/ renders the same views).
+   Scoped to the Explorer window, not the open / save dialog (window.win11-chooser). ---- */
+/* Caption buttons 46 x 33 at the top; 10 px glyphs centred 14 px down (not in the 38 px band). */
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols { margin-bottom: 5px; }
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { min-height: 26px; padding: 1px 0 6px 0; }
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button image { -gtk-icon-size: 20px; }
+window.win11-explorer:not(.win11-chooser) .win11-titlebar .win11-new-tab { margin-top: 10px; }
+window.win11-explorer:not(.win11-chooser) .win11-tabs .tab-close-button { margin: 0 6px 4px 4px; }
+window.win11-explorer:not(.win11-chooser) .win11-tabs .tab-close-button image { -gtk-icon-size: 16px; }
+/* Navigation row: address box 643 px from x 201, search 259 px, 8 px apart, 12 px from the edge. */
+window.win11-explorer:not(.win11-chooser) .win11-navigation { padding-left: 0; padding-right: 0; }
+window.win11-explorer:not(.win11-chooser) .win11-navigation box.start { margin-right: 3px; }
+window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search { margin-left: 2px; padding: 0 13px 0 14px; }
+window.win11-explorer:not(.win11-chooser) #NautilusPathBar > menubutton, window.win11-explorer:not(.win11-chooser) .nautilus-pathbar > menubutton { opacity: 0; min-width: 0; padding: 0; }
+window.win11-explorer:not(.win11-chooser) .fenestra-drives > flowboxchild { padding-left: 3px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-crumbs .fenestra-crumb-lead { margin: 0 13px 0 15px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-crumbs button.fenestra-crumb-known { padding-left: 0; }
+/* Command bar */
+window.win11-explorer:not(.win11-chooser) .win11-commandbar { padding: 0 11px 0 6px; }
+/* Sort (10th child) 4 px further left than the 8 px separator gap gives, View 2 px; See more 5 px. */
+window.win11-explorer:not(.win11-chooser) .win11-commandbar menubutton.win11-cmd-icon > button { margin-left: -3px; }
+window.win11-explorer:not(.win11-chooser) .win11-commandbar > menubutton:nth-child(10) { margin-left: -4px; margin-right: 2px; }
+/* Details: Win32 list metrics. Columns from x 582 (Name 258, Date 144, Type 120, Size 80, 1 px
+   separators), rows 24 px every 28 px from 5 px under the header; hover / selection fills
+   the row, the selection with a 1 px focus border. */
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view columnview { padding-left: 14px; }
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view columnview > listview { margin-left: -14px; padding-top: 5px; border-spacing: 0; }
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view .column-name-labels-box { margin-left: -3px; }
+window.win11-explorer:not(.win11-chooser) columnview > header > button { min-height: 25px; padding: 0 0 0 5px; border-right: 1px solid #636363; color: #dedede; }
+window.win11-explorer:not(.win11-chooser) columnview > header > button:first-child { padding-left: 15px; }
+window.win11-explorer:not(.win11-chooser) columnview > header > button label { font-weight: 400; color: #dedede; }
+window.win11-explorer:not(.win11-chooser) columnview > header > button:hover { background: #2d2d2d; }
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable,
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable:nth-child(odd):not(:disabled):not(:selected):not(:hover),
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable:nth-child(even):not(:disabled):not(:selected):not(:hover) { min-height: 24px; margin: 2px 28px 2px 14px; border-radius: 1px; }
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable > cell > widget#NautilusViewCell { min-height: 24px; padding: 0 6px; }
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable > cell:first-child > widget#NautilusViewCell { padding-left: 4px; }
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable:hover { background-color: #4d4d4d; }
+window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable:selected { background-color: #505050; box-shadow: inset 0 0 0 1px #c3c3c3; }
+window.win11-explorer:not(.win11-chooser) columnview row label, window.win11-explorer:not(.win11-chooser) columnview row label.dim-label { color: #dedede; opacity: 1; }
+window.win11-explorer:not(.win11-chooser) columnview row .column-name-labels-box label { color: #ffffff; }
+/* Navigation pane: rows 154 px wide from x 2, text at 55 px; selection #505050 + focus border. */
+window.win11-explorer:not(.win11-chooser) placessidebar row, window.win11-explorer:not(.win11-chooser) .navigation-sidebar row { margin: 0 1px 0 2px; padding-left: 26px; border-radius: 0; }
+window.win11-explorer:not(.win11-chooser) .navigation-sidebar row label { color: #ffffff; }
+window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:selected, window.win11-explorer:not(.win11-chooser) placessidebar row:selected { background: #505050; box-shadow: inset 0 0 0 1px #c3c3c3; }
+window.win11-explorer:not(.win11-chooser) .navigation-sidebar image.fenestra-pin { margin-right: 3px; }
+/* Status bar: view toggles 24 x 24, the active one bordered. */
+window.win11-explorer:not(.win11-chooser) .fenestra-statusbar { padding-right: 4px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-statusbar label.win11-status { color: #dedede; }
+window.win11-explorer:not(.win11-chooser) .fenestra-statusbar label.fenestra-status-selection { padding: 0 9px 0 12px; }
+/* Selection details live in the status bar (Explorer), not in Nautilus' floating pill. */
+window.win11-explorer:not(.win11-chooser) .floating-bar { opacity: 0; }
+window.win11-explorer:not(.win11-chooser) .fenestra-statusbar separator { background: #f7f7f7; }
+window.win11-explorer:not(.win11-chooser) .fenestra-statusbar button { min-width: 22px; min-height: 22px; margin: 1px 0 0 0; border-radius: 0; }
+window.win11-explorer:not(.win11-chooser) .fenestra-statusbar button:checked { background: #4d4d4d; box-shadow: inset 0 0 0 1px #636363; }
+/* Home: section chevrons 12 px glyphs; pills 31 px, borderless; Recent list rows 34 px from
+   x 582 to 1516, header text at +72, icons at +80, columns 314 / 184 / 182 / 182. */
+window.win11-explorer:not(.win11-chooser) .fenestra-section-header { padding-left: 7px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-section-header > box { border-spacing: 7px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-section-header image, window.win11-explorer:not(.win11-chooser) .fenestra-section-chevron image { -gtk-icon-size: 18px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-home-tabs { margin-top: 17px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-section-chevron { margin-right: 4px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-pill { min-height: 31px; padding: 0 12px; border: 0; border-radius: 8px; background: #272727; }
+window.win11-explorer:not(.win11-chooser) .fenestra-pill:hover { background: #2d2d2d; }
+window.win11-explorer:not(.win11-chooser) .fenestra-pill.active, window.win11-explorer:not(.win11-chooser) .fenestra-pill:checked { background: #4cc2ff; }
+window.win11-explorer:not(.win11-chooser) .fenestra-page .fenestra-tile-sub, window.win11-explorer:not(.win11-chooser) .fenestra-page .fenestra-cell.dim { color: #cbcbcb; }
+window.win11-explorer:not(.win11-chooser) .fenestra-details { margin: 11px 15px 0 14px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-details-header { min-height: 30px; padding-left: 72px; margin-bottom: 16px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-page .fenestra-col-title { padding-left: 0; border-right: 0; font-size: 14px; color: #ffffff; }
+window.win11-explorer:not(.win11-chooser) .fenestra-details-rows > row { min-height: 34px; padding-left: 80px; border-radius: 4px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-details-rows > row:hover { background: #272727; }
+window.win11-explorer:not(.win11-chooser) .fenestra-page .fenestra-cell.dim { padding-left: 0; }
+window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:hover, window.win11-explorer:not(.win11-chooser) placessidebar row:hover { background: #4d4d4d; }
+/* Context menus (GtkPopoverMenu): #2c2c2c with a 1 px #3b3b3b border, rows hover #383838, 287 px. */
+window.win11-explorer:not(.win11-chooser) popover.menu > contents { background: #2c2c2c; border: 1px solid #3b3b3b; min-width: 279px; }
+window.win11-explorer:not(.win11-chooser) popover.menu modelbutton > label:not(.accelerator), window.win11-explorer:not(.win11-chooser) popover.menu modelbutton > box > label { font-size: 14px; }
+window.win11-explorer:not(.win11-chooser) popover.menu modelbutton accelerator { font-size: 12px; }
+window.win11-explorer:not(.win11-chooser) popover.menu modelbutton:hover { background: #383838; }
+window.win11-explorer:not(.win11-chooser) popover.menu modelbutton label { color: #ffffff; }
+/* Command-bar dropdown buttons while their menu is open. */
+window.win11-explorer:not(.win11-chooser) .win11-commandbar menubutton:checked > button, window.win11-explorer:not(.win11-chooser) .win11-commandbar menubutton > button:checked { background: #272727; }
+/* Details pane (Alt+Shift+P): 299 px; 220 px icon band, then name, Share, Details and rows 22 px. */
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane.fenestra-infopane-details { padding: 0; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-band { min-height: 220px; background: #222222; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-head { margin: 26px 21px 0 22px; border-spacing: 16px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-head label { font-size: 14px; font-weight: 600; color: #ffffff; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share { margin: 17px 0 0 21px; min-height: 29px; padding: 0 9px; border-radius: 4px; background: #272727; box-shadow: inset 0 1px #2f2f2f; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share label { font-size: 12px; color: #ffffff; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-heading { margin: 32px 21px 0 21px; font-size: 12px; font-weight: 600; color: #ffffff; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-rows { margin: 10px 21px 0 21px; }
+window.win11-explorer:not(.win11-chooser) .fenestra-infopane-rows label { min-height: 22px; font-size: 12px; color: #ffffff; }
+/* Light (the VM draws the title bar and navigation row solid, without Mica). */
+@media (prefers-color-scheme: light) {
+  window.win11-explorer:not(.win11-chooser) .win11-titlebar { background: #e8e8e8; }
+  window.win11-explorer:not(.win11-chooser) .win11-navigation { background: #f8f8f8; border-top: 1px solid #dadada; border-bottom: 1px solid #d6d6d6; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-crumbs, window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search, window.win11-explorer:not(.win11-chooser) #NautilusPathBar { background: #fdfdfd; border: 0; }
+  window.win11-explorer:not(.win11-chooser) .win11-commandbar { border-bottom: 1px solid #d6d6d6; }
+  window.win11-explorer:not(.win11-chooser) columnview > header > button { border-right: 1px solid #e5e5e5; color: #4c607a; }
+  window.win11-explorer:not(.win11-chooser) columnview > header > button label { color: #4c607a; }
+  window.win11-explorer:not(.win11-chooser) columnview > header > button:hover { background: #d9ebf9; }
+  window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable:hover { background-color: #e5f3ff; }
+  window.win11-explorer:not(.win11-chooser) .nautilus-list-view listview.view > row.activatable:selected { background-color: #cce8ff; box-shadow: inset 0 0 0 1px #000000; }
+  window.win11-explorer:not(.win11-chooser) columnview row label, window.win11-explorer:not(.win11-chooser) columnview row label.dim-label { color: #6d6d6d; }
+  window.win11-explorer:not(.win11-chooser) columnview row .column-name-labels-box label { color: #000000; }
+  window.win11-explorer:not(.win11-chooser) .navigation-sidebar row label { color: #000000; }
+  window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:selected, window.win11-explorer:not(.win11-chooser) placessidebar row:selected { background: #cce8ff; box-shadow: inset 0 0 0 1px #000000; }
+  window.win11-explorer:not(.win11-chooser) .navigation-sidebar separator.fenestra-sidebar-sep { background: #d6d6d6; }
+  window.win11-explorer:not(.win11-chooser) placessidebar, window.win11-explorer:not(.win11-chooser) placessidebar > scrolledwindow, window.win11-explorer:not(.win11-chooser) placessidebar .navigation-sidebar { border-right-color: #ffffff; }
+  window.win11-explorer:not(.win11-chooser) label.win11-status, window.win11-explorer:not(.win11-chooser) .fenestra-statusbar { background: #ffffff; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-statusbar label.win11-status { color: #1e395b; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-statusbar button:checked { background: #e5f3fb; box-shadow: inset 0 0 0 1px #0078d4; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-pill { background: #f6f6f6; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-infopane-band { background: #f9f9f9; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share { background: #fbfbfb; box-shadow: inset 0 0 0 1px #e5e5e5; }
+  window.win11-explorer:not(.win11-chooser) popover.menu > contents { background: #f9f9f9; border: 1px solid #eaeaea; }
+  window.win11-explorer:not(.win11-chooser) popover.menu modelbutton:hover { background: #f0f0f0; }
+  window.win11-explorer:not(.win11-chooser) popover.menu modelbutton label { color: #1b1b1b; }
+  window.win11-explorer:not(.win11-chooser) .win11-commandbar menubutton:checked > button, window.win11-explorer:not(.win11-chooser) .win11-commandbar menubutton > button:checked { background: #f6f6f6; }
+  popover.fenestra-winmenu > contents { background: #f9f9f9; border: 1px solid #e2e2e2; color: #1b1b1b; }
+  popover.fenestra-winmenu .fenestra-winmenu-row:hover { background: #f0f0f0; }
+  popover.fenestra-winmenu .fenestra-winmenu-row:active { background: #f5f5f5; }
+  popover.fenestra-winmenu .fenestra-winmenu-label { color: #1b1b1b; }
+  popover.fenestra-winmenu separator.fenestra-winmenu-sep { background: #eaeaea; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-pill.active, window.win11-explorer:not(.win11-chooser) .fenestra-pill:checked { background: #0067c0; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-details-rows > row:hover { background: #f6f6f6; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-page .fenestra-col-title { color: #1b1b1b; }
+  window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:hover, window.win11-explorer:not(.win11-chooser) placessidebar row:hover { background: #e5f3ff; }
+}
+/* ---- end Fenestra: Explorer pass 3 ---- */
+
 /* ---- Fenestra: Explorer open / save dialog (Nautilus file chooser, overlay nautilus-file-chooser.ui).
    Measured against the reference «Guardar como» / «Abrir» dialogs: design/reference/measurements.json
    (file_dialog_save, file_dialog_open, file_dialog_menus) and dialogs.md. Coordinates below are
@@ -698,6 +829,7 @@ window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { m
   .win11-explorer .fenestra-pill.active, .win11-explorer .fenestra-pill:checked { background: @fenestra_accent_dark; border-color: @fenestra_accent_dark; }
   .win11-explorer .fenestra-accent-button { background: @fenestra_accent_dark; color: @fenestra_accent_dark_fg; }
   .win11-explorer .fenestra-accent-button:hover { background: shade(@fenestra_accent_dark, 0.92); }
+  window.win11-explorer:not(.win11-chooser) .fenestra-pill.active, window.win11-explorer:not(.win11-chooser) .fenestra-pill:checked { background: @fenestra_accent_dark; }
 }
 @media (prefers-color-scheme: light) {
   popover.menu > contents { background: rgba(249,249,249,0.96); border: 1px solid rgba(0,0,0,0.06); }
@@ -772,10 +904,6 @@ window.background.csd headerbar.header-bar.titlebar windowcontrols button.titleb
   .win11-explorer popover.menu modelbutton > accelerator { color: #5f5f5f; }
   .win11-explorer .fenestra-section-chevron:hover { background: #f0f0f0; }
   .win11-explorer .fenestra-crumbs button label, .win11-explorer .fenestra-crumbs button.current-dir label { color: #1a1a1a; }
-  popover.fenestra-winmenu > contents { color: #1a1a1a; }
-  popover.fenestra-winmenu .fenestra-winmenu-row:hover { background: #e5e5e5; }
-  popover.fenestra-winmenu .fenestra-winmenu-row:active { background: #e5e5e5; }
-  popover.fenestra-winmenu .fenestra-winmenu-label { color: #1a1a1a; }
   popover.fenestra-winmenu .fenestra-winmenu-mark { color: #5f5f5f; }
   popover.fenestra-winmenu .fenestra-winmenu-accel { color: #5f5f5f; }
   .win11-explorer button.fenestra-cmd-on { background: #f0f0f0; }
@@ -800,6 +928,12 @@ window.background.csd headerbar.header-bar.titlebar windowcontrols button.titleb
   .win11-explorer .navigation-sidebar separator.fenestra-sidebar-sep { background: #e5e5e5; }
   .win11-explorer .fenestra-statusbar separator { background: #5f5f5f; }
   .win11-explorer .fenestra-statusbar button:checked { background: #e5e5e5; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-pill:hover { background: #f0f0f0; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-page .fenestra-tile-sub, window.win11-explorer:not(.win11-chooser) .fenestra-page .fenestra-cell.dim { color: #616161; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-infopane-head label { color: #1a1a1a; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share label { color: #1a1a1a; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-infopane-heading { color: #1a1a1a; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-infopane-rows label { color: #1a1a1a; }
   .win11-explorer .win11-commandbar image, .win11-explorer .win11-navigation image, .win11-explorer image.fenestra-pin, .win11-explorer .win11-cmd-chevron { -gtk-icon-filter: invert(0.9); }
 }
 /* ---- end Fenestra light mode ---- */

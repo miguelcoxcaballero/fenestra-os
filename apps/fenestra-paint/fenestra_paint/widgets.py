@@ -297,9 +297,10 @@ def popup_at(win, menu, x, y):
 class Dialog(Gtk.Box):
     """Windows 11 content dialog shown over a smoke layer inside the window."""
 
-    def __init__(self, win, title, body=None, buttons=(), width=440, on_close=None):
+    def __init__(self, win, title, body=None, buttons=(), width=440, on_close=None, smoke=True):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.win = win
+        self.smoke = smoke
         self.on_close = on_close
         self.add_css_class("dialog-card")
         self.set_halign(Gtk.Align.CENTER)
@@ -500,9 +501,9 @@ class Slider(Gtk.Widget):
         cr.set_line_width(1)
         cr.set_source_rgba(*th.rgb("thumb-line"))
         cr.stroke()
-        r = 7 if (self.hover or self.dragging) else 6
+        r = 7 if (self.hover or self.dragging) else 5
         if self.dragging:
-            r = 5
+            r = 4.5
         cr.arc(tx, ty, r, 0, 2 * math.pi)
         cr.set_source_rgba(*th.rgb("accent"))
         cr.fill()
@@ -566,7 +567,7 @@ class Swatch(Gtk.Widget):
         cr.stroke()
         if self.selected and self.ring:
             cr.arc(cx, cy, r + 3, 0, 2 * math.pi)
-            cr.set_line_width(1.6)
+            cr.set_line_width(2)
             cr.set_source_rgba(*th.rgb("accent"))
             cr.stroke()
 
@@ -581,7 +582,7 @@ class ColorWheel(Gtk.Widget):
     def do_snapshot(self, snap):
         w, h = self.get_width(), self.get_height()
         cr = snap.append_cairo(Graphene.Rect().init(0, 0, w, h))
-        cx, cy, r = w / 2 - 1, h / 2 + 1, 12
+        cx, cy, r = w / 2 + 0.5, h / 2 + 1, 13
         import colorsys
         n = 72
         for i in range(n):

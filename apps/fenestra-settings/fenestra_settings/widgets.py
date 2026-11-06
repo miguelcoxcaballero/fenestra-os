@@ -324,9 +324,11 @@ class SettingRow(Gtk.Box):
         self.control = control
         if control is not None:
             self.suffix.append(control)
+        if isinstance(control, ToggleSwitch):
+            self.add_css_class("has-toggle")  # toggle rows are 1 px taller in the reference
         if chevron or external:
             self.suffix.append(icon("fs-open-symbolic" if external else "fs-chevron-right-symbolic",
-                                    16 if not external else 16, "row-chevron"))
+                                    20 if not external else 16, "row-chevron"))
 
         if on_click is not None:
             self.add_css_class("activatable")
@@ -368,6 +370,8 @@ class SettingRow(Gtk.Box):
         self.control = w
         if w is not None:
             self.suffix.prepend(w)
+        if isinstance(w, ToggleSwitch):
+            self.add_css_class("has-toggle")
 
     def flash(self):
         self.add_css_class("highlight")
@@ -382,7 +386,8 @@ class ExpanderRow(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("expander")
         self.key = key
-        self.chev = icon("fs-chevron-down-symbolic", 16, "row-chevron")
+        self.chev = icon("fs-chevron-down-symbolic", 20, "row-chevron")
+        self.chev.add_css_class("expander-chevron")
         self.header = SettingRow(title, subtitle, icon_name, control, on_click=self.toggle,
                                  key=key)
         self.header.suffix.append(self.chev)
@@ -409,6 +414,7 @@ class ExpanderRow(Gtk.Box):
 
     def set_expanded(self, v):
         self.revealer.set_reveal_child(v)
+        self.chev.set_from_icon_name("fs-chevron-up-symbolic" if v else "fs-chevron-down-symbolic")
         if v:
             self.add_css_class("expanded")
         else:
@@ -428,7 +434,7 @@ class Group(Gtk.Box):
             self.add_css_class(css)
         if title:
             self.append(label(title, "section-title"))
-        self.rows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.rows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         self.rows.add_css_class("group-rows")
         self.append(self.rows)
 

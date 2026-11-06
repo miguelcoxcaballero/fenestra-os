@@ -99,6 +99,29 @@ ICONS = {
     "warning": cut(poly((8, 1), (15.5, 14.5), (0.5, 14.5)), poly((8, 3.8), (2.8, 13.2), (13.2, 13.2)))
     + rr(7.35, 6, 1.3, 4.2, 0.6) + circle(8, 11.6, 0.8),
     "close": bar(3, 3, 13, 13, 1.4) + bar(13, 3, 3, 13, 1.4),
+    # navigation rail: outline icons and the filled ones shown for the selected page
+    "home-filled": cut(poly((8, 1), (15.5, 7.6), (14.6, 8.6), (13.5, 7.7), (13.5, 15), (2.5, 15), (2.5, 7.7),
+                            (1.4, 8.6), (0.5, 7.6)), rr(6.6, 9.6, 2.8, 5.4, 0.4)),
+    "apps-filled": rr(1, 1, 6, 6, 1.6) + rr(9, 9, 6, 6, 1.6) + rr(1, 9, 6, 6, 1.6) + circle(12, 4, 3.1),
+    "games-filled": cut(rr(0.5, 3.5, 15, 9, 3.6), rr(3.2, 7.4, 4, 1.2, 0.4) + rr(4.6, 6, 1.2, 4, 0.4)
+                        + circle(10.8, 7.1, 0.9) + circle(12.4, 8.9, 0.9)),
+    "library-filled": rr(1, 2, 3.6, 12, 0.8) + rr(5.4, 2, 3.6, 12, 0.8)
+    + poly((9.6, 4.5), (11.6, 2.9), (15.2, 13.6), (12.6, 14.6)),
+    "sources-filled": rr(1, 3.4, 14, 1.2, 0.6) + rr(1, 7.4, 14, 1.2, 0.6) + rr(1, 11.4, 14, 1.2, 0.6)
+    + circle(5, 4, 2.5) + circle(11, 8, 2.5) + circle(6.5, 12, 2.5),
+    "downloads": cut(poly((1, 9), (4.5, 9), (5.6, 11), (10.4, 11), (11.5, 9), (15, 9), (15, 15), (1, 15)),
+                     poly((2.3, 10.3), (2.3, 13.7), (13.7, 13.7), (13.7, 10.3), (12.3, 10.3), (11.2, 12.3),
+                          (4.8, 12.3), (3.7, 10.3)))
+    + poly((7.35, 1), (8.65, 1), (8.65, 6.6), (10.6, 4.7), (11.5, 5.6), (8, 9.1), (4.5, 5.6), (5.4, 4.7),
+           (7.35, 6.6)),
+    "downloads-filled": poly((1, 9), (4.5, 9), (5.6, 11), (10.4, 11), (11.5, 9), (15, 9), (15, 15), (1, 15))
+    + poly((7.1, 1), (8.9, 1), (8.9, 6.1), (10.6, 4.4), (11.8, 5.6), (8, 9.4), (4.2, 5.6), (5.4, 4.4),
+           (7.1, 6.1)),
+    "more": circle(2.8, 8, 1.1) + circle(8, 8, 1.1) + circle(13.2, 8, 1.1),
+    "sort": rr(1, 3.4, 14, 1.2, 0.6) + rr(3.5, 7.4, 9, 1.2, 0.6) + rr(6, 11.4, 4, 1.2, 0.6),
+    "chevron-down": poly((1.8, 5.6), (2.8, 4.6), (8, 9.8), (13.2, 4.6), (14.2, 5.6), (8, 11.8)),
+    "caret-left": poly((10.5, 3.5), (10.5, 12.5), (5, 8)),
+    "caret-right": poly((5.5, 3.5), (11, 8), (5.5, 12.5)),
     # categories
     "cat-productivity": ring_rr(1, 1.5, 5, 5, 1) + ring_rr(1, 9.5, 5, 5, 1) + rr(8, 3.4, 7, 1.3, 0.6)
     + rr(8, 11.4, 7, 1.3, 0.6) + poly((2.2, 12), (2.9, 11.3), (3.4, 11.8), (5.2, 10), (5.9, 10.7), (3.4, 13.2)),
@@ -131,6 +154,16 @@ ICONS = {
                        poly((8, 2.3), (2.9, 4.2), (3.1, 8), (8, 13.4), (12.9, 8), (13.1, 4.2))),
 }
 
+# Caption button glyphs (drawn at 10 px, so 1 px lines are 1.6 units); style.css puts them on
+# Gtk.WindowControls' buttons with -gtk-icon-source.
+CAPTION = {
+    "window-minimize": rr(0, 7.2, 16, 1.6, 0),
+    "window-maximize": ring_rr(0.2, 0.2, 15.6, 15.6, 1.6, 1.6),
+    "window-restore": ring_rr(0.2, 3.4, 12.4, 12.4, 1.4, 1.6) + poly((3.4, 0.2), (13.8, 0.2), (15.8, 2.2), (15.8, 12.6),
+                                                                    (14.2, 12.6), (14.2, 2.6), (13.4, 1.8), (3.4, 1.8)),
+    "window-close": bar(0.6, 0.6, 15.4, 15.4, 1.7) + bar(15.4, 0.6, 0.6, 15.4, 1.7),
+}
+
 
 def main():
     os.makedirs(OUT, exist_ok=True)
@@ -140,7 +173,12 @@ def main():
 
         with open(os.path.join(OUT, f"st-{name}-symbolic.svg"), "w") as f:
             f.write(svg)
-    print(f"wrote {len(ICONS)} icons to {OUT}")
+    for name, parts in CAPTION.items():
+        paths = "".join(f'<path fill="#2e3436" fill-rule="evenodd" d="{d}"/>' for d in parts)
+        svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">{paths}</svg>\n'
+        with open(os.path.join(OUT, f"st-{name}-symbolic.svg"), "w") as f:
+            f.write(svg)
+    print(f"wrote {len(ICONS) + len(CAPTION)} icons to {OUT}")
 
 
 if __name__ == "__main__":

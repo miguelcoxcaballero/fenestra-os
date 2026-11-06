@@ -1,0 +1,8 @@
+@scheme light
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+key alt+d
+wait 1000
+shot light-folder-click-address-edit

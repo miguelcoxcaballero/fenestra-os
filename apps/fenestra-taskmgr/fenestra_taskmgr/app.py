@@ -44,6 +44,8 @@ def parse_args(argv):
     p.add_argument("--search", default=None, help="(screenshot) text typed in the search box")
     p.add_argument("--expand", default=None, help="(screenshot) comma separated row keys to expand")
     p.add_argument("--select", default=None, help="(screenshot) row key to select")
+    p.add_argument("--menu", default=None, help="(screenshot) open a menu: row, more, graph, combo1, combo2;"
+                   " it is saved next to the window as OUT-menu.png")
     p.add_argument("--timing", action="store_true", help="print startup timing")
     p.add_argument("--real-data", action="store_true", help="(screenshot) use real /proc data, for testing only")
     # gnome-system-monitor compatible tab options (Fenestra's wrapper forwards them)
@@ -137,6 +139,10 @@ class App(Gtk.Application):
                         pg.table.select(o.select)
                         pg.table.header_focus = False
                     pg.refresh() if hasattr(pg, "refresh") else None
+            if o.menu:  # opened before the first frame: later frames are not presented headless
+                from .widgets.common import Menu
+                Menu.shot_window = self.win
+                self._open_menu()
             GLib.timeout_add(int(os.environ.get("FENESTRA_SHOT_DELAY", "900")), self._shoot)
         else:
             from .sampler import Sampler
@@ -185,6 +191,37 @@ class App(Gtk.Application):
     def _on_close(self, *_):
         if self.sampler:
             self.sampler.stop()
+        return False
+
+    def _open_menu(self):
+        from .widgets.common import Menu
+        win, what = self.win, self.opts.menu
+        pg = win.current
+        if what == "more":
+            win._more(win.more_btn)
+        elif what == "row" and hasattr(pg, "table"):
+            # where the reference capture right-clicked: window (171, 343) = table (122, 240)
+            Menu.shot_point = (171, 343)
+            i = pg.table.row_at(240)
+            if i is not None and i >= 0:
+                pg.table.select(pg.table.rows[i].key)
+                pg.table.emit("context-menu", 122.0, 240.0)
+        elif what == "graph" and hasattr(pg, "_graph_menu"):
+            Menu.shot_point = (612, 319)
+            pg._graph_menu(None, 1, 0.0, 0.0)
+        elif what.startswith("combo"):
+            combos = []
+
+            def walk(w):
+                while w is not None:
+                    if w.has_css_class("combo"):
+                        combos.append(w)
+                    walk(w.get_first_child())
+                    w = w.get_next_sibling()
+            walk(pg.get_first_child())
+            i = int(what[5:] or 1) - 1
+            if i < len(combos):
+                combos[i].emit("clicked")
         return False
 
     def _shoot(self):

@@ -21,33 +21,37 @@ ACCENTS = {  # GNOME accent-color -> (light-mode accent, dark-mode accent)
 }
 
 LIGHT = {
-    "strip": "#e8e8e8", "layer": "#f8f8f8", "editor": "#f9f9f9", "line": "#eaeaea",
+    "strip": "#e8e8e8", "layer": "#f8f8f8", "editor": "#f9f9f9", "line": "#eaeaea", "st-sep": "#eaeaea", "dlg-line": "#eaeaea",
     "tab-border": "#dadada", "tab-hover": "rgba(0,0,0,0.037)", "tab-sep": "rgba(0,0,0,0.16)",
     "fg": "#1a1a1a", "text": "#000000", "fg2": "#5e5e5e", "fg3": "#9f9f9f", "glyph2": "#747474",
     "hover": "rgba(0,0,0,0.037)", "press": "rgba(0,0,0,0.024)",
     "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.125)", "popover-bottom": "rgba(0,0,0,0.18)",
     "menu-sep": "#eaeaea", "shadow": "rgba(0,0,0,0.14)",
-    "card": "#f9f9f9", "card-border": "rgba(0,0,0,0.20)",
-    "input": "#ffffff", "input-border": "rgba(0,0,0,0.0578)", "input-bottom": "rgba(0,0,0,0.45)",
+    "card": "#f9f9f9", "card-border": "rgba(0,0,0,0.25)",
+    "input": "rgba(255,255,255,0.7)", "input-border": "rgba(0,0,0,0.0578)", "input-bottom": "rgba(0,0,0,0.4458)",
     "input-focus": "#ffffff",
-    "btn": "#fbfbfb", "btn-hover": "#f6f6f6", "btn-border": "rgba(0,0,0,0.0578)", "btn-bottom": "rgba(0,0,0,0.16)",
+    "btn": "rgba(255,255,255,0.7)", "btn-hover": "rgba(249,249,249,0.5)", "btn-border": "rgba(0,0,0,0.0578)",
+    "btn-top": "rgba(0,0,0,0.0578)", "btn-bottom": "rgba(0,0,0,0.1622)", "scard-hover": "#f6f6f6",
+    "sbody": "#f4f4f4", "radio-fill": "rgba(0,0,0,0.024)", "radio-border": "rgba(0,0,0,0.4458)",
     "page": "#f3f3f3", "scard": "#fbfbfb", "scard-border": "#e5e5e5", "sub": "#606060",
     "dot": "#8a8a8a", "smoke": "rgba(0,0,0,0.30)", "dialog": "#ffffff", "dialog-foot": "#f3f3f3",
     "close-hover": "#c42b1c", "scroll": "#8a8a8a", "toggle-off": "rgba(0,0,0,0.62)",
     "link": "#003e92", "current-line": "rgba(0,0,0,0.0)", "match": "rgba(255,200,0,0.45)",
 }
 DARK = {
-    "strip": "#202020", "layer": "#282828", "editor": "#272727", "line": "#1d1d1d",
+    "strip": "#202020", "layer": "#2c2c2c", "editor": "#272727", "line": "#272727", "st-sep": "#3d3d3d", "dlg-line": "#1d1d1d",
     "tab-border": "#1c1c1c", "tab-hover": "rgba(255,255,255,0.061)", "tab-sep": "rgba(255,255,255,0.16)",
     "fg": "#ffffff", "text": "#ffffff", "fg2": "#cfcfcf", "fg3": "#787878", "glyph2": "#9a9a9a",
     "hover": "rgba(255,255,255,0.061)", "press": "rgba(255,255,255,0.042)",
-    "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.45)", "popover-bottom": "rgba(0,0,0,0.55)",
+    "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.36)", "popover-bottom": "rgba(0,0,0,0.45)",
     "menu-sep": "rgba(255,255,255,0.0837)", "shadow": "rgba(0,0,0,0.32)",
-    "card": "#2c2c2c", "card-border": "rgba(0,0,0,0.50)",
-    "input": "#2d2d2d", "input-border": "rgba(255,255,255,0.07)", "input-bottom": "rgba(255,255,255,0.54)",
-    "input-focus": "#1f1f1f",
-    "btn": "#373737", "btn-hover": "#3c3c3c", "btn-border": "rgba(255,255,255,0.07)",
-    "btn-bottom": "rgba(255,255,255,0.05)",
+    "card": "#282828", "card-border": "#444444",
+    "input": "rgba(255,255,255,0.0605)", "input-border": "rgba(255,255,255,0.0698)",
+    "input-bottom": "rgba(255,255,255,0.5442)",
+    "input-focus": "rgba(30,30,30,0.7)",
+    "btn": "rgba(255,255,255,0.0605)", "btn-hover": "rgba(255,255,255,0.0837)", "btn-border": "rgba(255,255,255,0.0698)",
+    "btn-top": "rgba(255,255,255,0.0942)", "btn-bottom": "rgba(255,255,255,0.0698)", "scard-hover": "#3c3c3c",
+    "sbody": "#272727", "radio-fill": "rgba(0,0,0,0.1)", "radio-border": "rgba(255,255,255,0.51)",
     "page": "#202020", "scard": "#2b2b2b", "scard-border": "#1d1d1d", "sub": "#cfcfcf",
     "dot": "#9a9a9a", "smoke": "rgba(0,0,0,0.30)", "dialog": "#2b2b2b", "dialog-foot": "#202020",
     "close-hover": "#c42b1c", "scroll": "#9f9f9f", "toggle-off": "rgba(255,255,255,0.78)",
@@ -175,7 +179,7 @@ class Theme:
         # literal colours where var() is not resolved reliably
         css += ("switch.fluent:checked { background-color: %s; border-color: %s; }\n" % (acc, acc))
         css += ("checkbutton.fluent radio:checked { background-color: %s; border-color: %s; "
-                "background-image: radial-gradient(circle, %s 0%%, %s 3.5px, %s 4px); }\n"
+                "background-image: radial-gradient(circle, %s 0%%, %s 5.5px, %s 6px); }\n"
                 % (acc, acc, pal["accent-fg"], pal["accent-fg"], acc))
         self.vars.load_from_string(css)
         gs = Gtk.Settings.get_default()

@@ -37,11 +37,11 @@ class UpdatePage(Page):
     def build(self, box):
         self.state = "idle"
         self.updates = []
-        hero = Gtk.Box(spacing=20)
+        hero = Gtk.Box(spacing=21)
         hero.add_css_class("update-hero")
         self.hero_icon_box = Gtk.Overlay()
-        big = icon("fs-arrow-sync-symbolic", 56, "update-hero-icon")
-        big.set_size_request(80, 80)
+        big = icon("fs-arrow-sync-symbolic", 96, "update-hero-icon")
+        big.set_size_request(96, 96)
         self.hero_icon_box.set_child(big)
         hero.append(self.hero_icon_box)
         tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER, hexpand=True, spacing=2)

@@ -1,0 +1,8 @@
+@scheme dark
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+click 468 318
+wait 1200
+shot dark-folder-menu-nuevo

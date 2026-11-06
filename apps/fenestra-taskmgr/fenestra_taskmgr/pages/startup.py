@@ -121,7 +121,7 @@ class StartupPage(Page):
         top.append(self.bios)
         self.append(top)
         self.table = Table([
-            Column("name", _("Name"), 214), Column("publisher", _("Publisher"), 150),
+            Column("name", _("Name"), 215), Column("publisher", _("Publisher"), 150),
             Column("status", _("Status"), 100), Column("impact", _("Startup impact"), 100),
         ], header_h=34, two_line=False)
         self.table.connect("sort-changed", lambda *_: self.refresh())
@@ -235,7 +235,7 @@ class StartupPage(Page):
         e = self._sel()
         if e is None:
             return
-        m = Menu(table)
+        m = Menu(table, classic=True)
         m.add(_("Disable") if e["enabled"] else _("Enable"), lambda: self._set(not e["enabled"]))
         m.add(_("Properties"), self.properties)
         m.popup_at(x, y)

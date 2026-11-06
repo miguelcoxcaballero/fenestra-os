@@ -64,29 +64,46 @@ def custom_variants(base):
     return to_hex(lt), dark
 
 
+# AccentTextFillColorPrimary (links, accent text): the default blue's exact values,
+# other accents shifted in lightness from their light/dark-mode accent.
+ACCENT_TEXT = {"#4cc2ff": "#99ebff", "#0067c0": "#003e92"}
+
+
+def accent_text(acc, dark):
+    if acc.lower() in ACCENT_TEXT:
+        return ACCENT_TEXT[acc.lower()]
+    import colorsys
+    r, g, b = (v / 255 for v in _hex_to_rgb(acc))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    l = min(0.9, l + 0.15) if dark else max(0.1, l - 0.12)
+    return "#%02x%02x%02x" % tuple(round(v * 255) for v in colorsys.hls_to_rgb(h, l, s))
+
+
 def on_accent(h):
     """Windows: black glyphs on light accents, white on dark ones."""
     return "#000000" if _lum(h) > 0.25 else "#ffffff"
 
 DARK = {
     "bg": "#202020",
-    "bg-grad-a": "#1c2027",
+    "bg-grad-a": "#202020",
     "bg-grad-b": "#202020",
-    "bg-grad-c": "#221f22",
+    "bg-grad-c": "#202020",
     "card": "rgba(255,255,255,0.051)",
     "card-hover": "rgba(255,255,255,0.083)",
     "card-press": "rgba(255,255,255,0.03)",
-    "card-border": "rgba(0,0,0,0.20)",
-    "card-edge": "rgba(255,255,255,0.06)",
+    "card-border": "rgba(0,0,0,0.10)",
+    "card-edge": "rgba(0,0,0,0.10)",
     "fg": "#ffffff",
-    "fg2": "#c5c5c5",
-    "fg3": "#7e7e7e",
+    "fg2": "rgba(255,255,255,0.7725)",
+    "fg3": "rgba(255,255,255,0.5451)",
     "ctl": "rgba(255,255,255,0.061)",
     "ctl-hover": "rgba(255,255,255,0.084)",
     "ctl-press": "rgba(255,255,255,0.033)",
     "ctl-border": "rgba(255,255,255,0.07)",
     "ctl-border-bottom": "rgba(255,255,255,0.05)",
     "input": "rgba(255,255,255,0.061)",
+    "search": "rgba(255,255,255,0.061)",
+    "search-hover": "rgba(255,255,255,0.084)",
     "input-focus": "#1f1f1f",
     "input-bottom": "rgba(255,255,255,0.54)",
     "subtle-hover": "rgba(255,255,255,0.061)",
@@ -111,28 +128,30 @@ DARK = {
 
 LIGHT = {
     "bg": "#f3f3f3",
-    "bg-grad-a": "#eef1f7",
+    "bg-grad-a": "#f3f3f3",
     "bg-grad-b": "#f3f3f3",
-    "bg-grad-c": "#f6f2f3",
+    "bg-grad-c": "#f3f3f3",
     "card": "rgba(255,255,255,0.70)",
     "card-hover": "rgba(249,249,249,0.50)",
     "card-press": "rgba(249,249,249,0.30)",
-    "card-border": "rgba(0,0,0,0.07)",
-    "card-edge": "rgba(255,255,255,0.0)",
-    "fg": "#1b1b1b",
-    "fg2": "#5d5d5d",
-    "fg3": "#a0a0a0",
+    "card-border": "rgba(0,0,0,0.0578)",
+    "card-edge": "rgba(0,0,0,0.0578)",
+    "fg": "rgba(0,0,0,0.8941)",
+    "fg2": "rgba(0,0,0,0.6196)",
+    "fg3": "rgba(0,0,0,0.4471)",
     "ctl": "rgba(255,255,255,0.70)",
     "ctl-hover": "rgba(249,249,249,0.50)",
     "ctl-press": "rgba(249,249,249,0.30)",
     "ctl-border": "rgba(0,0,0,0.073)",
     "ctl-border-bottom": "rgba(0,0,0,0.16)",
     "input": "rgba(255,255,255,0.70)",
+    "search": "#ffffff",
+    "search-hover": "#fafafa",
     "input-focus": "#ffffff",
     "input-bottom": "rgba(0,0,0,0.45)",
     "subtle-hover": "rgba(0,0,0,0.037)",
     "subtle-press": "rgba(0,0,0,0.024)",
-    "subtle-select": "rgba(0,0,0,0.055)",
+    "subtle-select": "rgba(0,0,0,0.037)",
     "toggle-off": "rgba(0,0,0,0.62)",
     "toggle-off-bg": "rgba(0,0,0,0.024)",
     "divider": "rgba(0,0,0,0.08)",
@@ -220,7 +239,9 @@ class ThemeManager:
         pal["accent-press"] = f"rgba({r},{g},{b},0.8)"
         pal["accent-soft"] = f"rgba({r},{g},{b},0.18)"
         pal["accent-fg"] = on_accent(acc)
-        pal["accent-text"] = acc
+        pal["accent-text"] = accent_text(acc, dark)
+        # base system accent (glyphs such as the Themes summary icons use it in both modes)
+        pal["accent-base"] = "#0078d4" if acc.lower() in ACCENT_TEXT else self.accent_hex(dark=False)
         css = ":root {\n" + "".join(f"  --{k}: {v};\n" for k, v in pal.items()) + "}\n"
         # Gradients do not resolve var() reliably, so emit literal colors.
         css += (

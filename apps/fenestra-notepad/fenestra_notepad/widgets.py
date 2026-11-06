@@ -65,6 +65,11 @@ class Menu(Gtk.Popover):
         self.set_has_arrow(False)
         self.checks = checks
         self.sub = None
+        # shortcuts are right-aligned (WinUI default); the reference File menu instead shows them
+        # as a left-aligned column after the widest label: set shortcut_column = True for that
+        self.shortcut_column = False
+        self.label_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
+        self.shortcut_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box.add_css_class("menu-box")
         if scroll:
@@ -94,16 +99,23 @@ class Menu(Gtk.Popover):
         b.add_css_class("menu-item")
         box = Gtk.Box()
         if self.checks:
-            im = icon("np-check-symbolic", 16, "menu-check")
+            b.add_css_class("check-item")     # check menus have a 32 px pitch, others 33
+            im = icon("np-check-symbolic", 14, "menu-check")
             im.set_opacity(1.0 if check else 0.0)
             box.append(im)
         elif icon_name:
             box.append(icon(icon_name, 16, "menu-icon"))
         lb = label(text, "menu-label")
-        lb.set_hexpand(True)
+        if chevron or not self.shortcut_column:
+            lb.set_hexpand(True)
+        else:
+            self.label_group.add_widget(lb)
         box.append(lb)
         if shortcut:
-            box.append(label(shortcut, "menu-shortcut", xalign=1.0))
+            sc = label(shortcut, "menu-shortcut", xalign=0.0 if self.shortcut_column else 1.0)
+            if self.shortcut_column:
+                self.shortcut_group.add_widget(sc)
+            box.append(sc)
         if chevron:
             box.append(icon("np-chevron-right-symbolic", 12, "menu-chevron"))
         b.set_child(box)

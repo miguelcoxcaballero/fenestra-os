@@ -29,23 +29,25 @@ class TimePage(Page):
     ]
 
     def build(self, box):
-        hero = Gtk.Box(spacing=40)
-        hero.add_css_class("hero")
-        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.clock = label("", "big-number")
-        self.date = label("", "caption")
+        from .common import _status_item
+        hero = Gtk.Box(spacing=24)
+        hero.add_css_class("time-hero")
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        self.clock = label("", "time-clock")
+        self.date = label("", "time-date")
         col.append(self.clock)
         col.append(self.date)
         hero.append(col)
-        col2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
         info = timedate.info()
-        col2.append(label(_("Time zone"), "caption"))
-        col2.append(label(timedate.tz_label(info["timezone"]), "body-strong"))
-        hero.append(col2)
-        col3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
-        col3.append(label(_("Language"), "caption"))
-        col3.append(label(timedate.locale_label(timedate.locale_info().get("LANG", "")), "body-strong"))
-        hero.append(col3)
+        tz = _status_item("fs-globe-clock-symbolic", _("Time zone"), timedate.tz_label(info["timezone"]),
+                          lambda: self.go("datetime"))
+        lang = _status_item("fs-globe-symbolic", _("Language"),
+                            timedate.locale_label(timedate.locale_info().get("LANG", "")),
+                            lambda: self.go("language"))
+        for it in (tz, lang):
+            it.ic.remove_css_class("accent-icon")
+            it.set_valign(Gtk.Align.CENTER)
+            hero.append(it)
         box.append(hero)
         self._tick()
         GLib.timeout_add_seconds(1, self._tick)

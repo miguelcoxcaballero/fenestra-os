@@ -1,0 +1,11 @@
+@scheme light
+click 497 522
+wait 1500
+move 1900 30
+wait 500
+move 653 384
+wait 700
+shot light-folder-details-hover-row-informe
+click 653 384
+wait 700
+shot light-folder-details-click-row-selected

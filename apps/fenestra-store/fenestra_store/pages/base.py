@@ -5,7 +5,7 @@ from __future__ import annotations
 from gi.repository import Gtk
 
 from ..i18n import _
-from ..widgets import AppCard, button, card_grid, clear, icon, label
+from ..widgets import ResultCard, button, card_grid, clear, icon, label
 
 PAGE_STEP = 60  # cards added per "Show more"
 
@@ -14,6 +14,7 @@ class Page:
     id = ""
     nav = None          # navigation item highlighted while this page is shown
     title = ""
+    max_width = 1600    # page content is centred and limited to this width
 
     def __init__(self, win):
         self.win = win
@@ -42,30 +43,49 @@ class Page:
         """Library/update state changed (installs, removals, update checks)."""
 
     def set_narrow(self, narrow):
-        pass
+        for g in getattr(self, "_grids", []):
+            g.set_min_children_per_line(1 if narrow else g.get_max_children_per_line())
 
     # helpers ----------------------------------------------------------
-    def page_title(self, text, subtitle=None):
+    def page_title(self, text, subtitle=None, end=None):
+        """28 px title row; `end` (a widget) sits at its right edge."""
         head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         head.add_css_class("page-head")
-        head.append(label(text, "page-title", ellipsize=True))
+        row = Gtk.Box(spacing=12)
+        t = label(text, "page-title", ellipsize=True)
+        t.set_hexpand(True)
+        t.set_valign(Gtk.Align.CENTER)
+        row.append(t)
+        if end is not None:
+            end.set_valign(Gtk.Align.CENTER)
+            row.append(end)
+        head.append(row)
         if subtitle:
             head.append(label(subtitle, "page-subtitle", wrap=True))
         self.box.append(head)
         return head
 
-    def grid_of(self, apps, max_per_line=4, limit=None):
+    def _grid(self, max_per_line=3):
         grid = card_grid()
-        grid.set_max_children_per_line(max_per_line)
-        for a in (apps[:limit] if limit else apps):
-            card = AppCard(self.win, a)
-            card.set_size_request(200, 172)
-            grid.append(card)
+        grid.set_min_children_per_line(1 if self.win.narrow else max_per_line)
+        self._grids = [g for g in getattr(self, "_grids", []) if g.get_parent() is not None] + [grid]
         return grid
 
-    def paged_grid(self, parent, apps, max_per_line=6):
+    def grid_of(self, apps, max_per_line=3, limit=None):
+        grid = self._grid(max_per_line)
+        grid.set_max_children_per_line(max_per_line)
+        for a in (apps[:limit] if limit else apps):
+            grid.append(self._card(a))
+        return grid
+
+    def _card(self, app):
+        card = ResultCard(self.win, app)
+        card.set_size_request(-1, 316)
+        return card
+
+    def paged_grid(self, parent, apps, max_per_line=3):
         """Grid that shows PAGE_STEP cards and a 'Show more' button for the rest."""
-        grid = card_grid()
+        grid = self._grid(max_per_line)
         grid.set_max_children_per_line(max_per_line)
         parent.append(grid)
         more = button("", "fluent-button show-more")
@@ -75,9 +95,7 @@ class Page:
         def add():
             n = state["n"]
             for a in apps[n:n + PAGE_STEP]:
-                card = AppCard(self.win, a)
-                card.set_size_request(200, 172)
-                grid.append(card)
+                grid.append(self._card(a))
             state["n"] = min(len(apps), n + PAGE_STEP)
             left = len(apps) - state["n"]
             more.set_label(_("Show %d more") % min(left, PAGE_STEP))
@@ -101,7 +119,7 @@ class Page:
 
     def chips(self, options, selected, on_select):
         """Single row of filter chips (scrolls sideways when narrow): options = [(id, label)]."""
-        row = Gtk.Box(spacing=8)
+        row = Gtk.Box(spacing=7)
         row.add_css_class("chip-row")
         group = None
         for oid, text in options:

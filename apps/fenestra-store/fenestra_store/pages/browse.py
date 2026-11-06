@@ -39,30 +39,22 @@ class BrowsePage(Page):
         return _(self.title)
 
     def build(self, arg):
-        self.page_title(self.tr_title())
-        bar = Gtk.Box(spacing=12)
-        bar.add_css_class("browse-bar")
-        if self.kind == "apps":
-            opts = [("all", _("All"))] + [(k, _(t)) for k, t, _i in CATEGORIES
-                                          if k != "games" and self.store.by_category(k)]
-            chips = self.chips(opts, self.filter, self._set_filter)
-            chips.set_hexpand(True)
-            bar.append(chips)
-        else:
-            bar.append(Gtk.Box(hexpand=True))
-        bar.append(label(_("Sort by"), "caption"))
         sorts = SORTS if self.store.has_popularity else SORTS_NO_STATS
         model = Gtk.StringList.new([_(t) for _k, t in sorts])
         dd = Gtk.DropDown(model=model)
         dd.add_css_class("fluent-dropdown")
-        dd.set_valign(Gtk.Align.CENTER)
+        dd.set_tooltip_text(_("Sort by"))
         dd.set_selected([k for k, _t in SORTS].index(self.sort))
         dd.connect("notify::selected", lambda d, *_: self._set_sort(SORTS[d.get_selected()][0]))
-        bar.append(dd)
-        self.box.append(bar)
+        self.page_title(self.tr_title(), end=dd)
+        if self.kind == "apps":
+            opts = [("all", _("All"))] + [(k, _(t)) for k, t, _i in CATEGORIES
+                                          if k != "games" and self.store.by_category(k)]
+            self.box.append(self.chips(opts, self.filter, self._set_filter))
         self.count = label("", "caption count-line")
-        self.box.append(self.count)
+        self.count.set_visible(False)
         self.results_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        self.results_box.add_css_class("results")
         self.box.append(self.results_box)
         self._fill()
 
@@ -104,12 +96,13 @@ class SearchPage(Page):
 
     def build(self, arg):
         self.query = arg or ""
-        self.page_title(_("Results for “%s”") % self.query)
-        opts = [("all", _("All")), ("apps", _("Apps")), ("games", _("Games"))]
+        self.page_title("“%s”" % self.query)
+        opts = [("all", _("All departments")), ("apps", _("Apps")), ("games", _("Games"))]
         self.box.append(self.chips(opts, self.kind, self._set_kind))
         self.count = label("", "caption count-line")
-        self.box.append(self.count)
+        self.count.set_visible(False)
         self.results_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        self.results_box.add_css_class("results")
         self.box.append(self.results_box)
         self._fill()
 

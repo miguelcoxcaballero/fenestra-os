@@ -59,8 +59,11 @@ class NotepadWindow(Gtk.ApplicationWindow):
         sbar.add_css_class("titlebar-row")
         sbar.add_css_class("settings-titlebar")
         back = flat_button("np-arrow-left-symbolic", "title-back", _("Back"), self.close_settings)
+        back.set_valign(Gtk.Align.START)
         sbar.append(back)
-        sbar.append(icon(util.APP_ID, 16, "title-icon2 color-icon"))
+        ic2 = icon(util.APP_ID, 16, "title-icon2 color-icon")
+        ic2.set_valign(Gtk.Align.START)
+        sbar.append(ic2)
         sbar.append(label(_("Notepad"), "title-label"))
         sbar.append(Gtk.Box(hexpand=True))
         self.title_stack.add_named(sbar, "settings")
@@ -151,7 +154,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
             c.parse("#ffffff")
         cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
         cr.set_line_width(1.0)
-        cx, cy = int(w / 2), int(h / 2)
+        cx, cy = int(w / 2) - 1, int(h / 2)     # glyph boxes measured on the reference: x 16..25
         if name == "minimize":
             cr.rectangle(cx - 5, cy, 10, 1)
             cr.fill()
@@ -167,10 +170,11 @@ class NotepadWindow(Gtk.ApplicationWindow):
                 cr.rectangle(cx - 4.5, cy - 4.5, 9, 9)
                 cr.stroke()
         else:
-            cr.move_to(cx - 5, cy - 5)
-            cr.line_to(cx + 5, cy + 5)
-            cr.move_to(cx + 5, cy - 5)
-            cr.line_to(cx - 5, cy + 5)
+            # 10x10 px cross at x 17..26, y 9..18 (anti-aliased, no overshoot)
+            cr.move_to(cx - 3.5, cy - 4.5)
+            cr.line_to(cx + 5.5, cy + 4.5)
+            cr.move_to(cx + 5.5, cy - 4.5)
+            cr.line_to(cx - 3.5, cy + 4.5)
             cr.stroke()
 
     def _menubar(self):
@@ -244,7 +248,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         self.fmt_table.connect("clicked", lambda b: self._table_picker(b))
         tb.append(self.fmt_table)
         tb.append(flat_button("np-clear-format-symbolic", "tool-btn", _("Clear formatting"),
-                              lambda: self._md(markdown.clear_formatting)))
+                              lambda: self._md(markdown.clear_formatting, convert=False)))
         return tb
 
     def _statusbar(self):
@@ -321,6 +325,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
 
     def _build_file_menu(self, m):
         s = util.settings()
+        m.shortcut_column = True
         m.add(_("New tab"), self.new_tab, menu_shortcut("Ctrl+N"))
         m.add(_("New window"), self.app.new_window, menu_shortcut("Ctrl+Shift+N"))
         if s["formatting"]:
@@ -356,7 +361,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         clip = self.get_clipboard()
         can_paste = clip.get_formats().contain_gtype(str) or clip.get_formats().contain_mime_type("text/plain")
         can_paste = can_paste or clip.get_formats().contain_mime_type("text/plain;charset=utf-8")
-        md = bool(doc and doc.markdown and doc.formatting)
+        fmt = bool(doc and doc.formatting)
         m.add(_("Undo"), self.undo, menu_shortcut("Ctrl+Z"), sensitive=bool(buf and buf.get_can_undo()))
         m.add_separator()
         m.add(_("Cut"), self.cut, menu_shortcut("Ctrl+X"), sensitive=has_sel)
@@ -364,7 +369,8 @@ class NotepadWindow(Gtk.ApplicationWindow):
         m.add(_("Paste"), self.paste, menu_shortcut("Ctrl+V"), sensitive=bool(can_paste))
         m.add(_("Delete"), self.delete, menu_shortcut("Del"), sensitive=has_sel)
         m.add_separator()
-        m.add(_("Clear formatting"), lambda: self._md(markdown.clear_formatting), sensitive=md)
+        m.add(_("Clear formatting"), lambda: self._md(markdown.clear_formatting, convert=False),
+              sensitive=fmt)
         m.add_separator()
         m.add(_("Find"), lambda: self.show_find(False), menu_shortcut("Ctrl+F"))
         m.add(_("Find next"), self.find_next, "F3")
@@ -508,7 +514,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         view.add_css_class("editor")
         view.set_left_margin(16)
         view.set_right_margin(16)
-        view.set_top_margin(18)
+        view.set_top_margin(16)
         view.set_bottom_margin(16)
         view.set_pixels_below_lines(0)
         view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR if s["word_wrap"] else Gtk.WrapMode.NONE)
@@ -735,7 +741,9 @@ class NotepadWindow(Gtk.ApplicationWindow):
 
     def _update_toolbar(self):
         d = self.doc
-        on = bool(d and d.markdown and util.settings()["formatting"]
+        # like Windows: the toolbar is there whenever formatting is on; using it on a plain-text
+        # tab turns the tab into a Markdown one (see _md)
+        on = bool(d and util.settings()["formatting"]
                   and self.main_stack.get_visible_child_name() == "editor")
         self.toolbar.set_visible(on)
         if on:
@@ -789,6 +797,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         self.settings_page.set_narrow((self.get_width() or 1000) < 900)
         self.main_stack.set_visible_child_name("settings")
         self.title_stack.set_visible_child_name("settings")
+        self.add_css_class("in-settings")
         self.set_title(f"{_('Settings')} - {_('Notepad')}")
 
     def open_font_settings(self):
@@ -800,6 +809,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
             return
         self.main_stack.set_visible_child_name("editor")
         self.title_stack.set_visible_child_name("tabs")
+        self.remove_css_class("in-settings")
         self._update_title()
         self._update_toolbar()
         self.focus_editor()
@@ -968,10 +978,12 @@ class NotepadWindow(Gtk.ApplicationWindow):
             return
         d.set_encoding(enc)
 
-    def _md(self, fn, *args):
+    def _md(self, fn, *args, convert=True):
         d = self.doc
         if d is None:
             return
+        if convert and not d.markdown:
+            d.set_markdown(True)
         fn(d.buffer, *args)
         self._update_toolbar()
         self.focus_editor()
@@ -995,6 +1007,8 @@ class NotepadWindow(Gtk.ApplicationWindow):
             url = u.get_text().strip()
             if not url:
                 return True
+            if not self.doc.markdown:
+                self.doc.set_markdown(True)
             markdown.insert_link(buf, t.get_text().strip(), url)
             self.focus_editor()
         d = ContentDialog(self, _("Insert link"), box,

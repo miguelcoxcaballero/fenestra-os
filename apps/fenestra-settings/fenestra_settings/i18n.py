@@ -37,6 +37,11 @@ def _(s: str) -> str:
     return _catalog.get(s, s)
 
 
+def C_(ctx: str, s: str) -> str:
+    """Translate s in a context (same English text, different translation)."""
+    return _catalog.get(f"{ctx}\x04{s}", _catalog.get(s, s))
+
+
 def N_(s: str) -> str:
     """Mark for extraction without translating now."""
     return s

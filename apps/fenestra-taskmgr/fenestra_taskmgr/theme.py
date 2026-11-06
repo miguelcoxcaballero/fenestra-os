@@ -20,34 +20,40 @@ DARK = {
     "bg": "#202020", "panel": "#191919", "panel-edge": "#1d1d1d", "fg": "#ffffff", "fg2": "#cdcdcd",
     "fg3": "#6d6d6d", "line": "#2d2d2d", "toolbar-line": "#2c2c2c", "hover": "rgba(255,255,255,0.061)",
     "press": "rgba(255,255,255,0.042)", "select": "#2d2d2d", "header-sel": "#272727",
-    "search": "#2d2d2d", "search-border": "#353535", "search-focus": "#1f1f1f", "item-sel": "#272727",
-    "card": "#2b2b2b", "card-line": "#1d1d1d", "ctl": "#373737", "ctl-hover": "#3c3c3c",
+    "search": "#2d2d2d", "search-border": "#353535", "search-edge": "#303030", "search-bottom": "#303030", "search-focus": "#1f1f1f", "item-sel": "#272727",
+    "card": "#2b2b2b", "card-line": "#1d1d1d", "expander-head": "#2d2d2d", "combo-edge": "#3a3a3a",
+    "combo-top": "#3f3f3f", "combo-bottom": "#3a3a3a", "ctl": "#373737", "ctl-hover": "#3c3c3c",
     "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.35)", "shadow": "rgba(0,0,0,0.30)",
     "close-hover": "#c42b1c", "dialog": "#202020", "dialog-foot": "#2b2b2b", "smoke": "rgba(0,0,0,0.3)",
     "check-border": "rgba(255,255,255,0.55)", "graph-border": "#757575", "mini-bg": "#292929", "grid": "#2c2c2c",
-    "link": "#99ebff", "warn": "#fce100", "leaf": "#6ccb5f",
+    "link": "#99ebff", "head-sep": "#636363", "list-sep": "#1e1e1e",
+    "classic-menu": "#2c2c2c", "classic-menu-sep": "#3e3e3e", "classic-menu-disabled": "#797979",
+    "classic-menu-hover": "#414141", "warn": "#fce100", "leaf": "#6ccb5f",
 }
 LIGHT = {
-    "bg": "#f3f3f3", "panel": "#f9f9f9", "panel-edge": "#e5e5e5", "fg": "#1b1b1b", "fg2": "#5d5d5d",
-    "fg3": "#a0a0a0", "line": "#e5e5e5", "toolbar-line": "#e5e5e5", "hover": "rgba(0,0,0,0.037)",
-    "press": "rgba(0,0,0,0.024)", "select": "#e9e9e9", "header-sel": "#ededed",
-    "search": "#ffffff", "search-border": "#e5e5e5", "search-focus": "#ffffff", "item-sel": "#ededed",
-    "card": "#ffffff", "card-line": "#e5e5e5", "ctl": "#fbfbfb", "ctl-hover": "#f6f6f6",
-    "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.12)", "shadow": "rgba(0,0,0,0.14)",
+    "bg": "#f3f3f3", "panel": "#ffffff", "panel-edge": "#e5e5e5", "fg": "#1b1b1b", "fg2": "#5d5d5d",
+    "fg3": "#a0a0a0", "line": "#e9e9e9", "toolbar-line": "#f0f0f0", "hover": "rgba(0,0,0,0.037)",
+    "press": "rgba(0,0,0,0.024)", "select": "#eaeaea", "header-sel": "#ededed",
+    "search": "#fbfbfb", "search-border": "#e5e5e5", "search-edge": "#e5e5e5", "search-bottom": "#cccccc", "search-focus": "#ffffff", "item-sel": "#f6f6f6",
+    "card": "#fbfbfb", "card-line": "#e5e5e5", "expander-head": "#fbfbfb", "combo-edge": "#ececec",
+    "combo-top": "#ececec", "combo-bottom": "#d3d3d3", "ctl": "#fefefe", "ctl-hover": "#f6f6f6",
+    "popover": "#f9f9f9", "popover-border": "rgba(0,0,0,0.14)", "shadow": "rgba(0,0,0,0.14)",
     "close-hover": "#c42b1c", "dialog": "#f3f3f3", "dialog-foot": "#ffffff", "smoke": "rgba(0,0,0,0.3)",
-    "check-border": "rgba(0,0,0,0.55)", "graph-border": "#8e8e8e", "mini-bg": "#ffffff", "grid": "#e6e6e6",
-    "link": "#003e92", "warn": "#9d5d00", "leaf": "#0f7b0f",
+    "check-border": "rgba(0,0,0,0.55)", "graph-border": "#757575", "mini-bg": "#ffffff", "grid": "#ebebeb",
+    "link": "#003e92", "head-sep": "#e5e5e5", "list-sep": "#f2f2f2",
+    "classic-menu": "#f9f9f9", "classic-menu-sep": "#e5e5e5", "classic-menu-disabled": "#9f9f9f",
+    "classic-menu-hover": "#e5f3ff", "warn": "#9d5d00", "leaf": "#0f7b0f",
 }
 
 # heat-map levels (lowest .. hot); dark tones sampled from Windows 11 Task Manager
 HEAT_DARK = ["#11243e", "#08336e", "#0b4a96", "#1460b8", "#1c78d6", "#9a3a12"]
-HEAT_LIGHT = ["#fff4c4", "#f9eca8", "#ffe08a", "#ffd27a", "#ffb64a", "#f7a4a4"]
+HEAT_LIGHT = ["#d6f1ff", "#9cddff", "#79cfff", "#56c0fb", "#36aef3", "#f7a4a4"]  # first two sampled
 
 # graph colours: (line, fill) per resource
 GRAPH_DARK = {"cpu": ("#39b8e3", "#0f313b"), "mem": ("#5c9efa", "#0f1d34"), "disk": ("#84c718", "#2d3e0f"),
               "net": ("#f5628e", "#430f22"), "gpu": ("#39b8e3", "#0f313b")}
-GRAPH_LIGHT = {"cpu": ("#117dbb", "#f1f6fa"), "mem": ("#8b12ae", "#f4f2f4"), "disk": ("#4da60c", "#eff7ea"),
-               "net": ("#a74f01", "#fcf3eb"), "gpu": ("#117dbb", "#f1f6fa")}
+GRAPH_LIGHT = {"cpu": ("#006f91", "#c3ecfa"), "mem": ("#095bde", "#c9e1ff"), "disk": ("#4a7500", "#d8f4b5"),
+               "net": ("#c32559", "#fbd3de"), "gpu": ("#006f91", "#c3ecfa")}  # sampled
 
 
 def rgba(s) -> Gdk.RGBA:
@@ -122,7 +128,7 @@ class Theme:
             hue = colorsys.rgb_to_hls(*(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)))[0]
             heat = [_rehue(x, hue) for x in heat[:-1]] + [heat[-1]]
         self.heat = [rgba(x) for x in heat]
-        self.heat_line = rgba("rgba(255,255,255,0.09)" if dark else "rgba(0,0,0,0.06)")
+        self.heat_line = rgba("#29323f" if dark else "#d5e3e9")  # sampled over the lowest heat level
         g = GRAPH_DARK if dark else GRAPH_LIGHT
         self.graph = {k: (rgba(a), rgba(b)) for k, (a, b) in g.items()}
         css = ":root {\n" + "".join(f"  --{k}: {v};\n" for k, v in pal.items()) + "}\n"

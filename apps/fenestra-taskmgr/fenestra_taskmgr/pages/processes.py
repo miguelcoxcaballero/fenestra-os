@@ -112,7 +112,7 @@ def sort_entries(entries, key, desc):
 
 def proc_columns():
     return [
-        Column("name", _("Name"), 233),
+        Column("name", _("Name"), 234),
         Column("status", _("Status"), 120),
         Column("cpu", _("CPU"), 73, "right", heat=True, desc_first=True),
         Column("memory", _("Memory"), 73, "right", heat=True, desc_first=True),
@@ -269,10 +269,11 @@ class ProcessesPage(Page):
         e = self.selected()
         if e is None:
             return
-        m = Menu(table)
+        m = Menu(table, classic=True)
         row = table.selected_row()
         if row.expandable:
-            m.add(_("Collapse") if row.key in table.expanded else _("Expand"), lambda: table.toggle(row.key))
+            m.add(_("Collapse") if row.key in table.expanded else _("Expand"), lambda: table.toggle(row.key),
+                  default=True)
             m.add_separator()
         m.add(_("End task"), self.end_task, sensitive=e.key != "k:system")
         m.add(_("Efficiency mode"), self.toggle_efficiency, check=e.status == "eff",

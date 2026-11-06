@@ -38,13 +38,18 @@ class Avatar(Gtk.Box):
                 return
             except Exception:  # noqa: BLE001 - any loader error -> initials
                 pass
-        self.add_css_class("initials")
-        lb = Gtk.Label(label=user.initials())
-        lb.set_size_request(self.size, self.size)
-        lb.add_css_class("avatar-initials")
-        if self.size < 48:
-            lb.add_css_class("small")
-        self.append(lb)
+        # no account picture: the generic person glyph, like the reference
+        self.remove_css_class("initials")
+        import os
+        from . import util
+        path = os.path.join(util.data_dir(), "icons", "fenestra-avatar-default.svg")
+        try:
+            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, self.size * 2, self.size * 2, False)
+            img = Gtk.Image.new_from_paintable(Gdk.Texture.new_for_pixbuf(pb))
+        except Exception:  # noqa: BLE001 - no SVG loader
+            img = Gtk.Image.new_from_file(path)
+        img.set_pixel_size(self.size)
+        self.append(img)
 
 
 class NavPane(Gtk.Box):
@@ -56,9 +61,9 @@ class NavPane(Gtk.Box):
 
         # --- user card
         user = current_user()
-        self.user_card = Gtk.Box(spacing=16)
+        self.user_card = Gtk.Box(spacing=12)
         self.user_card.add_css_class("user-card")
-        self.avatar = Avatar(64)
+        self.avatar = Avatar(60)
         self.avatar.set_user(user)
         self.user_card.append(self.avatar)
         tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
@@ -76,17 +81,18 @@ class NavPane(Gtk.Box):
         self.entry = Gtk.Entry()
         self.entry.set_placeholder_text(_("Find a setting"))
         self.entry.add_css_class("search-entry")
-        self.entry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, "fs-search-symbolic")
+        self.entry.set_icon_from_icon_name(Gtk.EntryIconPosition.PRIMARY, "fs-search-symbolic")
         self.entry.connect("changed", self._on_search_changed)
         self.entry.connect("activate", self._on_search_activate)
-        self.entry.connect("icon-press", lambda *_: self._on_search_activate(self.entry))
+        self.entry.connect("icon-press", self._on_icon_press)
         keyc = Gtk.EventControllerKey()
         keyc.connect("key-pressed", self._on_search_key)
         self.entry.add_controller(keyc)
         self.search_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.search_wrap.add_css_class("search-wrap")
+        self.entry.set_size_request(516, -1)
         self.search_wrap.append(self.entry)
-        self.append(self.search_wrap)
+        # the window puts search_wrap in the title bar (centred), like the reference
 
         self.popover = Gtk.Popover()
         self.popover.add_css_class("search-popover")
@@ -98,7 +104,14 @@ class NavPane(Gtk.Box):
         self.results.add_css_class("search-results")
         self.results.set_selection_mode(Gtk.SelectionMode.BROWSE)
         self.results.connect("row-activated", self._on_result)
-        self.popover.set_child(self.results)
+        pop_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        pop_box.append(self.results)
+        self.show_all_btn = Gtk.Button(label=_("Show all results"))
+        self.show_all_btn.add_css_class("search-show-all")
+        self.show_all_btn.connect("clicked", lambda *_: self._show_all())
+        pop_box.append(self.show_all_btn)
+        self.popover.set_child(pop_box)
+        self._limit = 5
         self.popover.set_parent(self.entry)
         self._index = None
         self._result_entries = []
@@ -116,7 +129,7 @@ class NavPane(Gtk.Box):
             row.page_id = pid
             row.add_css_class("nav-item")
             ov = Gtk.Overlay()
-            box = Gtk.Box(spacing=16)
+            box = Gtk.Box(spacing=14)
             box.add_css_class("nav-item-box")
             box.append(icon(f"fs-nav-{pid}", 20, "nav-icon"))
             lb = label(_(cls.title), "nav-label", ellipsize=True)
@@ -161,7 +174,6 @@ class NavPane(Gtk.Box):
         else:
             self.remove_css_class("compact")
         self.user_texts.set_visible(not compact)
-        self.search_wrap.set_visible(not compact)
         for row in self.rows.values():
             row.nav_label.set_visible(not compact)
         self.avatar.set_visible(not compact)
@@ -173,8 +185,16 @@ class NavPane(Gtk.Box):
         self.name_lbl.set_label(u.real_name)
 
     # -------------------------------------------------------------- search
+    def _on_icon_press(self, entry, pos):
+        if pos == Gtk.EntryIconPosition.SECONDARY:
+            entry.set_text("")
+        else:
+            self._on_search_activate(entry)
+
     def _on_search_changed(self, entry):
         text = entry.get_text()
+        entry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY,
+                                      "fs-dismiss-symbolic" if text else None)
         if self._index is None:
             self._index = search.build_index()
         res = search.query(self._index, text)
@@ -191,23 +211,30 @@ class NavPane(Gtk.Box):
             row = Gtk.ListBoxRow(activatable=False, selectable=False)
             row.set_child(label(_("No results found"), "search-empty"))
             self.results.append(row)
-        for e in res:
+        # One line per result (where it lives goes in the tooltip), five at first and
+        # "Show all results" for the rest, like the reference suggestions list.
+        shown = res if getattr(self, "_all", False) else res[:self._limit]
+        for e in shown:
             row = Gtk.ListBoxRow()
             row.entry = e
             b = Gtk.Box(spacing=12)
             b.add_css_class("search-result")
             b.append(icon(e.icon, 16))
-            tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            t = label(e.title, "search-title", ellipsize=True)
-            tb.append(t)
-            if e.key is not None or "›" in e.where:
-                tb.append(label(e.where, "search-where", ellipsize=True))
-            b.append(tb)
+            b.append(label(e.title, "search-title", ellipsize=True))
             row.set_child(b)
+            if e.where:
+                row.set_tooltip_text(e.where)
             self.results.append(row)
-        w = self.entry.get_width()
-        self.results.set_size_request(max(w, 240), -1)
+        self.show_all_btn.set_visible(len(res) > len(shown))
+        # same outer width as the search box (popover contents border: 1 px each side)
+        w = max(self.entry.get_size_request()[0], self.entry.get_width()) - 2
+        self.results.get_parent().set_size_request(max(w, 240), -1)
         self.popover.popup()
+
+    def _show_all(self):
+        self._all = True
+        self._on_search_changed(self.entry)
+        self._all = False
 
     def _on_search_key(self, _c, keyval, _code, _state):
         if keyval == Gdk.KEY_Down and self.popover.get_visible():

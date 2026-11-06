@@ -5,6 +5,7 @@ import math
 import random
 import time
 
+from .i18n import _
 from .procdata import Proc, Snapshot
 
 GB = 1024 ** 3
@@ -12,7 +13,7 @@ MB = 1024 ** 2
 
 
 class DemoStatic:
-    cpu_model = "Intel(R) Core(TM) Ultra 5 125H"
+    cpu_model = "Virtual x86-64 CPU @ 3.00GHz"  # invented, no host data
     sockets = 1
     cores = 6
     logical = 6
@@ -182,7 +183,7 @@ class DemoCollector:
         s.mem = {"total": total, "avail": int(3.5 * GB), "used": used, "free": int(0.4 * GB),
                  "cached": int(3.4 * GB), "modified": 40 * MB, "committed": int(2.1 * GB),
                  "commit_limit": int(7.6 * GB), "swap_total": int(1.6 * GB), "swap_used": 0,
-                 "paged": 256 * MB, "nonpaged": 151 * MB, "compressed": int(33.4 * MB),
+                 "paged": 256 * MB, "nonpaged": 151 * MB, "compressed": int(122 * MB),
                  "zram_orig": 0, "reserved": int(38.3 * MB)}
         s.disks = [{"name": "sda", "index": 0, "model": "QEMU HARDDISK", "type": "HDD (SATA)",
                     "kind": "HDD", "capacity": 64 * GB, "formatted": 64 * GB, "label": "C:",
@@ -227,9 +228,10 @@ class DemoCollector:
             procs[p.pid] = p
             return p
 
-        mk("Task Manager", "app", 41.2, "app-gnome-org.fenestra.TaskManager-1.scope", cpu=5.0,
+        tm = _("Task Manager")
+        mk(tm, "app", 41.2, "app-gnome-org.fenestra.TaskManager-1.scope", cpu=5.0,
            disk=0.1 * MB, app="org.fenestra.TaskManager")
-        s.apps = {"org.fenestra.TaskManager": ("Task Manager", "org.fenestra.TaskManager", True, "")}
+        s.apps = {"org.fenestra.TaskManager": (tm, "org.fenestra.TaskManager", True, "")}
         for i, (name, icon, mem, kids, status) in enumerate(BACKGROUND):
             unit = f"bg{i}.service"
             if kids:

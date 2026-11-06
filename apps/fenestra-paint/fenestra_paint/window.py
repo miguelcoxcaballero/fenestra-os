@@ -65,6 +65,8 @@ class PaintWindow(Gtk.ApplicationWindow):
         self._sync_title()
         if path:
             GLib.idle_add(lambda: (self.open_path(path), False)[1])
+        else:
+            GLib.idle_add(lambda: (self._initial_zoom(), False)[1])
 
     # ================================================================== build
     def _build(self):
@@ -253,9 +255,9 @@ class PaintWindow(Gtk.ApplicationWindow):
         c = area.get_color()
         cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
         cr.set_line_width(1.0)
-        cx, cy = int(w / 2), int(h / 2)
+        cx, cy = int(w / 2), int(h / 2) - 2
         if name == "minimize":
-            cr.rectangle(cx - 5, cy, 10, 1)
+            cr.rectangle(cx - 4, cy, 10, 1)
             cr.fill()
         elif name == "maximize":
             if self.is_maximized():
@@ -421,29 +423,19 @@ class PaintWindow(Gtk.ApplicationWindow):
             self.set_secondary(rgba)
 
     def edit_colors(self):
-        dlg = Gtk.ColorDialog()
-        dlg.set_title(_("Edit colors"))
-        dlg.set_with_alpha(False)
+        from .colordialog import edit_colors
         cur = self.primary if self.active_slot == 0 else self.secondary
-        c = Gdk.RGBA()
-        c.red, c.green, c.blue, c.alpha = cur
-        dlg.choose_rgba(self, c, None, self._color_chosen)
+        return edit_colors(self, cur, self.set_active_color)
 
-    def _color_chosen(self, dlg, res):
-        try:
-            c = dlg.choose_rgba_finish(res)
-        except GLib.Error:
-            return
-        self.add_custom_color((c.red, c.green, c.blue, 1.0))
-
-    def add_custom_color(self, rgba):
+    def add_custom_color(self, rgba, activate=True):
         hx = rgba_hex(rgba)
         cols = [x for x in self.custom_colors if x != hx]
         cols.insert(0, hx)
         self.custom_colors = cols[:10]
         util.opts().set("custom_colors", self.custom_colors)
         self.ribbon.refresh_custom()
-        self.set_active_color(rgba)
+        if activate:
+            self.set_active_color(rgba)
 
     # ================================================================== text
     def show_text_bar(self, on):
@@ -521,7 +513,7 @@ class PaintWindow(Gtk.ApplicationWindow):
         b = self.menu_buttons[key]
         b.add_css_class("open")
         m = getattr(self, f"_{key}_menu")()
-        popup_menu(self, m, b, dy=-3)
+        popup_menu(self, m, b, dy=-2)
 
     def commit_tool_soft(self):
         pass
@@ -631,13 +623,15 @@ class PaintWindow(Gtk.ApplicationWindow):
         m.add(_("Rotate left 90°"), lambda: self.rotate("rot270"), "rotate-left")
         m.add(_("Rotate 180°"), lambda: self.rotate("rot180"), "rotate-180")
         m.add(_("Rotate custom"), self.rotate_custom_dialog, "rotate-custom")
-        popup_menu(self, m, anchor, dx=-80, dy=2)
+        # centred under the split button (icon + chevron), as in the reference
+        popup_menu(self, m, anchor.get_parent(), dy=2, align="center")
 
     def flip_menu(self, anchor):
         m = Menu(self, width=156)
         m.add(_("Flip vertical"), lambda: self.flip("flip_v"), "flip-v")
         m.add(_("Flip horizontal"), lambda: self.flip("flip_h"), "flip-h")
-        popup_menu(self, m, anchor, dx=-80, dy=2)
+        # centred under the split button (icon + chevron), as in the reference
+        popup_menu(self, m, anchor.get_parent(), dy=2, align="center")
 
     def brushes_menu(self, anchor):
         brushes_menu(self, anchor)
@@ -744,6 +738,8 @@ class PaintWindow(Gtk.ApplicationWindow):
             self.hide_dialog(self.dialog)
         self.dialog = d
         self.dialog_layer.append(d)
+        # Some dialogs (Resize and skew) leave the window undimmed, as in the reference.
+        (self.dialog_layer.add_css_class if getattr(d, "smoke", True) else self.dialog_layer.remove_css_class)("smoke")
         self.dialog_layer.set_visible(True)
         d.set_hexpand(True)
         d.set_vexpand(True)
@@ -1109,8 +1105,10 @@ class PaintWindow(Gtk.ApplicationWindow):
         GLib.idle_add(lambda: (self._initial_zoom(), False)[1])
 
     def _initial_zoom(self):
-        fz = self.canvas.fit_zoom()
+        # A new blank canvas opens at 100 % showing its top-left corner; images are fitted.
+        fz = 1.0 if self.path is None else self.canvas.fit_zoom()
         self.canvas.set_zoom(min(1.0, fz))
+        self.canvas.show_origin()
         self.status.set_zoom(self.canvas.zoom)
 
     def new(self):

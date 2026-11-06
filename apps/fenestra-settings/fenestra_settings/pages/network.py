@@ -6,7 +6,7 @@ from gi.repository import GLib, Gtk
 from .. import util
 from ..backends import network, session
 from ..i18n import _
-from ..widgets import (ContentDialog, ExpanderRow, SettingRow, ToggleSwitch, button, label,
+from ..widgets import (ContentDialog, ExpanderRow, SettingRow, ToggleSwitch, button, icon, label,
                        not_available_row, show_dialog, spinner, toast)
 from .base import Page, register
 
@@ -35,26 +35,33 @@ class NetworkPage(Page):
     ]
 
     def build(self, box):
-        hero = Gtk.Box(spacing=16)
-        hero.add_css_class("card")
+        # Hero like the reference: big accent glyph, connection name, status with a
+        # small globe, and a Properties status item on the right.
+        from .common import _status_item
+        hero = Gtk.Box(spacing=24)
         hero.add_css_class("net-hero")
         self.hero_icon = Gtk.Image.new_from_icon_name("fs-wifi-1-symbolic")
-        self.hero_icon.set_pixel_size(40)
+        self.hero_icon.set_pixel_size(92)
         self.hero_icon.add_css_class("accent-icon")
         hero.append(self.hero_icon)
         tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER, hexpand=True)
-        self.hero_title = label(_("Checking…"), "subtitle-text", ellipsize=True)
-        self.hero_sub = label("", "caption")
+        self.hero_title = label(_("Checking…"), "hero-name", ellipsize=True)
+        st = Gtk.Box(spacing=6)
+        st.add_css_class("net-hero-status")
+        st.append(icon("fs-globe-symbolic", 14, "accent-icon"))
+        self.hero_sub = label("", "net-hero-sub", ellipsize=True)
+        st.append(self.hero_sub)
         tb.append(self.hero_title)
-        tb.append(self.hero_sub)
+        tb.append(st)
         hero.append(tb)
-        self.hero_btn = button(_("Properties"), lambda: self.go(self._hero_target))
         self._hero_target = "wifi"
+        self.hero_btn = _status_item("fs-info-symbolic", _("Properties"), "", lambda: self.go(self._hero_target))
+        self.hero_btn.ic.remove_css_class("accent-icon")
+        self.hero_btn.set_valign(Gtk.Align.CENTER)
         hero.append(self.hero_btn)
         box.append(hero)
 
         g = self.group()
-        g.set_margin_top(4)
         if not network.available():
             g.add(not_available_row(_("Network"), _("NetworkManager (nmcli) is not installed")))
             return
@@ -104,14 +111,15 @@ class NetworkPage(Page):
         if conn:
             d = conn[0]
             self.hero_title.set_label(d.connection or d.name)
-            self.hero_sub.set_label((_("Wi-Fi") if d.type == "wifi" else _("Ethernet")) + " · " +
-                                    _("Connected, secured"))
+            self.hero_sub.set_label(_("Connected"))
+            self.hero_btn.sub.set_label(_("Wi-Fi") if d.type == "wifi" else _("Ethernet"))
             self.hero_icon.set_from_icon_name("fs-wifi-1-symbolic" if d.type == "wifi"
                                               else "fs-plug-connected-symbolic")
             self._hero_target = "wifi" if d.type == "wifi" else "ethernet"
         else:
             self.hero_title.set_label(_("Not connected"))
             self.hero_sub.set_label(_("You aren't connected to any networks"))
+            self.hero_btn.sub.set_label("")
             self.hero_icon.set_from_icon_name("fs-globe-symbolic")
 
 
