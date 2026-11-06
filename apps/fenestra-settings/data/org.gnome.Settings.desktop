@@ -13,5 +13,5 @@ NoDisplay=true
 StartupNotify=true
 StartupWMClass=org.fenestra.Settings
 Categories=GTK;Settings;X-GNOME-Settings-Panel;
-OnlyShowIn=GNOME;
+OnlyShowIn=GNOME;Fenestra;
 X-GNOME-UsesNotifications=true
