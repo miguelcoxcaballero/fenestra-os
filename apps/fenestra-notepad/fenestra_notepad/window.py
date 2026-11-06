@@ -59,8 +59,11 @@ class NotepadWindow(Gtk.ApplicationWindow):
         sbar.add_css_class("titlebar-row")
         sbar.add_css_class("settings-titlebar")
         back = flat_button("np-arrow-left-symbolic", "title-back", _("Back"), self.close_settings)
+        back.set_valign(Gtk.Align.START)
         sbar.append(back)
-        sbar.append(icon(util.APP_ID, 16, "title-icon2 color-icon"))
+        ic2 = icon(util.APP_ID, 16, "title-icon2 color-icon")
+        ic2.set_valign(Gtk.Align.START)
+        sbar.append(ic2)
         sbar.append(label(_("Notepad"), "title-label"))
         sbar.append(Gtk.Box(hexpand=True))
         self.title_stack.add_named(sbar, "settings")
@@ -794,6 +797,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         self.settings_page.set_narrow((self.get_width() or 1000) < 900)
         self.main_stack.set_visible_child_name("settings")
         self.title_stack.set_visible_child_name("settings")
+        self.add_css_class("in-settings")
         self.set_title(f"{_('Settings')} - {_('Notepad')}")
 
     def open_font_settings(self):
@@ -805,6 +809,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
             return
         self.main_stack.set_visible_child_name("editor")
         self.title_stack.set_visible_child_name("tabs")
+        self.remove_css_class("in-settings")
         self._update_title()
         self._update_toolbar()
         self.focus_editor()

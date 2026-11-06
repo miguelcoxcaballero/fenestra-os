@@ -36,7 +36,7 @@ def parse_args(argv):
     p.add_argument("--size", default="1428x746", help="window size WxH (screenshot mode)")
     p.add_argument("--shot", default="main", help="screenshot state: main (= text), empty, menu-file, menu-edit, menu-view, "
                    "menu-recent, menu-zoom, context, find, replace, settings, settings-font, goto, save, markdown, "
-                   "tabs, find-typed, find-options")
+                   "tabs, find-typed, find-options, settings-theme")
     p.add_argument("--dark", action="store_true")
     p.add_argument("--light", action="store_true")
     p.add_argument("--lang", default=None)
@@ -261,7 +261,7 @@ class App(Gtk.Application):
         w.set_default_size(ww, hh)
         w.set_resizable(False)
         shot = o.shot
-        empty = shot in ("empty", "tabs", "settings", "settings-font") or shot.startswith("menu-")
+        empty = shot in ("empty", "tabs", "settings", "settings-font", "settings-theme") or shot.startswith("menu-")
         if shot in ("markdown",):
             d = Document(markdown=True)
             w.add_document(d)
@@ -330,6 +330,9 @@ class App(Gtk.Application):
                 w.find.opt_btn.emit("clicked")
         elif shot == "settings":
             w.open_settings()
+        elif shot == "settings-theme":
+            w.open_settings()
+            w.settings_page.theme_exp.set_expanded(True, animate=False)
         elif shot == "settings-font":
             w.open_settings()
             w.settings_page.show_font()

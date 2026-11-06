@@ -32,6 +32,7 @@ LIGHT = {
     "input-focus": "#ffffff",
     "btn": "rgba(255,255,255,0.7)", "btn-hover": "rgba(249,249,249,0.5)", "btn-border": "rgba(0,0,0,0.0578)",
     "btn-top": "rgba(0,0,0,0.0578)", "btn-bottom": "rgba(0,0,0,0.1622)", "scard-hover": "#f6f6f6",
+    "sbody": "#f4f4f4", "radio-fill": "rgba(0,0,0,0.024)", "radio-border": "rgba(0,0,0,0.4458)",
     "page": "#f3f3f3", "scard": "#fbfbfb", "scard-border": "#e5e5e5", "sub": "#606060",
     "dot": "#8a8a8a", "smoke": "rgba(0,0,0,0.30)", "dialog": "#ffffff", "dialog-foot": "#f3f3f3",
     "close-hover": "#c42b1c", "scroll": "#8a8a8a", "toggle-off": "rgba(0,0,0,0.62)",
@@ -50,6 +51,7 @@ DARK = {
     "input-focus": "rgba(30,30,30,0.7)",
     "btn": "rgba(255,255,255,0.0605)", "btn-hover": "rgba(255,255,255,0.0837)", "btn-border": "rgba(255,255,255,0.0698)",
     "btn-top": "rgba(255,255,255,0.0942)", "btn-bottom": "rgba(255,255,255,0.0698)", "scard-hover": "#3c3c3c",
+    "sbody": "#272727", "radio-fill": "rgba(0,0,0,0.1)", "radio-border": "rgba(255,255,255,0.51)",
     "page": "#202020", "scard": "#2b2b2b", "scard-border": "#1d1d1d", "sub": "#cfcfcf",
     "dot": "#9a9a9a", "smoke": "rgba(0,0,0,0.30)", "dialog": "#2b2b2b", "dialog-foot": "#202020",
     "close-hover": "#c42b1c", "scroll": "#9f9f9f", "toggle-off": "rgba(255,255,255,0.78)",
@@ -177,7 +179,7 @@ class Theme:
         # literal colours where var() is not resolved reliably
         css += ("switch.fluent:checked { background-color: %s; border-color: %s; }\n" % (acc, acc))
         css += ("checkbutton.fluent radio:checked { background-color: %s; border-color: %s; "
-                "background-image: radial-gradient(circle, %s 0%%, %s 3.5px, %s 4px); }\n"
+                "background-image: radial-gradient(circle, %s 0%%, %s 5.5px, %s 6px); }\n"
                 % (acc, acc, pal["accent-fg"], pal["accent-fg"], acc))
         self.vars.load_from_string(css)
         gs = Gtk.Settings.get_default()
