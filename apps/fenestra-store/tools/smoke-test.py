@@ -191,11 +191,17 @@ def ui_test():
         for alt in w.store.alternatives(w.store.catalogue()[0]) or []:
             w.show_app(alt.uid)
         w.search.set_text("notas")
-        for _ in range(4):
+        for _ in range(40):
+            if w.current == "search":
+                break
             yield
         check(w.current == "search" and bool(w.pages["search"].results), "live search shows results")
         w.search.set_text("")
-        yield
+        for _ in range(40):
+            if w.current != "search":
+                break
+            yield
+        check(w.current != "search", "clearing the search returns to the previous page")
         app = next(x for x in w.store.catalogue() if not x.installed)
         w.show_app(app.uid)
         w.pages["details"].action.clicked()

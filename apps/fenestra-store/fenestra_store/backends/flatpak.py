@@ -172,7 +172,8 @@ class FlatpakBackend(Backend):
                    name=c.name, summary=c.summary, description=c.description, developer=c.developer,
                    categories=cats, kind="game" if "games" in cats else "app", version=c.version,
                    license=c.license, homepage=c.homepage, keywords=c.keywords, icon_path=c.icon_path,
-                   icon_url=c.icon_url, screenshots=[Screenshot(url=u, caption=cap) for u, cap in c.screenshots],
+                   icon_url=c.icon_url, icon_name=c.icon_name,
+                   screenshots=[Screenshot(url=u, caption=cap) for u, cap in c.screenshots],
                    released=c.released, ref=ref, origin=remote,
                    desktop_id=c.desktop_id or f"{c.id.removesuffix('.desktop')}.desktop")
 

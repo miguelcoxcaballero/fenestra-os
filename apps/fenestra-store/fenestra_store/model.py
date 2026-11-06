@@ -107,6 +107,7 @@ class App:
     keywords: list = field(default_factory=list)
     icon_path: str = ""           # local icon file
     icon_url: str = ""            # remote icon
+    icon_name: str = ""           # icon theme name (AppStream "stock" icons)
     screenshots: list = field(default_factory=list)   # [Screenshot]
     art: tuple = ()               # demo: (hue 0..1, glyph name) for generated icons
     installed: bool = False

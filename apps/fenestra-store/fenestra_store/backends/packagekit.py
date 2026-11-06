@@ -118,7 +118,7 @@ class PackageKitBackend(Backend):
                     source="fedora", packaging="rpm", name=c.name, summary=c.summary, description=c.description,
                     developer=c.developer, categories=cats, kind="game" if "games" in cats else "app",
                     version=pkg.get_version() if pkg else c.version, license=c.license, homepage=c.homepage,
-                    keywords=c.keywords, icon_path=c.icon_path, icon_url=c.icon_url,
+                    keywords=c.keywords, icon_path=c.icon_path, icon_url=c.icon_url, icon_name=c.icon_name,
                     screenshots=[Screenshot(url=u, caption=cap) for u, cap in c.screenshots],
                     released=c.released, ref=pkg.get_id() if pkg else c.pkgname, origin=c.origin or "fedora",
                     desktop_id=c.desktop_id or c.id, installed=pkg is not None, pkgname=c.pkgname)

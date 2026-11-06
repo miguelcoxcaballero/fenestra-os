@@ -53,8 +53,9 @@ class Store(GObject.Object):
                 pass
 
     # ------------------------------------------------------------------ loading
-    def load(self):
-        """Load every backend's catalogue in a worker thread; emits 'loaded'."""
+    def load(self, sync=False):
+        """Load every backend's catalogue in a worker thread (or right away with sync=True,
+        used by screenshot mode so the first frame already shows the page); emits 'loaded'."""
         if self.loading:
             return
         self.loading = True
@@ -69,7 +70,10 @@ class Store(GObject.Object):
                     errors.append(f"{b.label}: {e}")
                     util.log("load failed", b.id, e)
             return apps, sources, errors
-        util.in_thread(work, on_done=self._loaded)
+        if sync:
+            self._loaded(work())
+        else:
+            util.in_thread(work, on_done=self._loaded)
 
     def _loaded(self, res):
         apps, sources, errors = res

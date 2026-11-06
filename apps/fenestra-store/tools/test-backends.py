@@ -87,7 +87,6 @@ def permissions():
 
 
 def backends():
-    from gi.repository import GLib  # noqa: F401
     for mod, cls in (("flatpak", "FlatpakBackend"), ("packagekit", "PackageKitBackend")):
         try:
             m = __import__(f"fenestra_store.backends.{mod}", fromlist=[cls])
