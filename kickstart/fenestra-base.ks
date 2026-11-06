@@ -50,6 +50,8 @@ generic-logos-httpd
 -gnome-shell-extension-background-logo
 # Fenestra Notepad replaces GNOME Text Editor.
 -gnome-text-editor
+# Windows-style boot/restart/update screens (theme built by fenestra-plymouth-theme).
+plymouth-plugin-script
 %end
 
 %post --nochroot --log=/mnt/sysroot/root/fenestra-overlay.log
@@ -163,6 +165,8 @@ for t in /usr/share/icons/*/; do [ -f "$t/index.theme" ] && gtk-update-icon-cach
 ln -sf ../../../usr/share/fenestra/assets/branding/fenestra-logo-256.png /usr/share/pixmaps/fenestra-logo.png 2>/dev/null || true
 
 # Quiet, Windows-like boot: firmware logo + spinner, hidden boot menu.
-plymouth-set-default-theme bgrt 2>/dev/null || true
+python3 /usr/libexec/fenestra/fenestra-plymouth-theme /usr/share/plymouth/themes/fenestra --lang en >/dev/null 2>&1 \
+    && plymouth-set-default-theme fenestra || plymouth-set-default-theme bgrt 2>/dev/null || true
+for k in /lib/modules/*/; do dracut -f --kver "$(basename "$k")" >/dev/null 2>&1 || true; done
 grub2-editenv - set menu_auto_hide=1 || true
 %end
