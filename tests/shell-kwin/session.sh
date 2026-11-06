@@ -285,6 +285,12 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     check windows-after-restart wait_for 'awk "/FENESTRA_SHELL_READY/{r++} r==2 && /FENESTRA_SHELL_WINDOWS count=3/{f=1} END{exit !f}" /out/shell.log' 40
     sleep 2
     check screenshot-after-restart shot 08-after-restart
+    if [ -n "${PERF:-}" ]; then
+        kill $SHELL_PID 2>/dev/null; sleep 1
+        bash /src/tests/perf/shell-idle.sh "${PERF_SECONDS:-30}" "${PERF_RUNS:-3}" > /out/perf.jsonl 2>/out/perf.err
+        log "perf: $(cat /out/perf.jsonl | tr '\n' ' ')"
+        pkill -x fenestra-shell
+    fi
     kill $SHELL_PID $KWIN 2>/dev/null
 }
 export -f probe bar role conf is
