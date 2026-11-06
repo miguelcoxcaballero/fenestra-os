@@ -6,7 +6,8 @@
  "02": {
   "name": "taskbar-hover",
   "key": "taskbar.button.hover",
-  "mode": "region",
+  "mode": "hoverdiff",
+  "ref": "24-caption-buttons",
   "seed": [
    "center",
    24
@@ -216,7 +217,8 @@
  "24": {
   "name": "caption-buttons",
   "key": "window.caption",
-  "mode": "region",
+  "mode": "hoverdiff",
+  "ref": "24-caption-buttons",
   "seed": [
    1900,
    1060
@@ -269,5 +271,26 @@
    40,
    540
   ]
+ },
+ "exclude": {
+  "-18-osd-volume": "el teclado USB emulado de QEMU no envía teclas multimedia: Windows no mostró el OSD",
+  "-100-23-desktop-menu": "el clic derecho en el escritorio no abrió el menú en las pasadas al 100 % (sí al 150 %)",
+  "-150-27-snap-layouts": "al 150 % el hover no cayó sobre Maximizar: no apareció el panel de ajuste",
+  "-22-tray-overflow": "la bandeja no tiene iconos ocultos fijos: el clic abre otro flyout (OneDrive), no el desbordamiento",
+  "-24-caption-buttons": "estado de referencia sin hover para medir los botones de ventana (se usa como ref)"
+ },
+ "motion": {
+  "start-open": {
+   "motion.popup.open": "duration_ms",
+   "motion.popup.offset": "offset_px"
+  },
+  "quick-open": {
+   "motion.quick.open": "duration_ms",
+   "motion.quick.offset": "offset_px"
+  },
+  "notifications-open": {
+   "motion.notifications.open": "duration_ms",
+   "motion.notifications.offset": "offset_x_px"
+  }
  }
 }

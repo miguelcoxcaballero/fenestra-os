@@ -105,6 +105,7 @@ def bar_top(shot):
 def measure_taskbar(shot, out, spec):
     top = taskbar_top(shot)
     _TB[(os.path.dirname(shot.path), shot.theme, shot.scale)] = top
+    _BASE[(os.path.dirname(shot.path), shot.theme, shot.scale)] = shot.im
     out.add(shot, 'taskbar.height', shot.H - top, (4, top))
     fill = median_patch(shot, (4, top + 6), 2)
     out.add(shot, 'taskbar.background', hexc(fill), (4, top + 6), reliable=False, note='acrylic/mica: VM render')
@@ -141,7 +142,10 @@ def median_patch(shot, at, r):
 
 
 def panel_mask(shot, limit_y):
-    """1 where the pixel is lighter than the solid background (panel), 0 for background/shadow."""
+    """1 where the pixel is lighter than the solid background (panel), 0 for background/shadow
+    and for anything already on the empty desktop of the same pass (icons, evaluation watermark)."""
+    base = _BASE.get((os.path.dirname(shot.path), shot.theme, shot.scale))
+    bpx = base.load() if base is not None else None
     bl = lum(shot.bg)
     m = Image.new('L', (shot.W, shot.H), 0)
     mp = m.load()
@@ -150,6 +154,8 @@ def panel_mask(shot, limit_y):
         for x in range(shot.W):
             c = px[x, y]
             if lum(c) > bl + 3 or max(abs(c[i] - shot.bg[i]) for i in range(3)) > 10 and lum(c) >= bl:
+                if bpx is not None and max(abs(c[i] - bpx[x, y][i]) for i in range(3)) <= 2:
+                    continue
                 mp[x, y] = 255
     return m
 
@@ -257,10 +263,70 @@ def elements(shot, box, fill, radius, tol=28, merge=6):
     return outl
 
 
+def controls(shot, box, fill, radius, lo=3, hi=28, min_area=300):
+    """Flat areas whose colour is close to, but not the panel fill: search boxes, buttons,
+    footers, toggles' tracks. Returns their boxes and median colour."""
+    x0, y0, x1, y1 = box
+    inset = max(2, radius // 2)
+    w, h = x1 - x0, y1 - y0
+    m = Image.new('L', (w, h), 0)
+    mp = m.load()
+    px = shot.px
+    for y in range(inset, h - inset):
+        for x in range(inset, w - inset):
+            c = px[x0 + x, y0 + y]
+            d = max(abs(c[i] - fill[i]) for i in range(3))
+            if lo < d <= hi:
+                mp[x, y] = 255
+    res = []
+    for y in range(inset, h - inset, 2):
+        for x in range(inset, w - inset, 2):
+            if mp[x, y] == 255:
+                ImageDraw.floodfill(m, (x, y), 100)
+                part = m.point(lambda v: 255 if v == 100 else 0)
+                bb = part.getbbox()
+                ImageDraw.floodfill(m, (x, y), 50)
+                area = sum(part.histogram()[255:])
+                if bb and area >= min_area and (bb[2] - bb[0]) >= 12 and (bb[3] - bb[1]) >= 8:
+                    cx, cy = bb[0] + 3, (bb[1] + bb[3]) // 2
+                    res.append({'box': [x0 + bb[0], y0 + bb[1], bb[2] - bb[0], bb[3] - bb[1]],
+                                'color': hexc(px[x0 + cx, y0 + cy])})
+    return res
+
+
+_BASE = {}
+_BOX = {}
+
+
+def auto_seed(shot, base, limit_y):
+    """A pixel of the panel's fill: the most frequent colour among pixels that differ from the
+    empty desktop (capture 01 of the same pass), lighter than the background, nearest their centre."""
+    bp, px = base.load(), shot.px
+    bl = lum(shot.bg)
+    cols, pts = {}, []
+    for y in range(0, limit_y, 3):
+        for x in range(0, shot.W, 3):
+            c = px[x, y]
+            if c != bp[x, y] and max(abs(c[i] - bp[x, y][i]) for i in range(3)) > 6 and lum(c) > bl + 2:
+                cols[c] = cols.get(c, 0) + 1
+                pts.append((x, y, c))
+    if not cols:
+        raise ValueError(f'{shot.file}: nothing differs from the empty desktop')
+    fill = max(cols, key=cols.get)
+    sel = [(x, y) for x, y, c in pts if c == fill]
+    cx = sum(x for x, _ in sel) / len(sel)
+    cy = sum(y for _, y in sel) / len(sel)
+    x, y = min(sel, key=lambda q: (q[0] - cx) ** 2 + (q[1] - cy) ** 2)
+    return [x, y]
+
+
 def measure_panel(shot, out, spec, tb_top):
     # seed: a pixel inside the panel; the sidecar wins, else panels.json (100 % coords, y from the bottom)
+    base = _BASE.get((os.path.dirname(shot.path), shot.theme, shot.scale))
     if 'seed' in shot.meta:
         seed = shot.meta['seed']
+    elif base is not None and spec.get('mode', 'panel') == 'panel':
+        seed = auto_seed(shot, base, tb_top if spec.get('above_taskbar', True) else shot.H)
     else:
         sx, sy = spec['seed']
         seed = [shot.W // 2 if sx == 'center' else int(sx * shot.scale), shot.H - int(sy * shot.scale)]
@@ -280,6 +346,22 @@ def measure_panel(shot, out, spec, tb_top):
         ImageDraw.floodfill(sel, tuple(seed), 128)
         sel = sel.point(lambda v: 255 if v == 128 else 0)
         box = sel.getbbox()
+    elif mode == 'hoverdiff':
+        # the hover highlight = what differs from the same state without hover, around the seed
+        ref = Image.open(os.path.join(os.path.dirname(shot.path),
+                                      f"{shot.theme}-{int(round(shot.scale * 100))}-{spec['ref']}.png")).convert('RGB')
+        rp = ref.load()
+        sel = Image.new('L', (shot.W, shot.H), 0)
+        sp = sel.load()
+        r = int(80 * shot.scale)
+        for y in range(max(0, seed[1] - r), min(shot.H, seed[1] + r)):
+            for x in range(max(0, seed[0] - r), min(shot.W, seed[0] + r)):
+                if max(abs(shot.px[x, y][i] - rp[x, y][i]) for i in range(3)) > 3:
+                    sp[x, y] = 255
+        # drop the mouse pointer (the box of differences is the highlight, pointer drawn on top)
+        box = sel.getbbox()
+        if not box:
+            raise ValueError(f'{shot.file}: hover changed nothing')
     elif 'mask' in shot.meta:
         # exact panel shape supplied with the capture (Fenestra bench: from the surface's alpha)
         sel = Image.open(os.path.join(os.path.dirname(shot.path), shot.meta['mask'])).convert('L')
@@ -310,6 +392,12 @@ def measure_panel(shot, out, spec, tb_top):
         b = e['box']
         out.add(shot, f'{p}.element[{i}]', {'x': b[0] - x0, 'y': b[1] - y0, 'w': b[2], 'h': b[3], 'color': e['color']},
                 (b[0], b[1]))
+    _BOX[shot.file] = (box, seed)
+    if mode != 'fullscreen':
+        for i, c in enumerate(controls(shot, box, fill, r)):
+            b = c['box']
+            out.add(shot, f'{p}.control[{i}]', {'x': b[0] - x0, 'y': b[1] - y0, 'w': b[2], 'h': b[3], 'color': c['color']},
+                    (b[0], b[1]))
     for name, pt in spec.get('probes', {}).items():
         pt = [int(pt[0] * shot.scale) + x0, int(pt[1] * shot.scale) + y0]
         out.add(shot, f'{p}.{name}', hexc(shot.px[pt[0], pt[1]]), pt)
@@ -318,47 +406,128 @@ def measure_panel(shot, out, spec, tb_top):
     # the same numbers under design/tokens.json names (panels.json "tokens": {suffix: token})
     for suffix, token in spec.get('tokens', {}).items():
         src = next((e for e in reversed(out.entries) if e['key'] == f'{p}.{suffix}' and e['source'] == shot.file), None)
-        if src:
+        if src and token != src['key']:
             out.entries.append(dict(src, key=token, measured_as=src['key']))
     return box
+
+
+def measure_wallpaper(shot, out, spec):
+    """Non-solid background: only the acrylic colour, sampled inside the box measured on the
+    solid pass of the same capture (geometry is never read off a photo)."""
+    if shot.file not in _BOX or not spec.get('key'):
+        return False
+    box, seed = _BOX[shot.file]
+    p = spec['key']
+    cx, cy = (box[0] + box[2]) // 2, box[1] + 8
+    for name, pt in (('background.acrylic', seed), ('background.acrylic.top', (cx, cy))):
+        out.add(shot, f'{p}.{name}', hexc(median_patch(shot, tuple(pt), 2)), pt, reliable=False,
+                note='acrylic over fenestra-bloom-dark.jpg, VM render (no GPU)')
+    return True
+
+
+def motion_entries(d, panels_motion):
+    """motion.py analyses -> motion.* keys (all reliable=false)."""
+    ents = []
+    for name, keys in panels_motion.items():
+        f = os.path.join(d, name, 'analysis.json')
+        if not os.path.exists(f):
+            continue
+        a = json.load(open(f))
+        if 'duration_ms' not in a:
+            continue
+        settled = next((r for r in a['frames'] if r['t_ms'] == a['settled_ms']), None)
+        src = f"motion/{name}/f{settled['frame']:03d}.png" if settled else f'motion/{name}'
+        at = a['final_box'][:2]
+        for k, field in keys.items():
+            ents.append({'key': k, 'value': abs(a[field]), 'scale': 1.0, 'theme': 'dark', 'source': src, 'at': at,
+                         'reliable': False, 'note': f"QMP screendump every ~{a['frame_interval_ms']} ms, no GPU; {name}"})
+    return ents
+
+
+GEOM = re.compile(r'(\.(x|y|width|height|radius|gap\.taskbar|edge\.left|edge\.right)|^taskbar\.(height|button)|'
+                  r'^flyout\.(gap|edge|radius)|^(start|search|quick|notifications|toast|osd)\.(width|height)|'
+                  r'^menu\.width\.min|^window\.button\.(width|height))$')
+
+
+def cross_check(entries):
+    """The same panel is captured in 4 passes (dark/light x 100/150 %). A geometry value that,
+    divided by its scale, is off the median of the others by more than max(2 px, 4 %) is kept
+    but marked reliable=false: a wrong seed or a stray window, not a design difference."""
+    groups = {}
+    for e in entries:
+        if isinstance(e['value'], (int, float)) and GEOM.search(e['key']):
+            stem = e['source'].split('-', 2)[2]          # NN-name.png without theme/pct
+            groups.setdefault((e['key'], stem), []).append(e)
+    for g in groups.values():
+        if len(g) == 2:
+            a_, b_ = (e['value'] / e['scale'] for e in g)
+            if abs(a_ - b_) > max(2, 0.04 * max(abs(a_), abs(b_))):
+                for e in g:
+                    e['reliable'] = False
+                    e['note'] = f'solo dos pasadas y no coinciden ({a_:g} / {b_:g} px a escala 1)'
+            continue
+        if len(g) < 2:
+            continue
+        norm = sorted(e['value'] / e['scale'] for e in g)
+        med = norm[len(norm) // 2]
+        for e in g:
+            n = e['value'] / e['scale']
+            if abs(n - med) > max(2, 0.04 * abs(med)):
+                e['reliable'] = False
+                e['note'] = f'no cuadra con las otras pasadas (mediana {med:g} px a escala 1)'
 
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     repo = os.path.dirname(os.path.dirname(here))
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('shots')
+    ap.add_argument('shots', nargs='+', help='solid-background dir first, then wallpaper dirs')
     ap.add_argument('-o', '--out', default=os.path.join(repo, 'design/reference/measurements.json'))
     ap.add_argument('--panels', default=os.path.join(here, 'panels.json'))
+    ap.add_argument('--motion', help='~/fenestra-ref/motion')
     ap.add_argument('--only', help='regex on file names')
     a = ap.parse_args()
     panels = json.load(open(a.panels))
+    exclude = panels.get('exclude', {})
     out = Out()
-    skipped = []
-    for f in sorted(os.listdir(a.shots)):
-        if not NAME.match(f) or (a.only and not re.search(a.only, f)):
-            continue
-        shot = Shot(os.path.join(a.shots, f))
-        spec = panels.get(shot.num)
-        if not spec:
-            skipped.append(f'{f}: no entry {shot.num} in panels.json')
-            continue
-        try:
-            tb = measure_taskbar(shot, out, spec) if shot.num == '01' else bar_top(shot)
-            if spec.get('key') and shot.num != '01':
-                measure_panel(shot, out, spec, tb)
-        except ValueError as e:
-            skipped.append(str(e))
-        print(f'{f}: ok', file=sys.stderr)
-    doc = {'_comment': ['Measured on Windows 11 Enterprise Evaluation in a QEMU/KVM VM by tests/visual/measure.py.',
-                        'Keys follow design/tokens.json; reliable=false: VM render (acrylic, shadow, motion) or non-solid background.',
-                        'Screenshots stay outside the repo (~/fenestra-ref).'],
-           'skipped': skipped, 'entries': out.entries}
+    skipped, not_measured = [], []
+    for d in a.shots:
+        for f in sorted(os.listdir(d)):
+            if not NAME.match(f) or (a.only and not re.search(a.only, f)):
+                continue
+            why = next((r for pat, r in exclude.items() if re.search(pat, f)), None)
+            if why:
+                not_measured.append({'source': f, 'reason': why})
+                continue
+            shot = Shot(os.path.join(d, f))
+            spec = panels.get(shot.num)
+            if not spec:
+                skipped.append(f'{f}: no entry {shot.num} in panels.json')
+                continue
+            try:
+                if not shot.solid:
+                    if not measure_wallpaper(shot, out, spec):
+                        skipped.append(f'{f}: no solid-pass box to sample')
+                    continue
+                tb = measure_taskbar(shot, out, spec) if shot.num == '01' else bar_top(shot)
+                if spec.get('key') and shot.num != '01':
+                    measure_panel(shot, out, spec, tb)
+            except (ValueError, StopIteration) as e:
+                skipped.append(f'{f}: {e}')
+            print(f'{f}: ok', file=sys.stderr)
+    cross_check(out.entries)
+    if a.motion:
+        out.entries += motion_entries(a.motion, panels.get('motion', {}))
+    doc = {'_comment': ['Measured on Windows 11 Enterprise Evaluation (build 26100, es-ES) in a QEMU/KVM VM by tests/visual/measure.py.',
+                        'Keys follow design/tokens.json where one exists (measured_as = the panel key it was read from).',
+                        'reliable=false: VM render (acrylic, shadow, motion) or a non-solid background.',
+                        'source = screenshot in ~/fenestra-ref/raw/<wall>/ (never in the repo); at = pixel it was read at.'],
+           'not_measured': not_measured, 'skipped': skipped, 'entries': out.entries}
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
     with open(a.out, 'w') as fh:
         json.dump(doc, fh, indent=1, ensure_ascii=False)
         fh.write('\n')
-    print(f'{len(out.entries)} entries -> {a.out}; skipped {len(skipped)}', file=sys.stderr)
+    print(f'{len(out.entries)} entries -> {a.out}; skipped {len(skipped)}, not measured {len(not_measured)}', file=sys.stderr)
 
 
 if __name__ == '__main__':

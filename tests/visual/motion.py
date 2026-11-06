@@ -81,7 +81,8 @@ def analyse(d):
         settled = next((r for r in moving if r['box'] == final), moving[-1])
         res.update({'first_change_ms': first['t_ms'], 'settled_ms': settled['t_ms'],
                     'duration_ms': round(settled['t_ms'] - first['t_ms'], 1),
-                    'offset_px': first['box'][1] - final[1], 'final_box': final,
+                    'offset_px': first['box'][1] - final[1], 'offset_x_px': first['box'][0] - final[0],
+                    'final_box': final,
                     'frame_interval_ms': round((times[-1] - times[1]) / max(1, len(times) - 2), 1),
                     'reliable': False})
     json.dump(res, open(f'{d}/analysis.json', 'w'), indent=1)
