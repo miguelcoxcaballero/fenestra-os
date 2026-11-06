@@ -1,0 +1,14 @@
+{
+  "uuid": "single-user-gdm@local",
+  "name": "Single user GDM",
+  "description": "Select the sole available account once on the login screen; authentication remains required.",
+  "shell-version": [
+    "49",
+    "50",
+    "51"
+  ],
+  "session-modes": [
+    "gdm"
+  ],
+  "version": 1
+}

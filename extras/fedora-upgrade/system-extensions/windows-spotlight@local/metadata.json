@@ -1,0 +1,1 @@
+{"uuid": "windows-spotlight@local", "name": "Windows Spotlight Backgrounds", "description": "Use original cached Windows Spotlight images on both login and lock screens.", "shell-version": ["49", "50", "51"], "session-modes": ["gdm", "user", "unlock-dialog"], "version": 1}

@@ -24,7 +24,37 @@ export default class SingleUser extends Extension {
             return GLib.SOURCE_REMOVE;
         });
     }
+    // Everything the curtain needs from GDM's LoginDialog; if a GNOME release changes any of it,
+    // the curtain is skipped and the standard login stays (never hide the login form blindly).
+    _supported(dialog) {
+        const need = ['_beginVerificationForItem', '_showPrompt', '_updateCancelButton'];
+        return need.every(m => typeof dialog[m] === 'function') && dialog._userList?._items instanceof Map &&
+            !!Main.layoutManager.screenShieldGroup;
+    }
+
+    _failSafe(dialog, error) {
+        console.error(`Fenestra login: ${error?.message ?? error}; showing the standard login`);
+        try { this._cleanup(); } catch (e) { console.error(e); }
+        if (dialog?._userSelectionBox) {
+            dialog._userSelectionBox.opacity = this._listOpacity ?? 255;
+            dialog._userSelectionBox.show();
+        }
+        try { dialog?._userList?.grab_key_focus(); } catch (e) { console.error(e); }
+    }
+
     _showCurtain(dialog) {
+        if (!this._supported(dialog)) {
+            console.warn('Fenestra login: this GDM is not supported, standard login kept');
+            return;
+        }
+        try {
+            this._showCurtainUnsafe(dialog);
+        } catch (e) {
+            this._failSafe(dialog, e);
+        }
+    }
+
+    _showCurtainUnsafe(dialog) {
         this._attachRaceGuard(dialog);
         this._dismissing=false;
         this._dialog=dialog;
@@ -48,6 +78,7 @@ export default class SingleUser extends Extension {
     }
     _dismiss(dialog) {
         if(this._dismissing)return;
+        if(!this._face){this._failSafe(dialog, new Error('clock face missing'));return;}
         this._dismissing=true;
         // Swap identical backgrounds in one frame; never crossfade two photos.
         this._curtain.set_style('background-color: transparent;');
@@ -56,6 +87,7 @@ export default class SingleUser extends Extension {
         dialog._userSelectionBox.opacity=0;
         dialog._windowsDimmer?.ease({opacity:82,duration:300,mode:Clutter.AnimationMode.EASE_OUT_CUBIC});
         this._face.actor.ease({opacity:0,translation_y:-Math.round(Main.layoutManager.primaryMonitor.height*0.12),duration:300,mode:Clutter.AnimationMode.EASE_OUT_CUBIC,onComplete:()=>{
+          try {
             this._cleanup();
             dialog._userSelectionBox.opacity=oldListOpacity;
             const items=[...dialog._userList._items.values()];
@@ -70,6 +102,7 @@ export default class SingleUser extends Extension {
                 dialog._showPrompt();
             }
             else dialog._userList.grab_key_focus();
+          } catch (e) { this._failSafe(dialog, e); }
         }});
     }
 
