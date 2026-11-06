@@ -1,0 +1,27 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Fenestra's xdg-desktop-portal backend (org.freedesktop.impl.portal.Print).
+
+Installed to /usr/libexec/; the Python package lives in /usr/share/fenestra/portal.
+Also runs from the source tree (desktop/portal/).
+"""
+import os
+import sys
+
+here = os.path.dirname(os.path.realpath(__file__))
+for cand in (here, "/usr/share/fenestra/portal"):
+    if os.path.isdir(os.path.join(cand, "fenestra_portal")):
+        sys.path.insert(0, cand)
+        break
+
+# A portal backend must not call the portals itself: GTK would ask
+# org.freedesktop.portal.Desktop for settings while xdg-desktop-portal is still
+# waiting for this backend to start (a deadlock until the activation times out).
+_debug = [f for f in os.environ.get("GDK_DEBUG", "").split(",") if f and f != "portals"]
+os.environ["GDK_DEBUG"] = ",".join(_debug + ["no-portals"])
+os.environ["GTK_USE_PORTAL"] = "0"
+os.environ["ADW_DISABLE_PORTAL"] = "1"
+
+from fenestra_portal.main import main  # noqa: E402
+
+sys.exit(main())
