@@ -13,6 +13,7 @@ from fenestra_sidebar import _L, tr
 _L.setdefault('es', {}).update({'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
     'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar', 'Compact view': 'Vista compacta', 'View': 'Ver', '1 item': '1 elemento', '%d items': '%d elementos',
     'Date modified': 'Fecha de modificación', 'This folder is empty.': 'Esta carpeta está vacía.',
+    'Search Results in %s': 'Resultados de la búsqueda en %s', '%s - Search Results in %s': '%s - Resultados de la búsqueda en %s',
     '1 item selected': '1 elemento seleccionado', '%d items selected': '%d elementos seleccionados', '%d bytes': '%d bytes', 'Collection': 'Colección', 'Add a folder': 'Agregar una carpeta'})
 VIEWS = [(k, tr(v)) for k, v in [('extra-large','Extra large icons'),('large','Large icons'),('medium','Medium icons'),('small','Small icons'),('list','List'),('details','Details'),('tiles','Tiles'),('content','Content')]]
 
@@ -198,6 +199,9 @@ class FenestraViews:
     def wanted(self,location):
         """Windows keeps a view per folder: Details by default, Large icons for Pictures/Videos."""
         uri=location.get_uri()
+        # Explorer lists results as Content, but Nautilus crashes when a search's view is rebuilt
+        # (list -> grid), so a search keeps the folder's view.
+        if location.get_uri_scheme()=='x-nautilus-search':return self.mode
         if uri in self.folders:return self.folders[uri]
         media=[GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES),GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_VIDEOS)]+gallery_folders()
         return 'large' if location.get_path() and location.get_path() in media else 'details'
@@ -360,6 +364,7 @@ class FenestraViews:
         """Explorer ends the address with a chevron only when the folder has subfolders."""
         if special:return True
         slot=self.slot();location=slot.get_property('location') if slot else None
+        if location is not None and location.get_uri_scheme()=='x-nautilus-search':return False
         if not location or not location.get_path():return True
         try:
             for info in location.enumerate_children('standard::type,standard::is-hidden',Gio.FileQueryInfoFlags.NONE,None):
@@ -371,14 +376,16 @@ class FenestraViews:
         """Nautilus' home crumb ('Carpeta personal') is Explorer's Home; inside a known folder
         (Documents, Music, ...) Explorer starts the address at that folder behind This PC's icon."""
         home=crumbs[0];box=home.get_child()
-        if special or not isinstance(box,Gtk.Box):return
+        if special in ('gallery','computer') or not isinstance(box,Gtk.Box):return
+        slot=self.slot();location=slot.get_property('location') if slot else None
+        if location is not None and location.get_uri_scheme()=='x-nautilus-search':
+            self._search_crumb(crumbs);return
         lab=next((c for c in walk(box) if isinstance(c,Gtk.Label) and not c.has_css_class('fenestra-crumb-sep')),None)
         if lab is None:return
         names={GLib.dgettext('nautilus','Home'),'Home',tr('Home')}
         if lab.get_label() in names or getattr(lab,'_fenestra_home',False):
             lab._fenestra_home=True;lab.set_label(tr('Home'))
         else:return
-        slot=self.slot();location=slot.get_property('location') if slot else None
         path=location.get_path() if location else None
         known={GLib.get_user_special_dir(getattr(GLib.UserDirectory,k)) for k in ('DIRECTORY_DESKTOP','DIRECTORY_DOCUMENTS','DIRECTORY_DOWNLOAD','DIRECTORY_MUSIC','DIRECTORY_PICTURES','DIRECTORY_VIDEOS')}
         known.discard(None);known.discard(GLib.get_home_dir())
@@ -394,6 +401,21 @@ class FenestraViews:
         if nxt is not None:
             for w in walk(nxt):
                 if isinstance(w,Gtk.Label) and w.has_css_class('fenestra-crumb-sep') and not w.is_ancestor(crumbs[1]):w.set_visible(not inside)
+
+    def _search_crumb(self,crumbs):
+        """A search reads '[This PC] > Search results in <folder>' in Explorer's address bar."""
+        for c in crumbs[1:]:c.get_parent().set_visible(False)
+        for w in walk(crumbs[0].get_parent()):
+            if isinstance(w,Gtk.Label) and w.has_css_class('fenestra-crumb-sep') and not w.is_ancestor(crumbs[0]):w.set_visible(False)
+        box=crumbs[0].get_child()
+        if isinstance(box,Gtk.Box) and not next((c for c in walk(box) if isinstance(c,Gtk.Image)),None):
+            box.prepend(Gtk.Image.new_from_icon_name('win11-explorer-thispc'))
+        labels=[c for c in walk(box) if isinstance(c,Gtk.Label) and not c.has_css_class('fenestra-crumb-sep')]
+        if labels:
+            labels[0].set_label(tr('Search Results in %s')%getattr(self,'_folder_title',''));labels[0].set_visible(True)
+        image=next((c for c in walk(box) if isinstance(c,Gtk.Image)),None)
+        if image:
+            image.set_from_icon_name('win11-explorer-thispc');image.set_pixel_size(16);image.set_visible(True);image.add_css_class('fenestra-mono')
 
     def _empty(self,slot):
         for w in walk(slot):
@@ -469,6 +491,8 @@ class FenestraViews:
             slot.connect('notify::location',self.queue)
         location=slot.get_property('location')
         uri=location.get_uri() if location else None
+        if location is not None and location.get_uri_scheme()!='x-nautilus-search':
+            self._folder_title=tr('Home') if location.get_path()==GLib.get_home_dir() else (slot.get_property('title') if slot.find_property('title') else '') or location.get_basename()
         self.special=self.pages.update(slot)
         self._commandbar(self.special)
         self._crumbs(self.special)
@@ -549,7 +573,8 @@ class FenestraViews:
         if cell.get_property('icon-size')!=size:cell.set_property('icon-size',size)
         parent=cell.get_parent()
         if parent:parent.set_halign(Gtk.Align.FILL if mode=='content' else Gtk.Align.START)
-        cell.set_size_request(210 if mode!='content' else max(360,self.slot().get_width()-48),24 if self.compact and size==16 else 32 if size==16 else 64)
+        # Content rows fill the view (hexpand); a width taken from the slot would feed back into it.
+        cell.set_size_request(210 if mode!='content' else 360,24 if self.compact and size==16 else 32 if size==16 else 64)
         cell.set_valign(Gtk.Align.START);cell.set_halign(Gtk.Align.FILL);cell.set_hexpand(True)
         cell.add_css_class('windows-horizontal-cell')
         children=[];c=cell.get_first_child()

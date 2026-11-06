@@ -49,9 +49,10 @@
                   <object class="GtkStackPage">
                     <property name="name">search</property>
                     <property name="child">
-                      <object class="GtkBox" id="search_container">
-                        <property name="orientation">vertical</property>
-                      </object>
+                      <!-- Fenestra: Explorer types the query in the search box on the right;
+                           search_container sits after search_button_stack (fenestra_views.py
+                           shows it in the box's place) and the address keeps the path bar. -->
+                      <object class="GtkBox" />
                     </property>
                   </object>
                 </child>
@@ -100,6 +101,15 @@
                 <child>
                   <object class="AdwBin" id="search_button_placeholder" />
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox" id="search_container">
+                <property name="orientation">vertical</property>
+                <property name="visible">false</property>
+                <style>
+                  <class name="fenestra-search-container" />
+                </style>
               </object>
             </child>
             <property name="hexpand">true</property>
