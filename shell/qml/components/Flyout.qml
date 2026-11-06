@@ -10,7 +10,11 @@ Window {
     property var targetScreen
     // Horizontal centre the flyout should line up with (screen coordinates), or -1 for "right edge".
     property real anchorX: -1
-    property bool rightAligned: anchorX < 0
+    // Or the screen x of its left edge (menus that open at the pointer), -1 = use anchorX.
+    property real anchorLeft: -1
+    property bool rightAligned: anchorX < 0 && anchorLeft < 0
+    // Distance above the taskbar (its exclusive zone); menus opened from Start sit higher.
+    property int gap: Metrics.flyoutGap
     default property alias content: body.data
     property alias background: frame
     property int padding: 4
@@ -21,19 +25,20 @@ Window {
 
     color: "transparent"
     flags: Qt.FramelessWindowHint
-    width: body.childrenRect.width + 2 * padding
-    height: body.childrenRect.height + 2 * padding
+    // Never 0: a layer surface of width 0 must be anchored left and right (protocol error).
+    width: Math.max(1, body.childrenRect.width + 2 * padding)
+    height: Math.max(1, body.childrenRect.height + 2 * padding)
     visible: false
 
     LayerShell.Window.scope: "fenestra-flyout"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
                                | (rightAligned ? LayerShell.Window.AnchorRight : LayerShell.Window.AnchorLeft)
-    LayerShell.Window.margins.bottom: Metrics.flyoutGap
+    LayerShell.Window.margins.bottom: gap
     LayerShell.Window.margins.right: Metrics.flyoutEdge
     LayerShell.Window.margins.left: {
         if (rightAligned || !targetScreen) return Metrics.flyoutEdge
-        const x = Math.round(anchorX - width / 2)
+        const x = Math.round(anchorLeft >= 0 ? anchorLeft : anchorX - width / 2)
         return Math.max(Metrics.flyoutEdge, Math.min(x, targetScreen.width - width - Metrics.flyoutEdge))
     }
     LayerShell.Window.exclusionZone: 0

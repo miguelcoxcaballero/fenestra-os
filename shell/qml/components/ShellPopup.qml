@@ -11,6 +11,14 @@ Window {
     property var targetScreen
     property bool leftAligned: ShellSettings.taskbarAlignment === "left"
     property bool shown: false
+    // Screen x of the left edge (Search: the taskbar's search box), -1 = centred (Start).
+    property real anchorLeft: -1
+    // Where it lands on its screen (for menus opened from inside it).
+    readonly property real screenX: anchorLeft >= 0 && targetScreen ? Math.max(Metrics.flyoutEdge, Math.min(Math.round(anchorLeft), targetScreen.width - width - Metrics.flyoutEdge))
+                                    : leftAligned || !targetScreen ? Metrics.flyoutEdge : Math.round((targetScreen.width - width) / 2)
+    // Opening motion: rise by openOffset in openDuration (decelerate), or fade when openOffset is 0.
+    property int openOffset: Metrics.popupOffset
+    property int openDuration: Metrics.popupOpen
     default property alias content: panel.data
     property alias panel: panel
     signal opened()
@@ -20,9 +28,9 @@ Window {
     visible: false
     LayerShell.Window.scope: "fenestra-start"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
-    LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | (leftAligned ? LayerShell.Window.AnchorLeft : 0)
+    LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | (leftAligned || anchorLeft >= 0 ? LayerShell.Window.AnchorLeft : 0)
     LayerShell.Window.margins.bottom: Metrics.flyoutGap
-    LayerShell.Window.margins.left: Metrics.flyoutEdge
+    LayerShell.Window.margins.left: anchorLeft >= 0 ? screenX : Metrics.flyoutEdge
     LayerShell.Window.exclusionZone: 0
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
 
@@ -33,7 +41,8 @@ Window {
         visible = true
         ShellUtil.enableBlur(popup, Metrics.flyoutRadius)
         requestActivate()
-        panel.y = Motion.reduced ? 0 : Metrics.popupOffset
+        panel.y = Motion.reduced ? 0 : openOffset
+        panel.opacity = Motion.reduced || openOffset > 0 ? 1 : 0
         slideIn.restart()
         opened()
     }
@@ -46,10 +55,16 @@ Window {
     function toggle() { shown ? close() : open() }
     onActiveChanged: if (!active && shown) close()
 
-    NumberAnimation { id: slideIn; target: panel; property: "y"; to: 0; duration: Metrics.popupOpen; easing.type: Easing.OutQuint }
+    ParallelAnimation {
+        id: slideIn
+        NumberAnimation { target: panel; property: "y"; to: 0; duration: popup.openDuration
+                          easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.decelerate }
+        NumberAnimation { target: panel; property: "opacity"; to: 1; duration: popup.openDuration }
+    }
     SequentialAnimation {
         id: slideOut
-        NumberAnimation { target: panel; property: "y"; to: Metrics.popupOffset; duration: Metrics.popupClose; easing.type: Easing.InQuad }
+        NumberAnimation { target: panel; property: popup.openOffset > 0 ? "y" : "opacity"; to: popup.openOffset > 0 ? popup.openOffset : 0
+                          duration: Metrics.popupClose; easing.type: Easing.InQuad }
         ScriptAction { script: { popup.visible = false; popup.closed() } }
     }
 
@@ -61,8 +76,9 @@ Window {
             id: panel
             width: parent.width; height: parent.height
             radius: Metrics.flyoutRadius
-            color: Theme.acrylic
-            border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(0, 0, 0, 0.10)
+            // Flat fill of the reference (acrylic fallback); KWin's blur still runs behind it.
+            color: Metrics.themed("start.fill")
+            border.color: Metrics.themed("start.border")
             border.width: 1
             Keys.onEscapePressed: popup.close()
             focus: true

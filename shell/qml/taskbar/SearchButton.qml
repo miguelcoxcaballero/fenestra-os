@@ -6,33 +6,42 @@ import Fenestra.Shell
 Item {
     id: search
     property string mode: ShellSettings.searchMode
+    // Search is open: the box is its entry (the text typed in the flyout shows here).
+    property bool checked: false
+    property string query: ""
+    // Left edge of the box in this item (the Search flyout lines up with it).
+    readonly property real boxX: (Metrics.taskPitch - Metrics.taskButton) / 2 + (mode === "box" ? Metrics.tok("search.box.offset", 1) : 0)
     signal clicked()
     visible: mode !== "hidden"
-    width: mode === "box" ? Metrics.searchBoxWidth : mode === "iconLabel" ? row.implicitWidth + 22 : Metrics.taskButton
-    height: Metrics.taskButton
+    // Cells of the taskbar.button.pitch row: the plate (or the box) with 2 px on each side.
+    width: (mode === "box" ? Metrics.searchBoxWidth : mode === "iconLabel" ? row.implicitWidth + 22 : Metrics.taskButton)
+           + Metrics.taskPitch - Metrics.taskButton
+    height: Metrics.taskbarHeight
     Accessible.role: Accessible.Button
     Accessible.name: Strings.tr("Search")
 
     Rectangle {
-        anchors.centerIn: parent
-        width: parent.width
-        height: search.mode === "box" ? Metrics.searchBoxHeight : (search.mode === "iconLabel" ? 40 : parent.height)
+        id: box
+        x: search.boxX; anchors.verticalCenter: parent.verticalCenter
+        width: parent.width - Metrics.taskPitch + Metrics.taskButton
+        height: search.mode === "box" ? Metrics.searchBoxHeight : Metrics.taskButton
         radius: search.mode === "box" ? height / 2 : Metrics.controlRadius
-        color: search.mode === "box"
-               ? (Theme.dark ? Qt.rgba(1, 1, 1, mouse.containsMouse ? 0.09 : 0.06) : Qt.rgba(1, 1, 1, mouse.containsMouse ? 0.85 : 0.7))
-               : (mouse.containsMouse ? Theme.hover : "transparent")
-        border.width: search.mode === "box" ? 1 : 0
-        border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.08)
+        readonly property bool lit: search.checked || mouse.containsMouse
+        color: search.mode === "box" ? Metrics.themed(search.checked ? "search.box.open" : "search.box.fill")
+               : !lit ? "transparent" : Metrics.themed(mouse.containsMouse ? "taskbar.plate.hover" : "taskbar.plate")
+        border.width: search.mode === "box" || lit ? 1 : 0
+        border.color: search.mode === "box" ? Metrics.themed("search.box.border") : Metrics.themed("taskbar.plate.border")
     }
     Row {
         id: row
         anchors.verticalCenter: parent.verticalCenter
-        x: search.mode === "icon" ? (parent.width - 20) / 2 : (search.mode === "box" ? 14 : 10)
-        spacing: 10
+        x: search.mode === "icon" ? (parent.width - 20) / 2
+           : search.boxX + (search.mode === "box" ? Metrics.tok("search.box.icon.x", 10) : 10)
+        spacing: search.mode === "box" ? Metrics.tok("search.box.text.x", 37) - Metrics.tok("search.box.icon.x", 10) - 16 : 10
         Image {
-            width: 20; height: 20
+            width: 16 + (search.mode === "box" ? 0 : 4); height: width
             anchors.verticalCenter: parent.verticalCenter
-            sourceSize: Qt.size(20 * Screen.devicePixelRatio, 20 * Screen.devicePixelRatio)
+            sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
             source: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
             scale: mouse.pressed ? 0.85 : 1
             Behavior on scale { NumberAnimation { duration: 110 } }
@@ -40,10 +49,10 @@ Item {
         Text {
             visible: search.mode !== "icon"
             anchors.verticalCenter: parent.verticalCenter
-            text: Strings.tr("Search")
+            text: search.checked && search.mode === "box" ? search.query : Strings.tr("Search")
             font.family: Metrics.fontFamily
-            font.pixelSize: 13
-            color: search.mode === "box" ? (Theme.dark ? "#c5c5c5" : "#5c5c5c") : Theme.text
+            font.pixelSize: Metrics.fontBody
+            color: search.mode === "box" && !search.checked ? Metrics.themed("search.box.text") : Theme.text
         }
     }
     MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; onClicked: search.clicked() }

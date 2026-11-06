@@ -15,12 +15,13 @@ Item {
         delegate: QtObject {
             required property var modelData
             property Desktop desktop: Desktop { targetScreen: modelData }
-            property Taskbar taskbar: Taskbar { targetScreen: modelData }
+            property Taskbar taskbar: Taskbar { targetScreen: modelData; startOpen: start.shown; searchOpen: search.shown }
             property StartMenu start: StartMenu {
                 targetScreen: modelData
                 onSearchRequested: (text) => { close(); search.openWith(text) }
             }
-            property SearchFlyout search: SearchFlyout { targetScreen: modelData }
+            // Search lines up with the taskbar's search box (or button), like the reference.
+            property SearchFlyout search: SearchFlyout { targetScreen: modelData; anchorLeft: taskbar.searchBoxX }
             property QuickSettings quick: QuickSettings { targetScreen: modelData; rightAligned: true }
             property NotificationCenter center: NotificationCenter { targetScreen: modelData; rightAligned: true }
             property Osd osd: Osd { targetScreen: modelData }

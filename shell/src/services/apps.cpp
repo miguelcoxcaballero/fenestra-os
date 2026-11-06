@@ -57,7 +57,8 @@ QVariantMap Apps::info(const QString &storageId) const
     if (!s)
         return {};
     return {{QStringLiteral("storageId"), s->storageId()}, {QStringLiteral("name"), s->name()},
-            {QStringLiteral("icon"), s->icon()}, {QStringLiteral("comment"), s->comment()}};
+            {QStringLiteral("icon"), s->icon()}, {QStringLiteral("comment"), s->comment()},
+            {QStringLiteral("mimeTypes"), s->mimeTypes()}};
 }
 
 bool Apps::launch(const QString &storageId)
