@@ -32,7 +32,7 @@ ShellPopup {
             radius: 16
             color: Theme.dark ? Qt.rgba(28 / 255, 28 / 255, 28 / 255, 0.75) : Qt.rgba(1, 1, 1, 0.85)
             border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.08)
-            Image { x: 14; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; source: Metrics.assets + "search/search.svg"
+            Image { x: 14; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; source: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
                     sourceSize: Qt.size(16 * Screen.devicePixelRatio, 16 * Screen.devicePixelRatio) }
             Text {
                 x: 40; anchors.verticalCenter: parent.verticalCenter

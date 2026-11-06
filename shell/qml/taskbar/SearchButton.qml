@@ -33,7 +33,7 @@ Item {
             width: 20; height: 20
             anchors.verticalCenter: parent.verticalCenter
             sourceSize: Qt.size(20 * Screen.devicePixelRatio, 20 * Screen.devicePixelRatio)
-            source: Metrics.assets + "search/search.svg"
+            source: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
             scale: mouse.pressed ? 0.85 : 1
             Behavior on scale { NumberAnimation { duration: 110 } }
         }

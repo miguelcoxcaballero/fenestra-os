@@ -54,7 +54,7 @@ Window {
         TaskButton {
             id: startButton
             anchors.verticalCenter: parent.verticalCenter
-            iconSource: Metrics.assets + "branding/start-button.svg"
+            iconSource: ShellSettings.startIcon !== "" ? ShellSettings.startIcon : Metrics.assets + "branding/start-button.svg"
             label: Strings.tr("Start")
             // No context menu on Start (B07).
             onClicked: ShellState.toggleStart(bar.targetScreen, startButton.mapToItem(null, width / 2, 0).x)

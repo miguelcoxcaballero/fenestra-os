@@ -37,7 +37,7 @@ ShellPopup {
         border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.08)
         Image { x: 14; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16
                 sourceSize: Qt.size(16 * Screen.devicePixelRatio, 16 * Screen.devicePixelRatio)
-                source: Metrics.assets + "search/search.svg" }
+                source: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg" }
         TextInput {
             id: entry
             x: 40; width: parent.width - 54

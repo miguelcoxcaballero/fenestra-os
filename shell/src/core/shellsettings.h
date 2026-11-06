@@ -26,6 +26,9 @@ class ShellSettings : public QObject
     Q_PROPERTY(QString accentColor READ accentColor WRITE setAccentColor NOTIFY changed)
     Q_PROPERTY(QString wallpaper READ wallpaper WRITE setWallpaper NOTIFY changed)
     Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY changed)
+    // Icons imported by the user (Settings / setup icon import): file URLs, or "" for Fenestra's own.
+    Q_PROPERTY(QString startIcon READ startIcon NOTIFY changed)
+    Q_PROPERTY(QString searchIcon READ searchIcon NOTIFY changed)
 
 public:
     static ShellSettings *instance();
@@ -39,6 +42,8 @@ public:
     QString accentColor() const { return m_accent; }
     QString wallpaper() const { return m_wallpaper; }
     bool reduceMotion() const { return m_reduceMotion; }
+    QString startIcon() const { return m_startIcon; }
+    QString searchIcon() const { return m_searchIcon; }
 
     void setTaskbarAlignment(const QString &v) { write(QStringLiteral("Taskbar/Alignment"), v); }
     void setSearchMode(const QString &v) { write(QStringLiteral("Taskbar/SearchMode"), v); }
@@ -72,5 +77,6 @@ private:
     QString m_alignment, m_searchMode, m_scheme, m_accent, m_wallpaper;
     bool m_showWeather = true;
     bool m_reduceMotion = false;
+    QString m_startIcon, m_searchIcon;
     QStringList m_pinned;
 };

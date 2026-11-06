@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QUrl>
 
 namespace
 {
@@ -66,10 +67,17 @@ void ShellSettings::load()
         accent = kDefaultAccent;
     const QString wallpaper = s.value(QStringLiteral("Appearance/Wallpaper"), kDefaultWallpaper).toString();
     const bool reduceMotion = s.value(QStringLiteral("Appearance/ReduceMotion"), false).toBool();
+    auto iconUrl = [&s](const QString &key) {
+        const QString path = s.value(key).toString();
+        return !path.isEmpty() && QFileInfo::exists(path) ? QUrl::fromLocalFile(path).toString() : QString();
+    };
+    const QString startIcon = iconUrl(QStringLiteral("Appearance/StartIcon"));
+    const QString searchIcon = iconUrl(QStringLiteral("Appearance/SearchIcon"));
 
     Q_EMIT fileChanged();
     if (alignment == m_alignment && search == m_searchMode && weather == m_showWeather && pinned == m_pinned
-        && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper && reduceMotion == m_reduceMotion)
+        && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper && reduceMotion == m_reduceMotion
+        && startIcon == m_startIcon && searchIcon == m_searchIcon)
         return;
     m_alignment = alignment;
     m_searchMode = search;
@@ -79,6 +87,8 @@ void ShellSettings::load()
     m_accent = accent;
     m_wallpaper = wallpaper;
     m_reduceMotion = reduceMotion;
+    m_startIcon = startIcon;
+    m_searchIcon = searchIcon;
     Q_EMIT changed();
 }
 
