@@ -113,6 +113,11 @@ class Canvas(Gtk.Widget):
         if self._anchor is not None:
             GLib.idle_add(self._apply_anchor)
 
+    def show_origin(self):
+        """Scroll so the image's top-left corner is at the top-left of the view (new canvas)."""
+        self._anchor = (0, 0, 0, 0)
+        self.queue_resize()
+
     def _apply_anchor(self):
         if self._anchor is None:
             return False

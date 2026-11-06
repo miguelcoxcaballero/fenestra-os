@@ -65,6 +65,8 @@ class PaintWindow(Gtk.ApplicationWindow):
         self._sync_title()
         if path:
             GLib.idle_add(lambda: (self.open_path(path), False)[1])
+        else:
+            GLib.idle_add(lambda: (self._initial_zoom(), False)[1])
 
     # ================================================================== build
     def _build(self):
@@ -253,9 +255,9 @@ class PaintWindow(Gtk.ApplicationWindow):
         c = area.get_color()
         cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
         cr.set_line_width(1.0)
-        cx, cy = int(w / 2), int(h / 2)
+        cx, cy = int(w / 2), int(h / 2) - 2
         if name == "minimize":
-            cr.rectangle(cx - 5, cy, 10, 1)
+            cr.rectangle(cx - 4, cy, 10, 1)
             cr.fill()
         elif name == "maximize":
             if self.is_maximized():
@@ -1109,8 +1111,10 @@ class PaintWindow(Gtk.ApplicationWindow):
         GLib.idle_add(lambda: (self._initial_zoom(), False)[1])
 
     def _initial_zoom(self):
-        fz = self.canvas.fit_zoom()
+        # A new blank canvas opens at 100 % showing its top-left corner; images are fitted.
+        fz = 1.0 if self.path is None else self.canvas.fit_zoom()
         self.canvas.set_zoom(min(1.0, fz))
+        self.canvas.show_origin()
         self.status.set_zoom(self.canvas.zoom)
 
     def new(self):

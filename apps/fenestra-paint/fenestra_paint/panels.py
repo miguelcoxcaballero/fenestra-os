@@ -263,14 +263,14 @@ class LayersPanel(Gtk.Box):
 # =========================================================================== sliders
 
 def _size_map():
-    to = lambda v: math.sqrt(max(0.0, (v - 1) / 99))
-    fr = lambda f: max(1, round(1 + f * f * 99))
+    to = lambda v: max(0.0, (v - 1) / 99)
+    fr = lambda f: max(1, round(1 + f * 99))
     return to, fr
 
 
 class SideSliders(Gtk.Box):
     def __init__(self, win):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=9)
         self.win = win
         self.add_css_class("side-sliders")
         self.set_halign(Gtk.Align.START)
@@ -313,32 +313,36 @@ class StatusBar(Gtk.Box):
         self.win = win
         self.add_css_class("statusbar")
         self.pos = self._item("cursor", 133)
-        self.sel = self._item("select-size", 133)
-        self.size = self._item("canvas-size", 200)
+        self.sel = self._item("select-size", 132)
+        self.size = self._item("canvas-size", 200, 5)
         self.append(Gtk.Box(hexpand=True))
-        fit = button(icon("fit", 20), "status-button", tooltip=_("Fit to window"), cb=win.zoom_fit)
+        fit = button(icon("fit", 24), "status-button", tooltip=_("Fit to window"), cb=win.zoom_fit)
         self.append(fit)
         zb = Gtk.Box()
         self.zoom_label = label("100%", "zoom-label")
-        self.zoom_label.set_width_chars(6)
+        self.zoom_label.set_xalign(0)
+        self.zoom_label.set_hexpand(True)
         zb.append(self.zoom_label)
         zb.append(icon("chevron-down", 12, "zoom-chev"))
         self.zoom_btn = button(zb, "zoom-combo", tooltip=_("Zoom"), cb=self._zoom_menu)
+        self.zoom_btn.set_hexpand(False)
+        self.zoom_btn.set_valign(Gtk.Align.CENTER)
         self.append(self.zoom_btn)
         self.append(button(icon("zoom-out", 18), "status-button", "zoom-out", tooltip=_("Zoom out"),
                            cb=lambda: win.canvas.zoom_step(-1)))
-        lo, hi = math.log(ZOOM_MIN), math.log(ZOOM_MAX)
-        self.slider = Slider(Gtk.Orientation.HORIZONTAL, ZOOM_MIN, ZOOM_MAX, 1.0, length=130,
-                             mapping=(lambda v: (math.log(v) - lo) / (hi - lo),
-                                      lambda f: math.exp(lo + f * (hi - lo))))
+        # Linear track as in the reference (100 % sits near the left end).
+        lo = -0.14
+        self.slider = Slider(Gtk.Orientation.HORIZONTAL, ZOOM_MIN, ZOOM_MAX, 1.0, length=146,
+                             mapping=(lambda v: (v - lo) / (ZOOM_MAX - lo),
+                                      lambda f: max(ZOOM_MIN, lo + f * (ZOOM_MAX - lo))))
         self.slider.add_css_class("zoom-slider")
         self.slider.connect("value-changed", lambda s: win.canvas.set_zoom(s.value))
         self.append(self.slider)
         self.append(button(icon("zoom-in", 18), "status-button", "zoom-in", tooltip=_("Zoom in"),
                            cb=lambda: win.canvas.zoom_step(1)))
 
-    def _item(self, ic, width):
-        b = Gtk.Box(spacing=8)
+    def _item(self, ic, width, spacing=8):
+        b = Gtk.Box(spacing=spacing)
         b.add_css_class("status-item")
         b.set_size_request(width, -1)
         b.append(icon(ic, 16))

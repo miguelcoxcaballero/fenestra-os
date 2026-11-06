@@ -59,7 +59,7 @@ def chevron(w=12, h=10):
 
 
 class Group(Gtk.Box):
-    def __init__(self, title, content, width, last=False):
+    def __init__(self, title, content, width, last=False, start=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("rgroup")
         self.set_hexpand(False)
@@ -69,8 +69,12 @@ class Group(Gtk.Box):
         wrap = Gtk.Box()
         wrap.set_vexpand(True)
         content.set_valign(Gtk.Align.CENTER)
-        content.set_halign(Gtk.Align.CENTER)
-        content.set_hexpand(True)
+        if start is None:
+            content.set_halign(Gtk.Align.CENTER)
+            content.set_hexpand(True)
+        else:  # measured offset from the group's left edge
+            content.set_halign(Gtk.Align.START)
+            content.set_margin_start(start)
         wrap.append(content)
         self.append(wrap)
         self.append(label(title, "rgroup-label", xalign=0.5))
@@ -108,10 +112,10 @@ class Ribbon(Gtk.Box):
         sel.append(self.sel_main)
         sel.append(self.sel_drop)
         self.sel_box = sel
-        self.append(Group(_("Selection"), sel, 74))
+        self.append(Group(_("Selection"), sel, 75))
 
         # ---- Image
-        img = Gtk.Grid(column_spacing=0, row_spacing=6)
+        img = Gtk.Grid(column_spacing=0, row_spacing=8)
         self.crop_btn = button(tinted_icon("crop", "grey"), "tool-button", tooltip=_("Crop (Ctrl+Shift+X)"),
                                cb=w.crop)
         img.attach(self.crop_btn, 0, 0, 1, 1)
@@ -136,30 +140,30 @@ class Ribbon(Gtk.Box):
                     tooltip=_("Resize and skew (Ctrl+W)"), cb=w.resize_dialog)
         rs.set_valign(Gtk.Align.CENTER)
         img.attach(rs, 2, 0, 1, 2)
-        self.append(Group(_("Image"), img, 158))
+        self.append(Group(_("Image"), img, 159, start=8))
 
         # ---- Tools
-        tg = Gtk.Grid(column_spacing=0, row_spacing=6)
+        tg = Gtk.Grid(column_spacing=0, row_spacing=8)
         tg.attach(self._tool_btn("pencil", tinted_icon("pencil", "yellow"), _("Pencil")), 0, 0, 1, 1)
         tg.attach(self._tool_btn("fill", tinted_icon("bucket", "blue"), _("Fill")), 1, 0, 1, 1)
         tg.attach(self._tool_btn("text", Glyph(_letter_a, 16, 18), _("Text")), 2, 0, 1, 1)
         tg.attach(self._tool_btn("eraser", tinted_icon("eraser", "pink"), _("Eraser")), 0, 1, 1, 1)
         tg.attach(self._tool_btn("picker", tinted_icon("picker", "blue"), _("Color picker")), 1, 1, 1, 1)
         tg.attach(self._tool_btn("magnifier", icon("magnifier", 20), _("Magnifier")), 2, 1, 1, 1)
-        self.append(Group(_("Tools"), tg, 136))
+        self.append(Group(_("Tools"), tg, 137))
 
         # ---- Brushes
         bb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         bb.add_css_class("split-v")
         bb.add_css_class("brush-split")
-        self.brush_main = button(tinted_icon("brush", "grey", 20), "split-top", tooltip=_("Brushes"),
+        self.brush_main = button(tinted_icon("brush", "grey", 24), "split-top", tooltip=_("Brushes"),
                                  cb=lambda: w.set_tool("brush"))
         self.brush_drop = button(chevron(), "split-bottom", tooltip=_("Brushes"),
                                  cb=lambda: w.brushes_menu(self.brush_drop))
         bb.append(self.brush_main)
         bb.append(self.brush_drop)
         self.brush_box = bb
-        self.append(Group(_("Brushes"), bb, 67))
+        self.append(Group(_("Brushes"), bb, 68))
 
         # ---- Shapes
         sh = Gtk.Box(spacing=0)
@@ -167,7 +171,7 @@ class Ribbon(Gtk.Box):
         gal.add_css_class("shape-gallery")
         gal.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         gal.set_overlay_scrolling(True)
-        gal.set_size_request(172, 80)
+        gal.set_size_request(175, 80)
         gal.set_propagate_natural_height(False)
         gal.set_max_content_height(78)
         grid = Gtk.Grid()
@@ -179,15 +183,16 @@ class Ribbon(Gtk.Box):
             grid.attach(b, i % 7, i // 7, 1, 1)
         gal.set_child(grid)
         sh.append(gal)
-        styles = Gtk.Grid(row_spacing=6)
+        styles = Gtk.Grid(row_spacing=7)
+        styles.set_valign(Gtk.Align.START)
         styles.add_css_class("shape-styles")
         ob = Gtk.Box()
-        ob.append(tinted_icon("outline", "grey", 18))
+        ob.append(tinted_icon("outline", "grey", 20))
         ob.append(chevron(12, 10))
         self.outline_btn = button(ob, "drop-pair", tooltip=_("Shape outline"),
                                   cb=lambda: w.outline_menu(self.outline_btn))
         fb = Gtk.Box()
-        fb.append(tinted_icon("fill", "grey", 18))
+        fb.append(tinted_icon("fill", "grey", 20))
         fb.append(chevron(12, 10))
         self.fill_btn = button(fb, "drop-pair", tooltip=_("Shape fill"), cb=lambda: w.fill_menu(self.fill_btn))
         styles.attach(self.outline_btn, 0, 0, 1, 1)
@@ -199,14 +204,14 @@ class Ribbon(Gtk.Box):
         self.size_btn.set_valign(Gtk.Align.CENTER)
         styles.attach(self.size_btn, 1, 0, 1, 2)
         sh.append(styles)
-        self.append(Group(_("Shapes"), sh, 288))
+        self.append(Group(_("Shapes"), sh, 289, start=8))
 
         # ---- Colors
         cg = Gtk.Box()
-        cur = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        cur = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         cur.add_css_class("current-colors")
-        self.primary_sw = Swatch(w.primary, 22, ring=True)
-        self.secondary_sw = Swatch(w.secondary, 22, ring=True)
+        self.primary_sw = Swatch(w.primary, 24, ring=True)
+        self.secondary_sw = Swatch(w.secondary, 24, ring=True)
         self.primary_btn = button(self.primary_sw, "swatch-button", "current", tooltip=_("Color 1"),
                                   cb=lambda: w.set_active_slot(0))
         self.secondary_btn = button(self.secondary_sw, "swatch-button", "current", tooltip=_("Color 2"),
@@ -228,12 +233,12 @@ class Ribbon(Gtk.Box):
                                 cb=w.edit_colors)
         self.wheel_btn.set_valign(Gtk.Align.CENTER)
         cg.append(self.wheel_btn)
-        self.append(Group(_("Colors"), cg, 352))
+        self.append(Group(_("Colors"), cg, 353, start=12))
 
         # ---- Layers
         self.layers_btn = button(icon("layers", 24), "tool-button", "layers-button", tooltip=_("Layers"),
                                  cb=w.toggle_layers)
-        self.append(Group(_("Layers"), self.layers_btn, 64, last=True))
+        self.append(Group(_("Layers"), self.layers_btn, 65, last=True))
 
         sp = Gtk.Box(hexpand=True)
         self.append(sp)
@@ -281,7 +286,7 @@ class Ribbon(Gtk.Box):
         shape_on = name == "shape"
         self.outline_btn.set_sensitive(shape_on)
         self.fill_btn.set_sensitive(shape_on)
-        self.size_btn.set_sensitive(w.tool.uses_size)
+        self.size_btn.set_sensitive(shape_on)  # the side slider sizes the other tools
         self.crop_btn.set_sensitive(w.tools["select"].has_selection)
         self.primary_sw.set_rgba(w.primary)
         self.secondary_sw.set_rgba(w.secondary)

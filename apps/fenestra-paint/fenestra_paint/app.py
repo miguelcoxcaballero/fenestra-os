@@ -86,8 +86,9 @@ class App(Gtk.Application):
         o = self.opts
         if o.zoom:
             win.canvas.set_zoom(o.zoom)
+            win.canvas.show_origin()
         else:
-            win.canvas.set_zoom(min(1.0, win.canvas.fit_zoom()))
+            win._initial_zoom()
         if o.demo:
             from .demo import draw_demo
             draw_demo(win)
