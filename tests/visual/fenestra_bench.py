@@ -55,7 +55,19 @@ def compose(src, bg):
 
     def zone(screen, edge):
         return sum(o['exclusionZone'] for o in surfaces if o['screen'] == screen and o['exclusionZone'] > 0
-                   and o['anchors'] & edge and bin(o['anchors']).count('1') in (1, 3))
+                   and zone_edge(o['anchors']) == edge)
+
+    def zone_edge(a):
+        # The edge an exclusive zone applies to: the only anchored edge, or of three anchored edges
+        # the one whose opposite is free (a bottom taskbar anchored bottom|left|right reserves only
+        # the bottom). Same rule as tests/shell-kwin/compose.py.
+        if bin(a).count('1') == 1:
+            return a
+        if bin(a).count('1') == 3:
+            for e, opposite in ((TOP, BOTTOM), (BOTTOM, TOP), (LEFT, RIGHT), (RIGHT, LEFT)):
+                if a & e and not a & opposite:
+                    return e
+        return 0
 
     placed = []
     for s in sorted(surfaces, key=lambda s: s['layer']):
