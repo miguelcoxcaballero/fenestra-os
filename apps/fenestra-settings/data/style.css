@@ -81,7 +81,7 @@ window.maximized windowcontrols.window-controls button.close { border-radius: 0;
 
 .user-card {
   margin: 0 16px 0 16px;
-  padding: 9px 0 26px 0;
+  padding: 9px 0 24px 0;
   border-radius: 4px;
 }
 
@@ -197,7 +197,7 @@ list.nav-list > row.nav-item:active { background-color: var(--subtle-press); }
 list.nav-list > row.nav-item:selected { background-color: var(--subtle-select); color: var(--fg); }
 list.nav-list > row.nav-item:selected:hover { background-color: var(--subtle-hover); }
 .nav-item-box { padding: 0 12px 0 10px; min-height: 36px; }
-.nav-label { font-size: 14px; margin-bottom: 2px; }
+.nav-label { font-size: 14px; margin-top: 2px; }
 .nav-pill {
   border-radius: 2px;
   background-color: transparent;
@@ -801,3 +801,16 @@ button.hello-close:hover { background-color: var(--close-hover); color: #ffffff;
 .hello-status { font-size: 14px; color: var(--fg); min-height: 20px; }
 .hello-footer { margin-top: 12px; }
 .hello-camera { border-radius: 9999px; background-color: #000000; }
+
+/* ------------------------------------------------------------------ keyboard focus
+   2 px focus rectangle in the text colour around the focused control, outside its
+   edge (reference: 1 px gap for buttons, 2 px for navigation items). */
+button:focus-visible, switch.fluent-toggle:focus-visible, dropdown.fluent-dropdown > button:focus-visible,
+button.text-size-tile:focus-visible, button.home-theme-tile:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+list.nav-list > row.nav-item:focus-visible, list.search-results > row:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
