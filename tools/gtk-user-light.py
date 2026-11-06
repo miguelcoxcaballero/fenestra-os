@@ -36,6 +36,9 @@ EXTRA_LIGHT = [
     '.win11-explorer .win11-commandbar image, .win11-explorer .win11-navigation image, '
     '.win11-explorer image.fenestra-pin, .win11-explorer .win11-cmd-chevron { -gtk-icon-filter: invert(0.9); }',
 ]
+# Rules whose light colours are written by hand next to them (the open / save dialog, measured
+# against its reference in both themes: no single dark -> light mapping fits it).
+HAND_WRITTEN = ('window.win11-chooser',)
 # Rules painted on a fixed colour (red close button) keep their colours.
 KEEP = re.compile(r'#c42b1c|#a51c28|#b3261e', re.I)
 TOKEN = re.compile(r'#[0-9a-fA-F]{3,6}\b|rgba?\([^)]*\)|\bwhite\b|\bblack\b')
@@ -79,7 +82,7 @@ def dark_value(value):
 def generate(css):
     light, dark = [], []
     for sel, body in rules(css):
-        if KEEP.search(body):
+        if KEEP.search(body) or sel.startswith(HAND_WRITTEN):
             continue
         accent_rule = any(a in body.lower() for a in ACCENT)
         ld, dd = [], []

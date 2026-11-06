@@ -12,9 +12,11 @@ _L = {
            'See more': 'Ver más', 'Copy as path': 'Copiar como ruta de acceso', 'Open': 'Abrir', 'Home': 'Inicio', 'Gallery': 'Galería', 'This PC': 'Este equipo', 'Network': 'Red', 'Desktop': 'Escritorio',
            'Downloads': 'Descargas', 'Documents': 'Documentos', 'Pictures': 'Imágenes', 'Music': 'Música', 'Videos': 'Vídeos',
            # file chooser (fenestra_chooser.py)
-           'Organize': 'Organizar', 'File name:': 'Nombre de archivo:', 'Save as type:': 'Tipo:', 'Files of type:': 'Tipo:',
+           'Organize': 'Organizar', 'File name:': 'Nombre:', 'Save as type:': 'Tipo:', 'Files of type:': 'Tipo:',
            'Cancel': 'Cancelar', 'Select all': 'Seleccionar todo', 'Show hidden files': 'Mostrar archivos ocultos',
-           'Properties': 'Propiedades'},
+           'Properties': 'Propiedades', 'Close': 'Cerrar', 'Hide Folders': 'Ocultar carpetas',
+           'Browse Folders': 'Examinar carpetas', '_Save': '_Guardar', '_Open': '_Abrir', '_Select': '_Seleccionar',
+           'Name': 'Nombre', 'Date modified': 'Fecha de modificación', 'Type': 'Tipo', 'Size': 'Tamaño'},
 }
 
 
