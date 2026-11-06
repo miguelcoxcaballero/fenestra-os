@@ -43,7 +43,7 @@ DARK = {
     "tab-border": "#1c1c1c", "tab-hover": "rgba(255,255,255,0.061)", "tab-sep": "rgba(255,255,255,0.16)",
     "fg": "#ffffff", "text": "#ffffff", "fg2": "#cfcfcf", "fg3": "#787878", "glyph2": "#9a9a9a",
     "hover": "rgba(255,255,255,0.061)", "press": "rgba(255,255,255,0.042)",
-    "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.45)", "popover-bottom": "rgba(0,0,0,0.55)",
+    "popover": "#2c2c2c", "popover-border": "rgba(0,0,0,0.36)", "popover-bottom": "rgba(0,0,0,0.45)",
     "menu-sep": "rgba(255,255,255,0.0837)", "shadow": "rgba(0,0,0,0.32)",
     "card": "#282828", "card-border": "#444444",
     "input": "rgba(255,255,255,0.0605)", "input-border": "rgba(255,255,255,0.0698)",
