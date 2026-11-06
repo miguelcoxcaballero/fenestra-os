@@ -8,6 +8,12 @@ export KWIN_COMPOSE=${KWIN_COMPOSE:-Q} LIBGL_ALWAYS_SOFTWARE=1
 # Without a terminal, Qt logs to the journal; the bench reads stderr.
 export QT_FORCE_STDERR_LOGGING=1 QT_QUICK_BACKEND=${QT_QUICK_BACKEND:-software} LANG=C.UTF-8
 export FENESTRA_SHELL_TEST=1 FENESTRA_SHELL_NO_ACTIVATION=1 XDG_RUNTIME_DIR=/tmp/xdg QT_QPA_PLATFORM=wayland XDG_CURRENT_DESKTOP=Fenestra XDG_SESSION_TYPE=wayland
+# No xdg-desktop-portal in the bench: GTK and Qt talk to it at start-up (GTK reads the Settings
+# portal version, Qt registers with the host Registry), and in this container the portal sometimes
+# does not answer at session start, so every client blocks 25 s on a D-Bus timeout (Notepad's
+# first window misses B02-launch-from-pinned, Settings' search-index export misses S05). Its gtk
+# backend cannot work here anyway (activated without WAYLAND_DISPLAY); no check uses a portal.
+export GDK_DEBUG=no-portals QT_NO_XDG_DESKTOP_PORTAL=1 GTK_USE_PORTAL=0
 mkdir -p -m700 "$XDG_RUNTIME_DIR" /out
 rm -f /run/dbus/pid
 W=${WIDTH:-1920} H=${HEIGHT:-1080}
