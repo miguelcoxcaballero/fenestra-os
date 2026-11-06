@@ -24,8 +24,9 @@ gcall() { as_user gdbus call --session --dest org.gnome.Shell "$@"; }
 case "${1:-}" in
   start)
     [ -n "${2:-}" ] && U="$2"
-    # Sockets can outlive their daemons (container restarts): check the process.
-    if ! pgrep -x -u root dbus-daemon >/dev/null || [ ! -S /run/dbus/system_bus_socket ]; then
+    # Sockets can outlive their daemons (container restarts): check the process
+    # (it runs as root or, on newer Fedora, as the dbus user).
+    if ! pgrep -f "^dbus-daemon --system" >/dev/null || [ ! -S /run/dbus/system_bus_socket ]; then
         rm -f /run/dbus/system_bus_socket /run/dbus/pid; mkdir -p /run/dbus; dbus-daemon --system --fork
     fi
     r="/run/user/$(uid)"; install -d -m700 -o "$U" "$r"

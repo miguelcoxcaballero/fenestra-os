@@ -1,4 +1,6 @@
 """Explorer-style view choices using Nautilus' own models, selection and file actions."""
+import gi
+gi.require_version('Gtk', '4.0')
 from gi.repository import Gio, GLib, GObject, Gtk, Pango
 from pathlib import Path
 import json

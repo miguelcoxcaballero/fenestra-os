@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <interface>
   <requires lib="gtk" version="4.0" />
   <template class="NautilusToolbar" parent="AdwBin">
@@ -68,8 +68,8 @@
                     <property name="valign">center</property>
                     <property name="action_name">slot.search-visible</property>
                     <binding name="active">
-                      <lookup name="search-visible" type="NautilusWindowSlot">
-                        <lookup name="window-slot" type="NautilusToolbar">NautilusToolbar</lookup>
+                      <lookup name="search-visible">
+                        <lookup name="window-slot">NautilusToolbar</lookup>
                       </lookup>
                     </binding>
                     <property name="child">
@@ -81,9 +81,7 @@
                             <property name="hexpand">True</property>
                             <property name="xalign">0</property>
                             <property name="ellipsize">end</property>
-                            <style>
-                              <class name="win11-search-label" />
-                            </style>
+                            <style><class name="win11-search-label" /></style>
                           </object>
                         </child>
                         <child>

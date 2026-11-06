@@ -6,6 +6,10 @@ import os
 import time
 from pathlib import Path
 
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
+gi.require_version('GdkPixbuf', '2.0')
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk, Pango
 
 from fenestra_sidebar import _L, tr, GALLERY
