@@ -11,12 +11,12 @@ Window {
     property string kind: "volume"
     property int value: 0          // 0–100, -1 = muted
     color: "transparent"
-    width: 192 + 32; height: 48 + 32
+    width: Metrics.osdWidth + 32; height: Metrics.osdHeight + 32
     visible: false
     LayerShell.Window.scope: "fenestra-osd"
     LayerShell.Window.layer: LayerShell.Window.LayerOverlay
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
-    LayerShell.Window.margins.bottom: 24 - 16
+    LayerShell.Window.margins.bottom: Metrics.osdGap - 16
     LayerShell.Window.exclusionZone: 0
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
 
@@ -37,7 +37,7 @@ Window {
         return value < 34 ? "speaker-1" : value < 67 ? "speaker-2" : "speaker-3"
     }
 
-    Timer { id: hideTimer; interval: 1500; onTriggered: fadeOut.restart() }
+    Timer { id: hideTimer; interval: Metrics.osdTimeout; onTriggered: fadeOut.restart() }
     ParallelAnimation {
         id: fadeIn
         NumberAnimation { target: pill; property: "opacity"; to: 1; duration: Motion.reduced ? 0 : 150; easing.type: Easing.OutCubic }
@@ -54,7 +54,7 @@ Window {
 
     Rectangle {
         id: pill
-        x: 16; y: 16; width: 192; height: 48; radius: 8
+        x: 16; y: 16; width: Metrics.osdWidth; height: Metrics.osdHeight; radius: 8
         color: Theme.dark ? Qt.rgba(32 / 255, 32 / 255, 32 / 255, 0.85) : Qt.rgba(249 / 255, 249 / 255, 249 / 255, 0.92)
         border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.06)
         Row {

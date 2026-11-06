@@ -1,19 +1,52 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Sizes of the GNOME layer (see docs/fenestra-shell/INVENTORY.md for the sources).
+// Sizes from design/tokens.json (placeholders until the reference measurements replace them).
 pragma Singleton
 import QtQuick
+import Fenestra.Shell
 
 QtObject {
-    readonly property int taskbarHeight: 48        // dash-to-panel panel-sizes
-    readonly property int taskButton: 44           // 40 px icon cell + appicon-margin 2 * 2
-    readonly property int taskIcon: 24
-    readonly property int flyoutGap: 12            // flyoutGap.js FLYOUT_GAP
-    readonly property int flyoutEdge: 13           // flyoutGap.js FLYOUT_EDGE
-    readonly property int flyoutRadius: 8          // stylesheet.css .popup-menu-content
-    readonly property int controlRadius: 4         // buttons, menu items
-    readonly property int menuItemHeight: 36
-    readonly property int searchBoxWidth: 228      // .fenestra-taskbar-search-box
-    readonly property int searchBoxHeight: 32
-    readonly property string fontFamily: "Segoe UI Variable Text"  // fontconfig alias -> Selawik
+    readonly property int taskbarHeight: Tokens.px("taskbar.height", 48)
+    readonly property int taskButton: Tokens.px("taskbar.button", 44)
+    readonly property int taskIcon: Tokens.px("taskbar.icon", 24)
+    readonly property int indicatorFocused: Tokens.px("taskbar.indicator.focused", 16)
+    readonly property int indicatorUnfocused: Tokens.px("taskbar.indicator.unfocused", 6)
+    readonly property int indicatorHeight: Tokens.px("taskbar.indicator.height", 3)
+    readonly property int flyoutGap: Tokens.px("flyout.gap", 12)
+    readonly property int flyoutEdge: Tokens.px("flyout.edge", 13)
+    readonly property int flyoutRadius: Tokens.px("flyout.radius", 8)
+    readonly property int controlRadius: Tokens.px("control.radius", 4)
+    readonly property int menuItemHeight: Tokens.px("menu.item.height", 36)
+    readonly property int menuMinWidth: Tokens.px("menu.width.min", 220)
+    readonly property int searchBoxWidth: Tokens.px("search.box.width", 228)
+    readonly property int searchBoxHeight: Tokens.px("search.box.height", 32)
+    readonly property int startWidth: Tokens.px("start.width", 832)
+    readonly property int startHeight: Tokens.px("start.height", 864)
+    readonly property int startColumns: Tokens.px("start.pinned.columns", 8)
+    readonly property int startTileWidth: Tokens.px("start.pinned.tile.width", 80)
+    readonly property int startTileHeight: Tokens.px("start.pinned.tile.height", 69)
+    readonly property int startFooterHeight: Tokens.px("start.footer.height", 64)
+    readonly property int searchWidth: Tokens.px("search.width", 832)
+    readonly property int searchHeight: Tokens.px("search.height", 851)
+    readonly property int searchResultsWidth: Tokens.px("search.results.width", 328)
+    readonly property int searchPreviewWidth: Tokens.px("search.preview.width", 376)
+    readonly property int quickWidth: Tokens.px("quick.width", 400)
+    readonly property int quickTileWidth: Tokens.px("quick.tile.width", 104)
+    readonly property int quickTileHeight: Tokens.px("quick.tile.height", 48)
+    readonly property int quickFooterHeight: Tokens.px("quick.footer.height", 48)
+    readonly property int notificationsWidth: Tokens.px("notifications.width", 332)
+    readonly property int toastWidth: Tokens.px("toast.width", 362)
+    readonly property int calendarDay: Tokens.px("calendar.day", 40)
+    readonly property int osdWidth: Tokens.px("osd.width", 192)
+    readonly property int osdHeight: Tokens.px("osd.height", 48)
+    readonly property int osdGap: Tokens.px("osd.gap", 24)
+    readonly property int osdTimeout: Tokens.px("osd.timeout", 1500)
+    readonly property int popupOpen: Tokens.px("motion.popup.open", 200)
+    readonly property int popupClose: Tokens.px("motion.popup.close", 120)
+    readonly property int popupOffset: Tokens.px("motion.popup.offset", 96)
+    readonly property int osdFade: Tokens.px("motion.osd.fade", 150)
+    readonly property int previewDelay: Tokens.px("motion.preview.delay", 400)
+    readonly property string fontFamily: Tokens.v("font.family", "Segoe UI Variable Text")
+    readonly property int fontBody: Tokens.px("font.body", 14)
+    readonly property int fontCaption: Tokens.px("font.caption", 12)
     readonly property string assets: "file:///usr/share/fenestra/assets/"
 }

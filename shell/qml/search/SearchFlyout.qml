@@ -6,7 +6,7 @@ import Fenestra.Shell
 
 ShellPopup {
     id: search
-    width: 832; height: 864 - 13
+    width: Metrics.searchWidth; height: Metrics.searchHeight
     property int selected: 0
     readonly property var flat: {
         const out = []
@@ -130,7 +130,7 @@ ShellPopup {
         x: 25; y: 105; width: parent.width - 57; height: parent.height - y - 18
         Flickable {
             id: results
-            width: 328; height: parent.height
+            width: Metrics.searchResultsWidth; height: parent.height
             contentHeight: resultColumn.height
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -182,7 +182,7 @@ ShellPopup {
         // Preview pane
         Rectangle {
             visible: search.current !== null
-            x: 350; width: 376; height: Math.min(parent.height, previewColumn.height + 48)
+            x: Metrics.searchResultsWidth + 22; width: Metrics.searchPreviewWidth; height: Math.min(parent.height, previewColumn.height + 48)
             radius: 8
             color: Theme.dark ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.6)
             Column {

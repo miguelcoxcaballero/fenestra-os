@@ -8,7 +8,7 @@ Item {
     property string storageId
     property string name
     property string icon
-    property int tileWidth: 80
+    property int tileWidth: Metrics.startTileWidth
     signal activated()
     signal contextRequested(real x, real y)
     width: tileWidth + 8; height: 77

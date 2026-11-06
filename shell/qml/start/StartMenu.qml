@@ -7,7 +7,7 @@ import Fenestra.Shell
 
 ShellPopup {
     id: start
-    width: 832; height: 864
+    width: Metrics.startWidth; height: Metrics.startHeight
     signal searchRequested(string text)
     property bool allApps: false
     property bool pinnedExpanded: false
@@ -64,7 +64,7 @@ ShellPopup {
             Item { width: 1; height: 10 }
             Grid {
                 x: 44
-                columns: 8
+                columns: Metrics.startColumns
                 Repeater {
                     model: start.pinnedExpanded ? start.pins : start.pins.slice(0, 16)
                     delegate: AppTile {
@@ -230,7 +230,7 @@ ShellPopup {
     Rectangle {
         id: footer
         anchors.bottom: parent.bottom
-        width: parent.width; height: 64
+        width: parent.width; height: Metrics.startFooterHeight
         bottomLeftRadius: Metrics.flyoutRadius; bottomRightRadius: Metrics.flyoutRadius
         color: Theme.dark ? Qt.rgba(0, 0, 0, 0.21) : Qt.rgba(0, 0, 0, 0.03)
         Rectangle { width: parent.width; height: 1; color: Theme.dark ? Qt.rgba(0, 0, 0, 0.2) : Qt.rgba(0, 0, 0, 0.06) }

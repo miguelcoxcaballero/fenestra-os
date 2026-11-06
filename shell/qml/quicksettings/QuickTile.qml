@@ -13,12 +13,12 @@ Column {
     property bool hasPage: false
     signal toggled()
     signal pageRequested()
-    width: 104; spacing: 6
+    width: Metrics.quickTileWidth; spacing: 6
     Accessible.role: Accessible.CheckBox
     Accessible.name: label
     Accessible.checked: checked
     Row {
-        width: parent.width; height: 48
+        width: parent.width; height: Metrics.quickTileHeight
         Rectangle {
             width: tile.hasPage ? parent.width - 28 : parent.width; height: 48
             radius: Metrics.controlRadius

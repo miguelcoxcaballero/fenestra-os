@@ -9,7 +9,7 @@ Window {
     id: toasts
     property var targetScreen
     color: "transparent"
-    width: 362 + 2 * 8
+    width: Metrics.toastWidth + 2 * 8
     height: Math.max(1, stack.height + 16)
     visible: Notifications.popups.length > 0
     LayerShell.Window.scope: "fenestra-toasts"
@@ -23,7 +23,7 @@ Window {
 
     Column {
         id: stack
-        x: 8; y: 8; width: 362
+        x: 8; y: 8; width: Metrics.toastWidth
         spacing: 8
         Repeater {
             model: Notifications.popups.slice(-3)
@@ -31,7 +31,7 @@ Window {
                 required property var modelData
                 n: modelData
                 banner: true
-                width: 362
+                width: Metrics.toastWidth
                 onCloseRequested: Notifications.hidePopup(modelData.notificationId)
                 NumberAnimation on x { from: 380; to: 0; duration: 250; easing.type: Easing.OutCubic; running: !Motion.reduced }
             }

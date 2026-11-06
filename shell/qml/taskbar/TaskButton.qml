@@ -41,8 +41,8 @@ Item {
     Rectangle {
         visible: button.windowCount > 0
         anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 2 }
-        height: 3; radius: 1.5
-        width: button.focused ? 16 : 6
+        height: Metrics.indicatorHeight; radius: Metrics.indicatorHeight / 2
+        width: button.focused ? Metrics.indicatorFocused : Metrics.indicatorUnfocused
         color: button.attention ? "#ffb900" : button.focused ? Theme.accentFill : Theme.textSecondary
         Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
     }

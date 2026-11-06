@@ -13,7 +13,7 @@ Flyout {
     Column {
         spacing: 12
         Card {
-            width: 332
+            width: Metrics.notificationsWidth
             height: Math.min(Math.max(120, center.availableHeight - calendar.height), notifColumn.height)
             clip: true
             Column {

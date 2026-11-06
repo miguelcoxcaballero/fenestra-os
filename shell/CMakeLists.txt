@@ -36,6 +36,7 @@ qt_add_executable(fenestra-shell
     src/core/theme.cpp src/core/theme.h
     src/core/shellutil.h
     src/core/shellcontrol.h
+    src/core/tokens.cpp src/core/tokens.h
     src/services/apps.cpp src/services/apps.h
     src/services/taskbarmodel.cpp src/services/taskbarmodel.h
     src/services/weather.cpp src/services/weather.h
@@ -101,6 +102,12 @@ qt_add_qml_module(fenestra-shell
         qml/tray/Tray.qml
         qml/tray/TrayButton.qml
 )
+
+# design/tokens.json, built in (see src/core/tokens.h).
+qt_add_resources(fenestra-shell "design_tokens"
+    PREFIX "/design"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/../design"
+    FILES "${CMAKE_CURRENT_SOURCE_DIR}/../design/tokens.json")
 
 target_include_directories(fenestra-shell PRIVATE src/core src/services ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJECT_VERSION}")

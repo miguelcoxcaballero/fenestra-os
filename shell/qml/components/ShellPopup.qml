@@ -33,7 +33,7 @@ Window {
         visible = true
         ShellUtil.enableBlur(popup, Metrics.flyoutRadius)
         requestActivate()
-        panel.y = Motion.reduced ? 0 : 96
+        panel.y = Motion.reduced ? 0 : Metrics.popupOffset
         slideIn.restart()
         opened()
     }
@@ -46,10 +46,10 @@ Window {
     function toggle() { shown ? close() : open() }
     onActiveChanged: if (!active && shown) close()
 
-    NumberAnimation { id: slideIn; target: panel; property: "y"; to: 0; duration: 200; easing.type: Easing.OutQuint }
+    NumberAnimation { id: slideIn; target: panel; property: "y"; to: 0; duration: Metrics.popupOpen; easing.type: Easing.OutQuint }
     SequentialAnimation {
         id: slideOut
-        NumberAnimation { target: panel; property: "y"; to: 96; duration: 120; easing.type: Easing.InQuad }
+        NumberAnimation { target: panel; property: "y"; to: Metrics.popupOffset; duration: Metrics.popupClose; easing.type: Easing.InQuad }
         ScriptAction { script: { popup.visible = false; popup.closed() } }
     }
 

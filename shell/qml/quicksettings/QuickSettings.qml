@@ -18,7 +18,7 @@ Flyout {
         // ---- Media card (Q02, mediaPanel.js: 350 px, padding 22 24) ----
         Card {
             visible: Media.available
-            width: 400; height: mediaRow.height + 44
+            width: Metrics.quickWidth; height: mediaRow.height + 44
             Row {
                 id: mediaRow
                 x: 24; y: 22; spacing: 16; width: parent.width - 48
@@ -60,7 +60,7 @@ Flyout {
 
         // ---- Quick settings card ----
         Card {
-            width: 400; height: (qs.page === "" ? main.height : sub.height) + footer.height
+            width: Metrics.quickWidth; height: (qs.page === "" ? main.height : sub.height) + footer.height
             Column {
                 id: main
                 visible: qs.page === ""
@@ -164,7 +164,7 @@ Flyout {
             Rectangle {
                 id: footer
                 anchors.bottom: parent.bottom
-                width: parent.width; height: 48
+                width: parent.width; height: Metrics.quickFooterHeight
                 bottomLeftRadius: Metrics.flyoutRadius; bottomRightRadius: Metrics.flyoutRadius
                 color: Theme.dark ? Qt.rgba(0, 0, 0, 0.14) : Qt.rgba(0, 0, 0, 0.03)
                 Rectangle { width: parent.width; height: 1; color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.06) }

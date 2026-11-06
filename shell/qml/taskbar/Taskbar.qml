@@ -145,7 +145,7 @@ Window {
     Timer {
         id: previewTimer
         property var owner
-        interval: 400
+        interval: Metrics.previewDelay
         onTriggered: if (owner && owner.hovered) {
             preview.windows = owner.model.windows
             preview.anchorX = owner.mapToItem(null, owner.width / 2, 0).x

@@ -6,7 +6,7 @@ import Fenestra.Shell
 
 Card {
     id: cal
-    width: 332
+    width: Metrics.notificationsWidth
     height: header.height + (collapsed ? 0 : month.height) + focus.height
     color: Theme.dark ? Qt.rgba(36 / 255, 36 / 255, 36 / 255, 0.97) : Qt.rgba(249 / 255, 249 / 255, 249 / 255, 0.94)
     property bool collapsed: false
