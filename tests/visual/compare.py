@@ -15,6 +15,7 @@ docs/fenestra-shell/VISUAL.md quotes. Only numbers go to the repo.
 import argparse
 import json
 import os
+import re
 import sys
 
 from PIL import Image, ImageChops
@@ -32,6 +33,9 @@ def measure_dir(d, panels, only=None):
     for f in sorted(os.listdir(d)):
         if not measure.NAME.match(f) or (only and only not in f):
             continue
+        why = next((r for pat, r in panels.get('exclude', {}).items() if re.search(pat, f)), None)
+        if why:
+            continue        # the capture does not show the panel (reason in measurements.json)
         shot = measure.Shot(os.path.join(d, f))
         spec = panels.get(shot.num)
         if not spec:
