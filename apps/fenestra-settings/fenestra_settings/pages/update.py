@@ -134,21 +134,21 @@ class UpdatePage(Page):
                                  control=button(_("Restart now"), self._release_reboot, accent=True)))
             elif status == "failed":
                 g.add(SettingRow(_("The upgrade to Fedora {0} didn't finish").format(target),
-                                 st.get("message") or err or "", "fs-error-circle-symbolic",
+                                 st.get("message") or err or "", "fs-alert-symbolic",
                                  control=button(_("Try again"), self._release_start, accent=True)))
             elif status in ("done", "post-failed") and cur >= int(target or 0):
                 ok = status == "done"
                 g.add(SettingRow(_("Your device runs Fedora {0}").format(cur),
                                  _("Everything was set up for the new version") if ok else
                                  (st.get("message") or _("Some drivers need attention")),
-                                 "fs-checkmark-circle-symbolic" if ok else "fs-warning-symbolic"))
+                                 "fs-checkmark-symbolic" if ok else "fs-alert-symbolic"))
                 if self._rel_next and self._rel_next > cur:
                     self._offer(self._rel_next)
             elif self._rel_next and self._rel_next > cur:
                 self._offer(self._rel_next)
             for w in warns[-3:]:
                 if status in ("failed", "ready-to-reboot"):
-                    g.add(SettingRow(w, None, "fs-warning-symbolic"))
+                    g.add(SettingRow(w, None, "fs-alert-symbolic"))
         g.set_visible(g.rows.get_first_child() is not None)
 
     def _offer(self, target):
