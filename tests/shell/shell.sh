@@ -8,6 +8,7 @@
 #   tests/shell/shell.sh shot OUT.png     full-screen screenshot
 #   tests/shell/shell.sh click X Y [BTN]  click (1 = left, 3 = right) through a virtual pointer
 #   tests/shell/shell.sh key KEYSYM...    press keys, e.g. Super_L, Escape, Return, or type "text:hello"
+#   tests/shell/shell.sh winshot OUT.png  screenshot of the focused window's frame (title bar check)
 #   tests/shell/shell.sh run CMD...       run an app inside the test session
 #   tests/shell/shell.sh stop
 set -euo pipefail
@@ -39,7 +40,9 @@ case "${1:-}" in
     case "$cur" in *unsafe-mode@fenestra-tests*) ;; *)
         as_user gsettings set org.gnome.shell enabled-extensions "$(python3 -c 'import ast,sys; l=ast.literal_eval(sys.argv[1].replace("@as ","")); l.append("unsafe-mode@fenestra-tests"); print(l)' "$cur")" ;;
     esac
-    as_user sh -c 'nohup gnome-shell --headless --wayland --no-x11 --wayland-display=wayland-fenestra --virtual-monitor 1920x1080 --force-animations > "$XDG_RUNTIME_DIR/gnome-shell.log" 2>&1 &'
+    # FENESTRA_SHELL_X11=1 also starts Xwayland (to test X11 apps and mutter's frames).
+    x11=--no-x11; [ "${FENESTRA_SHELL_X11:-}" = 1 ] && x11=
+    as_user sh -c "nohup gnome-shell --headless --wayland $x11 --wayland-display=wayland-fenestra --virtual-monitor 1920x1080 --force-animations > \"\$XDG_RUNTIME_DIR/gnome-shell.log\" 2>&1 &"
     for _ in $(seq 60); do gcall --object-path /org/gnome/Shell --method org.gnome.Shell.Eval 1 >/dev/null 2>&1 && break; sleep 1; done
     sleep 3
     # Drop the "System was put in unsafe mode" notification before screenshots.
@@ -77,6 +80,12 @@ case "${1:-}" in
       gcall --object-path /org/gnome/Shell --method org.gnome.Shell.Eval "$js" >/dev/null
       sleep 0.3
     done ;;
+  winshot)
+    out="$(realpath -m "$2")"; tmp="/tmp/fenestra-shot-$$.png"
+    r=$(gcall --object-path /org/gnome/Shell --method org.gnome.Shell.Eval 'const w=global.display.focus_window;if(!w)throw new Error("no window");const r=w.get_frame_rect();[r.x,r.y,r.width,r.height].join(" ")' | sed -E "s/.*'\"?([0-9 -]+)\"?'.*/\1/")
+    set -- $r
+    gcall --object-path /org/gnome/Shell/Screenshot --method org.gnome.Shell.Screenshot.ScreenshotArea "$1" "$2" "$3" "$4" false "$tmp" >/dev/null
+    mv "$tmp" "$out"; echo "$out ($r)" ;;
   run) shift; as_user sh -c 'nohup "$@" >/dev/null 2>&1 &' _ "$@" ;;
   stop)
     pkill -u "$U" -x gnome-shell || true

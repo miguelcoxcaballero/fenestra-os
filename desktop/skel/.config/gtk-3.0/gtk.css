@@ -1,4 +1,5 @@
 @import 'colors.css';
+@import url("fenestra-caption-buttons.css");
 
 
 
@@ -44,21 +45,8 @@
 
 
 /* Windows Explorer and caption controls */
-/* Windows 11 caption controls. GTK owns all minimize/maximize/restore actions. */
-windowcontrols {  margin: 0; }
-windowcontrols > button,
-headerbar button.titlebutton {
- min-width: 46px; min-height: 32px; padding: 0; margin: 0;
- border: none; border-radius: 0; background-image: none; background-color: transparent; box-shadow: none;
-}
-windowcontrols > button > image,
-headerbar button.titlebutton > image { min-width: 16px; min-height: 16px;  padding: 0; margin: 0; }
-windowcontrols > button:not(.close):hover,
-headerbar button.titlebutton:not(.close):hover { background-color: @fenestra_caption_hover; }
-windowcontrols > button.close:hover,
-headerbar button.titlebutton.close:hover { background-color: #c42b1c; color: white; }
-windowcontrols > button.close:active,
-headerbar button.titlebutton.close:active { background-color: #b3261e; color: white; }
+/* Caption buttons: fenestra-caption-buttons.css (imported above), a copy of
+   /usr/share/fenestra/gtk-3.0/caption-buttons.css kept current by fenestra-tray at login. */
 /* Native GTK menus retain keyboard navigation and accessible labels. */
 popover.menu > contents { background: @fenestra_menu_bg; border: 1px solid @fenestra_menu_border; border-radius: 8px; padding: 4px; }
 popover.menu modelbutton { min-height: 30px; padding: 2px 10px; margin: 1px 0; border-radius: 4px; }
@@ -77,47 +65,6 @@ menu separator { min-height: 1px; margin: 4px 0; background-color: @fenestra_sep
 .desktopmenu .windows-menu-action image { margin: 0; }
 
 
-
-/* Original Windows caption glyphs, fixed Windows proportions */
-windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { min-width:46px; min-height:32px; padding:0; margin:0; border:0; border-radius:0; box-shadow:none; background-color:transparent; background-repeat:no-repeat; background-position:center; background-size:10px 10px; }
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity:1; }
-windowcontrols > button.minimize, headerbar button.titlebutton.minimize, .titlebar button.titlebutton.minimize { background-image:none; }
-windowcontrols > button.maximize, headerbar button.titlebutton.maximize, .titlebar button.titlebutton.maximize { background-image:none; }
-windowcontrols > button.close, headerbar button.titlebutton.close, .titlebar button.titlebutton.close { background-image:none; }
-window.maximized windowcontrols > button.maximize, window.maximized headerbar button.titlebutton.maximize, .maximized .titlebar button.titlebutton.maximize { background-image:none; }
-windowcontrols > button:hover, headerbar button.titlebutton:hover, .titlebar button.titlebutton:hover { background-color:@fenestra_caption_hover; }
-windowcontrols > button.close:hover, headerbar button.titlebutton.close:hover, .titlebar button.titlebutton.close:hover { background-color:#c42b1c; }
-windowcontrols > button.close:active, headerbar button.titlebutton.close:active, .titlebar button.titlebutton.close:active { background-color:#a51c28; }
-
-/* Caption hover must not inherit circular button styling from Fluent/libadwaita. */
-window windowcontrols > button.titlebutton,
-window windowcontrols > button.close,
-window windowcontrols > button.minimize,
-window windowcontrols > button.maximize,
-window headerbar button.titlebutton,
-window .titlebar button.titlebutton,
-window windowcontrols > button:hover,
-window windowcontrols > button:active,
-window headerbar button.titlebutton:hover,
-window headerbar button.titlebutton:active,
-window .titlebar button.titlebutton:hover,
-window .titlebar button.titlebutton:active {
- border-radius: 0; box-shadow: none; border: 0;
-}
-window windowcontrols > button.close:hover,
-window headerbar button.titlebutton.close:hover,
-window .titlebar button.titlebutton.close:hover { background-color: #c42b1c; }
-window windowcontrols > button.close:active,
-window headerbar button.titlebutton.close:active,
-window .titlebar button.titlebutton.close:active { background-color: #a51c28; }
-
-/* One native symbolic glyph per control, including Chromium/Electron. */
-windowcontrols > button, headerbar button.titlebutton, .titlebar button.titlebutton { background-image: none; }
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image { opacity: 1; min-width: 16px; min-height: 16px;  }
-
-windowcontrols > button > image, headerbar button.titlebutton > image, .titlebar button.titlebutton > image {
- background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; margin: 0;
-}
 
 /* Chromium measures the header padding before scaling caption buttons. */
 window.background.csd headerbar.header-bar.titlebar {

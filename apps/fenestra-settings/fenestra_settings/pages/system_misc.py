@@ -2,6 +2,8 @@
 Projecting to this PC, Clipboard."""
 from __future__ import annotations
 
+import os
+
 from gi.repository import Gdk, GLib
 
 from .. import util
@@ -159,9 +161,49 @@ class RecoveryPage(Page):
             tool = "timeshift-launcher" if util.have("timeshift-launcher") else "timeshift"
             self.ext_row(g, _("System snapshots"), _("Go back to an earlier state of the system"),
                          "fs-history-symbolic", [tool])
-        g.add(SettingRow(_("Reset this PC"), _("Reinstall Fenestra from the installation media"),
-                         "fs-arrow-reset-symbolic", control=button(_("Learn more"),
-                                                                   lambda: util.open_uri("https://docs.fedoraproject.org/"))))
+        g.add(SettingRow(_("Reset this PC"),
+                         _("Choose to keep or remove your personal files, then reset Fenestra without reinstalling"),
+                         "fs-arrow-reset-symbolic", control=button(_("Reset PC"), self._reset)))
+
+    RESET = "/usr/libexec/fenestra/fenestra-reset"
+
+    def _reset(self):
+        """Like the reference: choose an option, confirm, then restart to reset."""
+        from ..widgets import ContentDialog, show_dialog
+        if util.READ_ONLY:
+            toast(self.box, _("This action is disabled in read-only mode"))
+            return
+        if not os.path.exists(self.RESET) or not util.have("pkexec"):
+            toast(self.box, _("Resetting is not available on this system"))
+            return
+
+        def chosen(resp):
+            if resp not in ("primary", "secondary"):
+                return
+            mode = "keep" if resp == "primary" else "all"
+            if mode == "keep":
+                title = _("Ready to reset this PC")
+                body = _("Resetting will:\n• Remove all apps you installed (Flatpak)\n"
+                         "• Change settings back to their defaults\n"
+                         "• Keep your personal files\n\nYour PC will restart. This might take a few minutes.")
+            else:
+                title = _("Ready to reset this PC")
+                body = _("Resetting will:\n• Remove all user accounts and all personal files\n"
+                         "• Remove all apps you installed (Flatpak), saved Wi-Fi networks, fingerprints and face data\n"
+                         "• Change settings back to their defaults\n\n"
+                         "Your PC will restart and set up again as new. This can't be undone.")
+
+            def go():
+                util.run_async(["pkexec", self.RESET, "request", mode], None, mutating=True)
+            from ..widgets import confirm
+            confirm(self.box, title, body, _("Reset"), go, destructive=True)
+
+        show_dialog(self.box, ContentDialog(
+            _("Choose an option"),
+            _("Keep my files: removes apps and settings, but keeps your personal files.\n\n"
+              "Remove everything: removes all of your personal files, apps, and settings."),
+            primary=_("Keep my files"), secondary=_("Remove everything"), close=_("Cancel"),
+            on_response=chosen))
 
 
 @register

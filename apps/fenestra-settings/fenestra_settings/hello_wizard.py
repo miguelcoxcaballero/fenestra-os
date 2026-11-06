@@ -97,7 +97,7 @@ class FingerprintArt(Gtk.DrawingArea):
         cr.set_line_cap(1)  # ROUND
         cr.set_line_width(max(2.0, unit * 0.038))
         n = self.RIDGES
-        filled = self.progress.value * n
+        segs = []
         for i in range(n):
             t = i / (n - 1)
             r = unit * (0.08 + 0.92 * t)
@@ -108,35 +108,35 @@ class FingerprintArt(Gtk.DrawingArea):
             br = self._breaks[i]
             if i % 3 == 1 and i > 1:
                 mid = start + (end - start) * (0.2 + br * 0.6)
-                segs = [(start, mid - 0.14), (mid + 0.08, end)]
+                segs += [(r, start, mid - 0.14), (r, mid + 0.08, end)]
             elif i % 4 == 2 and i > 3:
                 mid = start + (end - start) * (0.55 + br * 0.3)
-                segs = [(start, mid - 0.1), (mid + 0.12, end)]
+                segs += [(r, start, mid - 0.1), (r, mid + 0.12, end)]
             else:
-                segs = [(start, end)]
-            frac = max(0.0, min(1.0, filled - i))
-            total = sum(a1 - a0 for a0, a1 in segs)
-            done_len = total * frac
-            for a0, a1 in segs:
+                segs.append((r, start, end))
+
+        def ridges(rgba):
+            cr.set_source_rgba(*rgba)
+            for r, a0, a1 in segs:
                 cr.save()
                 cr.translate(cx, cy)
                 cr.scale(1.0, sy)
                 cr.new_path()
                 cr.arc(0, 0, r, a0, a1)
                 cr.restore()
-                cr.set_source_rgba(*c["ridge"])
                 cr.stroke()
-                seg_done = min(a1 - a0, done_len)
-                if seg_done > 0:
-                    cr.save()
-                    cr.translate(cx, cy)
-                    cr.scale(1.0, sy)
-                    cr.new_path()
-                    cr.arc(0, 0, r, a0, a0 + seg_done)
-                    cr.restore()
-                    cr.set_source_rgba(*c["accent"])
-                    cr.stroke()
-                done_len -= seg_done
+        ridges(c["ridge"])
+        # Like the reference: the print fills with the accent colour from the
+        # bottom up as the sensor collects more of the finger.
+        p = self.progress.value
+        if p > 0:
+            top, bottom = cy - unit * sy - 4, cy + unit * sy + 4
+            y = bottom - (bottom - top) * min(1.0, p)
+            cr.save()
+            cr.rectangle(0, y, w, h - y)
+            cr.clip()
+            ridges(c["accent"])
+            cr.restore()
 
 
 class RingArt(Gtk.DrawingArea):
@@ -304,6 +304,21 @@ class CameraView(Gtk.Overlay):
             util.log("camera preview failed", e)
             return False
 
+    def handover(self, device):
+        """Howdy needs the camera now: keep showing the face, live from `device`
+        (another camera of the same module) when possible, else the last frame."""
+        frame = None
+        try:
+            paintable = self.picture.get_paintable()
+            frame = paintable.get_current_image() if paintable is not None else None
+        except Exception:  # noqa: BLE001
+            frame = None
+        self.stop()
+        if device and self._start(device):
+            return
+        if frame is not None:
+            self.picture.set_paintable(frame)
+
     def stop(self):
         if self.pipeline is not None:
             self.pipeline.set_state(self._gst.State.NULL)
@@ -361,10 +376,12 @@ class HelloWizard(Gtk.Box):
         pg = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         pg.add_css_class("hello-page")
         pg.append(label(title, "hello-title", wrap=True))
+        self.body = None
         if body:
             b = label(body, "hello-body", wrap=True)
             b.set_max_width_chars(56)
             pg.append(b)
+            self.body = b
         mid = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, vexpand=True, valign=Gtk.Align.CENTER, spacing=18)
         if art is not None:
             art.set_halign(Gtk.Align.CENTER)
@@ -454,20 +471,29 @@ class HelloWizard(Gtk.Box):
     def _face_capture(self):
         if self.closed:
             return False
-        if self.camera is not None:
-            self.camera.stop()
-        # The IR camera is now busy with Howdy: show the illustration with a scanning ring.
-        ring = RingArt(230, face=True)
-        self._page(_("Make sure you're looking directly at your camera"),
-                   _("Keep looking at the camera until the scan is finished. You may be asked for an "
-                     "administrator password first."),
-                   ring, _("Scanning your face…"), [(_("Cancel"), self.close, False)])
+        scan_body = _("Keep looking at the camera until the scan is finished. You may be asked for an "
+                      "administrator password first.")
+        cam = self.camera if (self.camera is not None and self.camera.ok) else None
+        if cam is not None:
+            # Howdy takes the IR camera from here on. The face stays on screen
+            # (same page, same ring), like the reference.
+            cam.handover(hello.preview_device(hello.howdy_device()))
+            ring = cam.ring
+            if self.body is not None:
+                self.body.set_label(scan_body)
+            self.set_status(_("Scanning your face…"))
+        else:
+            ring = RingArt(230, face=True)
+            self._page(_("Make sure you're looking directly at your camera"), scan_body,
+                       ring, _("Scanning your face…"), [(_("Cancel"), self.close, False)])
         ring.set_scanning(True)
         ring.progress.speed = 0.12
         ring.progress.set(0.92)  # creeps forward while Howdy works
 
         def done(ok, msg):
             ring.set_scanning(False)
+            if self.camera is not None:
+                self.camera.stop()
             if self.closed:
                 return
             if ok:

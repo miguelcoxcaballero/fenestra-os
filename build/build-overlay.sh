@@ -48,6 +48,14 @@ install -d "$OUT/usr/share/fenestra/upgrade"
 cp "$REPO/extras/fedora-upgrade/check.sh" "$REPO/extras/fedora-upgrade/nautilus-user-refresh.sh" "$OUT/usr/share/fenestra/upgrade/"
 install -Dm755 "$REPO/tools/fenestra-import-windows-assets" "$OUT/usr/bin/fenestra-import-windows-assets"
 install -Dm644 "$D/systemd/fenestra-patch-nautilus.service" "$OUT/usr/lib/systemd/system/fenestra-patch-nautilus.service"
+# Settings > System > Recovery > Reset this PC (runs at the next boot, before GDM).
+install -m755 "$D/libexec/fenestra-reset" "$OUT/usr/libexec/fenestra/"
+# Settings > Fenestra Update: newer Fenestra builds from GitHub (fenestra-update),
+# and the steps every install and update ends with (fenestra-post-install).
+install -m755 "$D/libexec/fenestra-update" "$D/libexec/fenestra-post-install" "$OUT/usr/libexec/fenestra/"
+install -Dm644 "$D/polkit/org.fenestra.update.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.update.policy"
+install -Dm644 "$D/systemd/fenestra-reset.service" "$OUT/usr/lib/systemd/system/fenestra-reset.service"
+install -Dm644 "$D/polkit/org.fenestra.reset.policy" "$OUT/usr/share/polkit-1/actions/org.fenestra.reset.policy"
 install -d "$OUT/usr/lib/systemd/user"
 cp -a "$D/systemd/user/." "$OUT/usr/lib/systemd/user/"   # e.g. gnome-shell CPU/IO priority drop-in
 
@@ -76,6 +84,18 @@ cp "$D/dconf/gdm.d/"* "$OUT/etc/dconf/db/gdm.d/"
 install -Dm644 "$D/fontconfig/60-fenestra.conf" "$OUT/etc/fonts/conf.d/60-fenestra.conf"
 
 log "GTK theme"
+# Windows 11 caption buttons for every GTK 3/4 window (imported by the user CSS).
+install -Dm644 "$D/gtk/caption-buttons-gtk4.css" "$OUT/usr/share/fenestra/gtk-4.0/caption-buttons.css"
+install -Dm644 "$D/gtk/caption-buttons-gtk3.css" "$OUT/usr/share/fenestra/gtk-3.0/caption-buttons.css"
+for v in 3 4; do
+    # Per-user copy (Flatpak apps cannot read /usr/share/fenestra); fenestra-tray refreshes it at login.
+    install -Dm644 "$D/gtk/caption-buttons-gtk$v.css" "$OUT/etc/skel/.config/gtk-$v.0/fenestra-caption-buttons.css"
+    # Fallback for every account and session: three caption buttons on the right.
+    install -Dm644 "$D/gtk/settings-gtk$v.ini" "$OUT/etc/gtk-$v.0/settings.ini"
+done
+# Qt apps: XWayland first, so mutter draws Windows 11 caption buttons for them
+# (Qt's own Wayland decorations cannot be themed). Wayland stays as fallback.
+install -Dm644 "$D/gtk/60-fenestra-qt.conf" "$OUT/usr/lib/environment.d/60-fenestra-qt.conf"
 install -d "$OUT/usr/share/themes"
 cp -a "$D/themes/Fenestra-Dark" "$D/themes/Fenestra-Light" "$OUT/usr/share/themes/"
 
@@ -120,6 +140,16 @@ for app in "$REPO"/apps/*/; do
         log "  installed $(basename "$app")"
     fi
 done
+
+log "Release stamp"
+# Which Fenestra build this is; Settings > Fenestra Update compares it with GitHub.
+COMMIT="${FENESTRA_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo unknown)}"
+COMMIT_DATE="${FENESTRA_COMMIT_DATE:-$(git -C "$REPO" log -1 --format=%cI 2>/dev/null || date -u +%FT%TZ)}"
+python3 - "$OUT/usr/share/fenestra/release.json" "$COMMIT" "$COMMIT_DATE" <<'PY'
+import json, sys
+json.dump({"repo": "miguelcoxcaballero/fenestra-os", "branch": "main",
+           "commit": sys.argv[2], "date": sys.argv[3]}, open(sys.argv[1], "w"), indent=1)
+PY
 
 log "Licenses"
 install -d "$OUT/usr/share/licenses/fenestra"

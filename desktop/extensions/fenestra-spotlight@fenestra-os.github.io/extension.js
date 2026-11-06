@@ -1,6 +1,7 @@
 import {installLockControls} from './lockControls.js';
 import {installLockStatus} from './lockStatus.js';
 import {installStartupCover} from './startup.js';
+import {installFirstLoginCurtain} from './firstLogin.js';
 import {installTransitions} from './transitions.js';
 import {installPanelGuard} from './panelGuard.js';
 import {installHelloFeedback} from './hello.js';
@@ -18,6 +19,8 @@ export default class WindowsSpotlight extends Extension {
         this._injections = new InjectionManager();
         this._stopLockControls=installLockControls();
         this._stopTransitions=installTransitions(this._injections);
+        // First login: black until the setup window is up, and after it until the desktop is smooth.
+        try{this._stopFirstLogin=installFirstLoginCurtain();}catch(e){logError(e,'Fenestra first-login curtain');}
         this._stopStartup=installStartupCover();
         this._stopHello=installHelloFeedback(this._injections,this.path);
         this._stopPanelGuard=installPanelGuard({Main,GLib,St,shellGlobal:global});
@@ -86,6 +89,7 @@ export default class WindowsSpotlight extends Extension {
         this._stopLockControls?.();this._stopLockControls=null;
         this._stopLockStatus?.();this._stopLockStatus=null;
         this._stopStartup?.();this._stopStartup=null;
+        this._stopFirstLogin?.();this._stopFirstLogin=null;
         this._stopTransitions?.();this._stopTransitions=null;
         this._stopHello?.();this._stopHello=null;
         this._stopPanelGuard?.();this._stopPanelGuard=null;

@@ -1,0 +1,89 @@
+#!/usr/bin/bash
+# Fenestra "Reset this PC" (Settings > System > Recovery), without reinstalling.
+#
+#   fenestra-reset request keep|all   (root, via pkexec from Settings)
+#       Records the request and restarts. Nothing is deleted while anyone is
+#       signed in: the work runs at the next boot, before the login screen.
+#   fenestra-reset run                (root, fenestra-reset.service at boot)
+#   fenestra-reset cancel             (root) forget a pending request
+#
+# keep: "Keep my files" — removes apps (Flatpak) and settings, keeps every
+#       user's personal folders. Each user goes through the first-login part
+#       of the setup again (privacy, icons).
+# all:  "Remove everything" — removes all user accounts and their files,
+#       Flatpak apps, saved networks, fingerprints and face models, the device
+#       name and automatic sign-in. The full first-boot setup runs again.
+# Fedora's own packages and the Fenestra system files are not touched.
+set -euo pipefail
+PENDING=/var/lib/fenestra/reset-pending
+LOG=/var/log/fenestra-reset.log
+
+die() { echo "fenestra-reset: $*" >&2; exit 1; }
+[ "$(id -u)" = 0 ] || die "must run as root"
+
+human_users() {
+    getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 && $1 != "nobody" {print $1 ":" $6}'
+}
+
+reset_user_settings() {  # $1 user, $2 home
+    local u=$1 h=$2
+    [ -d "$h" ] || return 0
+    # Settings and per-user customisations; personal folders stay.
+    rm -rf -- "$h/.config/dconf" "$h/.local/share/gnome-shell/extensions" "$h/.config/autostart" \
+              "$h/.config/fenestra" "$h/.local/share/fenestra" "$h/.local/share/flatpak" \
+              "$h/.var/app" "$h/.config/gnome-initial-setup-done"
+    # Fresh copies of the default desktop files (GTK look, templates).
+    if [ -d /etc/skel/.config ]; then
+        cp -a /etc/skel/.config/. "$h/.config/"
+        chown -R "$u:" "$h/.config"
+    fi
+}
+
+run_reset() {
+    local mode
+    mode=$(cat "$PENDING" 2>/dev/null || true)
+    case "$mode" in keep|all) ;; *) rm -f "$PENDING"; return 0 ;; esac
+    exec >>"$LOG" 2>&1
+    echo "== $(date -Is) reset: $mode"
+    # Never loop: the request is consumed first.
+    rm -f "$PENDING"
+
+    if command -v flatpak >/dev/null; then
+        flatpak uninstall --system --all --noninteractive -y || true
+    fi
+    while IFS=: read -r u h; do
+        [ -n "$u" ] || continue
+        if [ "$mode" = all ]; then
+            echo "removing user $u"
+            userdel --remove --force "$u" || true
+            rm -rf -- "/var/lib/AccountsService/users/$u" "/var/lib/AccountsService/icons/$u"
+        else
+            echo "resetting settings of $u"
+            reset_user_settings "$u" "$h"
+        fi
+    done < <(human_users)
+
+    if [ "$mode" = all ]; then
+        rm -f /etc/NetworkManager/system-connections/* || true
+        rm -rf /var/lib/fprint/* || true
+        for d in /etc/howdy/models /usr/lib64/security/howdy/models /usr/lib/security/howdy/models; do
+            [ -d "$d" ] && find "$d" -mindepth 1 -delete || true
+        done
+        [ -f /etc/gdm/custom.conf ] && sed -i '/^AutomaticLogin/d' /etc/gdm/custom.conf
+        echo fenestra > /etc/hostname
+        rm -f /etc/machine-info
+    fi
+    echo "== done"
+}
+
+case "${1:-}" in
+    request)
+        case "${2:-}" in keep|all) ;; *) die "usage: fenestra-reset request keep|all" ;; esac
+        install -d -m 0755 "$(dirname "$PENDING")"
+        echo "$2" > "$PENDING"
+        sync
+        systemctl reboot ;;
+    run) run_reset ;;
+    cancel) rm -f "$PENDING" ;;
+    *) sed -n 2,17p "$0"; exit 1 ;;
+esac

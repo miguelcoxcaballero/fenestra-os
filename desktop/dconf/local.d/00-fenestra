@@ -6,6 +6,8 @@ enabled-extensions=['no-screenshot-box@screenshot', 'blur-my-shell@aunetx', 'til
 favorite-apps=['fenestra-search.desktop', 'org.mozilla.firefox.desktop', 'org.gnome.Nautilus.desktop']
 
 [org/gnome/shell/extensions/arcmenu]
+# Right-clicking Start does nothing (no ArcMenu context menu).
+menu-button-right-click-action='None'
 apps-show-extra-details=false
 apps-show-generic-names=false
 dash-to-panel-standalone=false
@@ -43,7 +45,7 @@ menu-button-position-offset=0
 menu-font-size=12
 menu-foreground-color='rgb(245,245,245)'
 menu-height=864
-menu-item-active-bg-color='rgba(100,124,100,0.35)'
+menu-item-active-bg-color='rgba(255,255,255,0.08)'
 menu-item-active-fg-color='rgb(255,255,255)'
 menu-item-grid-icon-size='Default'
 menu-item-hover-bg-color='rgba(238,238,236,0.08)'
@@ -203,10 +205,10 @@ appicon-padding=4
 appicon-style='NORMAL'
 desktop-line-custom-color='rgba(0,0,0,0)'
 desktop-line-use-custom-color=true
-dot-color-1='#647c64'
-dot-color-2='#647c64'
-dot-color-3='#647c64'
-dot-color-4='#647c64'
+dot-color-1='#4cc2ff'
+dot-color-2='#4cc2ff'
+dot-color-3='#4cc2ff'
+dot-color-4='#4cc2ff'
 dot-color-dominant=false
 dot-color-override=true
 dot-color-unfocused-1='#a0a0a0'
@@ -382,7 +384,7 @@ maximize=@as []
 unmaximize=@as []
 
 [org/gnome/desktop/wm/preferences]
-button-layout='icon:minimize,maximize,close'
+button-layout='appmenu:minimize,maximize,close'
 num-workspaces=1
 titlebar-font='Segoe UI Variable 10'
 

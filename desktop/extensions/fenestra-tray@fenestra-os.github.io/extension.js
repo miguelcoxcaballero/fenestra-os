@@ -15,6 +15,9 @@ import {SecurityScreen} from './securityScreen.js';
 import {Appearance} from './appearance.js';
 import {installWeatherWidget} from './weatherWidget.js';
 import {installTaskbarSearch} from './taskbarSearch.js';
+import {syncCaptionButtons} from './captionSync.js';
+import {installFlyoutGap} from './flyoutGap.js';
+import {installTaskbarMenu} from './taskbarMenu.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
@@ -28,6 +31,8 @@ const fenestraAsset=rel=>{for(const base of [GLib.build_filenamev([GLib.get_user
 export default class WindowsTrayTypography extends Extension {
     enable() {
         this._injections=new InjectionManager();this._dates=new Map();this._powers=new Map();
+        // Windows 11 caption buttons for GTK/Flatpak apps (per-user copy of the system CSS).
+        try{syncCaptionButtons();}catch(e){logError(e,'Fenestra caption buttons');}
         // Light/dark mode + accent colour for the whole desktop (appearance.js).
         try{this._appearance=new Appearance(this.path);this._appearance.connect(()=>this._power(Main.panel.statusArea.quickSettings?._system));}catch(e){logError(e,'Fenestra appearance');}
         this._stopTaskbar=installTaskbarStyle(this._injections,this._appearance);
@@ -41,6 +46,8 @@ export default class WindowsTrayTypography extends Extension {
         this._injections.overrideMethod(PowerIndicator.prototype,'_sync',original=>function(...args){original.apply(this,args);ext._power(this);});
         this._date(Main.panel.statusArea.dateMenu);
         this._stopTrayLayout=installTrayLayout(this._injections);
+        try{installFlyoutGap(this._injections);}catch(e){logError(e,'Fenestra flyout gap');}
+        try{this._stopTaskbarMenu=installTaskbarMenu();}catch(e){logError(e,'Fenestra taskbar menu');}
         this._stopPress=installPressAnimation();
         this._stopOverview=installOverviewBlock(this._injections);
         this._stopPreview=installPreviewStyle();
@@ -111,6 +118,7 @@ export default class WindowsTrayTypography extends Extension {
         indicator._percentageLabel.set_style('font-family: "Fenestra Taskbar Text"; font-size: 12px; font-weight: 400; min-width: 36px; text-align: right;');
     }
     disable() {
+        this._stopTaskbarMenu?.();this._stopTaskbarMenu=null;
         this._stopWeather?.();this._stopWeather=null;
         this._stopSearch?.();this._stopSearch=null;this._desktop=null;
         this._security?.destroy();this._security=null;

@@ -1,0 +1,38 @@
+/* Fenestra: Windows 11 caption buttons for every GTK 3 window (Firefox, Chromium
+   and Electron in GTK mode, gedit…). Imported by ~/.config/gtk-3.0/gtk.css.
+   Same metrics and colours as the GTK 4 file. */
+headerbar button.titlebutton,
+.titlebar button.titlebutton {
+  min-width: 46px; min-height: 32px; padding: 0; margin: 0;
+  border: none; border-radius: 0; outline: none; box-shadow: none;
+  background: none; background-color: transparent; background-image: none;
+  color: inherit; -gtk-icon-shadow: none; -gtk-icon-effect: none;
+  transition: background-color 83ms linear, color 83ms linear;
+}
+headerbar button.titlebutton > image,
+.titlebar button.titlebutton > image {
+  min-width: 16px; min-height: 16px; padding: 0; margin: 0;
+  background: none; border: none; box-shadow: none; opacity: 1;
+}
+headerbar button.titlebutton:hover,
+.titlebar button.titlebutton:hover { background-color: alpha(currentColor, 0.0605); }
+headerbar button.titlebutton:active,
+.titlebar button.titlebutton:active { background-color: alpha(currentColor, 0.0419); }
+headerbar button.titlebutton:active > image,
+.titlebar button.titlebutton:active > image { opacity: 0.786; }
+headerbar button.titlebutton:backdrop:not(:hover) > image,
+.titlebar button.titlebutton:backdrop:not(:hover) > image { opacity: 0.3628; }
+headerbar button.titlebutton.close:hover,
+.titlebar button.titlebutton.close:hover { background-color: #c42b1c; color: #ffffff; }
+headerbar button.titlebutton.close:active,
+.titlebar button.titlebutton.close:active { background-color: alpha(#c42b1c, 0.9); color: #ffffff; }
+headerbar button.titlebutton.close:active > image,
+.titlebar button.titlebutton.close:active > image { opacity: 0.7; }
+/* GtkHeaderBar packs its title buttons with its 6px child spacing; Windows has none. */
+headerbar button.titlebutton + button.titlebutton,
+.titlebar button.titlebutton + button.titlebutton { margin-left: -6px; }
+window:not(.maximized):not(.tiled):not(.fullscreen) headerbar button.titlebutton.close:last-child,
+window:not(.maximized):not(.tiled):not(.fullscreen) .titlebar button.titlebutton.close:last-child { border-top-right-radius: 8px; }
+/* Flush with the window's top-right corner, full title-bar height. */
+headerbar.titlebar, .titlebar headerbar { padding-right: 0; }
+headerbar button.titlebutton, .titlebar button.titlebutton { margin-top: -6px; margin-bottom: -6px; min-height: 46px; }

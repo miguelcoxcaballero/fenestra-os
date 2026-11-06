@@ -4,7 +4,7 @@ from __future__ import annotations
 from gi.repository import GLib, Gtk
 
 from .. import util
-from ..backends import packages, release
+from ..backends import fenestra_update, packages, release
 from ..i18n import _
 from ..widgets import (ExpanderRow, SettingRow, ToggleSwitch, button, clear, confirm, icon, label,
                        not_available_row, spinner, toast)
@@ -201,11 +201,11 @@ class UpdatePage(Page):
     def _render(self):
         clear(self.action_box)
         last = packages.last_checked()
-        if not util.have("pkcon"):
+        if not util.have("pkcon") and not fenestra_update.available():
             self.title_lbl.set_label(_("Updates are not available"))
             self.sub_lbl.set_label(_("PackageKit (pkcon) is not installed"))
             return
-        if packages.offline_pending() and self.state not in ("checking", "downloading"):
+        if (packages.offline_pending() or fenestra_update.restart_pending()) and self.state not in ("checking", "downloading"):
             self.title_lbl.set_label(_("Restart required"))
             self.sub_lbl.set_label(_("Your device will restart to finish installing updates."))
             self.action_box.append(button(_("Restart now"), self._restart, accent=True))
@@ -221,8 +221,9 @@ class UpdatePage(Page):
         elif self.state == "available":
             n = len(self.updates)
             self.title_lbl.set_label(_("Updates available") if n != 1 else _("Update available"))
-            self.sub_lbl.set_label(_("{0} updates · Last checked: {1}").format(n, _fmt_time(last)))
-            has_rpm = any(u.kind == "rpm" for u in self.updates)
+            self.sub_lbl.set_label((_("{0} updates · Last checked: {1}") if n != 1 else _("{0} update · Last checked: {1}"))
+                                   .format(n, _fmt_time(last)))
+            has_rpm = any(u.kind in ("rpm", "fenestra") for u in self.updates)
             self.action_box.append(button(_("Download & install all") if has_rpm else _("Install all"),
                                           self._install, accent=True))
         elif self.state == "error":
@@ -237,15 +238,30 @@ class UpdatePage(Page):
     def _check(self):
         self.state = "checking"
         self._render()
-        packages.check(self._checked)
+        self.fenestra = None
+
+        def fenestra_checked(ok, upd, _err):
+            # Fedora's updates are still listed when GitHub can't be reached.
+            self.fenestra = upd if ok else None
+            if util.have("pkcon"):
+                packages.check(self._checked)
+            else:
+                if not util.READ_ONLY:
+                    packages.set_state("last_checked", GLib.get_real_time() / 1e6)
+                self._checked(ok, [], _err)
+        if fenestra_update.available():
+            fenestra_update.check(fenestra_checked)
+        else:
+            fenestra_checked(False, None, "")
 
     def _checked(self, ok, ups, err):
-        if not ok:
+        fen = [self.fenestra] if getattr(self, "fenestra", None) else []
+        if not ok and not fen:
             self.state, self.error = "error", err
             self._render()
             return
-        self.updates = ups
-        self.state = "available" if ups else "idle"
+        self.updates = fen + list(ups)
+        self.state = "available" if self.updates else "idle"
         self._render()
         self._fill_list()
 
@@ -255,6 +271,18 @@ class UpdatePage(Page):
             self.list_group.set_visible(False)
             return
         self.list_group.set_visible(True)
+        for u in self.updates:
+            if u.kind != "fenestra":
+                continue
+            exp = ExpanderRow(_("Fenestra {0}").format(u.version),
+                              _("{0} changes · new features and fixes").format(u.total) if u.total
+                              else _("New features and fixes"),
+                              "fs-arrow-sync-symbolic", expanded=True)
+            for c in u.changes[:50]:
+                exp.add(SettingRow(c, None, None))
+            if u.total > min(len(u.changes), 50):
+                exp.add(SettingRow(_("…and {0} more").format(u.total - min(len(u.changes), 50)), None, None))
+            self.list_group.add(exp)
         rpm = [u for u in self.updates if u.kind == "rpm"]
         fp = [u for u in self.updates if u.kind == "flatpak"]
         if rpm:
@@ -283,6 +311,7 @@ class UpdatePage(Page):
         self._render()
         has_rpm = any(u.kind == "rpm" for u in self.updates)
         has_fp = any(u.kind == "flatpak" for u in self.updates)
+        fen = next((u for u in self.updates if u.kind == "fenestra"), None)
 
         def after_fp(ok, _msg=None):
             if has_rpm:
@@ -301,10 +330,24 @@ class UpdatePage(Page):
             else:
                 self.state, self.error = "error", msg.splitlines()[-1] if msg else ""
                 self._render()
-        if has_fp:
-            packages.update_flatpaks(after_fp)
+        def apps_and_system():
+            if has_fp:
+                packages.update_flatpaks(after_fp)
+            else:
+                after_fp(True)
+
+        def after_fenestra(ok, msg):
+            if not ok:
+                self.state, self.error = "error", (_("Fenestra update failed: {0}").format(msg.splitlines()[-1])
+                                                   if msg else _("Fenestra update failed"))
+                self._render()
+                return
+            self.updates = [u for u in self.updates if u.kind != "fenestra"]
+            apps_and_system()
+        if fen:
+            fenestra_update.install(fen, after_fenestra)
         else:
-            after_fp(True)
+            apps_and_system()
 
     def _restart(self):
         confirm(self.box, _("Restart now?"), _("Save your work before restarting. Updates will be installed "

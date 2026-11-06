@@ -87,6 +87,11 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | OOBE unit tests (`tests.test_backends`) | OK |
 | OOBE demo flow (`tests.test_flow_demo`) | OK, except where the host has a real user called `alex`: the username derivation then (correctly) proposes `alexrivera` |
 | Settings pages in dark and light (`--demo-data`) | OK |
+| *System › Recovery › Reset this PC* (`fenestra-reset run`, both modes, on throw-away users in the Fedora 43 container) | OK: *Keep my files* leaves `~/Documents` and restores `~/.config` from `/etc/skel`; *Remove everything* deletes the users and their homes; the request file is consumed first, so it never runs twice. Not yet run on a real boot (polkit, `fenestra-reset.service` before GDM) |
+| *Fenestra Update* from GitHub: check | OK against the live repository: an older build lists the commits since it (merge commits left out), a build without a commit id offers the newest one, the newest build reports nothing to install |
+| *Fenestra Update* from GitHub: install (`fenestra-update apply`, Fedora 43 container, source tarball of the working tree) | OK: the overlay is rebuilt (`build/build-overlay.sh`) and installed; files dropped since the last update are removed (`/usr` only), `/var` state is kept, running programs keep their open files (new inodes), `fenestra-post-install` runs. Not yet run with pkexec on an installed system |
+| Fenestra Hello face scan: the face stays on screen while Howdy scans (GStreamer test sources in place of cameras) | OK: with a second camera in the same module it switches to that one live; otherwise the last frame stays. Needs `gstreamer1-plugin-gtk4` (now in the package list, it was missing). Not yet tried with a real IR camera |
+| Fenestra Hello fingerprint art (`--hello-demo finger-2`, `finger-edges`) | OK: the print fills with the accent colour from the bottom up |
 
 ### Build and packaging
 
@@ -100,6 +105,22 @@ tests/shell/shell.sh click 915 1056 && tests/shell/shell.sh shot start.png
 | Ctrl+Shift+Esc → Task Manager | OK (custom keybinding in `10-fenestra-theme`, verified with `gsettings`) |
 | Python dependencies of the apps | All in Fedora Workstation (PyGObject, GTK 4, Gst, Rsvg, cairo, Gdm typelib) |
 | CI lint (py_compile, ksvalidator, no Microsoft assets) | OK locally |
+
+### Caption buttons (minimize, maximize, close)
+
+Tested in the headless GNOME Shell (with Xwayland) by opening one app of each kind and measuring the title bar:
+
+| App kind | Example | Result |
+|---|---|---|
+| GTK 4 / libadwaita | Text Editor, Calculator | Three buttons, 46 px wide, full title-bar height, flush with the corner, white 10 px glyphs, 6 % hover, red close with rounded corner |
+| Fenestra apps | Settings | Same |
+| GTK 3 | gedit | Same (GtkHeaderBar's 6 px spacing cancelled) |
+| X11 apps (mutter frames) | xterm | Same glyphs and spacing, 12 px regular title. Spotify uses this path. |
+| Qt 6 | PyQt6 window | Through XWayland (`QT_QPA_PLATFORM=xcb;wayland`) the mutter frame gives the same buttons; Qt's own Wayland decoration would draw round Adwaita buttons |
+| Firefox | Firefox 145 | Fenestra glyphs, but Firefox spaces the buttons 37 px apart instead of 46 |
+| Files (Explorer layer) | Nautilus | Correct buttons, but in narrow windows the close button is pushed past the right edge by the tab strip's minimum width (`.tab-title { min-width: 1024px }`); fine at 1400 px |
+
+Flatpak apps get the same CSS (per-user copy plus a system `flatpak override` for `xdg-config/gtk-*`); not tested.
 
 ## Installer branding (legal notes)
 
