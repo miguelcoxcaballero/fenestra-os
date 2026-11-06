@@ -24,7 +24,7 @@ LABEL_ICONS = {'Copy as path': 'win11-menu-copypath', 'Copiar como ruta de acces
 
 
 # The overlay's context-menu labels have no entry in Nautilus' catalogue; Explorer's wording.
-MENU_ES = {'View': 'Ver', 'Sort by': 'Ordenar por', 'Group by': 'Agrupar por', 'New': 'Nuevo', 'Folder': 'Carpeta',
+MENU_ES = {'Renombrar…': 'Cambiar nombre', 'Mover a la papelera': 'Eliminar', 'Rename': 'Cambiar nombre', 'Share': 'Compartir', 'Delete': 'Eliminar', 'View': 'Ver', 'Sort by': 'Ordenar por', 'Group by': 'Agrupar por', 'New': 'Nuevo', 'Folder': 'Carpeta',
            'Open in Terminal': 'Abrir en Terminal', 'Open With…': 'Abrir con', 'Open with…': 'Abrir con',
            'Cut': 'Cortar', 'Copy': 'Copiar', 'Paste': 'Pegar', 'Rename…': 'Cambiar nombre', 'Move to Trash': 'Eliminar',
            'Compress to ZIP file': 'Comprimir en archivo ZIP', 'Extract to…': 'Extraer en…', 'Extract': 'Extraer todo',
@@ -40,11 +40,38 @@ MENU_ES = {'View': 'Ver', 'Sort by': 'Ordenar por', 'Group by': 'Agrupar por', '
            'Empty Trash…': 'Vaciar papelera de reciclaje…', 'Restore From Trash': 'Restaurar', 'Remove From Recent': 'Quitar de Reciente'}
 
 
+def iconic_label(button):
+    """Explorer's context menu top row (Cut, Copy, Rename, Share, Delete) puts the label under
+    the glyph; GtkModelButton hides the label of iconic items, so show it below the image."""
+    text = (button.get_property('text') or '').replace('_', '')
+    if not text:
+        return
+    text = MENU_ES.get(text, text) if tr('View') != 'View' else text
+    layout = button.get_layout_manager()
+    if isinstance(layout, Gtk.BoxLayout):
+        layout.set_orientation(Gtk.Orientation.VERTICAL)
+        layout.set_spacing(4)
+    button.add_css_class('fenestra-iconic')
+    label = next((c for c in walk(button) if isinstance(c, Gtk.Label) and c.get_css_name() != 'accelerator'), None)
+    if label is None:
+        return
+    label.set_label(text)
+    label.set_wrap(True)
+    label.set_justify(Gtk.Justification.CENTER)
+    label.set_max_width_chars(8)
+    label.set_xalign(0.5)
+    label.set_visible(True)
+    if not getattr(label, '_fenestra_shown', False):
+        label._fenestra_shown = True
+        label.connect('notify::visible', lambda l, _p: l.get_visible() or l.set_visible(True))
+
+
 def decorate_menu(widget):
     for button in walk(widget):
         if GObject.type_name(button.__gtype__) != 'GtkModelButton':
             continue
         if button.get_property('iconic'):
+            iconic_label(button)
             continue
         text = (button.get_property('text') or '').replace('_', '')
         if text in MENU_ES and tr('View') != 'View':
@@ -115,6 +142,93 @@ def _map_hook(widget):
         widget.connect('map', _popover_mapped)
         _popover_mapped(widget)
     return True
+
+
+def explorer_search(toolbar):
+    """Explorer searches from the search box: while the slot searches, the query editor
+    (search_container, moved next to the search button by the toolbar overlay) takes the
+    search box's place and the address keeps the path bar."""
+    if getattr(toolbar, '_fenestra_search', False):
+        return
+    switcher = next((w for w in walk(toolbar) if isinstance(w, Gtk.Stack) and w.get_child_by_name('pathbar')), None)
+    container = next((w for w in walk(toolbar) if w.has_css_class('fenestra-search-container')), None)
+    button = next((w for w in walk(toolbar) if isinstance(w, Gtk.ToggleButton) and w.get_action_name() == 'slot.search-visible'), None)
+    holder = button.get_parent() if button else None
+    if not (switcher and container and isinstance(holder, Gtk.Stack)):
+        return
+    toolbar._fenestra_search = True
+    state = {'slot': None, 'id': 0}
+
+    def sync(*_args):
+        slot = toolbar.get_property('window-slot')
+        searching = bool(slot and slot.get_property('search-visible'))
+        if searching and switcher.get_visible_child_name() == 'search':
+            switcher.set_visible_child_name('pathbar')
+        if searching and holder.get_visible():
+            width = holder.get_width()
+            if width > 0:
+                container.set_size_request(width, -1)
+        container.set_visible(searching)
+        holder.set_visible(not searching)
+        # Explorer's box has just the text and a clear button: no folder glyph, no filter menu.
+        editor = container.get_first_child()
+        if editor is not None:
+            for child in list(walk(editor))[1:]:
+                if child.get_parent() is editor and (isinstance(child, Gtk.MenuButton) or
+                                                     (isinstance(child, Gtk.Image) and child is editor.get_first_child())):
+                    child.set_visible(False)
+                elif isinstance(child, Gtk.Image) and (child.get_icon_name() or '').startswith('edit-clear'):
+                    child.set_from_icon_name('window-close-symbolic')  # Explorer's clear is an X
+                    child.set_pixel_size(12)
+        if slot is not state['slot']:
+            if state['slot'] is not None and state['id']:
+                try:
+                    state['slot'].disconnect(state['id'])
+                except TypeError:
+                    pass
+            state['slot'] = slot
+            state['id'] = slot.connect('notify::search-visible', lambda *_: GLib.idle_add(sync)) if slot else 0
+        return GLib.SOURCE_REMOVE
+
+    # Alt+D / Ctrl+L: the entry takes the whole address box like Explorer's.
+    entry = next((w for w in walk(switcher) if GObject.type_name(w.__gtype__) == 'NautilusLocationEntry'), None)
+    if entry is not None:
+        entry.set_hexpand(True)
+        entry.get_parent().add_css_class('fenestra-location-box')
+    switcher.connect('notify::visible-child-name', lambda *_: GLib.idle_add(sync))
+    toolbar.connect('notify::window-slot', lambda *_: GLib.idle_add(sync))
+    sync()
+
+
+def explorer_shortcuts(window):
+    """Alt+D edits the address (Nautilus' Ctrl+L, the toolbar's edit-location action)."""
+    if getattr(window, '_fenestra_keys', False):
+        return
+    window._fenestra_keys = True
+    keys = Gtk.ShortcutController()
+    keys.set_scope(Gtk.ShortcutScope.GLOBAL)
+    keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+
+    def edit_location(*_args):
+        toolbar = next((w for w in walk(window) if GObject.type_name(w.__gtype__) == 'NautilusToolbar'), None)
+        return bool(toolbar and toolbar.activate_action('toolbar.edit-location', None))
+    keys.add_shortcut(Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string('<Alt>d'), Gtk.CallbackAction.new(edit_location)))
+    window.add_controller(keys)
+    # A new tab (Ctrl+T, the + button) opens Home in Explorer, not a copy of the current folder.
+    original = window.lookup_action('new-tab') if isinstance(window, Gio.ActionMap) else None
+    if original is not None and not getattr(window, '_fenestra_new_tab', False):
+        window._fenestra_new_tab = True
+        window.remove_action('new-tab')
+        action = Gio.SimpleAction.new('new-tab', None)
+
+        def new_tab(*_args):
+            original.activate(None)
+            home = Gio.File.new_for_path(GLib.get_home_dir()).get_uri()
+            slot = window.get_property('active-slot')
+            if slot is not None:
+                slot.activate_action('slot.open-location', GLib.Variant('s', home))
+        action.connect('activate', new_tab)
+        window.add_action(action)
 
 
 class TabStripSizer:
@@ -189,6 +303,9 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
     def _attach(self, window):
         for widget in walk(window):
             legacy_name(widget)
+            if GObject.type_name(widget.__gtype__) == 'NautilusToolbar':
+                explorer_search(widget)
+        explorer_shortcuts(window)
         self._relabel(window)
         if window.find_property("active-slot") and not getattr(window,"_windows_views",None):
             window._windows_views = FenestraViews(window)
@@ -219,7 +336,25 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
             slot._windows_tab_icon = True
             # Resolve its current page after a tab is transferred to a window.
             slot.connect('notify::location', lambda obj, _ps: self._refresh_slot(obj))
+        if not getattr(page, '_fenestra_title', False):
+            page._fenestra_title = True
+            page.connect('notify::title', lambda p, _ps: self._search_title(p))
         self._set_icon(page, slot)
+
+    def _search_title(self, page):
+        """Explorer titles a search tab '<query> - Search Results in <folder>'."""
+        slot = page.get_child()
+        location = slot.get_property('location') if slot else None
+        if not location or location.get_uri_scheme() != 'x-nautilus-search':
+            return
+        editor = next((w for w in walk(slot.get_root() or slot) if GObject.type_name(w.__gtype__) == 'NautilusQueryEditor'
+                       and w.get_mapped()), None)
+        text = next((w for w in walk(editor) if isinstance(w, Gtk.Text)), None) if editor is not None else None
+        query = text.get_text() if text is not None else ''
+        views = getattr(slot.get_root(), '_windows_views', None)
+        title = tr('%s - Search Results in %s') % (query, getattr(views, '_folder_title', ''))
+        if query and page.get_title() != title:
+            GLib.idle_add(lambda: (page.get_title() != title and page.set_title(title), GLib.SOURCE_REMOVE)[1])
 
     def _refresh_slot(self, slot):
         parent = slot.get_parent()
@@ -244,7 +379,7 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
                     special[value] = icon
             name = special.get(path, 'folder')
             if not path:
-                name = {'trash':'user-trash', 'recent':'document-open-recent', 'starred':'starred',
+                name = {'trash':'user-trash', 'recent':'document-open-recent', 'starred':'starred', 'x-nautilus-search':'win11-explorer-search',
                         'network':'network-workgroup', 'computer':'computer'}.get(location.get_uri_scheme(), 'folder-remote')
         page.set_icon(Gio.ThemedIcon.new('hwin' if name == 'folder-home' else name))
         if location and location.get_uri_scheme() == 'computer':

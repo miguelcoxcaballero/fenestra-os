@@ -6,7 +6,7 @@ from gi.repository import Gio,Gtk,GLib
 
 _LANG = (os.environ.get('LANGUAGE') or os.environ.get('LC_MESSAGES') or os.environ.get('LANG') or 'en').split(':')[0][:2]
 _L = {
-    'es': {'New': 'Nuevo', 'Sort': 'Ordenar', 'View': 'Ver', 'Filter': 'Filtrar', 'Details': 'Detalles',
+    'es': {'New': 'Nuevo', 'Sort': 'Ordenar', 'View': 'Ver', 'Filter': 'Filtro', 'Details': 'Detalles',
            'Search': 'Buscar', 'Search %s': 'Buscar en %s', 'New folder': 'Nueva carpeta', 'Cut': 'Cortar',
            'Copy': 'Copiar', 'Paste': 'Pegar', 'Rename': 'Cambiar nombre', 'Share': 'Compartir', 'Delete': 'Eliminar',
            'See more': 'Ver más', 'Copy as path': 'Copiar como ruta de acceso', 'Open': 'Abrir', 'Home': 'Inicio', 'Gallery': 'Galería', 'This PC': 'Este equipo', 'Network': 'Red', 'Desktop': 'Escritorio',
