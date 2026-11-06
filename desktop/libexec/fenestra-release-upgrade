@@ -182,9 +182,21 @@ def copr_has_chroot(owner, project, target):
         return True   # unknown: leave it alone, the dry run decides
 
 
+def coprs_in_use():
+    out = sh(['dnf', 'repoquery', '--installed', '--qf', '%{from_repo}\n'], capture=True, check=False, log=False).stdout
+    return {l.strip() for l in out.splitlines() if l.startswith('copr:')}
+
+
 def handle_coprs(target):
     disabled = []
+    used = coprs_in_use()
     for owner, project in enabled_coprs():
+        if f'copr:copr.fedorainfracloud.org:{owner}:{project}' not in used:
+            # Nothing installed comes from it: it can only offer surprises during the upgrade.
+            sh(['dnf', 'copr', 'disable', '-y', f'{owner}/{project}'], check=False)
+            disabled.append(f'{owner}/{project}')
+            emit('LOG', f'{owner}/{project}: no installed package uses it, disabled')
+            continue
         if not copr_has_chroot(owner, project, target):
             sh(['dnf', 'copr', 'disable', '-y', f'{owner}/{project}'], check=False)
             disabled.append(f'{owner}/{project}')
@@ -266,7 +278,8 @@ def pin_drivers():
 
 
 def dry_run(target):
-    p = sh(['dnf', 'distro-sync', f'--releasever={target}', '--assumeno', '--refresh'], capture=True, check=False)
+    p = sh(['dnf', 'distro-sync', f'--releasever={target}', '--assumeno', '--refresh', '--allowerasing'],
+           capture=True, check=False)
     out = p.stdout
     if 'Failed to resolve the transaction' in out:
         probs = [l.strip() for l in out.splitlines() if l.strip().startswith(('Problem', '- installed', '- nothing'))]
@@ -389,7 +402,9 @@ def run(target, kits, user):
             raise RuntimeError(f'camera/speaker drivers do not build for kernel {k}: {", ".join(bad)}')
         step(55, 'Downloading the new version')
         emit('LOG', f'download size: {size}')
-        sh(['dnf', '-y', 'system-upgrade', 'download', f'--releasever={target}'])
+        # Same rules as the dry run: packages Fedora dropped are removed (the dry run
+        # already refused if any of them matters).
+        sh(['dnf', '-y', 'system-upgrade', 'download', f'--releasever={target}', '--allowerasing'])
         step(93, 'Getting ready to restart')
         install_plymouth()
         sh(['systemctl', 'enable', 'fenestra-post-upgrade.service'], check=False)
