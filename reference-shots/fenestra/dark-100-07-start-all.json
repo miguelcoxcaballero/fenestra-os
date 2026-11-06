@@ -1,0 +1,1 @@
+{"wallpaper": "solid", "bg": "#1f1f1f", "note": "KWin bench 10-all-category (fenestra-start), shell surfaces only", "seed": [960, 588], "mask": "dark-100-07-start-all.mask.png", "surfaces": [{"layer": 2, "scope": "fenestra-start", "excl": 0, "box": [544, 156, 832, 864]}, {"layer": 2, "scope": "fenestra-taskbar", "excl": 48, "box": [0, 1032, 1920, 48]}]}

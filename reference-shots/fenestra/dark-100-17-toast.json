@@ -1,0 +1,1 @@
+{"wallpaper": "solid", "bg": "#1f1f1f", "note": "KWin bench 17-banner (fenestra-toasts), shell surfaces only", "seed": [1677, 952], "mask": "dark-100-17-toast.mask.png", "surfaces": [{"layer": 2, "scope": "fenestra-taskbar", "excl": 48, "box": [0, 1032, 1920, 48]}, {"layer": 3, "scope": "fenestra-toasts", "excl": 0, "box": [1489, 878, 378, 150]}]}

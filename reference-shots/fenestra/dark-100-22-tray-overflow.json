@@ -1,0 +1,1 @@
+{"wallpaper": "solid", "bg": "#1f1f1f", "note": "KWin bench 01b-overflow (fenestra-flyout), shell surfaces only", "seed": [1845, 996], "mask": "dark-100-22-tray-overflow.mask.png", "surfaces": [{"layer": 2, "scope": "fenestra-taskbar", "excl": 48, "box": [0, 1032, 1920, 48]}, {"layer": 2, "scope": "fenestra-flyout", "excl": 0, "box": [1821, 972, 48, 48]}]}

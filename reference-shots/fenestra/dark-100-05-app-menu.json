@@ -1,0 +1,1 @@
+{"wallpaper": "solid", "bg": "#1f1f1f", "note": "KWin bench 03-app-menu (fenestra-flyout), shell surfaces only", "seed": [1124, 962], "mask": "dark-100-05-app-menu.mask.png", "surfaces": [{"layer": 2, "scope": "fenestra-taskbar", "excl": 48, "box": [0, 1032, 1920, 48]}, {"layer": 2, "scope": "fenestra-flyout", "excl": 0, "box": [1010, 904, 228, 116]}]}

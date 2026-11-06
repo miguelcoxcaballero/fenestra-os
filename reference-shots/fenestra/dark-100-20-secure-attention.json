@@ -1,0 +1,1 @@
+{"wallpaper": "solid", "bg": "#1f1f1f", "note": "KWin bench 22-security (fenestra-security), shell surfaces only", "seed": [960, 540], "surfaces": [{"layer": 2, "scope": "fenestra-taskbar", "excl": 48, "box": [0, 1032, 1920, 48]}, {"layer": 3, "scope": "fenestra-security", "excl": -1, "box": [0, 0, 1920, 1080]}]}
