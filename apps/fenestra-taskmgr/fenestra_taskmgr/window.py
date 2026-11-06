@@ -333,6 +333,10 @@ class TaskWindow(Gtk.ApplicationWindow):
             it.set_selected(k == pid)
         self.page_title.set_text(page.title)
         self.toolbar.set_visible(page.has_toolbar)
+        if page.has_toolbar:  # Settings sits straight on the window background
+            self.panel.remove_css_class("flat")
+        else:
+            self.panel.add_css_class("flat")
         child = self.tool_slot.get_first_child()
         while child:
             nxt = child.get_next_sibling()

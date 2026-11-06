@@ -73,6 +73,7 @@ button.nav-item.selected .nav-pill { background-color: var(--accent); }
 button.nav-item.nav-settings { margin-bottom: 0; }
 
 /* ------------------------------------------------------------- panel */
+.panel.flat { background: none; border-color: transparent; }
 .panel {
   background-color: var(--panel);
   border-top: 1px solid var(--panel-edge);
@@ -169,7 +170,7 @@ entry.fluent-entry {
 entry.fluent-entry:focus-within { border-bottom: 2px solid var(--accent); }
 checkbutton.fluent-check { font-size: 14px; }
 checkbutton check, checkbutton.fluent-check check {
-  min-width: 18px; min-height: 18px; border-radius: 4px; margin-right: 10px;
+  min-width: 18px; min-height: 18px; border-radius: 4px; margin-right: 4px;
   border: 1px solid var(--check-border); background: none; box-shadow: none;
 }
 checkbutton check:checked {
@@ -204,29 +205,30 @@ button.perf-item.selected { background-color: var(--item-sel); }
 .bios-time { font-size: 12px; }
 
 /* ------------------------------------------------------------- settings page */
-.settings-page { padding: 0 0 24px 0; }
+.settings-page { padding: 0 0 24px 0; margin-left: -1px; }
 .settings-column { min-width: 400px; }
-.settings-title { font-size: 20px; font-weight: 600; margin: 6px 0 10px 0; }
-.settings-section { font-size: 14px; font-weight: 600; margin: 14px 0 11px 0; }
+.settings-title { font-size: 20px; font-weight: 600; margin: 7px 0 10px 0; }
+.settings-section { font-size: 14px; font-weight: 600; margin: 16px 0 11px 0; }
 .card {
   background-color: var(--card);
   border: 1px solid var(--card-line);
   border-radius: 4px;
-  min-height: 66px;
+  min-height: 67px;
   padding: 0 32px 0 20px;
   margin-bottom: 8px;
 }
-.card.expander-head { border-radius: 4px 4px 0 0; margin-bottom: 0; }
+.card.expander-head { border-radius: 4px 4px 0 0; margin-bottom: 0; background-color: var(--expander-head); padding-right: 8px; }
 .card.expander-head.collapsed { border-radius: 4px; margin-bottom: 8px; }
-.card.sub { min-height: 48px; border-radius: 0; border-top: none; margin-bottom: 0; padding-left: 64px; }
+.card.sub { min-height: 48px; border-radius: 0; border-top: none; margin-bottom: 0; padding-left: 58px; }
 .card.sub.last { border-radius: 0 0 4px 4px; margin-bottom: 8px; }
-.card-title { font-size: 14px; }
-.card-sub { font-size: 12px; color: var(--fg2); }
-.card-icon { margin-right: 18px; }
+.card-title { font-size: 14px; margin-bottom: 1px; }
+.card-sub { font-size: 12px; color: var(--fg2); margin-right: 24px; line-height: 16px; }
+.card-icon { margin-right: 21px; }
 button.combo {
-  min-height: 32px; min-width: 110px;
-  padding: 0 10px 0 12px;
-  border-radius: 4px; border: 1px solid var(--search-border); box-shadow: none;
+  min-height: 30px; min-width: 104px;
+  padding: 0 13px 0 12px;
+  border-radius: 4px; border: 1px solid var(--combo-edge); border-top-color: var(--combo-top);
+  border-bottom-color: var(--combo-bottom); box-shadow: none;
   background-color: var(--ctl);
   font-size: 14px;
 }
