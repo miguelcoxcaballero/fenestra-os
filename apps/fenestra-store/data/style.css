@@ -20,9 +20,9 @@ button.back-button {
 }
 button.back-button:hover { background: var(--st-subtle-hover); }
 button.back-button:active { background: var(--st-subtle-press); }
-.title-icon { margin: 0 20px 0 19px; -gtk-icon-style: regular; }
-.titlebar-box.has-back .title-icon { margin-left: 10px; }
-.title-label { font-size: 12px; }
+.title-icon { margin: 0 19px 0 19px; -gtk-icon-style: regular; }
+.titlebar-box.has-back .title-icon { margin-left: 9px; }
+.title-label { font-size: 12px; margin-top: 2px; }
 .demo-pill {
   font-size: 12px; padding: 1px 8px; margin-right: 52px; border-radius: 4px;
   background-color: var(--st-caution-bg); color: var(--st-warning);
@@ -30,7 +30,7 @@ button.back-button:active { background: var(--st-subtle-press); }
 
 /* search box: 600x33 at x=300, y=8; glass on the right */
 entry.store-search {
-  min-height: 31px; padding: 0 12px 0 11px; border-radius: 4px; margin: 0;
+  min-height: 31px; padding: 0 12px 0 10px; border-radius: 4px; margin: 1px 0 0 0;
   background-color: var(--st-input); border: 1px solid var(--st-input-border);
   border-bottom-color: var(--st-input-bottom);
   box-shadow: none; outline: none; color: var(--st-fg); caret-color: var(--st-fg); font-size: 14px;
@@ -43,14 +43,14 @@ entry.store-search > text > placeholder { color: var(--st-fg2); }
 entry.store-search > image { color: var(--st-fg2); -gtk-icon-size: 12px; margin: 0; }
 entry.store-search selection { background-color: var(--st-accent); color: var(--st-on-accent); }
 
-windowcontrols.window-controls { margin: 0; padding: 0; }
-windowcontrols.window-controls button {
+.window-controls { margin: 0; padding: 0; }
+button.caption-button {
   min-width: 46px; min-height: 32px; padding: 0; margin: 0; border-radius: 0;
   background: none; border: none; box-shadow: none; color: var(--st-fg);
 }
-windowcontrols.window-controls button image { background: none; box-shadow: none; padding: 0; -gtk-icon-size: 10px; }
-windowcontrols.window-controls button:hover { background: var(--st-subtle-hover); }
-windowcontrols.window-controls button.close:hover { background: var(--st-close-hover); color: #ffffff; }
+button.caption-button:hover { background: var(--st-subtle-hover); }
+button.caption-button:active { background: var(--st-subtle-press); }
+button.caption-button.close:hover { background: var(--st-close-hover); color: #ffffff; }
 
 /* ------------------------------------------------------------------ navigation rail (72 px) */
 .nav-pane { min-width: 72px; padding: 0 0 4px 0; }
@@ -67,7 +67,7 @@ list.nav-list > row.nav-item:selected { background-color: var(--st-nav-select); 
 .nav-item-box.selected { padding: 19px 0 0 0; }
 .nav-icon { color: var(--st-nav-fg); }
 .nav-item-box.selected .nav-icon { color: var(--st-accent); }
-.nav-label { font-size: 11px; margin-top: 5px; padding: 0 2px; }
+.nav-label { font-size: 11px; margin-top: 7px; padding: 0; }
 .nav-pill { min-width: 3px; min-height: 24px; margin-top: 16px; border-radius: 2px; background-color: transparent; }
 list.nav-list > row.nav-item:selected .nav-pill { background-color: var(--st-accent); }
 .nav-badge {
@@ -89,7 +89,7 @@ scrolledwindow.page-scroll { background: none; }
   font-size: 28px; font-weight: 600;
 }
 .page-subtitle { color: var(--st-fg2); font-size: 14px; margin-top: 2px; }
-.list-heading { font-size: 20px; font-weight: 600; margin: -4px 0 9px 0; }
+.list-heading { font-size: 20px; font-weight: 600; margin: -1px 0 12px 0; }
 .section-head { margin: 28px 0 10px 1px; }
 .section-title { font-size: 20px; font-weight: 600; margin: 0; }
 .caption { font-size: 12px; color: var(--st-fg2); }
@@ -126,12 +126,12 @@ button.hero-button {
   font-size: 14px; font-weight: 600;
 }
 button.hero-button:hover { background: rgba(255,255,255,0.12); }
-.hero-dots { min-height: 40px; }
+.hero-dots { min-height: 6px; margin: 7px 0 25px 0; }
 button.dot {
-  min-width: 4px; min-height: 4px; padding: 0; margin: 0 2px; border-radius: 3px; border: none; box-shadow: none;
+  min-width: 4px; min-height: 4px; padding: 0; margin: 0 4px; border-radius: 3px; border: none; box-shadow: none;
   background-color: #9a9a9a; background-image: none;
 }
-button.dot.active { min-width: 6px; min-height: 6px; margin: 0 1px; }
+button.dot.active { min-width: 6px; min-height: 6px; margin: 0 3px; }
 .tile-text-large { padding: 88px 24px 0 34px; color: #ffffff; }
 .tile-text-large .hero-chip { margin: 0 0 9px -2px; }
 .tile-title { font-size: 20px; font-weight: 600; color: #ffffff; }
@@ -147,15 +147,15 @@ button.category-chip {
 }
 button.category-chip:hover { background-color: var(--st-card-hover); }
 .category-chip-icon { color: var(--st-accent); }
-.showcase > .chip-scroll { margin: 0 0 20px 0; }
+.page-body.showcase > .chip-scroll { margin: 16px 0 20px 0; }
 
 /* ------------------------------------------------------------------ panels (two per row) */
-.panel-pair { margin-bottom: 14px; }
+.panel-pair { margin-bottom: 12px; }
 .panel {
   border-radius: 8px; background-color: var(--st-card); border: 1px solid var(--st-card-border);
   padding: 0 0 26px 0;
 }
-.panel-head { padding: 30px 30px 0 32px; min-height: 52px; }
+.panel-head { padding: 21px 30px 0 32px; min-height: 52px; }
 button.panel-title-button {
   padding: 0 8px; margin: 0; min-height: 36px; border-radius: 4px; background: none; border: none; box-shadow: none;
   color: var(--st-fg); font-weight: normal;
@@ -170,14 +170,14 @@ button.panel-arrow {
 button.panel-arrow image { -gtk-icon-size: 10px; }
 button.panel-arrow:hover { background: var(--st-subtle-hover); }
 button.panel-arrow:disabled { color: var(--st-fg3); background: none; }
-.panel-divider { min-height: 1px; background-color: var(--st-divider); margin: 1px 39px 0 39px; }
+.panel-divider { min-height: 1px; background-color: var(--st-divider); margin: 12px 39px 0 39px; }
 .panel-rows { padding: 22px 16px 0 16px; }
 button.panel-row {
-  padding: 23px 39px 23px 40px; margin: 0; border-radius: 8px; background: none; border: none;
+  padding: 23px 40px 23px 39px; margin: 0; border-radius: 8px; background: none; border: none;
   box-shadow: none; color: var(--st-fg); font-weight: normal; min-height: 0;
 }
 button.panel-row:hover { background-color: var(--st-card-hover); }
-.panel-row-text { margin-left: 21px; padding-top: 3px; }
+.panel-row-text { margin-left: 20px; padding-top: 2px; }
 .panel-row-name { font-size: 14px; }
 .panel-row-cat { font-size: 14px; color: var(--st-fg2); margin-top: 7px; }
 .price-chip {
@@ -190,13 +190,13 @@ image.app-icon { -gtk-icon-style: regular; }
 flowbox.card-grid > flowboxchild { padding: 0; background: none; outline: none; }
 flowbox.card-grid { margin: 0; }
 button.result-card {
-  min-width: 280px; padding: 16px; border-radius: 8px;
+  min-width: 200px; padding: 16px; border-radius: 8px;
   background-color: var(--st-card); background-image: none; border: 1px solid var(--st-card-border);
   box-shadow: none; color: var(--st-fg); font-weight: normal;
 }
 button.result-card:hover { background-color: var(--st-card-hover); }
 button.result-card:active { background-color: var(--st-card-press); }
-.result-texts { margin-left: 16px; margin-right: 8px; }
+.result-texts { margin-left: 12px; margin-right: 8px; }
 .result-name { font-size: 14px; font-weight: 600; }
 .result-meta { margin-top: 3px; }
 .result-meta-text, .app-meta-text { font-size: 12px; color: var(--st-fg2); }
@@ -208,17 +208,17 @@ button.result-card:active { background-color: var(--st-card-press); }
 /* chips under a page title (search: All departments / Apps / Games) */
 .chip-row { padding: 0; }
 togglebutton.filter-chip, button.filter-chip {
-  min-height: 31px; padding: 0 17px; border-radius: 16px;
+  min-height: 31px; padding: 0 16px; border-radius: 16px;
   background: none; border: 1px solid var(--st-chip-border); box-shadow: none; color: var(--st-fg);
   font-size: 14px; font-weight: normal;
 }
 togglebutton.filter-chip:hover { background-color: var(--st-subtle-hover); }
 togglebutton.filter-chip:checked { background: none; border-color: var(--st-accent); color: var(--st-accent); }
-.page-body > .chip-scroll { margin: -6px 0 36px 0; }
+.page-body > .chip-scroll { margin: 3px 0 36px 0; }
 
 /* ------------------------------------------------------------------ app page */
 .page-body.details { padding: 0; }
-.app-head { padding: 88px 88px 43px 88px; }
+.app-head { padding: 88px 88px 45px 88px; }
 .app-head-info { margin-left: 26px; }
 .app-title {
   font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", "Selawik", "Inter", sans-serif;
@@ -228,15 +228,15 @@ button.dev-link, button.meta-link {
   padding: 0; margin: 0; min-height: 0; min-width: 0; border: none; background: none; box-shadow: none;
   color: var(--st-link); font-size: 14px; font-weight: normal;
 }
-button.dev-link { margin-top: 1px; }
+button.dev-link { margin-top: 10px; }
 button.dev-link:hover, button.meta-link:hover { text-decoration: underline; }
-.app-meta { margin-top: 5px; }
+.app-meta { margin-top: 6px; }
 .app-meta .app-meta-text { font-size: 14px; color: var(--st-fg); }
 .app-meta .meta-sep { min-height: 14px; margin: 3px 8px 2px 8px; }
 .app-summary { font-size: 14px; margin-top: 17px; }
-.app-actions { margin-top: 32px; }
+.app-actions { margin-top: 52px; }
 button.fluent-button.big {
-  min-width: 200px; min-height: 50px; padding: 0 12px; font-size: 14px; font-weight: 600;
+  min-width: 174px; min-height: 50px; padding: 0 12px; font-size: 14px; font-weight: 600;
 }
 button.icon-action {
   min-width: 32px; min-height: 32px; padding: 0; margin-left: 13px; border-radius: 4px;
@@ -252,7 +252,7 @@ button.icon-action:hover { background: var(--st-subtle-hover); }
 .progress-box.big progressbar.fluent-progress > trough > progress { min-height: 3px; border-radius: 0 2px 2px 0; }
 .progress-title { font-size: 12px; font-weight: 600; }
 .progress-box.big .progress-text { font-size: 12px; color: var(--st-fg); }
-.source-block { margin-top: 18px; }
+.source-block { margin-top: 16px; }
 .source-mark { min-width: 42px; min-height: 50px; border-radius: 2px; margin-right: 10px; }
 .source-mark image { margin: 0 11px; }
 .source-mark.badge-flathub { background-color: var(--st-badge-flathub); color: var(--st-badge-flathub-fg); }
@@ -302,9 +302,10 @@ button.row-name-link {
 }
 button.row-name-link:hover { color: var(--st-accent); }
 .lib-row-dev { font-size: 12px; color: var(--st-fg2); }
+.lib-col-name button.row-name-link { margin-bottom: 2px; }
 .lib-col { font-size: 14px; }
-.lib-action button.fluent-button { min-width: 120px; min-height: 30px; }
-.lib-action { margin-right: 17px; }
+.lib-action button.fluent-button.small { min-width: 94px; min-height: 30px; }
+.lib-action { margin-right: 15px; }
 menubutton.more-button > button {
   min-width: 32px; min-height: 32px; padding: 0; border-radius: 4px; background: none; border: none;
   box-shadow: none; color: var(--st-fg);

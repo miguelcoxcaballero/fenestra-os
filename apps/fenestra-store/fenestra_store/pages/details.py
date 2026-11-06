@@ -275,6 +275,7 @@ class DetailsPage(Page):
         pass
 
     def set_narrow(self, narrow):
+        super().set_narrow(narrow)
         head = getattr(self, "head", None)
         if head is None:
             return

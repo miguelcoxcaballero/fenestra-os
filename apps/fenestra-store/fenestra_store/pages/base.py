@@ -43,7 +43,8 @@ class Page:
         """Library/update state changed (installs, removals, update checks)."""
 
     def set_narrow(self, narrow):
-        pass
+        for g in getattr(self, "_grids", []):
+            g.set_min_children_per_line(1 if narrow else g.get_max_children_per_line())
 
     # helpers ----------------------------------------------------------
     def page_title(self, text, subtitle=None, end=None):
@@ -64,8 +65,14 @@ class Page:
         self.box.append(head)
         return head
 
-    def grid_of(self, apps, max_per_line=3, limit=None):
+    def _grid(self, max_per_line=3):
         grid = card_grid()
+        grid.set_min_children_per_line(1 if self.win.narrow else max_per_line)
+        self._grids = [g for g in getattr(self, "_grids", []) if g.get_parent() is not None] + [grid]
+        return grid
+
+    def grid_of(self, apps, max_per_line=3, limit=None):
+        grid = self._grid(max_per_line)
         grid.set_max_children_per_line(max_per_line)
         for a in (apps[:limit] if limit else apps):
             grid.append(self._card(a))
@@ -78,7 +85,7 @@ class Page:
 
     def paged_grid(self, parent, apps, max_per_line=3):
         """Grid that shows PAGE_STEP cards and a 'Show more' button for the rest."""
-        grid = card_grid()
+        grid = self._grid(max_per_line)
         grid.set_max_children_per_line(max_per_line)
         parent.append(grid)
         more = button("", "fluent-button show-more")
@@ -112,7 +119,7 @@ class Page:
 
     def chips(self, options, selected, on_select):
         """Single row of filter chips (scrolls sideways when narrow): options = [(id, label)]."""
-        row = Gtk.Box(spacing=9)
+        row = Gtk.Box(spacing=7)
         row.add_css_class("chip-row")
         group = None
         for oid, text in options:

@@ -97,13 +97,14 @@ class ShowcasePage(Page):
             b.connect("clicked", lambda _b, k=key: self.win.navigate("category", k))
             row.append(b)
         sc = Gtk.ScrolledWindow()
-        sc.set_policy(Gtk.PolicyType.EXTERNAL, Gtk.PolicyType.NEVER)
+        sc.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         sc.set_propagate_natural_height(True)
         sc.set_child(row)
         sc.add_css_class("chip-scroll")
         return sc
 
     def set_narrow(self, narrow):
+        super().set_narrow(narrow)
         if self.banner is not None:
             self.banner.set_narrow(narrow)
 

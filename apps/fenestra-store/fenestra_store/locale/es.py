@@ -212,4 +212,8 @@ STRINGS = {
     "Installed apps": "Aplicaciones instaladas",
     "More options": "Más opciones",
     "Open app page": "Abrir la ficha",
+    "Minimize": "Minimizar",
+    "Maximize": "Maximizar",
+    "Restore": "Restaurar",
+    "Close": "Cerrar",
 }

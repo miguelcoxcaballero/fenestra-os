@@ -326,6 +326,7 @@ class ActionArea(Gtk.Box):
         self.set_valign(Gtk.Align.CENTER)
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, transition_duration=120)
         self.stack.set_hhomogeneous(False)
+        self.stack.set_vhomogeneous(False)
         self.stack.set_interpolate_size(False)
         self.buttons = Gtk.Box(spacing=8)
         self.stack.add_named(self.buttons, "buttons")
@@ -481,7 +482,7 @@ class Hero(Gtk.Box):
         self.content.set_halign(Gtk.Align.START)
         self.big.add_overlay(self.content)
         left.append(self.big)
-        self.dots = Gtk.Box(spacing=6, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+        self.dots = Gtk.Box(spacing=0, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
         self.dots.add_css_class("hero-dots")
         left.append(self.dots)
         row.append(left)
@@ -676,7 +677,7 @@ class Panel(Gtk.Box):
 
 def panel_pair(win, left, right) -> Gtk.Box:
     """Two panels side by side, 13 px apart (one column when the window is narrow)."""
-    box = Gtk.Box(spacing=13, homogeneous=True)
+    box = Gtk.Box(spacing=12, homogeneous=True)
     box.add_css_class("panel-pair")
     box.append(left)
     if right is not None:
@@ -770,7 +771,9 @@ class Carousel(Gtk.Box):
         self.index = 0
         ov = Gtk.Overlay()
         self.scroller = Gtk.ScrolledWindow()
-        self.scroller.set_policy(Gtk.PolicyType.EXTERNAL, Gtk.PolicyType.NEVER)
+        # AUTOMATIC (overlay scrollbar), not EXTERNAL: EXTERNAL makes the strip's width the
+        # page's minimum width
+        self.scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.scroller.set_size_request(-1, self.HEIGHT)
         strip = Gtk.Box(spacing=12)
         strip.add_css_class("shot-strip")
@@ -779,7 +782,8 @@ class Carousel(Gtk.Box):
         for shot in app.screenshots:
             pic = screenshot_picture(app, shot, w * 2, self.HEIGHT * 2)
             pic.set_size_request(w, self.HEIGHT)
-            pic.set_can_shrink(False)
+            pic.set_can_shrink(True)
+            pic.set_hexpand(False)
             frame = Gtk.Box()
             frame.add_css_class("shot-frame")
             frame.set_overflow(Gtk.Overflow.HIDDEN)

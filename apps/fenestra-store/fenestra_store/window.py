@@ -86,9 +86,26 @@ class StoreWindow(Gtk.ApplicationWindow):
             pill.set_valign(Gtk.Align.CENTER)
             pill.set_tooltip_text(_("Sample catalogue: nothing on this computer is changed"))
             end.append(pill)
-        controls = Gtk.WindowControls(side=Gtk.PackType.END)
+        # own caption buttons (46x32, 10 px glyphs) instead of Gtk.WindowControls, whose icon
+        # theme glyphs cannot be resized from CSS
+        controls = Gtk.Box()
         controls.add_css_class("window-controls")
         controls.set_valign(Gtk.Align.START)
+        self.max_btn = None
+        for css, glyph, tip, cb in (("minimize", "st-window-minimize-symbolic", _("Minimize"), self.minimize),
+                                    ("maximize", "st-window-maximize-symbolic", _("Maximize"), self._toggle_max),
+                                    ("close", "st-window-close-symbolic", _("Close"), self.close)):
+            b = Gtk.Button()
+            b.add_css_class("caption-button")
+            b.add_css_class(css)
+            b.set_child(icon(glyph, 10))
+            b.set_tooltip_text(tip)
+            b.set_focusable(False)
+            b.connect("clicked", lambda _b, cb=cb: cb())
+            controls.append(b)
+            if css == "maximize":
+                self.max_btn = b
+        self.connect("notify::maximized", self._on_maximized)
         end.append(controls)
         tbox.set_end_widget(end)
         handle.set_child(tbox)
@@ -177,6 +194,8 @@ class StoreWindow(Gtk.ApplicationWindow):
         img.set_halign(Gtk.Align.CENTER)
         box.append(img)
         lb = label(title, "nav-label", xalign=0.5, ellipsize=True)
+        lb.set_width_chars(1)
+        lb.set_max_width_chars(1)
         box.append(lb)
         ov.set_child(box)
         badge = label("", "nav-badge", xalign=0.5)
@@ -199,6 +218,7 @@ class StoreWindow(Gtk.ApplicationWindow):
         return row
 
     def _select_nav(self, nav_id):
+        self._nav_sel = nav_id
         for lst in self.nav_lists:
             lst.unselect_all()
         for pid, row in self.nav_rows.items():
@@ -298,9 +318,24 @@ class StoreWindow(Gtk.ApplicationWindow):
         self.current, self.current_arg = pid, arg
         self._sync_back()
         page.show(arg)
-        self._select_nav(page.nav_for(arg) if hasattr(page, "nav_for") else page.nav)
+        nav = page.nav_for(arg) if hasattr(page, "nav_for") else page.nav
+        if nav is not None:  # app pages and search results keep the rail selection
+            self._select_nav(nav)
+        elif getattr(self, "_nav_sel", None) is None:
+            self._select_nav("home")
         page.scroller.get_vadjustment().set_value(0)
         self.stack.set_visible_child_name(pid)
+
+    def _toggle_max(self):
+        if self.is_maximized():
+            self.unmaximize()
+        else:
+            self.maximize()
+
+    def _on_maximized(self, *_):
+        m = self.is_maximized()
+        self.max_btn.get_child().set_from_icon_name("st-window-restore-symbolic" if m else "st-window-maximize-symbolic")
+        self.max_btn.set_tooltip_text(_("Restore") if m else _("Maximize"))
 
     def _sync_back(self):
         has = bool(self.history)

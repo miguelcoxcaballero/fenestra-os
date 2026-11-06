@@ -108,7 +108,7 @@ class LibraryPage(Page):
         row.append(img)
         tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
         tb.add_css_class("lib-col-name")
-        tb.set_size_request(269, -1)
+        tb.set_size_request(267, -1)
         name = Gtk.Button(label=app.name)
         name.add_css_class("row-name-link")
         name.set_halign(Gtk.Align.START)

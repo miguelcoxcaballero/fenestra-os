@@ -154,8 +154,8 @@ ICONS = {
                        poly((8, 2.3), (2.9, 4.2), (3.1, 8), (8, 13.4), (12.9, 8), (13.1, 4.2))),
 }
 
-# Caption button glyphs (drawn at 10 px, so 1 px lines are 1.6 units). They use the names
-# Gtk.WindowControls asks for, and win over the icon theme from data/icons/ui.
+# Caption button glyphs (drawn at 10 px, so 1 px lines are 1.6 units); style.css puts them on
+# Gtk.WindowControls' buttons with -gtk-icon-source.
 CAPTION = {
     "window-minimize": rr(0, 7.2, 16, 1.6, 0),
     "window-maximize": ring_rr(0.2, 0.2, 15.6, 15.6, 1.6, 1.6),
@@ -176,7 +176,7 @@ def main():
     for name, parts in CAPTION.items():
         paths = "".join(f'<path fill="#2e3436" fill-rule="evenodd" d="{d}"/>' for d in parts)
         svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">{paths}</svg>\n'
-        with open(os.path.join(OUT, f"{name}-symbolic.svg"), "w") as f:
+        with open(os.path.join(OUT, f"st-{name}-symbolic.svg"), "w") as f:
             f.write(svg)
     print(f"wrote {len(ICONS) + len(CAPTION)} icons to {OUT}")
 
