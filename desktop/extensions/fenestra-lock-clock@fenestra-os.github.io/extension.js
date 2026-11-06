@@ -1,11 +1,15 @@
+import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 // GNOME 51 moved the verifier to gdm/userVerifier.js; 49/50 have it in gdm/util.js.
-let ShellUserVerifier, MessageType;
-try {
+let ShellUserVerifier, MessageType, AuthServices = null;
+// (Checked first, so GNOME 49 doesn't log a failed import every start.)
+const hasResource = path => { try { Gio.resources_get_info(path, 0); return true; } catch { return false; } };
+if (hasResource('/org/gnome/shell/gdm/userVerifier.js')) {
     ({ShellUserVerifier, MessageType} = await import('resource:///org/gnome/shell/gdm/userVerifier.js'));
-} catch {
+    ({AuthServices} = await import('resource:///org/gnome/shell/gdm/authServices.js'));
+} else {
     ({ShellUserVerifier, MessageType} = await import('resource:///org/gnome/shell/gdm/util.js'));
 }
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -49,6 +53,31 @@ export default class WindowsLockClock extends Extension {
             }catch(e){console.warn(`Fenestra fast unlock: ${e.message}`);}
             return original.call(this,client,serviceName);
         });
+        // GNOME 51: the verifier no longer has _onVerificationComplete; the auth
+        // services report success and AuthPrompt then waits for
+        // ShellUserVerifier.handlePendingMessages() before hiding the lock screen.
+        // Same rule there: right after a success, keep only that service's short messages.
+        if(AuthServices&&typeof AuthServices.prototype._onVerificationComplete==='function'&&
+           typeof ShellUserVerifier.prototype.handlePendingMessages==='function'){
+            this._injections.overrideMethod(AuthServices.prototype,'_onVerificationComplete',original=>function(serviceName,...rest){
+                ext._succeeded={serviceName,time:GLib.get_monotonic_time()};
+                return original.call(this,serviceName,...rest);
+            });
+            this._injections.overrideMethod(ShellUserVerifier.prototype,'handlePendingMessages',original=>function(...args){
+                try{
+                    const ok=ext._succeeded;
+                    if(ok&&GLib.get_monotonic_time()-ok.time<5e6&&this.hasPendingMessages){
+                        const queue=this._messageQueue??[];
+                        const keep=queue.filter(m=>m.serviceName===ok.serviceName&&m.text&&m.interval<=400);
+                        if(keep.length!==queue.length){
+                            this._clearMessageQueue();
+                            for(const m of keep)this._queueMessage({serviceName:m.serviceName,message:m.text,messageType:m.type,wiggle:m.wiggle});
+                        }
+                    }
+                }catch(e){console.warn(`Fenestra fast unlock: ${e.message}`);}
+                return original.apply(this,args);
+            });
+        }
         const dialog=Main.screenShield?._dialog;
         if(dialog?._clock)this._attach(dialog);
     }

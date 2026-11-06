@@ -2,5 +2,12 @@
   "uuid": "unsafe-mode@fenestra-tests",
   "name": "Fenestra test harness (unsafe mode)",
   "description": "TEST ONLY. Turns on GNOME Shell unsafe mode so org.gnome.Shell.Eval and Screenshot can drive a headless test shell. Never install it on a real system.",
-  "shell-version": ["49", "51"]
+  "shell-version": [
+    "49",
+    "51"
+  ],
+  "session-modes": [
+    "user",
+    "unlock-dialog"
+  ]
 }
