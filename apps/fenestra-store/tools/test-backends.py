@@ -49,6 +49,7 @@ def readers():
                 os.environ.pop("FENESTRA_STORE_NO_GI_APPSTREAM", None)
             comps = appstream.parse_file(gz, os.path.join(tmp, "icons"), "flathub")
             tag = f"[{mode} {lang}]"
+            check(appstream.last_reader == mode, f"{tag} parsed by the {mode} reader ({appstream.last_reader})")
             check(len(comps) == 2, f"{tag} two applications, runtime skipped ({len(comps)})")
             t = next((c for c in comps if c.id == "org.fenestra.sample.Telar"), None)
             if t is None:
@@ -58,6 +59,9 @@ def readers():
             want_p = "Telar convierte" if lang == "es" else "Telar turns"
             check(bool(t.description) and t.description[0].startswith(want_p), f"{tag} description ({t.description})")
             check(any(p.startswith("• ") for p in t.description), f"{tag} bullet items")
+            other = "Telar turns" if lang == "es" else "Telar convierte"
+            check(len(t.description) == 2 and not any(p.startswith(other) for p in t.description),
+                  f"{tag} only the UI language in the description")
             check(t.developer == "Sample Collective", f"{tag} developer ({t.developer!r})")
             check(t.version == "2.1.0" and t.released.startswith("2026"), f"{tag} newest release ({t.version} {t.released})")
             check(t.icon_path.endswith("128x128/org.fenestra.sample.Telar.png"), f"{tag} cached icon ({t.icon_path})")

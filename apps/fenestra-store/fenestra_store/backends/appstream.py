@@ -83,7 +83,19 @@ def markup_to_paragraphs(markup: str) -> list[str]:
     except ET.ParseError:
         text = re.sub(r"<[^>]+>", " ", markup)
         return [" ".join(text.split())] if text.strip() else []
-    return _desc_from_element(root)
+    return _desc_best(root)
+
+
+def _desc_best(el) -> list[str]:
+    """Paragraphs in the UI language from a description whose paragraphs carry xml:lang
+    translations (catalog style; AppStream's gi API returns this markup unchanged)."""
+    langs = {x.get(XML_LANG) for x in el.iter() if x is not el}
+    descs = {}
+    for lg in langs:
+        d = _desc_from_element(el, lg)
+        if d:
+            descs[lg] = d
+    return _pick(descs) or []
 
 
 def _text(el) -> str:
@@ -163,11 +175,9 @@ def _component_from_xml(el, icon_root, origin):
             if lang is not None:  # whole-description translation (metainfo style)
                 descs[lang] = _desc_from_element(child)
             else:  # catalog style: per-paragraph xml:lang
-                langs = {x.get(XML_LANG) for x in child.iter() if x is not child}
-                for lg in langs:
-                    d = _desc_from_element(child, lg)
-                    if d:
-                        descs[lg] = d
+                d = _desc_best(child)
+                if d:
+                    descs[i18n.LANG] = d
         elif tag == "developer_name" and not c.developer:
             c.developer = _text(child)
         elif tag == "developer":
@@ -327,20 +337,28 @@ def _from_gi(AS, comp, icon_root="", origin=""):
     return c
 
 
+last_reader = ""   # "gi" or "xml": which reader handled the last parse_file() (tests)
+
+
 def parse_file(path: str, icon_root: str = "", origin: str = "") -> list[Component]:
     """Read one catalog file: gi AppStream when available, XML reader otherwise."""
+    global last_reader
     if have_gi() and not os.environ.get("FENESTRA_STORE_NO_GI_APPSTREAM"):
         try:
             from gi.repository import Gio
             AS = _gi()
             md = AS.Metadata()
             md.set_locale(i18n.LANG)
+            style = getattr(AS.FormatStyle, "CATALOG", None) or getattr(AS.FormatStyle, "COLLECTION")  # 1.x / 0.x
+            md.set_format_style(style)
             md.parse_file(Gio.File.new_for_path(path), AS.FormatKind.XML)
             out = [c for c in (_from_gi(AS, x, icon_root, origin) for x in _box_items(md.get_components())) if c]
             if out:
+                last_reader = "gi"
                 return out
         except Exception as e:  # noqa: BLE001
             util.log("AppStream gi reader failed, using XML reader:", e)
+    last_reader = "xml"
     return parse_xml(path, icon_root, origin)
 
 

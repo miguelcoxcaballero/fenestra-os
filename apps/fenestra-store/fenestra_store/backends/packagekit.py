@@ -45,8 +45,10 @@ def _check(results):
     return results
 
 
-def _name_of(pid: str) -> str:
-    return pid.split(";", 1)[0]
+def pretty_version(v: str) -> str:
+    """'1:51.0.1-1.fc45' -> '51.0.1' (epoch and release are noise for people)."""
+    v = v.split(":", 1)[-1]
+    return v.rsplit("-", 1)[0] if "-" in v else v
 
 
 class PackageKitBackend(Backend):
@@ -117,7 +119,7 @@ class PackageKitBackend(Backend):
             a = App(uid=f"packagekit:{c.pkgname}", app_id=c.id.removesuffix(".desktop"), backend=self.id,
                     source="fedora", packaging="rpm", name=c.name, summary=c.summary, description=c.description,
                     developer=c.developer, categories=cats, kind="game" if "games" in cats else "app",
-                    version=pkg.get_version() if pkg else c.version, license=c.license, homepage=c.homepage,
+                    version=pretty_version(pkg.get_version()) if pkg else c.version, license=c.license, homepage=c.homepage,
                     keywords=c.keywords, icon_path=c.icon_path, icon_url=c.icon_url, icon_name=c.icon_name,
                     screenshots=[Screenshot(url=u, caption=cap) for u, cap in c.screenshots],
                     released=c.released, ref=pkg.get_id() if pkg else c.pkgname, origin=c.origin or "fedora",
@@ -198,7 +200,7 @@ class PackageKitBackend(Backend):
         for pkg in res.get_package_array():
             a = self._by_pkg.get(pkg.get_name())
             if a is not None and a.installed:
-                found[a.uid] = pkg.get_version()
+                found[a.uid] = pretty_version(pkg.get_version())
                 self._update_ids[pkg.get_name()] = pkg.get_id()
         return found
 
