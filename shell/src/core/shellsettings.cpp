@@ -58,6 +58,7 @@ void ShellSettings::load()
     const QString search = pick(s.value(QStringLiteral("Taskbar/SearchMode")).toString(),
                                 {QStringLiteral("box"), QStringLiteral("hidden"), QStringLiteral("icon"), QStringLiteral("iconLabel")});
     const bool weather = s.value(QStringLiteral("Taskbar/Weather"), true).toBool();
+    // Present but empty (QSettings writes @Invalid() for an empty list): no pins, not the defaults.
     const QStringList pinned = s.contains(QStringLiteral("Taskbar/Pinned")) ? s.value(QStringLiteral("Taskbar/Pinned")).toStringList() : kDefaultPinned;
     const QString scheme = pick(s.value(QStringLiteral("Appearance/ColorScheme")).toString(), {QStringLiteral("dark"), QStringLiteral("light")});
     QString accent = s.value(QStringLiteral("Appearance/Accent"), kDefaultAccent).toString();

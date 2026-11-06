@@ -54,6 +54,14 @@ Notifications::Notifications(QObject *parent)
     : QAbstractListModel(parent)
 {
     m_dnd = ShellSettings::instance()->value(QStringLiteral("Notifications/DoNotDisturb"), false).toBool();
+    // Fenestra Settings changes it in shell.conf: apply it live (not during a Focus session).
+    connect(ShellSettings::instance(), &ShellSettings::fileChanged, this, [this] {
+        const bool dnd = ShellSettings::instance()->value(QStringLiteral("Notifications/DoNotDisturb"), false).toBool();
+        if (dnd != m_dnd && !m_focusEnd.isValid()) {
+            m_dnd = dnd;
+            Q_EMIT doNotDisturbChanged();
+        }
+    });
     m_focusTimer.setInterval(1000);
     connect(&m_focusTimer, &QTimer::timeout, this, [this] {
         if (focusRemaining() <= 0)

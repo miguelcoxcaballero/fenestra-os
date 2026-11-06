@@ -24,6 +24,7 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QUrl>
 #include <QXmlStreamReader>
@@ -168,8 +169,11 @@ StartPins::StartPins(QObject *parent)
 
 QStringList StartPins::ids() const
 {
-    const QVariant v = ShellSettings::instance()->value(QStringLiteral("Start/Pinned"));
-    return v.isValid() ? v.toStringList() : kDefaultStartPins;
+    // A present but empty key (@Invalid() in QSettings) means "no pins", not the defaults.
+    QSettings s(ShellSettings::path(), QSettings::IniFormat);
+    if (!s.contains(QStringLiteral("Start/Pinned")))
+        return kDefaultStartPins;
+    return s.value(QStringLiteral("Start/Pinned")).toStringList();
 }
 
 QVariantList StartPins::apps() const
