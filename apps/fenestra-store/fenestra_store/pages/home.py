@@ -1,87 +1,118 @@
-"""Home: featured banner, category tiles, Popular, New and updated and one row per category."""
+"""Home, Apps and Games showcases: the hero (one large rotating banner and three tiles), a row
+of category chips on Apps, and pairs of panels that list apps three at a time."""
 from __future__ import annotations
 
 from gi.repository import Gtk
 
 from .. import util
 from ..i18n import N_, _
-from ..model import CATEGORIES
-from ..widgets import Banner, icon, label, section_header
+from ..model import CATEGORIES, CATEGORY_TITLES
+from ..widgets import Hero, Panel, icon, label, panel_pair
 from .base import Page
 
 
-class HomePage(Page):
-    id = "home"
-    nav = "home"
-    title = N_("Home")
+def hero_apps(st, games=None, n=7):
+    """Featured apps first, then the most popular ones, without repeats."""
+    out = []
+    for a in [x for x in st.featured() if games is None or x.is_game == games] + st.popular(games=games):
+        if a not in out:
+            out.append(a)
+    return out[:n]
+
+
+class ShowcasePage(Page):
+    """kind: 'home', 'apps' or 'games'."""
+
+    def __init__(self, win, kind="home"):
+        super().__init__(win)
+        self.kind = kind
+        self.id = kind
+        self.nav = kind
+        self.title = {"home": N_("Home"), "apps": N_("Apps"), "games": N_("Games")}[kind]
+        self.box.add_css_class("showcase")
+        self.banner = None
 
     def build(self, arg):
         st = self.store
         self.banner = None
         if not st.backends:
-            self.page_title(_("Home"))
+            self.page_title(_(self.title))
             self.empty_state("st-warning-symbolic", _("No software sources are available"),
                              _("Install flatpak-libs or PackageKit to browse and install apps."))
             return
-        if not st.catalogue():
-            self.page_title(_("Home"))
+        games = {"home": None, "apps": False, "games": True}[self.kind]
+        if not st.popular(games=games):
+            self.page_title(_(self.title))
             self.empty_state("st-apps-symbolic", _("The catalogue is empty"),
                              _("Turn on a source in Sources, or check your internet connection."))
             return
-        featured = st.featured()
-        if featured:
-            self.banner = Banner(self.win, featured, rotate=not getattr(self.win.get_application(), "screenshot", None))
+        apps = hero_apps(st, games)
+        if apps:
+            rotate = not getattr(self.win.get_application(), "screenshot", None)
+            self.banner = Hero(self.win, apps, rotate=rotate)
             self.box.append(self.banner)
+        if self.kind == "apps":
+            self.box.append(self._category_chips())
+        pop = st.has_popularity
+        pairs = []
+        if self.kind == "home":
+            pairs.append(((_("Popular apps") if pop else _("Recommended apps"), st.popular(games=False),
+                           lambda: self.win.navigate("apps")),
+                          (_("Popular games") if pop else _("Recommended games"), st.popular(games=True),
+                           lambda: self.win.navigate("games"))))
+            pairs.append(((_("New and updated"), st.new_and_updated(games=False), None),
+                          (_("New games"), st.new_and_updated(games=True), None)))
+        elif self.kind == "apps":
+            pairs.append(((_("Popular apps") if pop else _("Recommended apps"), st.popular(games=False), None),
+                          (_("New and updated"), st.new_and_updated(games=False), None)))
+        else:
+            pairs.append(((_("Popular games") if pop else _("Recommended games"), st.popular(games=True), None),
+                          (_("New games"), st.new_and_updated(games=True), None)))
+        if self.kind != "games":
+            cats = [(k, t) for k, t, _i in CATEGORIES if k != "games" and len(st.by_category(k)) >= 2]
+            for i in range(0, len(cats), 2):
+                pair = []
+                for k, t in cats[i:i + 2]:
+                    pair.append((_(t), st.by_category(k), lambda k=k: self.win.navigate("category", k)))
+                pairs.append(tuple(pair))
+        for pair in pairs:
+            panels = [Panel(self.win, t, a, cb) for t, a, cb in pair if a]
+            if not panels:
+                continue
+            self.box.append(panel_pair(self.win, panels[0], panels[1] if len(panels) > 1 else None))
+        util.log(f"{self.kind} built")
 
-        self.box.append(section_header(_("Browse by category")))
-        tiles = Gtk.FlowBox()
-        tiles.set_selection_mode(Gtk.SelectionMode.NONE)
-        tiles.set_homogeneous(True)
-        tiles.set_max_children_per_line(4)
-        tiles.set_min_children_per_line(2)
-        tiles.set_column_spacing(8)
-        tiles.set_row_spacing(8)
-        tiles.add_css_class("category-tiles")
+    def _category_chips(self):
+        row = Gtk.Box(spacing=12)
+        row.add_css_class("category-chips")
         for key, title, icon_name in CATEGORIES:
-            n = len(st.by_category(key))
-            if not n:
+            if key == "games" or not self.store.by_category(key):
                 continue
             b = Gtk.Button()
-            b.add_css_class("category-tile")
-            inner = Gtk.Box(spacing=12)
-            ic = icon(icon_name, 18, "category-icon")
-            ic.set_valign(Gtk.Align.CENTER)
-            inner.append(ic)
-            texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
-            texts.append(label(_(title), "category-name", ellipsize=True))
-            texts.append(label(_("%d apps") % n if n != 1 else _("1 app"), "caption"))
-            inner.append(texts)
+            b.add_css_class("category-chip")
+            inner = Gtk.Box(spacing=8)
+            inner.append(icon(icon_name, 16, "category-chip-icon"))
+            inner.append(label(_(title)))
             b.set_child(inner)
-            target = ("games", None) if key == "games" else ("category", key)
-            b.connect("clicked", lambda _b, t=target: self.win.navigate(*t))
-            tiles.append(b)
-        self.box.append(tiles)
-
-        pop = st.has_popularity
-        self._row(_("Popular apps") if pop else _("Recommended apps"), st.popular(games=False), 8,
-                  lambda: self.win.navigate("apps"))
-        self._row(_("New and updated"), st.new_and_updated(), 8, None)
-        self._row(_("Popular games") if pop else _("Recommended games"), st.popular(games=True), 4,
-                  lambda: self.win.navigate("games"))
-        for key, title, _i in CATEGORIES:
-            if key == "games":
-                continue
-            apps = st.by_category(key)
-            if len(apps) >= 2:
-                self._row(_(title), apps, 4, lambda k=key: self.win.navigate("category", k))
-        util.log("home built")
-
-    def _row(self, title, apps, limit, see_all):
-        if not apps:
-            return
-        self.box.append(section_header(title, see_all if len(apps) > limit else None))
-        self.box.append(self.grid_of(apps, 4, limit))
+            b.connect("clicked", lambda _b, k=key: self.win.navigate("category", k))
+            row.append(b)
+        sc = Gtk.ScrolledWindow()
+        sc.set_policy(Gtk.PolicyType.EXTERNAL, Gtk.PolicyType.NEVER)
+        sc.set_propagate_natural_height(True)
+        sc.set_child(row)
+        sc.add_css_class("chip-scroll")
+        return sc
 
     def set_narrow(self, narrow):
-        if getattr(self, "banner", None) is not None:
+        if self.banner is not None:
             self.banner.set_narrow(narrow)
+
+
+class HomePage(ShowcasePage):
+    id = "home"
+
+    def __init__(self, win):
+        super().__init__(win, "home")
+
+
+__all__ = ["HomePage", "ShowcasePage", "CATEGORY_TITLES"]

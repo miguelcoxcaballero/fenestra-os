@@ -10,14 +10,14 @@ from .i18n import _
 from .pages.base import Page
 from .pages.browse import BrowsePage, SearchPage
 from .pages.details import DetailsPage
-from .pages.home import HomePage
+from .pages.home import HomePage, ShowcasePage
 from .pages.library import LibraryPage
 from .pages.sources import SourcesPage
 from .widgets import Clamp, button, icon, label
 
-NAV = [("home", "st-home-symbolic", "Home"), ("apps", "st-apps-symbolic", "Apps"),
-       ("games", "st-games-symbolic", "Games"), ("library", "st-library-symbolic", "Library")]
-NAV_BOTTOM = [("sources", "st-sources-symbolic", "Sources")]
+NAV = [("home", "st-home", "Home"), ("apps", "st-apps", "Apps"), ("games", "st-games", "Games")]
+NAV_BOTTOM = [("sources", "st-sources", "Sources"), ("updates", "st-downloads", "Downloads"),
+              ("library", "st-library", "Library")]
 COMPACT_WIDTH = 900
 NARROW_CONTENT = 760
 
@@ -47,34 +47,50 @@ class StoreWindow(Gtk.ApplicationWindow):
         self._start = (start_page, start_arg)
 
         # ------------------------------------------------------------- title bar
+        # 48 px: [back] icon title | search box centred on the window | demo pill, caption buttons
         handle = Gtk.WindowHandle()
-        tbox = Gtk.Box(spacing=0)
+        tbox = Gtk.CenterBox()
         tbox.add_css_class("titlebar-box")
+        self.titlebar_box = tbox
+        start = Gtk.Box(spacing=0)
         self.back_btn = button("", "back-button", self.go_back, "st-back-symbolic", _("Back"))
-        self.back_btn.set_sensitive(False)
-        tbox.append(self.back_btn)
+        self.back_btn.set_valign(Gtk.Align.CENTER)
+        self.back_btn.set_visible(False)
+        start.append(self.back_btn)
         app_icon = icon("org.fenestra.Store", 16, "title-icon")
-        tbox.append(app_icon)
-        tbox.append(label(_("Fenestra Store"), "title-label"))
-        self.search = Gtk.SearchEntry()
-        self.search.set_placeholder_text(_("Search apps and games"))
+        app_icon.set_valign(Gtk.Align.CENTER)
+        start.append(app_icon)
+        title = label(_("Fenestra Store"), "title-label")
+        title.set_valign(Gtk.Align.CENTER)
+        start.append(title)
+        tbox.set_start_widget(start)
+        self.search = Gtk.Entry()
+        self.search.set_placeholder_text(_("Search apps, games and more"))
         self.search.add_css_class("store-search")
+        self.search.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, "st-search-symbolic")
+        self.search.set_icon_activatable(Gtk.EntryIconPosition.SECONDARY, True)
+        self.search.connect("icon-press", lambda *_: self._run_search())
         self.search.set_valign(Gtk.Align.CENTER)
         self.search.set_hexpand(False)
-        self.search.set_size_request(380, -1)
+        self.search.set_size_request(600, -1)
         self.search.connect("changed", self._on_search_changed)
         self.search.connect("activate", lambda *_: self._run_search())
-        self.search.connect("stop-search", lambda *_: self.search.set_text(""))
-        tbox.append(self.search)
-        tbox.append(Gtk.Box(hexpand=True))
+        esc = Gtk.EventControllerKey()
+        esc.connect("key-pressed", lambda _c, kv, *_: kv == Gdk.KEY_Escape and self.search.get_text() != ""
+                    and (self.search.set_text(""), True)[1])
+        self.search.add_controller(esc)
+        tbox.set_center_widget(self.search)
+        end = Gtk.Box(spacing=0)
         if util.DEMO:
             pill = label(_("Demo"), "demo-pill")
             pill.set_valign(Gtk.Align.CENTER)
             pill.set_tooltip_text(_("Sample catalogue: nothing on this computer is changed"))
-            tbox.append(pill)
+            end.append(pill)
         controls = Gtk.WindowControls(side=Gtk.PackType.END)
         controls.add_css_class("window-controls")
-        tbox.append(controls)
+        controls.set_valign(Gtk.Align.START)
+        end.append(controls)
+        tbox.set_end_widget(end)
         handle.set_child(tbox)
         self.set_titlebar(handle)
 
@@ -85,6 +101,8 @@ class StoreWindow(Gtk.ApplicationWindow):
         body.add_css_class("window-body")
         self.overlay.set_child(body)
 
+        # 72 px rail: 64x58 items 4 px apart, icon over a small label; the selected item shows
+        # only its icon in the accent colour and an accent pill on its left edge
         self.nav = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.nav.add_css_class("nav-pane")
         self.nav_rows = {}
@@ -93,9 +111,9 @@ class StoreWindow(Gtk.ApplicationWindow):
         bottom = Gtk.ListBox()
         bottom.add_css_class("nav-list")
         for lst, items in ((top, NAV), (bottom, NAV_BOTTOM)):
-            for pid, icon_name, title in items:
-                lst.append(self._nav_row(pid, icon_name, _(title)))
-            lst.connect("row-activated", lambda _l, row: self.navigate(row.page_id))
+            for pid, icon_name, title_text in items:
+                lst.append(self._nav_row(pid, icon_name, _(title_text)))
+            lst.connect("row-activated", lambda _l, row: self.navigate(row.page_id, row.page_arg))
         self.nav_lists = (top, bottom)
         self.nav.append(top)
         self.nav.append(Gtk.Box(vexpand=True))
@@ -149,35 +167,45 @@ class StoreWindow(Gtk.ApplicationWindow):
     def _nav_row(self, pid, icon_name, title):
         row = Gtk.ListBoxRow()
         row.page_id = pid
+        row.page_arg = None
         row.add_css_class("nav-item")
         row.set_tooltip_text(title)
         ov = Gtk.Overlay()
-        box = Gtk.Box(spacing=14)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         box.add_css_class("nav-item-box")
-        box.append(icon(icon_name, 18, "nav-icon"))
-        lb = label(title, "nav-label", ellipsize=True)
-        lb.set_hexpand(True)
+        img = icon(icon_name + "-symbolic", 20, "nav-icon")
+        img.set_halign(Gtk.Align.CENTER)
+        box.append(img)
+        lb = label(title, "nav-label", xalign=0.5, ellipsize=True)
         box.append(lb)
-        badge = label("", "nav-badge", xalign=0.5)
-        badge.set_valign(Gtk.Align.CENTER)
-        badge.set_visible(False)
-        box.append(badge)
-        row.nav_label = lb
-        row.badge = badge
         ov.set_child(box)
+        badge = label("", "nav-badge", xalign=0.5)
+        badge.set_halign(Gtk.Align.END)
+        badge.set_valign(Gtk.Align.START)
+        badge.set_visible(False)
+        ov.add_overlay(badge)
         pill = Gtk.Box()
         pill.add_css_class("nav-pill")
         pill.set_halign(Gtk.Align.START)
-        pill.set_valign(Gtk.Align.CENTER)
-        pill.set_size_request(3, 16)
+        pill.set_valign(Gtk.Align.START)
         ov.add_overlay(pill)
         row.set_child(ov)
+        row.nav_label = lb
+        row.nav_icon = img
+        row.icon_base = icon_name
+        row.nav_box = box
+        row.badge = badge
         self.nav_rows[pid] = row
         return row
 
     def _select_nav(self, nav_id):
         for lst in self.nav_lists:
             lst.unselect_all()
+        for pid, row in self.nav_rows.items():
+            sel = pid == nav_id
+            row.nav_label.set_visible(not sel)
+            row.nav_icon.set_from_icon_name(row.icon_base + ("-filled-symbolic" if sel else "-symbolic"))
+            (row.nav_box.add_css_class if sel else row.nav_box.remove_css_class)("selected")
         row = self.nav_rows.get(nav_id)
         if row is not None:
             row.get_parent().select_row(row)
@@ -186,16 +214,13 @@ class StoreWindow(Gtk.ApplicationWindow):
         if compact == self._compact:
             return
         self._compact = compact
-        (self.nav.add_css_class if compact else self.nav.remove_css_class)("compact")
-        for row in self.nav_rows.values():
-            row.nav_label.set_visible(not compact)
         self._update_badge()
 
     # ----------------------------------------------------------------- layout
     @staticmethod
     def layout_for(w):
         compact = w < COMPACT_WIDTH
-        return compact, w - (64 if compact else 232) < NARROW_CONTENT
+        return compact, w - 72 < NARROW_CONTENT
 
     def preset_width(self, w):
         """Apply the layout for a known width before the first frame (no relayout flash)."""
@@ -209,7 +234,7 @@ class StoreWindow(Gtk.ApplicationWindow):
 
     def _apply_layout(self, compact, narrow):
         self.set_compact(compact)
-        self.search.set_size_request(220 if compact else 380, -1)
+        self.search.set_size_request(260 if compact else 600, -1)
         if narrow != self.narrow:
             self.narrow = narrow
             for p in self.pages.values():
@@ -220,7 +245,9 @@ class StoreWindow(Gtk.ApplicationWindow):
     def _make_page(self, pid) -> Page | None:
         if pid == "home":
             return HomePage(self)
-        if pid in ("apps", "games", "category"):
+        if pid in ("apps", "games"):
+            return ShowcasePage(self, pid)
+        if pid == "category":
             return BrowsePage(self, pid)
         if pid == "search":
             return SearchPage(self)
@@ -240,7 +267,7 @@ class StoreWindow(Gtk.ApplicationWindow):
             scroller = Gtk.ScrolledWindow()
             scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
             scroller.add_css_class("page-scroll")
-            scroller.set_child(Clamp(page.box, 1240))
+            scroller.set_child(Clamp(page.box, page.max_width))
             page.scroller = scroller
             self.pages[pid] = page
             self.stack.add_named(scroller, pid)
@@ -250,6 +277,8 @@ class StoreWindow(Gtk.ApplicationWindow):
     def navigate(self, pid, arg=None, record=True):
         if pid == "updates":
             pid, arg = "library", "updates"
+        elif pid == "library" and arg is None:
+            arg = "installed"
         if not self.store.loaded:
             self._start = (pid, arg)
             return
@@ -267,11 +296,16 @@ class StoreWindow(Gtk.ApplicationWindow):
             self.search.set_text("")
             self._cancel_search_timer()
         self.current, self.current_arg = pid, arg
-        self.back_btn.set_sensitive(bool(self.history))
+        self._sync_back()
         page.show(arg)
-        self._select_nav(page.nav)
+        self._select_nav(page.nav_for(arg) if hasattr(page, "nav_for") else page.nav)
         page.scroller.get_vadjustment().set_value(0)
         self.stack.set_visible_child_name(pid)
+
+    def _sync_back(self):
+        has = bool(self.history)
+        self.back_btn.set_visible(has)
+        (self.titlebar_box.add_css_class if has else self.titlebar_box.remove_css_class)("has-back")
 
     def show_app(self, uid, record=True):
         self.navigate("details", uid, record)
@@ -281,7 +315,7 @@ class StoreWindow(Gtk.ApplicationWindow):
             return
         pid, arg = self.history.pop()
         self.navigate(pid, arg, record=False)
-        self.back_btn.set_sensitive(bool(self.history))
+        self._sync_back()
 
     def catalogue_changed(self):
         """Sources changed: rebuild every page next time it is shown, refresh the current one."""
@@ -398,13 +432,13 @@ class StoreWindow(Gtk.ApplicationWindow):
                 lib.dirty = True
 
     def _update_badge(self):
-        row = self.nav_rows.get("library")
+        row = self.nav_rows.get("updates")
         if row is None:
             return
         n = len(self.store.updates()) if self.store.loaded else 0
-        row.badge.set_label(str(n))
-        row.badge.set_visible(n > 0 and not self._compact)
-        row.set_tooltip_text(_("Library") + (f" ({_('%d updates') % n})" if n else ""))
+        row.badge.set_label("")
+        row.badge.set_visible(n > 0)
+        row.set_tooltip_text(_("Downloads") + (f" ({_('%d updates') % n})" if n else ""))
 
     def _on_job_done(self, store, uid, op, ok, msg):
         app = store.get(uid)
