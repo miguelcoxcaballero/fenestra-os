@@ -1,0 +1,124 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Fenestra print dialog. Same tokens as Fenestra Settings/Store; colours are CSS custom
+ * properties set at runtime by theme.py, sizes come from metrics.py. */
+
+window.fenestra-print {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-size: 14px;
+}
+window.fenestra-print * { color: inherit; text-shadow: none; -gtk-icon-shadow: none; }
+
+headerbar.print-titlebar {
+  min-height: 32px; padding: 0; background: var(--pane); box-shadow: none; border: none; color: var(--fg);
+}
+headerbar.print-titlebar .print-window-title { font-size: 12px; }
+headerbar.print-titlebar windowcontrols button {
+  min-width: 46px; min-height: 32px; padding: 0; margin: 0; border-radius: 0;
+  background: none; border: none; box-shadow: none; color: var(--fg);
+}
+headerbar.print-titlebar windowcontrols button image { background: none; box-shadow: none; padding: 0; -gtk-icon-size: 16px; }
+headerbar.print-titlebar windowcontrols button:hover { background: var(--subtle-hover); }
+headerbar.print-titlebar windowcontrols button.close:hover { background: var(--close-hover); color: #ffffff; }
+
+.print-pane { background-color: var(--pane); border-right: 1px solid var(--divider); }
+.print-pane scrolledwindow, .print-pane stack { background: none; }
+.print-heading { font-weight: 600; }
+.print-subheading { font-size: 20px; font-weight: 600; }
+.print-summary { color: var(--fg2); margin-top: 4px; }
+.print-label { font-size: 14px; }
+.print-caption { font-size: 12px; color: var(--fg2); margin-top: 4px; }
+popover .print-caption { margin-top: 0; }
+
+/* dropdowns */
+dropdown.print-dropdown > button {
+  padding: 0 10px 0 11px; border-radius: 4px;
+  background-color: var(--ctl); background-image: none;
+  border: 1px solid var(--ctl-border); border-bottom-color: var(--ctl-border-bottom); box-shadow: none;
+  color: var(--fg); font-size: 14px; font-weight: normal;
+}
+dropdown.print-dropdown > button:hover { background-color: var(--ctl-hover); }
+dropdown.print-dropdown > button:active { background-color: var(--ctl-press); }
+dropdown.print-dropdown popover > contents {
+  background-color: var(--popover); border: 1px solid var(--popover-border); border-radius: 8px;
+  padding: 2px; box-shadow: 0 8px 16px var(--shadow); color: var(--fg);
+}
+dropdown.print-dropdown popover listview { background: none; color: var(--fg); }
+dropdown.print-dropdown popover listview > row { min-height: 32px; border-radius: 4px; margin: 2px; padding: 4px 10px; }
+dropdown.print-dropdown popover listview > row:hover { background-color: var(--subtle-hover); }
+dropdown.print-dropdown popover listview > row:selected { background-color: var(--subtle-select); }
+
+/* text entry and copies */
+entry.print-entry, spinbutton.print-spin {
+  border-radius: 4px; padding: 0 0 0 10px;
+  background-color: var(--input); border: 1px solid var(--ctl-border); border-bottom-color: var(--input-bottom);
+  box-shadow: none; outline: none; color: var(--fg); caret-color: var(--fg);
+}
+entry.print-entry { padding-right: 10px; }
+entry.print-entry:hover, spinbutton.print-spin:hover { background-color: var(--ctl-hover); }
+entry.print-entry:focus-within, spinbutton.print-spin:focus-within {
+  background-color: var(--input-focus); border-bottom: 2px solid var(--accent);
+}
+entry.print-entry.error, entry.print-entry.error:focus-within { border-bottom: 2px solid var(--danger); }
+entry.print-entry > text > placeholder { color: var(--fg2); }
+entry.print-entry selection, spinbutton.print-spin selection { background-color: var(--accent); color: var(--on-accent); }
+spinbutton.print-spin > text { background: none; }
+spinbutton.print-spin > button {
+  min-width: 32px; margin: 3px 3px 3px 0; padding: 0; border-radius: 4px;
+  background: none; border: none; box-shadow: none; color: var(--fg2);
+}
+spinbutton.print-spin > button:hover { background-color: var(--subtle-hover); color: var(--fg); }
+spinbutton.print-spin > button:active { background-color: var(--subtle-press); }
+spinbutton.print-spin > button:disabled { color: var(--fg3); }
+
+checkbutton.print-check { padding: 0; }
+checkbutton.print-check check {
+  min-width: 18px; min-height: 18px; border-radius: 4px; margin-right: 8px;
+  border: 1px solid var(--fg2); background: var(--ctl);
+}
+checkbutton.print-check check:checked { background-color: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+button.hyperlink {
+  background: none; border: none; box-shadow: none; padding: 2px 4px; margin: 0 -4px;
+  min-height: 0; min-width: 0; border-radius: 4px; color: var(--accent-text); font-size: 14px; font-weight: normal;
+}
+button.hyperlink:hover { background-color: var(--subtle-hover); }
+button.hyperlink label { color: inherit; }
+
+button.flat-icon {
+  min-width: 32px; min-height: 32px; padding: 0; border: none; background: none; box-shadow: none;
+  border-radius: 4px; color: var(--fg);
+}
+button.flat-icon:hover { background-color: var(--subtle-hover); }
+button.flat-icon:active { background-color: var(--subtle-press); }
+button.flat-icon:disabled { color: var(--fg3); background: none; }
+
+/* preview */
+.print-preview { background-color: var(--preview-bg); }
+.print-counter { font-size: 14px; font-feature-settings: "tnum"; }
+
+/* footer */
+.print-footer {
+  background-color: var(--footer); border-top: 1px solid var(--divider);
+}
+button.fluent-button {
+  padding: 0 12px; border-radius: 4px;
+  background-color: var(--ctl); background-image: none;
+  border: 1px solid var(--ctl-border); border-bottom-color: var(--ctl-border-bottom);
+  box-shadow: none; color: var(--fg); font-size: 14px; font-weight: normal;
+}
+button.fluent-button:hover { background-color: var(--ctl-hover); }
+button.fluent-button:active { background-color: var(--ctl-press); color: var(--fg2); }
+button.fluent-button:disabled { color: var(--fg3); background-color: var(--ctl-press); }
+button.fluent-button.accent {
+  background-color: var(--accent); color: var(--on-accent);
+  border-color: transparent; border-bottom-color: rgba(0,0,0,0.25);
+}
+button.fluent-button.accent:hover { background-color: var(--accent-hover); }
+button.fluent-button.accent:active { background-color: var(--accent-press); }
+button.fluent-button.accent:disabled { background-color: var(--ctl-press); color: var(--fg3); }
+button.fluent-button label { color: inherit; }
+window.fenestra-print button.fluent-button.accent,
+window.fenestra-print button.fluent-button.accent label { color: var(--on-accent); }
+window.fenestra-print button.fluent-button.accent:disabled,
+window.fenestra-print button.fluent-button.accent:disabled label { color: var(--fg3); }
