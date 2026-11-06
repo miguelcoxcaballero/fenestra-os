@@ -4,12 +4,12 @@ import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 export function installMediaPanel(){
  const q=Main.panel.statusArea.quickSettings,source=Main.panel.statusArea.dateMenu._messageList._messageView._mediaSource;
- const card=new St.BoxLayout({vertical:true,style_class:'windows-media-card popup-menu-content',visible:false});
+ const card=new St.BoxLayout({orientation:Clutter.Orientation.VERTICAL,style_class:'windows-media-card popup-menu-content',visible:false});
  // A separate surface above the native quick settings surface.
- const stack=new St.BoxLayout({vertical:true,style_class:'windows-quick-stack'}),parent=q.menu.box.get_parent(),index=parent.get_children().indexOf(q.menu.box);
+ const stack=new St.BoxLayout({orientation:Clutter.Orientation.VERTICAL,style_class:'windows-quick-stack'}),parent=q.menu.box.get_parent(),index=parent.get_children().indexOf(q.menu.box);
  parent.remove_child(q.menu.box);parent.insert_child_at_index(stack,index);stack.add_child(card);stack.add_child(q.menu.box);
  const app=new St.Label({style_class:'windows-media-app'});card.add_child(app);
- const row=new St.BoxLayout({style_class:'windows-media-track'}),text=new St.BoxLayout({vertical:true,x_expand:true});
+ const row=new St.BoxLayout({style_class:'windows-media-track'}),text=new St.BoxLayout({orientation:Clutter.Orientation.VERTICAL,x_expand:true});
  const title=new St.Label({style_class:'windows-media-title'}),artist=new St.Label({style_class:'windows-media-artist'});title.clutter_text.ellipsize=3;artist.clutter_text.ellipsize=3;text.add_child(title);text.add_child(artist);row.add_child(text);
  const art=new St.Icon({icon_size:64,style_class:'windows-media-art'});row.add_child(art);card.add_child(row);
  const controls=new St.BoxLayout({x_align:Clutter.ActorAlign.CENTER,style_class:'windows-media-controls'});card.add_child(controls);let selected=null;

@@ -68,7 +68,25 @@ def _popover_mapped(menu):
     GLib.idle_add(lambda: (decorate_menu(menu), GLib.SOURCE_REMOVE)[1])
 
 
+# Nautilus 51 replaced its CSS widget names (#NautilusPathBar, ...) with style
+# classes (.nautilus-pathbar, ...). Fenestra's GTK themes and user CSS target the
+# names, so give the widgets their Nautilus 49 names back (no-op on 49).
+LEGACY_NAMES = {'nautilus-pathbar': 'NautilusPathBar', 'nautilus-path-button': 'NautilusPathButton',
+                'nautilus-view-cell': 'NautilusViewCell', 'nautilus-query-editor': 'NautilusQueryEditor',
+                'nautilus-progress-indicator': 'NautilusProgressIndicator',
+                'nautilus-app-chooser': 'NautilusAppChooser', 'nautilus-file-chooser': 'NautilusFileChooser'}
+
+
+def legacy_name(widget):
+    for cls in widget.get_css_classes():
+        name = LEGACY_NAMES.get(cls)
+        if name and widget.get_name() != name:
+            widget.set_name(name)
+            return
+
+
 def _map_hook(widget):
+    legacy_name(widget)
     if isinstance(widget, Gtk.PopoverMenu) and not getattr(widget, '_windows_menu', False):
         widget._windows_menu = True
         widget.connect('map', _popover_mapped)
@@ -146,6 +164,8 @@ class FenestraExplorer(GObject.GObject, Nautilus.MenuProvider):
                 widget.set_label(tr('Search %s') % title if title else tr('Search'))
 
     def _attach(self, window):
+        for widget in walk(window):
+            legacy_name(widget)
         self._relabel(window)
         if window.find_property("active-slot") and not getattr(window,"_windows_views",None):
             window._windows_views = FenestraViews(window)

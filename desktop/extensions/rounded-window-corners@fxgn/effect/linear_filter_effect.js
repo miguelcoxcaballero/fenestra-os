@@ -2,11 +2,12 @@
  * @file Applies linear interpolation to a window. This is used to make windows
  * in the overview look better.
  */
+import {GLSLEffectBase} from './glsl_compat.js';
 import Cogl from 'gi://Cogl';
 import GObject from 'gi://GObject';
 import Shell from 'gi://Shell';
-export const LinearFilterEffect = GObject.registerClass({}, class extends Shell.GLSLEffect {
-    vfunc_build_pipeline() {
+export const LinearFilterEffect = GObject.registerClass({}, class extends GLSLEffectBase {
+    _buildPipeline() {
         this.add_glsl_snippet(Cogl.SnippetHook.FRAGMENT, '', '', false);
     }
     vfunc_paint_target(node, ctx) {

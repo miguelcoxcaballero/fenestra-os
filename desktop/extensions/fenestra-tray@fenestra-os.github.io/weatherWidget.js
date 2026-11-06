@@ -107,7 +107,7 @@ export function installWeatherWidget(settings) {
                 // Follow taskbar alignment / size changes right away.
                 for (const actor of [panel.panelBox, panel._leftBox].filter(Boolean))
                     actor.connectObject('notify::allocation', queue, button.actor);
-                Main.layoutManager.addChrome(button.actor, {affectsInputRegion: true, trackFullscreen: true});
+                Main.layoutManager.addChrome(button.actor, {trackFullscreen: true});
                 buttons.set(panel, button);
             }
             const box = panel.panelBox;

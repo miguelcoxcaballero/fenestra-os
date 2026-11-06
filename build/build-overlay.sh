@@ -43,8 +43,9 @@ cp -a "$D/systemd/user/." "$OUT/usr/lib/systemd/user/"   # e.g. gnome-shell CPU/
 log "Files (Nautilus) Explorer layer"
 install -d "$OUT/usr/share/nautilus-python/extensions" "$OUT/usr/share/fenestra/nautilus"
 cp -a "$D/nautilus/python/"*.py "$OUT/usr/share/nautilus-python/extensions/"
+# One UI overlay per supported Nautilus major version (overlay/<major>/{ui,menu}/);
+# fenestra-nautilus picks the one matching the installed Nautilus, else runs it stock.
 cp -a "$D/nautilus/overlay" "$OUT/usr/share/fenestra/nautilus/overlay"
-cp "$D/nautilus/VERSION" "$OUT/usr/share/fenestra/nautilus/VERSION"
 install -Dm644 "$D/applications/org.gnome.Nautilus.dbus.service" "$OUT/usr/local/share/dbus-1/services/org.gnome.Nautilus.service"
 
 log "Desktop entries, backgrounds, skeleton"

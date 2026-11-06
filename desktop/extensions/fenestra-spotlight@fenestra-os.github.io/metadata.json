@@ -4,7 +4,8 @@
   "description": "Lock/login screen backgrounds, status and face-unlock animation in the Windows 11 style.",
   "shell-version": [
     "49",
-    "50"
+    "50",
+    "51"
   ],
   "session-modes": [
     "gdm",

@@ -4,7 +4,8 @@
   "description": "Login screen that selects the single account like Windows does; authentication still required.",
   "shell-version": [
     "49",
-    "50"
+    "50",
+    "51"
   ],
   "session-modes": [
     "gdm"

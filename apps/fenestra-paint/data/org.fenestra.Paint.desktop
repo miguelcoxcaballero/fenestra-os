@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Name=Paint
+Name[es]=Paint
+GenericName=Image Editor
+GenericName[es]=Editor de imágenes
+Comment=Draw, edit and annotate pictures
+Comment[es]=Dibuja, edita y anota imágenes
+Exec=fenestra-paint %F
+Icon=org.fenestra.Paint
+Terminal=false
+StartupNotify=true
+StartupWMClass=org.fenestra.Paint
+Categories=Graphics;2DGraphics;RasterGraphics;GTK;
+MimeType=image/png;image/jpeg;image/bmp;image/gif;image/webp;image/tiff;
+Keywords=paint;draw;drawing;image;picture;editor;mspaint;brush;dibujo;imagen;pintar;
+Actions=NewWindow;
+
+[Desktop Action NewWindow]
+Name=New window
+Name[es]=Nueva ventana
+Exec=fenestra-paint

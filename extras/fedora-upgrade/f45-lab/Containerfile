@@ -1,0 +1,7 @@
+FROM registry.fedoraproject.org/fedora:45
+RUN dnf -y --setopt=install_weak_deps=False install gnome-shell mutter nautilus nautilus-python nautilus-extensions \
+    gnome-weather python3-gobject gtk4 libadwaita gtksourceview5 dbus-daemon dbus-tools dconf glib2 xdg-user-dirs \
+    python3-pillow python3-cairo webkitgtk6.0 util-linux procps-ng gnome-settings-daemon gsettings-desktop-schemas \
+    adwaita-icon-theme google-noto-sans-fonts libgweather4 gnome-session mesa-dri-drivers xorg-x11-server-Xwayland \
+    gnome-shell-extension-common binutils file python3-psutil gdk-pixbuf2-modules-extra glycin-loaders \
+    && dnf clean all && useradd -m alex && dnf -y install rpm-build gcc gcc-c++ make cmake meson ninja-build python3-devel pam-devel inih-devel libevdev-devel openblas-devel libjpeg-turbo-devel libpng-devel python3-setuptools python3-wheel python3-pip python3-opencv && dnf clean all

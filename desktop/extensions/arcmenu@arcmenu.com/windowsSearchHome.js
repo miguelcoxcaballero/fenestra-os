@@ -90,7 +90,7 @@ export class WindowsSearchHome {
   const add=app=>{if(app&&apps.length<6&&!seen.has(app.get_id())&&app.get_app_info()?.should_show()){seen.add(app.get_id());apps.push(app);}};
   try{Shell.AppUsage.get_default().get_most_used().forEach(add);}catch{}
   try{new Gio.Settings({schema_id:'org.gnome.shell'}).get_strv('favorite-apps').forEach(id=>add(this.appSystem.lookup_app(id)));}catch{}
-  for(const id of ['org.gnome.Nautilus.desktop','fenestra-settings.desktop','org.mozilla.firefox.desktop','org.gnome.TextEditor.desktop','org.gnome.Calculator.desktop','org.gnome.Ptyxis.desktop'])add(this.appSystem.lookup_app(id));
+  for(const id of ['org.gnome.Nautilus.desktop','fenestra-settings.desktop','org.mozilla.firefox.desktop','org.fenestra.Notepad.desktop','org.gnome.TextEditor.desktop','org.gnome.Calculator.desktop','org.gnome.Ptyxis.desktop'])add(this.appSystem.lookup_app(id));
   return apps;
  }
  renderTop(){

@@ -4,7 +4,8 @@
   "description": "Windows-11-style tray, clock, quick settings, calendar, media, previews and toasts for Fenestra.",
   "shell-version": [
     "49",
-    "50"
+    "50",
+    "51"
   ],
   "session-modes": [
     "user"

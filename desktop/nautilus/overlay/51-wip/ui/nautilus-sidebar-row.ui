@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <template class="NautilusSidebarRow" parent="GtkListBoxRow">
+    <property name="focus-on-click">false</property>
+    <property name="child">
+      <object class="GtkRevealer" id="revealer">
+        <property name="reveal-child">true</property>
+        <signal name="notify::child-revealed" handler="on_child_revealed" />
+        <style>
+          <class name="sidebar-revealer" />
+        </style>
+        <child>
+          <object class="GtkBox">
+            <child>
+              <object class="GtkImage" id="start_icon_widget">
+                <accessibility>
+                  <relation name="labelled-by">label_widget</relation>
+                </accessibility>
+                <style>
+                  <class name="sidebarrow-icon" />
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label_widget">
+                <property name="hexpand">true</property>
+                <property name="xalign">0</property>
+                <property name="ellipsize">2</property>
+                <style>
+                  <class name="sidebar-label" />
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkImage" id="end_icon_widget">
+                <property name="visible">false</property>
+                <property name="hexpand">true</property>
+                <property name="halign">2</property>
+                <property name="valign">3</property>
+                <style>
+                  <class name="sidebarrow-icon" />
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="eject_button">
+                <property name="halign">3</property>
+                <property name="valign">3</property>
+                <property name="margin-start">4</property>
+                <property name="icon-name">media-eject-symbolic</property>
+                <style>
+                  <class name="sidebar-button" />
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinner" id="busy_spinner">
+                <property name="halign">3</property>
+                <property name="valign">3</property>
+                <property name="margin-start">4</property>
+                <property name="margin-end">4</property>
+                <property name="visible">false</property>
+                <property name="opacity">0.7</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </property>
+    <style>
+      <class name="sidebar-row" />
+    </style>
+  </template>
+</interface>

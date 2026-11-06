@@ -48,6 +48,8 @@ generic-logos-httpd
 -initial-setup
 -initial-setup-gui
 -gnome-shell-extension-background-logo
+# Fenestra Notepad replaces GNOME Text Editor.
+-gnome-text-editor
 %end
 
 %post --nochroot --log=/mnt/sysroot/root/fenestra-overlay.log
@@ -130,6 +132,26 @@ if [ -x /usr/bin/fenestra-taskmgr ] && [ -f /usr/share/applications/org.gnome.Sy
         /usr/share/applications/org.gnome.SystemMonitor.desktop \
         > /usr/local/share/applications/org.gnome.SystemMonitor.desktop
     sed -i '/^\[Desktop Entry\]/a NoDisplay=true' /usr/local/share/applications/org.gnome.SystemMonitor.desktop
+fi
+
+# Fenestra Notepad is the default for text files; Paint is offered for images.
+if [ -x /usr/bin/fenestra-notepad ]; then
+    {
+        echo '[Default Applications]'
+        for m in text/plain text/markdown text/x-log text/csv text/x-python text/x-python3 application/json \
+                 application/xml text/xml application/x-shellscript text/x-csrc text/x-chdr text/x-c++src \
+                 text/x-java text/css application/javascript text/x-makefile text/x-patch application/x-desktop; do
+            echo "$m=org.fenestra.Notepad.desktop"
+        done
+        echo
+        echo '[Added Associations]'
+        for m in image/png image/jpeg image/bmp image/gif image/webp image/tiff; do
+            echo "$m=org.gnome.Loupe.desktop;org.fenestra.Paint.desktop;"
+        done
+    } > /usr/share/applications/fenestra-mimeapps.list
+    install -d /etc/xdg
+    cp /usr/share/applications/fenestra-mimeapps.list /etc/xdg/gnome-mimeapps.list
+    update-desktop-database -q /usr/share/applications || true
 fi
 
 # System defaults.
