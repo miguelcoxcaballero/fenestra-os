@@ -1,10 +1,12 @@
 """Fenestra Update (PackageKit + Flatpak)."""
 from __future__ import annotations
 
+import os
+
 from gi.repository import GLib, Gtk
 
 from .. import util
-from ..backends import fenestra_update, packages, release
+from ..backends import fenestra_update, migrate, packages, release, session
 from ..i18n import _
 from ..widgets import (ExpanderRow, SettingRow, ToggleSwitch, button, clear, confirm, icon, label,
                        not_available_row, spinner, toast)
@@ -64,6 +66,13 @@ class UpdatePage(Page):
         self._rel_timer = 0
         self._render_release()
         release.available(self._got_release)
+
+        # «Migrar a KDE»: the Fenestra session on KWin (fenestra-migrate).
+        self.mig_group = self.group()
+        self.mig_group.set_visible(False)
+        self._mig_timer = 0
+        self._mig_open = False
+        self._render_migrate()
 
         g = self.group(_("More options"))
         g.set_margin_top(18)
@@ -192,6 +201,113 @@ class UpdatePage(Page):
         confirm(self.box, _("Restart now?"), _("Save your work before restarting. The new version is installed "
                                                  "during the restart."), _("Restart now"),
                 lambda: release.reboot(lambda ok, *_: ok or toast(self.box, _("Couldn't restart"))))
+
+    # ------------------------------------------------------------ «Migrar a KDE»
+    def _render_migrate(self):
+        g = self.mig_group
+        g.clear()
+        if not migrate.available():
+            g.set_visible(False)
+            return
+        st = migrate.state()
+        status = st.get("status", "idle")
+        running = status == "running"
+        if running and not self._mig_timer:
+            self._mig_timer = GLib.timeout_add(1000, self._poll_migrate)
+        title = _("Migrar a KDE")
+        desc = _("Actualiza Fenestra a su nueva arquitectura basada en KWin y Wayland, con una interfaz propia "
+                 "optimizada para mejorar el rendimiento, la estabilidad y la eficiencia energética. Conserva tus "
+                 "aplicaciones, archivos y configuración.")
+        if running:
+            phase = st.get("phase") or "detect"
+            bar = Gtk.ProgressBar(fraction=max(0.02, min(1.0, st.get("progress", 0) / 100)), hexpand=True)
+            bar.set_size_request(220, -1)
+            g.add(SettingRow(title, _(migrate.PHASE_TEXT.get(phase, "")), "fs-arrow-sync-symbolic", control=bar))
+            g.add(SettingRow(_("You can keep using your device. Don't turn it off."), None, "fs-info-symbolic"))
+        elif status == "failed":
+            g.add(SettingRow(_("The migration didn't finish"), st.get("error", "")[-300:], "fs-alert-symbolic",
+                             control=button(_("Try again"), self._migrate_start, accent=True)))
+            g.add(SettingRow(_("Go back to the previous desktop"), _("Removes what the migration installed"),
+                             "fs-arrow-undo-symbolic", control=button(_("Go back"), self._migrate_rollback)))
+        elif status == "done" or migrate.installed():
+            if session.is_fenestra():
+                if migrate.session_ok() and st.get("default_for") is not None and os.environ.get("USER") not in st.get("default_for", []):
+                    g.add(SettingRow(_("Use the new desktop every time"), _("Make it the default when you sign in. GNOME stays available."),
+                                     "fs-checkmark-symbolic", control=button(_("Make default"), self._migrate_default, accent=True)))
+            else:
+                g.add(SettingRow(_("The new desktop is installed"),
+                                 _("Sign out, choose «Fenestra» with the gear button on the sign-in screen and sign in. "
+                                   "This desktop stays available."), "fs-checkmark-symbolic",
+                                 control=button(_("Sign out"), self._migrate_signout, accent=True)))
+            g.add(SettingRow(_("Go back to the previous desktop"), _("Removes the new desktop and uses this one again"),
+                             "fs-arrow-undo-symbolic", control=button(_("Go back"), self._migrate_rollback)))
+        else:
+            g.add(SettingRow(title, desc, "fs-arrow-sync-symbolic",
+                             control=button(_("Hide details") if self._mig_open else _("Details"), self._migrate_toggle,
+                                            accent=not self._mig_open)))
+            if self._mig_open:
+                g.add(SettingRow(_("Requirements"), _("Fedora 45 or later, an internet connection, about 1.5 GB of free space, "
+                                                      "and the device plugged in"), "fs-info-symbolic"))
+                g.add(SettingRow(_("What changes"), _("A new desktop is added to the sign-in screen. The current desktop, "
+                                                      "your apps, files and settings stay; you choose when to switch."),
+                                 "fs-info-symbolic"))
+                mb = st.get("download_mb")
+                checked = status == "dry-run-ok"
+                g.add(SettingRow(_("Checks"), (_("Everything is ready. Download: {0} MB").format(mb) if checked and mb is not None
+                                               else _("Not checked yet")),
+                                 "fs-checkmark-symbolic" if checked else "fs-shield-checkmark-symbolic",
+                                 control=button(_("Check"), self._migrate_check)))
+                g.add(SettingRow(_("Start the migration"), _("The new desktop is tested before it is offered"),
+                                 "fs-arrow-sync-symbolic", control=button(_("Start"), self._migrate_start, accent=True)))
+        g.set_visible(True)
+
+    def _poll_migrate(self):
+        if self.mig_group.get_root() is None:
+            self._mig_timer = 0
+            return GLib.SOURCE_REMOVE
+        running = migrate.state().get("status") == "running"
+        self._render_migrate()
+        if not running:
+            self._mig_timer = 0
+            return GLib.SOURCE_REMOVE
+        return GLib.SOURCE_CONTINUE
+
+    def _migrate_toggle(self):
+        self._mig_open = not self._mig_open
+        self._render_migrate()
+
+    def _migrate_check(self):
+        def done(ok, msg):
+            if not ok and migrate.state().get("status") != "failed":
+                toast(self.box, _("Couldn't check: {0}").format(msg[-120:] if msg else _("cancelled")))
+            self._render_migrate()
+        migrate.check(done)
+
+    def _migrate_start(self):
+        if util.READ_ONLY:
+            toast(self.box, _("This action is disabled in read-only mode"))
+            return
+
+        def go():
+            migrate.start(lambda ok, msg: self._render_migrate())
+            GLib.timeout_add(1500, lambda: (self._render_migrate(), False)[1])
+        confirm(self.box, _("Migrar a KDE?"),
+                _("Fenestra installs and tests the new desktop. Nothing is removed and your current desktop stays "
+                  "available. Keep the device plugged in."), _("Start"), go)
+
+    def _migrate_signout(self):
+        confirm(self.box, _("Sign out now?"), _("Save your work first. On the sign-in screen, choose «Fenestra» with the "
+                                                "gear button."), _("Sign out"),
+                lambda: util.run_async(["gnome-session-quit", "--logout", "--no-prompt"]))
+
+    def _migrate_default(self):
+        migrate.set_default(lambda ok, msg: (toast(self.box, _("The new desktop is now the default") if ok else msg), self._render_migrate()))
+
+    def _migrate_rollback(self):
+        confirm(self.box, _("Go back to the previous desktop?"),
+                _("The new desktop and what it installed are removed. Your files, apps and settings stay."), _("Go back"),
+                lambda: migrate.rollback(lambda ok, msg: (toast(self.box, _("Done. The previous desktop is the default again.") if ok else msg),
+                                                          self._render_migrate())))
 
     def _gs_toggle(self, key):
         t = ToggleSwitch(bool(util.gget(UPD, key)), lambda v: util.gset(UPD, key, v))
