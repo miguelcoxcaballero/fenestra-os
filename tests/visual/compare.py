@@ -41,7 +41,7 @@ def measure_dir(d, panels, only=None):
                 tb = measure.measure_taskbar(shot, out, spec)
                 boxes[f] = (shot, (0, tb, shot.W, shot.H))
             elif spec.get('key'):
-                tb = measure.taskbar_top(shot)
+                tb = measure.bar_top(shot)
                 boxes[f] = (shot, measure.measure_panel(shot, out, spec, tb))
         except ValueError as e:
             print(f'skip {e}', file=sys.stderr)

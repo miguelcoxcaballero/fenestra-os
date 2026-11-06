@@ -1,32 +1,273 @@
 {
  "_comment": "Capture number -> token key prefix (design/tokens.json) and how to find the panel. seed: a point inside it at 100 % ('center' = screen centre x), y counted from the bottom edge; a capture sidecar .json with \"seed\" overrides it. mode: panel (lighter than the solid background, default), region (flat colour around the seed), fullscreen.",
- "01": {"name": "taskbar"},
- "02": {"name": "taskbar-hover", "key": "taskbar.button.hover", "mode": "region", "seed": ["center", 24]},
- "03": {"name": "preview", "key": "preview", "seed": ["center", 120]},
- "04": {"name": "taskbar-menu", "key": "menu.taskbar", "seed": ["center", 90]},
- "05": {"name": "app-menu", "key": "jumplist", "seed": ["center", 150]},
- "06": {"name": "start", "key": "start", "seed": ["center", 500]},
- "07": {"name": "start-all", "key": "start.all", "seed": ["center", 500]},
- "08": {"name": "power-menu", "key": "menu.power", "seed": ["center", 200]},
- "09": {"name": "account-menu", "key": "menu.account", "seed": ["center", 200]},
- "10": {"name": "search", "key": "search", "seed": ["center", 500]},
- "11": {"name": "search-query", "key": "search.query", "seed": ["center", 500]},
- "12": {"name": "quick", "key": "quick", "seed": [1720, 300]},
- "13": {"name": "quick-wifi", "key": "quick.wifi", "seed": [1720, 300]},
- "14": {"name": "quick-media", "key": "quick.media", "seed": [1720, 300]},
- "15": {"name": "notifications", "key": "notifications", "seed": [1750, 700]},
- "16": {"name": "calendar", "key": "calendar", "seed": [1750, 250]},
- "17": {"name": "toast", "key": "toast", "seed": [1730, 120]},
- "18": {"name": "osd-volume", "key": "osd", "seed": ["center", 96]},
- "19": {"name": "osd-brightness", "key": "osd.brightness", "seed": ["center", 96]},
- "20": {"name": "secure-attention", "key": "secure", "mode": "fullscreen", "seed": [40, 540]},
- "21": {"name": "uac", "key": "uac", "seed": ["center", 540], "above_taskbar": false},
- "22": {"name": "tray-overflow", "key": "flyout.overflow", "seed": [1730, 80]},
- "23": {"name": "desktop-menu", "key": "menu.desktop", "seed": [960, 540]},
- "24": {"name": "caption-buttons", "key": "window.caption", "mode": "region", "seed": [1900, 1060]},
- "25": {"name": "alt-tab", "key": "alttab", "seed": ["center", 540], "above_taskbar": false},
- "26": {"name": "task-view", "key": "taskview", "mode": "fullscreen", "seed": [40, 540]},
- "27": {"name": "snap-layouts", "key": "snap", "seed": [1800, 1000]},
- "28": {"name": "lock", "key": "lock", "mode": "fullscreen", "seed": [40, 540]},
- "29": {"name": "login", "key": "login", "mode": "fullscreen", "seed": [40, 540]}
+ "01": {
+  "name": "taskbar"
+ },
+ "02": {
+  "name": "taskbar-hover",
+  "key": "taskbar.button.hover",
+  "mode": "region",
+  "seed": [
+   "center",
+   24
+  ],
+  "tokens": {
+   "width": "taskbar.button"
+  }
+ },
+ "03": {
+  "name": "preview",
+  "key": "preview",
+  "seed": [
+   "center",
+   120
+  ]
+ },
+ "04": {
+  "name": "taskbar-menu",
+  "key": "menu.taskbar",
+  "seed": [
+   "center",
+   90
+  ]
+ },
+ "05": {
+  "name": "app-menu",
+  "key": "jumplist",
+  "seed": [
+   "center",
+   150
+  ]
+ },
+ "06": {
+  "name": "start",
+  "key": "start",
+  "seed": [
+   "center",
+   500
+  ],
+  "tokens": {
+   "width": "start.width",
+   "height": "start.height"
+  }
+ },
+ "07": {
+  "name": "start-all",
+  "key": "start.all",
+  "seed": [
+   "center",
+   500
+  ]
+ },
+ "08": {
+  "name": "power-menu",
+  "key": "menu.power",
+  "seed": [
+   "center",
+   200
+  ]
+ },
+ "09": {
+  "name": "account-menu",
+  "key": "menu.account",
+  "seed": [
+   "center",
+   200
+  ]
+ },
+ "10": {
+  "name": "search",
+  "key": "search",
+  "seed": [
+   "center",
+   500
+  ],
+  "tokens": {
+   "width": "search.width",
+   "height": "search.height"
+  }
+ },
+ "11": {
+  "name": "search-query",
+  "key": "search.query",
+  "seed": [
+   "center",
+   500
+  ]
+ },
+ "12": {
+  "name": "quick",
+  "key": "quick",
+  "seed": [
+   1720,
+   300
+  ],
+  "tokens": {
+   "width": "quick.width",
+   "gap.taskbar": "flyout.gap",
+   "edge.right": "flyout.edge",
+   "radius": "flyout.radius"
+  }
+ },
+ "13": {
+  "name": "quick-wifi",
+  "key": "quick.wifi",
+  "seed": [
+   1720,
+   300
+  ]
+ },
+ "14": {
+  "name": "quick-media",
+  "key": "quick.media",
+  "seed": [
+   1720,
+   300
+  ]
+ },
+ "15": {
+  "name": "notifications",
+  "key": "notifications",
+  "seed": [
+   1750,
+   700
+  ],
+  "tokens": {
+   "width": "notifications.width"
+  }
+ },
+ "16": {
+  "name": "calendar",
+  "key": "calendar",
+  "seed": [
+   1750,
+   250
+  ]
+ },
+ "17": {
+  "name": "toast",
+  "key": "toast",
+  "seed": [
+   1730,
+   120
+  ],
+  "tokens": {
+   "width": "toast.width"
+  }
+ },
+ "18": {
+  "name": "osd-volume",
+  "key": "osd",
+  "seed": [
+   "center",
+   96
+  ],
+  "tokens": {
+   "width": "osd.width",
+   "height": "osd.height",
+   "gap.taskbar": "osd.gap"
+  }
+ },
+ "19": {
+  "name": "osd-brightness",
+  "key": "osd.brightness",
+  "seed": [
+   "center",
+   96
+  ]
+ },
+ "20": {
+  "name": "secure-attention",
+  "key": "secure",
+  "mode": "fullscreen",
+  "seed": [
+   40,
+   540
+  ]
+ },
+ "21": {
+  "name": "uac",
+  "key": "uac",
+  "seed": [
+   "center",
+   540
+  ],
+  "above_taskbar": false
+ },
+ "22": {
+  "name": "tray-overflow",
+  "key": "flyout.overflow",
+  "seed": [
+   1730,
+   80
+  ]
+ },
+ "23": {
+  "name": "desktop-menu",
+  "key": "menu.desktop",
+  "seed": [
+   960,
+   540
+  ],
+  "tokens": {
+   "width": "menu.width.min"
+  }
+ },
+ "24": {
+  "name": "caption-buttons",
+  "key": "window.caption",
+  "mode": "region",
+  "seed": [
+   1900,
+   1060
+  ],
+  "tokens": {
+   "width": "window.button.width",
+   "height": "window.button.height"
+  }
+ },
+ "25": {
+  "name": "alt-tab",
+  "key": "alttab",
+  "seed": [
+   "center",
+   540
+  ],
+  "above_taskbar": false
+ },
+ "26": {
+  "name": "task-view",
+  "key": "taskview",
+  "mode": "fullscreen",
+  "seed": [
+   40,
+   540
+  ]
+ },
+ "27": {
+  "name": "snap-layouts",
+  "key": "snap",
+  "seed": [
+   1800,
+   1000
+  ]
+ },
+ "28": {
+  "name": "lock",
+  "key": "lock",
+  "mode": "fullscreen",
+  "seed": [
+   40,
+   540
+  ]
+ },
+ "29": {
+  "name": "login",
+  "key": "login",
+  "mode": "fullscreen",
+  "seed": [
+   40,
+   540
+  ]
+ }
 }

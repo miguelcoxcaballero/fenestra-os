@@ -82,12 +82,29 @@ def taskbar_top(shot):
     ds = {y: sum(abs(lum(shot.px[x, y]) - lum(shot.px[x, y - 1])) for x in range(0, shot.W, 8))
           for y in range(shot.H - 120, shot.H)}
     peak = max(ds.values())
-    # the border line makes two edges (above and below it): the bar starts at the upper one
-    return min(y for y, d in ds.items() if d >= 0.5 * peak)
+    # the border line makes two edges (above and below it): the bar starts at the upper one,
+    # and a faint 1 px border above the strongest edge still belongs to the bar
+    t = min(y for y, d in ds.items() if d >= 0.5 * peak)
+    n = len(range(0, shot.W, 8))
+    while t - 1 in ds and ds[t] / n >= 2.5 and t - 2 >= shot.H - 120 and ds[t - 1] / n >= 2.5:
+        t -= 1
+    return t
+
+
+_TB = {}
+
+
+def bar_top(shot):
+    """Taskbar top measured on capture 01 of the same theme and scale (no panel covers it there)."""
+    d = os.path.dirname(shot.path)
+    return (_TB.get((d, shot.theme, shot.scale))
+            or next((v for (dd, _t, sc), v in _TB.items() if dd == d and sc == shot.scale), None)
+            or taskbar_top(shot))
 
 
 def measure_taskbar(shot, out, spec):
     top = taskbar_top(shot)
+    _TB[(os.path.dirname(shot.path), shot.theme, shot.scale)] = top
     out.add(shot, 'taskbar.height', shot.H - top, (4, top))
     fill = median_patch(shot, (4, top + 6), 2)
     out.add(shot, 'taskbar.background', hexc(fill), (4, top + 6), reliable=False, note='acrylic/mica: VM render')
@@ -263,6 +280,13 @@ def measure_panel(shot, out, spec, tb_top):
         ImageDraw.floodfill(sel, tuple(seed), 128)
         sel = sel.point(lambda v: 255 if v == 128 else 0)
         box = sel.getbbox()
+    elif 'mask' in shot.meta:
+        # exact panel shape supplied with the capture (Fenestra bench: from the surface's alpha)
+        sel = Image.open(os.path.join(os.path.dirname(shot.path), shot.meta['mask'])).convert('L')
+        box = sel.getbbox()
+        if not box:
+            raise ValueError(f'{shot.file}: empty mask')
+        seed = [box[0] + (box[2] - box[0]) // 2, box[1] + 8]
     else:
         box, sel = panel_box(shot, seed, tb_top if spec.get('above_taskbar', True) else shot.H)
     x0, y0, x1, y1 = box
@@ -291,6 +315,11 @@ def measure_panel(shot, out, spec, tb_top):
         out.add(shot, f'{p}.{name}', hexc(shot.px[pt[0], pt[1]]), pt)
     for name, pt in shot.meta.get('probes', {}).items():
         out.add(shot, f'{p}.{name}', hexc(shot.px[pt[0], pt[1]]), pt)
+    # the same numbers under design/tokens.json names (panels.json "tokens": {suffix: token})
+    for suffix, token in spec.get('tokens', {}).items():
+        src = next((e for e in reversed(out.entries) if e['key'] == f'{p}.{suffix}' and e['source'] == shot.file), None)
+        if src:
+            out.entries.append(dict(src, key=token, measured_as=src['key']))
     return box
 
 
@@ -315,7 +344,7 @@ def main():
             skipped.append(f'{f}: no entry {shot.num} in panels.json')
             continue
         try:
-            tb = measure_taskbar(shot, out, spec) if shot.num == '01' else taskbar_top(shot)
+            tb = measure_taskbar(shot, out, spec) if shot.num == '01' else bar_top(shot)
             if spec.get('key') and shot.num != '01':
                 measure_panel(shot, out, spec, tb)
         except ValueError as e:
