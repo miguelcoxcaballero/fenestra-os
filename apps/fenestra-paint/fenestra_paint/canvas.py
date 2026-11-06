@@ -17,7 +17,7 @@ from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk
 from . import raster, theme
 
 TILE = 256
-PAD = 40           # margin around the canvas when it is larger than the view
+PAD = 34           # margin around the canvas when it is larger than the view (reference)
 HANDLE = 6         # canvas resize handle size (px)
 ZOOM_MIN, ZOOM_MAX = 0.125, 8.0
 ZOOM_PRESETS = [0.125, 0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]

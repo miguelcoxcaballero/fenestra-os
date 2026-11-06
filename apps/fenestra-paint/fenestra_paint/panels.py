@@ -12,13 +12,14 @@ from .i18n import _
 from .widgets import Menu, Slider, button, icon, label, popup_menu, radio_group
 
 
-def _checker(cr, x, y, w, h, cell=6):
+def _checker(cr, x, y, w, h, cell=8):
+    th = theme.get()
     cr.save()
     cr.rectangle(x, y, w, h)
     cr.clip()
-    cr.set_source_rgb(1, 1, 1)
+    cr.set_source_rgba(*th.rgb("checker-a"))
     cr.paint()
-    cr.set_source_rgb(0.85, 0.85, 0.85)
+    cr.set_source_rgba(*th.rgb("checker-b"))
     for j in range(int(h // cell) + 1):
         for i in range(int(w // cell) + 1):
             if (i + j) % 2:
@@ -77,7 +78,7 @@ class LayersPanel(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.win = win
         self.add_css_class("layers-panel")
-        add = button(icon("add-circle", 16), "panel-icon-button", tooltip=_("Add layer"),
+        add = button(icon("add-circle", 20), "panel-icon-button", tooltip=_("Add layer"),
                      cb=lambda: win.doc.add_layer())
         add.set_halign(Gtk.Align.CENTER)
         self.append(add)
@@ -110,6 +111,9 @@ class LayersPanel(Gtk.Box):
         bgwrap.append(self.bg_btn)
         self.append(bgwrap)
         self.append(Gtk.Separator())
+        foot = Gtk.Box()
+        foot.add_css_class("layers-foot")
+        self.append(foot)
         self.tiles = []
         self._pending = 0
 
@@ -150,7 +154,7 @@ class LayersPanel(Gtk.Box):
             b.add_css_class("selected")
         b.set_tooltip_text(layer.name + ("" if layer.opacity >= 1 else f" ({round(layer.opacity * 100)}%)"))
         ov = Gtk.Overlay()
-        th = Thumb(lambda layer=layer: layer.surface, 76)
+        th = Thumb(lambda layer=layer: layer.surface, 80)
         if not layer.visible:
             th.set_opacity(0.4)
         ov.set_child(th)
