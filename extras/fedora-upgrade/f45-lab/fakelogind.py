@@ -48,4 +48,15 @@ def acquired(conn, name):
     for path, i in (('/org/freedesktop/login1', 0), (S, 1), ('/org/freedesktop/login1/session/auto', 1), (UP, 2)):
         conn.register_object(path, node.interfaces[i], call, prop, None)
 Gio.bus_own_name(Gio.BusType.SYSTEM, 'org.freedesktop.login1', 0, acquired, None, None)
+
+# GDM's manager: GNOME Shell only creates the lock screen (Main.screenShield) when
+# org.gnome.DisplayManager answers Version and /run/systemd/seats exists.
+GDM_XML = '''<node><interface name="org.gnome.DisplayManager.Manager">
+ <property name="Version" type="s" access="read"/></interface></node>'''
+gdm_node = Gio.DBusNodeInfo.new_for_xml(GDM_XML)
+def gdm_acquired(conn, name):
+    conn.register_object('/org/gnome/DisplayManager/Manager', gdm_node.interfaces[0], None,
+                         lambda *a: GLib.Variant('s', '51.0'), None)
+__import__('os').makedirs('/run/systemd/seats', exist_ok=True)
+Gio.bus_own_name(Gio.BusType.SYSTEM, 'org.gnome.DisplayManager', 0, gdm_acquired, None, None)
 GLib.MainLoop().run()

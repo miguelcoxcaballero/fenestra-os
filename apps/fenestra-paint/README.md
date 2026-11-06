@@ -11,6 +11,8 @@ needed: pixel work uses C-speed `bytes` operations).
 | Light | Dark |
 |---|---|
 | ![Light](screenshots/demo-light.png) | ![Dark](screenshots/layers-dark.png) |
+| ![File menu](screenshots/menu-file.png) | ![Brushes](screenshots/menu-brushes-dark.png) |
+| ![Text tool](screenshots/text-tool.png) | ![Unsaved changes](screenshots/dialog-unsaved-dark.png) |
 
 All screenshots are in [`screenshots/`](screenshots/) (menus, dialogs, settings, Spanish UI).
 

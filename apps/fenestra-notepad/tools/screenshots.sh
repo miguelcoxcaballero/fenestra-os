@@ -20,10 +20,12 @@ for theme in light dark; do
     shot settings-$theme --$theme --shot settings
     shot markdown-$theme --$theme --shot markdown
 done
-shot settings-font-light --light --shot settings-font
-shot menu-recent-light --light --shot menu-recent
-shot tabs-light --light --shot tabs
-shot save-changes-light --light --shot save
-shot goto-light --light --shot goto
+for theme in light dark; do
+    shot settings-font-$theme --$theme --shot settings-font
+    shot menu-recent-$theme --$theme --shot menu-recent
+    shot tabs-$theme --$theme --shot tabs
+    shot save-changes-$theme --$theme --shot save
+    shot goto-$theme --$theme --shot goto
+done
 shot main-es-light --light --lang es --shot menu-file
 shot settings-es-dark --dark --lang es --shot settings

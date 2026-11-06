@@ -5,9 +5,11 @@ import Clutter from 'gi://Clutter';
 import {AuthPrompt} from 'resource:///org/gnome/shell/gdm/authPrompt.js';
 // GNOME 51 moved the verifier to gdm/userVerifier.js; 49/50 have it in gdm/util.js.
 let ShellUserVerifier, MessageType;
-try {
+// (Checked first, so GNOME 49 doesn't log a failed import every start.)
+const hasResource = path => { try { Gio.resources_get_info(path, 0); return true; } catch { return false; } };
+if (hasResource('/org/gnome/shell/gdm/userVerifier.js')) {
     ({ShellUserVerifier, MessageType} = await import('resource:///org/gnome/shell/gdm/userVerifier.js'));
-} catch {
+} else {
     ({ShellUserVerifier, MessageType} = await import('resource:///org/gnome/shell/gdm/util.js'));
 }
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';

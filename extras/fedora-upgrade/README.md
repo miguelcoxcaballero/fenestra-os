@@ -43,6 +43,9 @@ manual equivalent and stay for recovery.
 | Same ports on GNOME 49 (headless) | all load, no regressions |
 | Fenestra Settings, Task Manager, OOBE, Notepad on GTK 4.24 / Python 3.15 | start without tracebacks |
 | Explorer on Nautilus 51.1 (`overlay/51`, fedora:45 container, GNOME Shell 51 headless) vs Nautilus 49.6 (fedora:43), same overlay build and user | same pixels side by side: tabs in the title bar, command bar, View/Sort/See more menus under their buttons, background and file context menus with icons, address bar (path and edit mode), sidebar with patched icons and pins, Home/This PC/Gallery pages, Details view, new tab. Only environment differences: thumbnails (no thumbnailer in the container), "Open in Terminal" (no terminal extension) |
+| Plymouth theme `fenestra` (Plymouth 26, Fedora 45 kernel 7.2.15 + dracut initramfs, QEMU **TCG** + OVMF, bochs-drm; `tests/plymouth/`) | boot (firmware-logo stand-in + spinner), live switch to the offline-upgrade screen (`change-mode --system-upgrade`, what `dnf5 offline` does), progress 0/42/87 %, `--updates` mode, Restarting, Shutting down; English and Spanish; 1280×800, 1920×1080 and 2560×1600 (2× assets). Text uses Selawik Semilight through the `99fenestra-plymouth` dracut module (Plymouth only reads `/usr/share/fonts/Plymouth.ttf`). Not covered without KVM/real hardware: the firmware's own BGRT logo hand-off and a full `dnf5 offline` run |
+| Release upgrade for later releases (os-release logic, rebrand, GNOME version check), fedora:45 container | version from `/usr/lib/os-release`; a stale "Fenestra 43" `/etc/os-release` and boot entry become "Fenestra 45"; with a simulated GNOME 53 the login step keeps the desktop extensions on and reports them |
+| Lock screen and greeter on GNOME 51.1 vs 49 (headless shells; logind/GDM stubs and accounts-daemon in `f45-lab/fakelogind.py`) | lock-clock, direct-unlock, user-lock-prompt, spotlight enable and lock the screen on both; the Fenestra lock background and account prompt render on both; fenestra-login + spotlight enable in `--mode=gdm` and draw the greeter background. Fast unlock on 51 (simulated verifier): after a Hello success the fingerprint/face hints are dropped and only the short success message stays. Not verifiable without a real GDM/PAM: typing the password, Howdy/fingerprint unlock timing (51's verifier needs GDM's reauthentication service) |
 
 ## GNOME 51 API changes handled
 
@@ -59,11 +62,16 @@ manual equivalent and stay for recovery.
 - `St.BoxLayout` `vertical:` property removed → `orientation: Clutter.Orientation.VERTICAL`.
 - `ShellUserVerifier`/`MessageType` moved from `gdm/util.js` to `gdm/userVerifier.js`;
   `_queueMessage(service, message, type)` became `_queueMessage({serviceName, message, messageType, wiggle})`;
-  `_onVerificationComplete` left the verifier (fast-unlock tweak is skipped on 51).
+  `_onVerificationComplete` left the verifier: fast unlock now hooks `AuthServices._onVerificationComplete`
+  (which service succeeded) and `ShellUserVerifier.handlePendingMessages()` (what AuthPrompt waits for).
+- Mutter 51 removed `Meta.Background.set_file` (backgrounds load through a private glycin cache):
+  the lock screen, greeter and startup cover use an St background (cover) there — before this,
+  `Main.screenShield.lock()` threw and **the screen never locked** on 51.
 - `Shell.GLSLEffect` removed → `rounded-window-corners/effect/glsl_compat.js` (Clutter.ShaderEffect + Cogl.Snippet).
 - `addChrome({affectsInputRegion})` removed.
 - Every extension declares `"51"`.
 
 ## Open work (see the cloud hand-off in the PR)
 
-- Lock screen / GDM on GNOME 51 can only be fully checked on the real machine.
+- Lock screen / GDM on GNOME 51: the unlock itself (password, Hello, fingerprint and the fast-unlock
+  timing) can only be checked on the real machine.

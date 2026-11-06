@@ -13,7 +13,7 @@ from fenestra_notepad.locale.es import STRINGS  # noqa: E402
 from fenestra_notepad import textio  # noqa: E402
 
 # Literal labels that are deliberately identical in every language
-UNTRANSLATED_OK = {"Windows (CRLF)", "Unix (LF)", "Macintosh (CR)", "Markdown", "UTF-8", "UTF-16 LE",
+UNTRANSLATED_OK = {"CRLF", "LF", "CR", "Markdown", "UTF-8", "UTF-16 LE",
                    "UTF-16 BE", "ISO-8859-1", "OK", "Zoom", "F3", "F5", "Ctrl", "Alt"}
 
 

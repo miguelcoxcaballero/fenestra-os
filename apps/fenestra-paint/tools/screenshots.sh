@@ -36,6 +36,17 @@ shot dialog-properties-dark --dark --dialog properties
 shot dialog-unsaved --light --demo --dialog unsaved
 shot text-tool --light --text
 shot selection-move --light --demo --select
+# Dark mode of the same menus and dialogs.
+shot menu-file-dark --dark --menu file
+shot menu-edit-dark --dark --menu edit
+shot menu-view-dark --dark --menu view-zoom
+shot menu-brushes-dark --dark --menu brushes
+shot menu-selection-dark --dark --menu selection
+shot menu-rotate-dark --dark --menu rotate
+shot dialog-resize-dark --dark --dialog resize
+shot dialog-unsaved-dark --dark --demo --dialog unsaved
+shot text-tool-dark --dark --text
+shot selection-move-dark --dark --demo --select
 shot spanish --light --lang es --menu file
 rm -rf "$CFG"
 [ -e "/run/user/$(id -u)/gnome-shell-disable-extensions" ] && rm -f "/run/user/$(id -u)/gnome-shell-disable-extensions"

@@ -1,7 +1,11 @@
 #!/usr/bin/python3
 """Build Fenestra's Plymouth theme: Windows-11-style boot, restart, shutdown and update screens.
 
-    fenestra-plymouth-theme OUT_DIR [--lang es] [--bgrt]
+    fenestra-plymouth-theme OUT_DIR [--lang es] [--bgrt] [--dracut]
+
+--dracut (root) also installs the 99fenestra-plymouth dracut module: Plymouth draws all
+text with /usr/share/fonts/Plymouth.ttf, which dracut links to the system default font,
+so Font= alone never changes the font; the module links the theme's font instead.
 
 Measured on a real Windows 11 25H2 (1920x1080 VM), everything scales with the screen height:
 - Boot: the firmware logo (ACPI BGRT) at its native size and position, and the Fluent
@@ -218,7 +222,8 @@ def main():
 
     font = 'Segoe UI Variable Text'
     if os.system(f'fc-list | grep -q "Segoe UI Variable"') != 0:
-        font = 'Sans'
+        # Fenestra's own UI font (Selawik, OFL), metric-compatible with the reference.
+        font = 'Selawik Semilight' if os.system('fc-list | grep -q "Selawik Semilight"') == 0 else 'Sans'
     s = STRINGS[lang]
     a, _, b = s['complete'].partition('{}')
     script = (SCRIPT.replace('@DOT_FRAMES@', str(DOT_FRAMES)).replace('@RING_FRAMES@', str(RING_FRAMES))
@@ -229,11 +234,42 @@ def main():
     open(f'{out}/fenestra.script', 'w').write(script)
     final = os.environ.get('FENESTRA_PLYMOUTH_DIR', '/usr/share/plymouth/themes/fenestra')
     open(f'{out}/fenestra.plymouth', 'w').write(
-        '[Plymouth Theme]\nName=Fenestra\nDescription=Windows-11-style boot, restart and update screens\n'
+        '[Plymouth Theme]\nName=Fenestra\nDescription=Fenestra boot, restart and update screens\n'
         'ModuleName=script\n\n[script]\n'
         f'ImageDir={final}\nScriptFile={final}/fenestra.script\n'
         f'Font={font} 15\nTitleFont={font} 15\n')
+    if '--dracut' in sys.argv:
+        install_dracut_module()
     print(out)
+
+
+DRACUT_MODULE = r'''#!/bin/bash
+# Fenestra: Plymouth's label-freetype draws all text with /usr/share/fonts/Plymouth.ttf,
+# which plymouth-populate-initrd links to the system default font. Link the Fenestra
+# theme's Font= instead (written by fenestra-plymouth-theme --dracut). Runs after 45plymouth.
+check() { return 0; }
+depends() { echo plymouth; }
+install() {
+    local theme=/usr/share/plymouth/themes/fenestra/fenestra.plymouth name f
+    grep -qs "^Theme=fenestra" /etc/plymouth/plymouthd.conf || return 0
+    name=$(sed -n 's/^Font=\(.*\) [0-9]\+$/\1/p' "$theme" | head -1)
+    [ -n "$name" ] || return 0
+    f=$(fc-match -f "%{file}" "$name" 2>/dev/null)
+    # fc-match always answers; only use it when it found that family.
+    fc-query -f "%{family}\n" "$f" 2>/dev/null | tr ',' '\n' | grep -qixF "$name" || return 0
+    inst "$f"
+    mkdir -p "$initdir/usr/share/fonts"
+    ln -sfn "$f" "$initdir/usr/share/fonts/Plymouth.ttf"
+}
+'''
+
+
+def install_dracut_module():
+    d = '/usr/lib/dracut/modules.d/99fenestra-plymouth'
+    os.makedirs(d, exist_ok=True)
+    with open(f'{d}/module-setup.sh', 'w') as f:
+        f.write(DRACUT_MODULE)
+    os.chmod(f'{d}/module-setup.sh', 0o755)
 
 
 def _modes():

@@ -18,7 +18,8 @@ ENCODINGS = {
 ENCODING_ORDER = ["utf-8", "utf-8-bom", "utf-16-le", "utf-16-be", "latin-1"]
 
 EOLS = {"crlf": "\r\n", "lf": "\n", "cr": "\r"}
-EOL_LABELS = {"crlf": "Windows (CRLF)", "lf": "Unix (LF)", "cr": "Macintosh (CR)"}
+# Plain names (no operating-system names in the interface).
+EOL_LABELS = {"crlf": "CRLF", "lf": "LF", "cr": "CR"}
 EOL_ORDER = ["crlf", "lf", "cr"]
 
 DEFAULT_ENCODING = "utf-8"

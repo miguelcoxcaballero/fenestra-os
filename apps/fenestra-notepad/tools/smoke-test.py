@@ -127,7 +127,7 @@ def phase1(a):
     yield 50
     check(w.st_pos.get_label() == "Ln 3, Col 11", f"status position {w.st_pos.get_label()!r}")
     check(w.st_chars.get_label() == f"{len(SAMPLE)} characters", f"status chars {w.st_chars.get_label()!r}")
-    check(w.st_eol_lbl.get_label() == "Unix (LF)", "status eol")
+    check(w.st_eol_lbl.get_label() == "LF", "status eol")
     check(w.st_enc_lbl.get_label() == "UTF-8", "status encoding")
     check(not w.toolbar.get_visible(), "toolbar hidden for plain text")
 

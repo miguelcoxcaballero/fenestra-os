@@ -46,6 +46,11 @@ update: just GNOME Shell extensions, an Explorer layer for Files, and apps writt
 |---|---|
 | ![Fenestra Settings, Home page](apps/fenestra-settings/screenshots/home-dark.png) | ![Fenestra Task Manager, Performance](apps/fenestra-taskmgr/screenshots/performance-cpu.png) |
 
+| Notepad | Paint |
+|---|---|
+| ![Fenestra Notepad with tabs, dark mode](apps/fenestra-notepad/screenshots/tabs-dark.png) | ![Fenestra Paint with a drawing, light mode](apps/fenestra-paint/screenshots/demo-light.png) |
+| ![Fenestra Notepad Find and Replace, light mode](apps/fenestra-notepad/screenshots/replace-light.png) | ![Fenestra Paint View menu, dark mode](apps/fenestra-paint/screenshots/menu-view-dark.png) |
+
 | Ctrl+Alt+Del | Sign-in options (Fenestra Hello) |
 |---|---|
 | ![Ctrl+Alt+Del security screen](docs/images/ctrl-alt-del.png) | ![Face sign-in setup](apps/fenestra-settings/screenshots/hello-face-2-dark.png) |
@@ -81,6 +86,8 @@ Screenshots use demo data only (user "Alex Morgan", device "FENESTRA-PC").
 | **Consent prompts** | Administrator prompts styled like User Account Control (password always required) |
 | **Settings** | Fenestra Settings replaces GNOME Settings (also for `gnome-control-center <panel>`): System, Bluetooth & devices, Network, Personalization, Apps, Accounts, Time & language, Gaming, Accessibility, Privacy, Update, plus a *Fenestra* section for GNOME-specific options |
 | **Task Manager** | Fenestra Task Manager (Ctrl+Shift+Esc): Processes, Performance, App history, Startup apps, Users, Details, Services |
+| **Notepad** | Fenestra Notepad: tabs in the title bar, File / Edit / View menus, Find and Replace, Go to line, zoom, line endings and encodings in the status bar, Markdown preview, sessions that keep unsaved tabs, light and dark |
+| **Paint** | Fenestra Paint: the familiar toolbar (selection, image, tools, brushes, shapes, colours), layers, text tool, resize and skew, rotate and flip, zoom, light and dark |
 | **First boot** | Windows-style OOBE: region, keyboard, network, device name, account, automatic sign-in, privacy, “Hi… this might take a few minutes” |
 | **Installer** | Anaconda with the Fenestra name, artwork and boot menu (no Fedora logos); account screens hidden because the OOBE creates the user |
 | **Look** | Fenestra-Light / Fenestra-Dark GTK themes, Win11 icon theme, Bibata Original cursors, Selawik (Segoe UI metrics) and Cascadia fonts, original wallpapers |
@@ -155,6 +162,8 @@ screenshot modes (see each app's README).
 apps/fenestra-settings/   Windows-11-style Settings app (Python + GTK 4)
 apps/fenestra-taskmgr/    Windows-11-style Task Manager (Python + GTK 4)
 apps/fenestra-oobe/       Windows-11-style first-boot setup (replaces GNOME Initial Setup)
+apps/fenestra-notepad/    Notepad (Python + GTK 4 + GtkSourceView)
+apps/fenestra-paint/      Paint (Python + GTK 4 + cairo)
 desktop/extensions/       GNOME Shell extensions (Fenestra's own + modified ArcMenu/DING + upstream ones)
 desktop/nautilus/         Explorer layer for Files: nautilus-python extensions + UI overlay
 desktop/dconf/            System-wide defaults (/etc/dconf/db/local.d, gdm.d)
