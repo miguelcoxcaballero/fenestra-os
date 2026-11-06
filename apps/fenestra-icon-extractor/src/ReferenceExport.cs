@@ -173,6 +173,14 @@ public sealed partial class Exporter
 
     string Status(bool verified) => verified ? "exported" : "candidate";
 
+    /// <summary>Apps icons.json gives no package family for, with one seen in a real manifest (recorded
+    /// as "candidate" all the same).</summary>
+    static readonly Dictionary<string, (string Family, string App, string Note)> ExtraPackageCandidates = new()
+    {
+        ["windows-backup"] = ("MicrosoftWindows.Client.CBS_cw5n1h2txyewy", "WindowsBackup",
+            "application id WindowsBackup seen in the Client.CBS manifest of Windows 11 26100 (CI runner); not in icons.json"),
+    };
+
     JsonObject ExportReferenceApp(RefApp app)
     {
         // Logos the older steps already export.
@@ -187,6 +195,12 @@ public sealed partial class Exporter
                 return Covered("assets/search/search.png", "Search icon step", app.Verified);
         }
         if (app.Module == "Exe") return ExportExeLogo(app);
+        if (app.Family == null && ExtraPackageCandidates.TryGetValue(app.Name, out var extra))
+        {
+            var r = ExportAppxLogo(app with { Family = extra.Family, Hint = extra.App, Verified = false });
+            r["note"] = extra.Note;
+            return r;
+        }
         if (app.Family == null || !app.Family.Contains('_'))
             return new JsonObject { ["status"] = "unresolved", ["reason"] = "icons.json names no package family for it" };
         return ExportAppxLogo(app);
