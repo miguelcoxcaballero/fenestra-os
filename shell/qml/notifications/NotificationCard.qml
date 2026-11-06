@@ -33,11 +33,12 @@ Rectangle {
     component Glyph: Rectangle {
         id: g
         property string glyph
+        property int glyphSize: 12
         readonly property alias hovered: gm.containsMouse
         signal clicked()
         width: 24; height: 24; radius: Metrics.controlRadius
         color: gm.pressed ? Theme.pressed : gm.containsMouse ? Theme.hover : "transparent"
-        SymbolicIcon { anchors.centerIn: parent; name: g.glyph; size: 12; opacity: 0.75 }
+        SymbolicIcon { anchors.centerIn: parent; name: g.glyph; size: g.glyphSize; opacity: 0.75 }
         MouseArea { id: gm; anchors.fill: parent; hoverEnabled: true; onClicked: g.clicked() }
     }
 
@@ -60,7 +61,7 @@ Rectangle {
                    text: card.n ? card.n.appName : ""; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
             Glyph { x: 285; y: 11; Accessible.name: Strings.tr("More options")
                     Row { x: 6; y: 11; spacing: 3; Repeater { model: 3; Rectangle { width: 2; height: 2; radius: 1; color: Metrics.col("toast.glyph") } } } }
-            Glyph { x: 325; y: 11; glyph: "window-close-symbolic"; Accessible.name: Strings.tr("Close"); onClicked: card.closeRequested() }
+            Glyph { x: 325; y: 11; glyph: "window-close-symbolic"; glyphSize: 16; Accessible.name: Strings.tr("Close"); onClicked: card.closeRequested() }
         }
         // Centre: time line (and close on hover).
         Item {

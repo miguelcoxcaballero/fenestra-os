@@ -67,7 +67,7 @@ Card {
                 required property int index
                 x: 255 + 40 * index; y: 12; width: 32; height: 32; radius: Metrics.controlRadius
                 color: pm.pressed ? Theme.pressed : pm.containsMouse ? Theme.hover : "transparent"
-                Text { anchors.centerIn: parent; text: modelData[0]; color: Theme.dark ? "#9b9b9b" : "#868686"; font.pixelSize: 9 }
+                Text { anchors.centerIn: parent; text: modelData[0]; color: Theme.dark ? "#9b9b9b" : "#868686"; font.pixelSize: 12 }
                 MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true
                     onClicked: cal.shown = new Date(cal.shown.getFullYear(), cal.shown.getMonth() + modelData[1], 1) }
             }
