@@ -24,17 +24,17 @@ run exists, B also records the container state: PASS-CONTAINER (tests/shell-kwin
 | S03 | Start works for a new account | pending (VM) | CODE | defaults (Start pins, taskbar pins) apply without shell.conf; check with a new account in the VM |
 | S04 | Search flyout: recent searches, top apps, chips (All, Web, Apps, Documents, Settings, Folders, Photos), best match, preview pane | pending (VM) | PASS-CONTAINER | checks S04-* (home, chips, results + preview, Settings filter, history file kept at the GNOME layer path); screenshots 13–15 |
 | S05 | Search finds and opens apps, documents, folders and Settings pages | pending (VM) | PASS-CONTAINER | checks S05-finds-photo, -finds-settings-page (Fenestra Settings --export-search-index), -finds-app, -opens-app; documents via a folder index (localsearch not used yet) |
-| Q01 | Quick settings tiles with subpages; volume, brightness, audio output | pending (VM) | TODO |  |
-| Q02 | Media panel (MPRIS): play/pause, previous, next | pending (VM) | TODO |  |
-| Q03 | Volume and brightness OSD (keys and wheel) | pending (VM) | TODO |  |
-| Q04 | Notice after a screenshot | pending (VM) | TODO |  |
-| Q05 | Ctrl+Alt+Del security screen: Lock, Switch user, Sign out, Change a password, Task Manager, power; mouse works on every button | pending (VM) | TODO |  |
-| Q06 | Administrator prompts (polkit) in the Fenestra account-control style; the password is always asked | pending (VM) | TODO |  |
-| N01 | Two separate cards: notification centre (Clear all, Do not disturb) and calendar (focus timer) | pending (VM) | TODO |  |
-| N02 | Notification banners; grouping by app; working actions; history | pending (VM) | TODO |  |
-| D01 | Desktop icons with Fenestra folder icons; select, drag and drop | pending (VM) | TODO |  |
-| D02 | Desktop context menu like the Explorer's | pending (VM) | TODO |  |
-| D03 | Wallpapers: Fenestra originals, solid palette colours, Spotlight | pending (VM) | PARTIAL | Fenestra wallpaper from shell.conf, light/dark; palette colours and Spotlight in H5 |
+| Q01 | Quick settings tiles with subpages; volume, brightness, audio output | pending (VM) | PARTIAL | checks Q01-quick-settings (tiles, sliders, subpages written); Wi-Fi, Bluetooth, battery, brightness need real devices (VM) |
+| Q02 | Media panel (MPRIS): play/pause, previous, next | pending (VM) | PASS-CONTAINER | checks Q02-media-player, Q02-play-pause (test MPRIS player) |
+| Q03 | Volume and brightness OSD (keys and wheel) | pending (VM) | PARTIAL | OSD drawn (check Q03-osd); media keys via KGlobalAccel need the VM |
+| Q04 | Notice after a screenshot | pending (VM) | PARTIAL | image notification layout (check Q04-image-notification); Print → KWin ScreenShot2 needs OpenGL (VM) |
+| Q05 | Ctrl+Alt+Del security screen: Lock, Switch user, Sign out, Change a password, Task Manager, power; mouse works on every button | pending (VM) | PASS-CONTAINER | checks Q05-security-screen, Q05-power-menu; Ctrl+Alt+Del binding in the VM |
+| Q06 | Administrator prompts (polkit) in the Fenestra account-control style; the password is always asked | pending (VM) | CODE | polkit agent + consent dialog written; needs polkitd and a logind session (VM) |
+| N01 | Two separate cards: notification centre (Clear all, Do not disturb) and calendar (focus timer) | pending (VM) | PASS-CONTAINER | checks N01-center-and-calendar, -history, -do-not-disturb, -focus-session, -clear-all |
+| N02 | Notification banners; grouping by app; working actions; history | pending (VM) | PASS-CONTAINER | checks N02-server-registered, -banner, -action-invoked (real D-Bus notifications) |
+| D01 | Desktop icons with Fenestra folder icons; select, drag and drop | pending (VM) | PASS-CONTAINER | checks D01-* (icons, new folder + rename, move remembered, trash) |
+| D02 | Desktop context menu like the Explorer's | pending (VM) | PASS-CONTAINER | checks D02-background-menu, D02-item-menu (glyphs of the GNOME layer) |
+| D03 | Wallpapers: Fenestra originals, solid palette colours, Spotlight | pending (VM) | PASS-CONTAINER | checks D03-solid-colour, D03-spotlight (current.json, same allow-list) |
 | W01 | Fenestra caption buttons (46 px, close #c42b1c on hover) on GTK 4/libadwaita, GTK 3, Qt, X11/Xwayland, Flatpak, Electron; always three buttons | pending (VM) | PARTIAL | GTK CSD windows keep their buttons (Notepad); server-side decoration in H6 |
 | W02 | Rounded corners; square when snapped or maximized | pending (VM) | TODO |  |
 | W03 | Snap to edges and quarters; layouts over maximize | pending (VM) | TODO |  |

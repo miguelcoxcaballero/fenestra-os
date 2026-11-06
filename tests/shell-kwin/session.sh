@@ -15,7 +15,7 @@ W=${WIDTH:-1920} H=${HEIGHT:-1080}
 # What the RPM will install (packaging/): binary, .desktop (window-management access), assets.
 cmake --install /build --prefix /usr >/dev/null
 install -Dm644 -t /usr/share/backgrounds/fenestra /src/assets/generated/wallpapers/*.jpg
-for d in branding search menu-icons status battery; do
+for d in branding search menu-icons status battery folders power osd security consent privacy; do
     install -Dm644 -t /usr/share/fenestra/assets/$d /src/assets/generated/$d/*.* 2>/dev/null
 done
 # The apps, as the RPMs install them: launchers in PATH and their .desktop entries.
@@ -34,7 +34,13 @@ kbuildsycoca6 --noincremental >/dev/null 2>&1
 # Demo data (never personal data): a user name and picture-less account, documents, a photo,
 # a folder and recently used files for Start's Recommended and Search.
 usermod -c "Usuario Demo" root 2>/dev/null
-mkdir -p ~/Documents/Proyectos ~/Pictures ~/Downloads ~/.local/share
+mkdir -p ~/Documents/Proyectos ~/Pictures ~/Downloads ~/.local/share ~/Desktop/Proyectos ~/Desktop/Vacía ~/Templates
+printf 'Demo\n' > ~/Desktop/"Lista de tareas.txt"; printf 'x' > ~/Desktop/Proyectos/plan.txt
+printf '' > ~/Templates/"Documento de texto.txt"
+# Spotlight fixture: the daily picture as the GNOME layer's service writes it.
+mkdir -p /var/lib/fenestra-spotlight/images
+cp /usr/share/backgrounds/fenestra/fenestra-bloom-light.jpg /var/lib/fenestra-spotlight/images/$(printf '%064d' 0 | tr 0 a).jpg
+printf '{"image": "/var/lib/fenestra-spotlight/images/%s.jpg"}\n' $(printf '%064d' 0 | tr 0 a) > /var/lib/fenestra-spotlight/current.json
 printf 'Demo\n' > ~/Documents/"Informe trimestral.txt"
 printf '# Notas\n' > ~/Documents/"Notas de la reunión.md"
 cp /usr/share/backgrounds/fenestra/fenestra-bloom-light.jpg ~/Pictures/playa-verano.jpg
@@ -223,6 +229,29 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "securityScreen.menu = \"power\"" >/dev/null; sleep 0.5
     check Q05-power-menu shot_with fenestra-security 22b-security-power
     probe "securityScreen.close()" >/dev/null
+    # ---- H5: desktop ----
+    dk() { echo "screensView.objectAt(0).desktop.$1"; }
+    check D01-desktop-icons wait_for 'is "$(probe "DesktopModel.rowCount()")" 4' 10   # Recycle Bin + 3 entries
+    sleep 1; check D01-desktop shot 23-desktop
+    probe "$(dk 'testBackgroundMenu()')" >/dev/null; sleep 1; check D02-background-menu shot_with fenestra-flyout 24-desktop-menu
+    probe "$(dk 'testCloseMenu()')" >/dev/null
+    probe "$(dk 'testItemMenu(2)')" >/dev/null; sleep 1; check D02-item-menu shot_with fenestra-flyout 25-item-menu
+    probe "$(dk 'testCloseMenu()')" >/dev/null
+    probe "DesktopModel.newFolder()" >/dev/null
+    check D01-new-folder wait_for '[ -d ~/Desktop/"New folder" ]' 5
+    check D01-rename-starts wait_for '[ "$(probe "$(dk renaming)")" != "('"'"'[-1]'"'"',)" ]' 5
+    probe "DesktopModel.rename($(probe "$(dk renaming)" | tr -dc 0-9), \"Fotos de demo\")" >/dev/null
+    check D01-rename wait_for '[ -d ~/Desktop/"Fotos de demo" ]' 5
+    probe "DesktopModel.moveTo(1, 3, 2)" >/dev/null
+    check D01-move-remembered wait_for 'grep -q "\[3,2\]" ~/.config/fenestra/desktop-positions.json' 5
+    probe "DesktopModel.trash([DesktopModel.rowCount() - 1])" >/dev/null
+    check D01-trash wait_for '[ "$(ls ~/.local/share/Trash/files 2>/dev/null | wc -l)" -ge 1 ]' 10
+    conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' '[Appearance]' 'Wallpaper=#0063b1'
+    check D03-solid-colour wait_for 'is "$(probe "WallpaperSource.color")" "\"#0063b1\""' 5
+    sleep 1; check D03-solid-shot shot 26-solid
+    conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' '[Appearance]' 'Wallpaper=spotlight'
+    check D03-spotlight wait_for 'probe "WallpaperSource.image" | grep -q fenestra-spotlight/images' 5
+    conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
     # A shell crash must not take KWin or the windows down; a new shell picks the windows up again.
     kill -SEGV $SHELL_PID; sleep 2
     check kwin-survives-shell-crash kill -0 $KWIN

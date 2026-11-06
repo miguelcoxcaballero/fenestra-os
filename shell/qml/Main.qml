@@ -14,7 +14,7 @@ Item {
         model: Qt.application.screens
         delegate: QtObject {
             required property var modelData
-            property Wallpaper wallpaper: Wallpaper { targetScreen: modelData }
+            property Desktop desktop: Desktop { targetScreen: modelData }
             property Taskbar taskbar: Taskbar { targetScreen: modelData }
             property StartMenu start: StartMenu {
                 targetScreen: modelData

@@ -48,6 +48,7 @@ qt_add_executable(fenestra-shell
     src/services/system.cpp src/services/system.h
     src/services/shortcuts.cpp src/services/shortcuts.h
     src/services/polkitagent.cpp src/services/polkitagent.h
+    src/services/desktop.cpp src/services/desktop.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -80,7 +81,7 @@ qt_add_qml_module(fenestra-shell
         qml/design/Metrics.qml
         qml/design/Motion.qml
         qml/design/Strings.qml
-        qml/desktop/Wallpaper.qml
+        qml/desktop/Desktop.qml
         qml/notifications/NotificationCard.qml
         qml/notifications/NotificationCenter.qml
         qml/notifications/Toasts.qml
@@ -115,7 +116,7 @@ target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJ
 target_link_libraries(fenestra-shell PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::DBus Qt6::WaylandClient Qt6::WaylandClientPrivate
     LayerShellQt::Interface Wayland::Client
-    KF6::Service KF6::KIOGui KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt KF6::GlobalAccel KF6::ConfigCore
+    KF6::Service KF6::KIOGui KF6::KIOCore KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt KF6::GlobalAccel KF6::ConfigCore
     PolkitQt6-1::Agent PkgConfig::GWEATHER)
 
 install(TARGETS fenestra-shell RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

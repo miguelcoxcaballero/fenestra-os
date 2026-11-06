@@ -10,7 +10,10 @@ Branch `feature/fenestra-shell-kwin`. Tested only in the headless KWin bench
 | H1 minimal session | done in the container | KWin + shell + GTK 4 and X11 clients; shell crash → windows survive, relaunch; session units verified with `systemd-analyze --user verify` |
 | H2 taskbar | mostly done | grouping, pins, launch, unpinned apps, preview list, menus, alignment, search modes, light mode, tray (StatusNotifierItem + menus), keyboard layout, two outputs. **Missing:** live thumbnails and acrylic (need OpenGL), real Wi-Fi/volume/battery (VM), privacy glyphs (H4) |
 | H3 Start and Search | done in the container | Start (pins, Recommended, All apps ×3 views, power and account menus, Super via D-Bus), Search (home, history, chips, apps, Settings pages, documents/folders/photos, preview, opening). **Missing:** acrylic blur (VM), localsearch for file contents |
-| H4–H11 | not started | — |
+| H4 tray panels | mostly done in the container | notifications server + centre + banners, calendar with Focus, quick settings + media, OSD, Ctrl+Alt+Del, image toast. **Missing:** real devices, polkit and media keys (VM), camera privacy glyph |
+| H5 desktop | done in the container | icons, selection, rename, new folder / from template, move, trash, menus, solid colour and Spotlight wallpapers |
+| Visual tuning | waiting for reference measurements | `design/tokens.json` holds placeholders; `tools/apply-measurements.py` merges the measured values |
+| H6–H11 | not started | — |
 
 ## How to run the bench
 
