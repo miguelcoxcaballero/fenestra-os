@@ -379,9 +379,11 @@ class ActionArea(Gtk.Box):
             self.main = self._btn(_("Install"), True, lambda: st.install(app.uid), "st-download-symbolic")
         elif app.state == INSTALLED:
             if app.has_update:
-                self.main = self._btn(_("Update"), True, lambda: st.update(app.uid), "st-update-symbolic")
+                self.main = self._btn(_("Update"), True, lambda: st.update(app.uid),
+                                      None if self.small else "st-update-symbolic")
             if self.show_open:
-                b = self._btn(_("Open"), not app.has_update, lambda: self.win.launch(app.uid))
+                # rows (small) use a standard Open button, like the reference's list rows
+                b = self._btn(_("Open"), not app.has_update and not self.small, lambda: self.win.launch(app.uid))
                 self.main = self.main or b
 
     def clicked(self):

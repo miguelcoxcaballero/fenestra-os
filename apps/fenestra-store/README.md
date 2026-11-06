@@ -5,9 +5,11 @@ Fenestra's own app store. You can browse, search, install, update and uninstall 
 catalogue.
 
 It is written in Python 3 + PyGObject + **GTK 4** (no libadwaita, no pip dependencies) and
-uses the visual language of Fenestra Settings and Task Manager: a left navigation rail with
-an accent pill, cards with 4–8 px corners, accent buttons, the same fonts and palette, and
-the accent colour from GSettings. The layout, artwork and wording are Fenestra's own. Demo
+follows the geometry of the reference store, measured at 100 % (design/reference/
+measurements.json, key `app_store`, on the visual/reference branch): a 48 px title bar with
+the search box centred, a 72 px rail of icon-over-label items, the page in a framed area with
+an 8 px corner, a hero of one large and three small tiles, panels that list apps three at a
+time, 341x316 result cards and 72 px download rows. It uses the accent colour from GSettings. The layout, artwork and wording are Fenestra's own. Demo
 mode only shows invented apps with icons and screenshots generated at runtime.
 
 | Home | App page |
@@ -15,7 +17,7 @@ mode only shows invented apps with icons and screenshots generated at runtime.
 | ![Home, dark](screenshots/home-dark.png) | ![App page, dark](screenshots/app-dark.png) |
 | ![Home, light](screenshots/home-light.png) | ![App page in Spanish, light](screenshots/app-es-light.png) |
 
-| Library › Updates | Library › Installed |
+| Downloads (updates) | Library |
 |---|---|
 | ![Updates, light](screenshots/updates-light.png) | ![Installed apps, dark](screenshots/library-dark.png) |
 
@@ -60,27 +62,27 @@ renderer, then saved as a PNG. `FENESTRA_SHOT_DELAY` (ms, default 1500) sets the
 
 ## Pages
 
-* **Home**: a rotating featured banner (highlighted apps, or five complete and recently
-  released listings that change daily for real catalogues), category tiles, Popular apps,
-  New and updated, Popular games and one row per category. Each card shows the icon, name,
-  summary, a source badge (Flathub or Fedora) and the state (installed, update available,
-  progress).
-* **Apps / Games / categories**: category chips, sorting (popular or recommended, name,
-  recently updated) and a grid that loads 60 cards at a time.
+* **Home / Apps / Games**: a hero with a large rotating banner (highlighted apps, or five
+  complete and recently released listings that change daily for real catalogues) and three
+  tiles, then pairs of panels: Popular apps and games, New and updated, and one panel per
+  category (Apps also has a row of category chips). Each row shows the icon, name, category
+  and a chip with the state (Free, Installed, Update).
+* **Categories**: sorting (popular or recommended, name, recently updated) and a grid of
+  cards (icon, name, source and category, summary, first screenshot) that loads 60 at a time.
 * **Search**: the search box is in the title bar. Results are live (150 ms debounce),
   ranked by name, then keywords, summary, developer, id and description. Matching ignores
   accents ("rapidas" finds "Notas rápidas"). Results can be filtered to apps or games.
 * **App page**: icon, name, developer (click to search for their apps), summary, source and
-  format chips, Install / Open / Update / Uninstall with real progress, a screenshot carousel
-  with thumbnails, the description, details (version, release date, download and installed
+  format, Install / Open / Update / Uninstall with real progress, over a gradient of the app's
+  colour; then cards with the screenshot strip, the description, details (version, release date, download and installed
   size, licence, source and remote, format, developer, website), permissions for Flatpak
   apps ("not sandboxed" for RPMs), "Other apps by …", and "Also available from" when the same
   app exists in both sources.
   **There are no ratings.** Fenestra Store has no review source yet (ODRS is not wired up),
   and it never invents ratings.
-* **Library**: installed apps from both sources (open, update, uninstall) and **Updates**
-  (per app or *Update all*, progress, *Check for updates*, "last checked", and a count badge
-  on the rail).
+* **Library**: installed apps from both sources as 72 px rows (source, version and size,
+  Open/Update, and a menu with Uninstall). **Downloads** (rail) lists the updates: per app or
+  *Update all*, progress, *Check for updates*, "last checked", and a dot on the rail item.
 * **Sources**: turn Flathub on or off (Flatpak remotes), add Flathub if it is missing, and
   turn the Fedora repositories on or off (PackageKit). The page also explains how apps are
   installed.
