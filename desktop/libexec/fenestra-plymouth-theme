@@ -3,17 +3,21 @@
 
     fenestra-plymouth-theme OUT_DIR [--lang es] [--bgrt] [--dracut]
 
---dracut (root) also installs the 99fenestra-plymouth dracut module: Plymouth draws all
+--dracut (root) also sets DeviceScale=1 in /etc/plymouth/plymouthd.conf and installs the 99fenestra-plymouth dracut module: Plymouth draws all
 text with /usr/share/fonts/Plymouth.ttf, which dracut links to the system default font,
 so Font= alone never changes the font; the module links the theme's font instead.
 
-Measured on a real Windows 11 25H2 (1920x1080 VM), everything scales with the screen height:
-- Boot: the firmware logo (ACPI BGRT) at its native size and position, and the Fluent
-  progress ring (a 42 px arc, ~4 px stroke, round caps) centred at 78.4 % of the height.
-- Restart / shut down / updates: black, six 6.5 px dots on a 29.5 px-radius circle centred
-  at 48.5 %, text in Segoe UI ~20 px starting 60 px below the circle centre:
-  "Restarting", "Shutting down", or "Working on updates / NN% complete / Don't turn off
-  your computer" with the real progress of the offline update.
+Measured frame by frame on Windows 11 25H2 (VM, 1080p; see docs/boot-animations.md); the
+numbers are in the tables below and everything scales with the screen height:
+- Boot: the firmware logo (ACPI BGRT) at its native size and position, and the progress
+  ring (17.5 px radius, 6 px stroke, round caps) at 78.35 % of the height, 3.778 s cycle.
+- Restart / shut down / updates: black, six 6.5 px dots on a 29.04 px circle at 48.47 %,
+  4.31 s cycle, each dot with the measured position-dependent speed; text in Segoe UI
+  ~20 px below: "Restarting", "Shutting down", or "Working on updates / NN% complete /
+  Don't turn off your computer" with the real progress of the offline update.
+Frames are drawn at the built-in panel's native pixel size and played at 50 fps; Plymouth
+must run unscaled (DeviceScale=1, set by --dracut), otherwise it draws at half resolution
+and stretches everything on HiDPI panels.
 No Microsoft artwork is used: the ring and dots are drawn here. Needs python3-pillow.
 The font is the system "Segoe UI Variable" when installed (declared as Font= so dracut
 copies it into the initramfs), otherwise Plymouth's default font.
@@ -31,52 +35,96 @@ STRINGS = {
            'keep': 'No apagues el equipo', 'restart': 'Reiniciando', 'shutdown': 'Apagando'},
 }
 SS = 4                 # supersampling
-REF = 2                # frames are drawn at 2x the 1080p reference size
-DOT_FRAMES = 96        # 3.2 s per dot cycle at 30 fps
-RING_FRAMES = 60       # 2 s per ring cycle
+FPS = 50               # Plymouth.SetRefreshRate(FPS): one frame per refresh
+
+# --- Measured on Windows 11 25H2 (VM, 1080p; tests/vm/capture.py + the analysis in
+# docs/boot-animations.md). Angles in degrees, 0 = top, clockwise. -------------------------
+
+# Restart / shut down / updates: 6 dots, diameter 6.5 px, on a 29.04 px circle centred at
+# 48.47 % of the height. Every dot runs the same path: it pops in at the bottom left, runs
+# almost two turns with a speed that depends on where it is (about 105 deg/s on the upper
+# left, up to 1400 deg/s on the lower right) and pops out on the right. Dot n starts n/6 s
+# after the first one and 5.25*n degrees behind it, so the dots bunch up where they are fast
+# and spread out where they are slow. The cycle is 4.31 s (all dots gone for 0.28 s).
+DOT_R, DOT_D, DOT_CY, DOT_N, DOT_PERIOD = 29.04, 6.5, 0.4847, 6, 4.31
+DOT_STAGGER, DOT_LAG = 1 / 6, 5.25
+DOT_ANGLES = [185, 197, 209, 221, 233, 245, 257, 269, 281, 293, 305, 317, 329, 341, 353, 365, 377,
+              389, 401, 413, 425, 437, 449, 461, 473, 485, 497, 509, 521, 533, 545, 557, 569, 581,
+              593, 605, 617, 629, 641, 653, 665, 677, 689, 701, 713, 725, 737, 749, 761, 773, 785,
+              797, 809, 821, 829]
+DOT_TIMES = [0.0, 0.0236, 0.0484, 0.078, 0.113, 0.1565, 0.2129, 0.2834, 0.372, 0.4771, 0.5886,
+             0.7011, 0.813, 0.9272, 1.0429, 1.1554, 1.2577, 1.3392, 1.4029, 1.4515, 1.4884, 1.5176,
+             1.5411, 1.5577, 1.5685, 1.577, 1.586, 1.598, 1.6127, 1.6314, 1.6535, 1.6772, 1.7054,
+             1.7402, 1.782, 1.8332, 1.9, 1.9845, 2.0855, 2.1973, 2.3129, 2.4278, 2.5428, 2.652,
+             2.754, 2.8428, 2.9158, 2.9763, 3.0254, 3.0667, 3.1001, 3.1251, 3.1489, 3.1721, 3.1975]
+
+# Boot: progress ring, 17.5 px radius (stroke axis), 6.2 px stroke (drawn 5.9 + antialiasing), round caps, centred at
+# 78.35 % of the height. One cycle is 3.778 s: the arc grows from a dot (7.5 deg) to 175 deg
+# and shrinks back while the tail turns exactly 3 times (1080 deg), so every cycle starts and
+# ends at the same place (a dot at 349 deg). 40 samples per cycle, tail and head angles.
+RING_R, RING_STROKE, RING_CY, RING_PERIOD, RING_START = 17.5, 5.9, 0.7835, 3.778, 349.0
+RING_TAIL = [0.0, 26.1, 50.3, 73.4, 96.5, 120.1, 143.9, 167.6, 190.8, 213.6, 236.5, 259.9, 284.1,
+             308.7, 332.8, 355.6, 376.6, 396.5, 416.2, 437.2, 460.5, 486.0, 513.2, 541.0, 568.6,
+             595.9, 623.6, 652.8, 684.2, 717.7, 752.6, 787.7, 822.1, 855.4, 888.0, 920.6, 953.7,
+             987.1, 1020.0, 1051.2]
+RING_HEAD = [7.5, 36.4, 67.8, 101.2, 135.3, 169.2, 202.2, 234.3, 266.0, 298.0, 330.8, 364.3,
+             398.4, 432.2, 465.2, 497.1, 527.7, 556.9, 584.7, 610.8, 635.1, 657.3, 677.8, 697.0,
+             715.9, 735.2, 755.6, 777.3, 800.2, 823.9, 848.2, 872.7, 897.2, 921.5, 945.5, 969.0,
+             991.8, 1014.3, 1037.2, 1061.3]
+
+DOT_FRAMES = round(DOT_PERIOD * FPS)
+RING_FRAMES = round(RING_PERIOD * FPS)
 
 
-def dots_frame(i):
-    size = int(2 * (29.5 + 6.5) * REF) + 4
+def interp(x, xs, ys):
+    if x <= xs[0]:
+        return ys[0]
+    for i in range(1, len(xs)):
+        if x <= xs[i]:
+            f = (x - xs[i - 1]) / (xs[i] - xs[i - 1])
+            return ys[i - 1] + f * (ys[i] - ys[i - 1])
+    return ys[-1]
+
+
+def ring_angles(phase):
+    """(tail, head) in absolute degrees for a phase in [0, 1); periodic: +1080 deg per cycle."""
+    n = len(RING_TAIL)
+    xs = [i / n for i in range(n + 1)]
+    tail = interp(phase, xs, RING_TAIL + [RING_TAIL[0] + 1080])
+    head = interp(phase, xs, RING_HEAD + [RING_HEAD[0] + 1080])
+    return RING_START + tail, RING_START + head
+
+
+def dots_frame(i, k):
+    """Frame i of the dots at scale k (screen height / 1080), drawn at the final pixel size."""
+    r, dot = DOT_R * k, DOT_D * k / 2
+    size = int(2 * (r + dot)) + 4
     img = Image.new('RGBA', (size * SS, size * SS), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     c = size * SS / 2
-    r = 29.5 * REF * SS
-    dot = 6.5 * REF * SS / 2
-    t0 = i / DOT_FRAMES
-    for k in range(6):
-        t = t0 * 1.14 - k * 0.026                     # stagger; the tail of the cycle is the empty pause
-        if not 0 <= t <= 1:
+    t = i / FPS
+    for n in range(DOT_N):
+        u = t - n * DOT_STAGGER
+        if not 0 <= u <= DOT_TIMES[-1]:
             continue
-        e = t - math.sin(2 * math.pi * t) / (2 * math.pi) * 0.92   # fast at the top, slow at the bottom
-        a = math.pi / 2 + e * 4 * math.pi                            # two turns, starting at the bottom
-        x, y = c + r * math.cos(a), c + r * math.sin(a)
-        d.ellipse((x - dot, y - dot, x + dot, y + dot), fill=(255, 255, 255, 255))
+        a = math.radians(interp(u, DOT_TIMES, DOT_ANGLES) - n * DOT_LAG)
+        x, y = c + r * SS * math.sin(a), c - r * SS * math.cos(a)
+        d.ellipse((x - dot * SS, y - dot * SS, x + dot * SS, y + dot * SS), fill=(255, 255, 255, 255))
     return img.resize((size, size), Image.LANCZOS)
 
 
-def ease(t):
-    return 4 * t ** 3 if t < 0.5 else 1 - (-2 * t + 2) ** 3 / 2
-
-
-def ring_frame(i):
-    size = int(46 * REF) + 4
+def ring_frame(i, k):
+    r, w = RING_R * k, RING_STROKE * k
+    size = int(2 * r + w) + 4
     img = Image.new('RGBA', (size * SS, size * SS), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     c = size * SS / 2
-    stroke = 4.0 * REF * SS
-    r = (42 * REF * SS - stroke) / 2
-    t = i / RING_FRAMES
-    base = 300 * t                                  # whole ring keeps rotating
-    head = base + 285 * ease(min(1.0, t * 2))       # first half: the head runs away
-    tail = base + 285 * ease(max(0.0, t * 2 - 1))   # second half: the tail catches up
-    if head - tail < 4:
-        head = tail + 4
-    steps = max(2, int((head - tail) / 1.5))
-    for s in range(steps + 1):
-        a = math.radians(tail + (head - tail) * s / steps - 90)
-        x, y = c + r * math.cos(a), c + r * math.sin(a)
-        d.ellipse((x - stroke / 2, y - stroke / 2, x + stroke / 2, y + stroke / 2), fill=(255, 255, 255, 255))
+    tail, head = ring_angles(i / RING_FRAMES)
+    steps = max(2, int((head - tail) / 0.5))
+    for s in range(steps + 1):                      # round-capped arc as a chain of discs
+        a = math.radians(tail + (head - tail) * s / steps)
+        x, y = c + r * SS * math.sin(a), c - r * SS * math.cos(a)
+        d.ellipse((x - w * SS / 2, y - w * SS / 2, x + w * SS / 2, y + w * SS / 2), fill=(255, 255, 255, 255))
     return img.resize((size, size), Image.LANCZOS)
 
 
@@ -91,21 +139,14 @@ if (mode == "updates" || mode == "system-upgrade" || mode == "firmware-upgrade")
 textmode = 0;
 if (updating || mode == "shutdown" || mode == "reboot") textmode = 1;
 
-# Frames are drawn at 2x the 1080p size: scale them to this screen.
-if (textmode) {
-    for (i = 0; i < @DOT_FRAMES@; i++) {
-        f = Image("dots-" + i + ".png");
-        frames[i] = f.Scale(Math.Int(f.GetWidth() * k / 2), Math.Int(f.GetHeight() * k / 2));
-    }
-    nframes = @DOT_FRAMES@;
-    cy = H * 0.485;
-} else {
-    for (i = 0; i < @RING_FRAMES@; i++) {
-        f = Image("ring-" + i + ".png");
-        frames[i] = f.Scale(Math.Int(f.GetWidth() * k / 2), Math.Int(f.GetHeight() * k / 2));
-    }
-    nframes = @RING_FRAMES@;
-    cy = H * 0.784;
+# Frames are drawn for the built-in panel (@FRAME_H@ px high) at 1:1; other screens rescale.
+fs = H / @FRAME_H@;
+if (textmode) { prefix = "dots-"; nframes = @DOT_FRAMES@; cy = H * @DOT_CY@; }
+else { prefix = "ring-"; nframes = @RING_FRAMES@; cy = H * @RING_CY@; }
+for (i = 0; i < nframes; i++) {
+    f = Image(prefix + i + ".png");
+    if (fs == 1) frames[i] = f;
+    else frames[i] = f.Scale(Math.Int(f.GetWidth() * fs), Math.Int(f.GetHeight() * fs));
 }
 spinner = Sprite(frames[0]);
 spinner.SetX(Math.Int(W / 2 - frames[0].GetWidth() / 2));
@@ -155,11 +196,29 @@ fun system_update(p) {
 }
 Plymouth.SetSystemUpdateFunction(system_update);
 
+# Clock: Plymouth reports the elapsed time (s) through the boot-progress callback (~30 times
+# a second), so the animation keeps Windows' speed even when refreshes are late or dropped
+# (slow framebuffers). Between two reports at most one frame is extrapolated from the ticks.
 global.tick = 0;
+global.time = -1;
+global.tick_at_time = 0;
+fun boot_progress(duration, progress) {
+    global.time = duration;
+    global.tick_at_time = global.tick;
+}
+Plymouth.SetBootProgressFunction(boot_progress);
 fun refresh() {
     global.tick = global.tick + 1;
-    spinner.SetImage(frames[Math.Int(global.tick / 2) % nframes]);
+    if (global.time >= 0) {
+        extra = global.tick - global.tick_at_time;
+        if (extra > 1) extra = 1;
+        idx = Math.Int(global.time * @FPS@) + extra;
+    } else {
+        idx = global.tick;
+    }
+    spinner.SetImage(frames[idx % nframes]);
 }
+Plymouth.SetRefreshRate(@FPS@);
 Plymouth.SetRefreshFunction(refresh);
 
 # Disk-encryption / emergency prompts stay usable.
@@ -198,10 +257,12 @@ def main():
     for f in os.listdir(out):
         if f.endswith('.png'):
             os.remove(os.path.join(out, f))
+    frame_h = panel_height()
+    k = frame_h / 1080
     for i in range(DOT_FRAMES):
-        dots_frame(i).save(f'{out}/dots-{i}.png')
+        dots_frame(i, k).save(f'{out}/dots-{i}.png')
     for i in range(RING_FRAMES):
-        ring_frame(i).save(f'{out}/ring-{i}.png')
+        ring_frame(i, k).save(f'{out}/ring-{i}.png')
 
     native_w, logo_cy = 1920, 0.5
     logo = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
@@ -227,7 +288,8 @@ def main():
     s = STRINGS[lang]
     a, _, b = s['complete'].partition('{}')
     script = (SCRIPT.replace('@DOT_FRAMES@', str(DOT_FRAMES)).replace('@RING_FRAMES@', str(RING_FRAMES))
-              .replace('@NATIVE_W@', str(native_w)).replace('@LOGO_CY@', f'{logo_cy:.4f}')
+              .replace('@NATIVE_W@', str(native_w)).replace('@FRAME_H@', str(frame_h)).replace('@FPS@', str(FPS))
+              .replace('@DOT_CY@', str(DOT_CY)).replace('@RING_CY@', str(RING_CY)).replace('@LOGO_CY@', f'{logo_cy:.4f}')
               .replace('@FONT@', font).replace('@UPDATES@', s['updates']).replace('@COMPLETE_A@', a)
               .replace('@COMPLETE_B@', b).replace('@KEEP@', s['keep']).replace('@RESTART@', s['restart'])
               .replace('@SHUTDOWN@', s['shutdown']))
@@ -240,6 +302,7 @@ def main():
         f'Font={font} 15\nTitleFont={font} 15\n')
     if '--dracut' in sys.argv:
         install_dracut_module()
+        set_device_scale()
     print(out)
 
 
@@ -264,12 +327,38 @@ install() {
 '''
 
 
+def set_device_scale():
+    """Plymouth picks scale 2 on HiDPI panels and then stretches every image; the frames are
+    already drawn at the panel's pixel size, so run it unscaled."""
+    conf = '/etc/plymouth/plymouthd.conf'
+    try:
+        lines = open(conf).read().splitlines()
+    except OSError:
+        lines = []
+    lines = [l for l in lines if not l.strip().startswith('DeviceScale=')]
+    if not any(l.strip() == '[Daemon]' for l in lines):
+        lines += ['[Daemon]']
+    i = next(i for i, l in enumerate(lines) if l.strip() == '[Daemon]')
+    lines.insert(i + 1, 'DeviceScale=1')
+    os.makedirs(os.path.dirname(conf), exist_ok=True)
+    open(conf, 'w').write('\n'.join(lines) + '\n')
+
+
 def install_dracut_module():
     d = '/usr/lib/dracut/modules.d/99fenestra-plymouth'
     os.makedirs(d, exist_ok=True)
     with open(f'{d}/module-setup.sh', 'w') as f:
         f.write(DRACUT_MODULE)
     os.chmod(f'{d}/module-setup.sh', 0o755)
+
+
+def panel_height():
+    """Pixel height the frames are drawn for: the built-in panel's native mode (Plymouth runs
+    with DeviceScale=1, see plymouthd.conf), FENESTRA_PLYMOUTH_HEIGHT, or 1080."""
+    if os.environ.get('FENESTRA_PLYMOUTH_HEIGHT'):
+        return int(os.environ['FENESTRA_PLYMOUTH_HEIGHT'])
+    modes = _modes()
+    return modes[0][1] if modes else 1080
 
 
 def _modes():

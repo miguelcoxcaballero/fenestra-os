@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Test initramfs for the Fenestra Plymouth theme. Run as root inside a Fedora container
-# (any release) with kernel-core, dracut, plymouth, plymouth-scripts, plymouth-plugin-script
+# (any release) with kernel-core, dracut, plymouth, plymouth-scripts, plymouth-plugin-script,
+# plymouth-plugin-label (without it Image.Text fails and plymouthd crashes in sprite refresh)
 # and the Fenestra overlay (Selawik font) installed; the repo mounted at /src.
 #   LANGX=es tests/plymouth/build-initrd.sh OUT_DIR
 # OUT_DIR gets vmlinuz + initrd.img; boot them with tests/plymouth/run.py.
