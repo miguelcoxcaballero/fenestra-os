@@ -25,6 +25,9 @@ def parse_args(argv):
     p.add_argument("--screenshot", metavar="OUT.png", help="render the dialog to a PNG and exit")
     p.add_argument("--pdf", metavar="FILE", help="with --dialog/--screenshot: preview this PDF (as Print without a token)")
     p.add_argument("--page", choices=("main", "more"), default="main", help="with --screenshot: which settings page")
+    p.add_argument("--ui", action="append", default=[], metavar="KEY=VALUE",
+                   help="with --screenshot: dialog state, e.g. focus=none, menu=orientation, "
+                        "to_file=1, allow_app=0, printer=NAME, hover=print")
     p.add_argument("--title", default="", help="document title for --dialog/--screenshot")
     p.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
                    help="with --dialog/--screenshot: initial print setting (e.g. orientation=landscape)")
@@ -57,14 +60,32 @@ def _standalone(o):
                 print("page-setup", ps.to_gvariant().print_(True))
         loop.quit()
 
-    opts = Options(title=o.title, demo=o.demo or bool(o.screenshot), no_save_dialog=True)
+    ui = dict(kv.partition("=")[::2] for kv in o.ui)
+    opts = Options(title=o.title, demo=(o.demo or bool(o.screenshot)) and ui.get("demo") != "0",
+                   no_save_dialog=True)
     dlg = PrintDialog(o.title or "Document", choice, opts, done, doc=doc)
-    if o.screenshot:
-        dlg.set_resizable(False)
     if o.page == "more":
         dlg.stack.set_transition_type(Gtk.StackTransitionType.NONE)
         dlg.stack.set_visible_child_name("more")
     dlg.present()
+    if "printer" in ui:
+        name = printing.PDF_PRINTER if ui["printer"] == "pdf" else ui["printer"]
+        GLib.timeout_add(300, lambda: dlg._select_printer(name) and False)
+    if ui.get("to_file"):
+        dlg.to_file.set_active(ui["to_file"] in ("1", "on"))
+    if ui.get("allow_app"):
+        dlg.allow_app.set_active(ui["allow_app"] in ("1", "on"))
+    if ui.get("focus") == "none":
+        dlg.set_focus_visible(False)
+        dlg.set_focus(None)
+    if ui.get("menu"):
+        def open_menu():
+            from .dialog import dropdown_popover
+            dd = {"printer": dlg.printer_dd}.get(ui["menu"]) or getattr(dlg, ui["menu"])
+            dd.grab_focus()
+            dropdown_popover(dd).popup()
+            return False
+        GLib.timeout_add(600, open_menu)
     if o.screenshot:
         tries = {"n": 0}
 

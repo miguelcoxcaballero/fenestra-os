@@ -249,6 +249,7 @@ class PrinterInfo:
     label: str
     location: str = ""
     state: str = ""
+    state_problem: bool = False  # paused, not accepting jobs or reporting a problem
     is_default: bool = False
     is_pdf: bool = False
     accepts_pdf: bool = True
@@ -287,8 +288,16 @@ class PrinterWatcher:
             return True
         if printer.is_virtual():          # GTK's own "Print to File"; we offer Save as PDF instead
             return False
+        from .i18n import _
+        msg = printer.get_state_message() or ""
+        paused, accepting = printer.is_paused(), printer.is_accepting_jobs()
+        if not msg and paused:
+            msg = _("Paused")
+        elif not msg and not accepting:
+            msg = _("Not accepting jobs")
         info = PrinterInfo(name=printer.get_name(), label=printer.get_description() or printer.get_name(),
-                           location=printer.get_location() or "", state=printer.get_state_message() or "",
+                           location=printer.get_location() or "", state=msg,
+                           state_problem=bool(msg) and (paused or not accepting or bool(printer.get_state_message())),
                            is_default=printer.is_default(), accepts_pdf=printer.accepts_pdf(), gtk=printer)
         self._add(info)
         if self._quiet:
@@ -315,6 +324,14 @@ class PrinterWatcher:
         if getattr(self, "_quiet", 0):
             GLib.source_remove(self._quiet)
             self._quiet = 0
+
+
+def printer_settings_command() -> list[str] | None:
+    """What "Add a printer" runs: the desktop's printer settings, if any is installed."""
+    for cmd in (["gnome-control-center", "printers"], ["system-config-printer"]):
+        if shutil.which(cmd[0]):
+            return cmd
+    return None
 
 
 def find_printer(name: str, callback, timeout_ms=10000):

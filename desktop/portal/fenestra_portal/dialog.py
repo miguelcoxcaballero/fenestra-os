@@ -8,6 +8,7 @@ Print button plus Cancel at the bottom right. Sizes and colours live in metrics.
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 import os
 import sys
@@ -73,33 +74,98 @@ class Options:
         self.no_save_dialog = no_save_dialog
 
 
-def label_factory(ellipsize: bool) -> Gtk.SignalListItemFactory:
+def icon(name: str, size: int) -> Gtk.Image:
+    img = Gtk.Image.new_from_icon_name(name)
+    img.set_pixel_size(size)
+    return img
+
+
+def item_factory(icons: dict | None, ellipsize: bool) -> Gtk.SignalListItemFactory:
+    """Combo rows: an optional icon (orientation) and the label."""
     f = Gtk.SignalListItemFactory()
 
     def setup(_f, item):
-        lbl = Gtk.Label(xalign=0)
+        box = Gtk.Box()
+        if icons:
+            img = Gtk.Image(valign=Gtk.Align.CENTER)
+            img.set_pixel_size(16)
+            img.add_css_class("print-item-icon")
+            box.append(img)
+        lbl = Gtk.Label(xalign=0, valign=Gtk.Align.CENTER, hexpand=True)
+        lbl.add_css_class("print-item-label")
         if ellipsize:
             lbl.set_ellipsize(3)   # Pango.EllipsizeMode.END
             lbl.set_width_chars(1)
-        item.set_child(lbl)
+        box.append(lbl)
+        item.set_child(box)
+
+    def bind(_f, item):
+        text = item.get_item().get_string()
+        box = item.get_child()
+        lbl = box.get_last_child()
+        lbl.set_label(text)
+        if icons:
+            box.get_first_child().set_from_icon_name(icons.get(text, ""))
     f.connect("setup", setup)
-    f.connect("bind", lambda _f, item: item.get_child().set_label(item.get_item().get_string()))
+    f.connect("bind", bind)
     return f
 
 
-class Choices(Gtk.DropDown):
-    """A dropdown of (id, label) pairs."""
+def dropdown_popover(dd: Gtk.DropDown):
+    child = dd.get_first_child()
+    while child is not None:
+        if isinstance(child, Gtk.Popover):
+            return child
+        child = child.get_next_sibling()
+    return None
 
-    def __init__(self, items, selected=None):
+
+def menu_over_combo(dd: Gtk.DropDown, row_height: int, icon_menu=False):
+    """The reference opens a combo's list over the combo, the selected row on top of it."""
+    pop = dropdown_popover(dd)
+    if pop is None:
+        return
+    pop.add_css_class("print-menu")
+    if icon_menu:
+        pop.add_css_class("print-icon-menu")
+    pop.set_has_arrow(False)
+    pop.set_position(Gtk.PositionType.BOTTOM)
+
+    def place(*_a):
+        h = dd.get_height() or metrics.CONTROL_HEIGHT
+        sel = dd.get_selected()
+        model = dd.get_model()
+        if model is None or sel >= model.get_n_items():
+            sel = 0
+        pitch = row_height + 2 * metrics.MENU_ROW_MARGIN
+        inset = 1 + metrics.MENU_PAD[0] + metrics.MENU_ROW_MARGIN
+        shift = metrics.MENU_ICON_ROW_SHIFT if icon_menu else metrics.MENU_ROW_SHIFT
+        top = shift - inset - sel * pitch
+        pop.set_offset(0, top - h - metrics.MENU_POPUP_GAP)
+    pop.connect("show", place)
+    dd.connect("notify::selected", place)
+    place()
+
+
+class Choices(Gtk.DropDown):
+    """A combo of (id, label) pairs; icons: {id: icon name} for an icon combo."""
+
+    def __init__(self, items, selected=None, icons=None):
         self.ids = [i for i, _l in items]
-        super().__init__(model=Gtk.StringList.new([lbl for _i, lbl in items]))
+        labels = [lbl for _i, lbl in items]
+        super().__init__(model=Gtk.StringList.new(labels))
         self.add_css_class("print-dropdown")
+        by_label = {lbl: icons[i] for i, lbl in items if i in icons} if icons else None
+        if icons:
+            self.add_css_class("print-icon-combo")
         # Ellipsize in the button so a long choice cannot widen the settings column.
-        self.set_factory(label_factory(ellipsize=True))
-        self.set_list_factory(label_factory(ellipsize=False))
-        self.set_hexpand(True)
+        self.set_factory(item_factory(by_label, ellipsize=True))
+        self.set_list_factory(item_factory(by_label, ellipsize=False))
+        self.set_size_request(metrics.CONTROL_WIDTH, -1)
+        self.set_halign(Gtk.Align.START)
         if selected in self.ids:
             self.set_selected(self.ids.index(selected))
+        menu_over_combo(self, metrics.MENU_ICON_ROW_HEIGHT if icons else metrics.MENU_ROW_HEIGHT, bool(icons))
 
     @property
     def value(self):
@@ -111,40 +177,33 @@ class Choices(Gtk.DropDown):
             self.set_selected(self.ids.index(v))
 
 
-class Preview(Gtk.Box):
-    """The sheet preview with its 'n / N' pager."""
+class Preview(Gtk.Stack):
+    """The preview box: the sheets of the document, or a note when there is none
+    (PreparePrint: through the portal the app hands the document over only after the
+    dialog, so there is nothing to preview yet)."""
 
     def __init__(self, dialog):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        super().__init__()
         self.dialog = dialog
-        self.add_css_class("print-preview")
-        self.set_hexpand(True)
-        self.set_vexpand(True)
+        self.add_css_class("print-preview-box")
+        x, y, w, h = metrics.PREVIEW_BOX
+        self.set_size_request(w, h)
+        self.set_halign(Gtk.Align.START)
+        self.set_valign(Gtk.Align.START)
+        self.set_overflow(Gtk.Overflow.HIDDEN)
         self.index = 0
-        self.area = Gtk.DrawingArea()
-        self.area.set_vexpand(True)
-        self.area.set_hexpand(True)
+        self.fit_width = False
+        note = Gtk.Label(label=_("This app doesn't support print preview"), wrap=True,
+                         justify=Gtk.Justification.CENTER, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+        note.add_css_class("print-preview-note")
+        note.set_margin_top(2 * metrics.TEXT_NUDGE)
+        self.add_named(note, "none")
+        self.area = Gtk.DrawingArea(hexpand=True, vexpand=True)
         self.area.set_draw_func(self._draw)
-        self.append(self.area)
-
-        pager = Gtk.Box(spacing=4, halign=Gtk.Align.CENTER)
-        pager.add_css_class("print-pager")
-        pager.set_size_request(-1, metrics.PAGER_HEIGHT)
-        self.prev = Gtk.Button(icon_name="pan-start-symbolic", valign=Gtk.Align.CENTER)
-        self.prev.set_tooltip_text(_("Previous page"))
-        self.next = Gtk.Button(icon_name="pan-end-symbolic", valign=Gtk.Align.CENTER)
-        self.next.set_tooltip_text(_("Next page"))
-        for b in (self.prev, self.next):
-            b.add_css_class("flat-icon")
-        self.counter = Gtk.Label(valign=Gtk.Align.CENTER)
-        self.counter.add_css_class("print-counter")
-        self.counter.set_width_chars(7)
-        pager.append(self.prev)
-        pager.append(self.counter)
-        pager.append(self.next)
-        self.append(pager)
-        self.prev.connect("clicked", lambda *_: self.go(-1))
-        self.next.connect("clicked", lambda *_: self.go(+1))
+        self.scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
+        self.scroller.set_child(self.area)
+        self.add_named(self.scroller, "sheets")
+        self.set_visible_child_name("sheets" if dialog.doc is not None else "none")
 
     def sheets(self):
         doc = self.dialog.doc
@@ -155,13 +214,25 @@ class Preview(Gtk.Box):
     def refresh(self):
         n = len(self.sheets())
         self.index = max(0, min(self.index, n - 1))
-        self.counter.set_label(f"{self.index + 1} / {n}")
-        self.prev.set_sensitive(self.index > 0)
-        self.next.set_sensitive(self.index < n - 1)
+        d = self.dialog
+        has_doc = d.doc is not None
+        d.counter.set_label(f"{self.index + 1} / {n}" if has_doc else "")
+        d.prev_btn.set_sensitive(has_doc and self.index > 0)
+        d.next_btn.set_sensitive(has_doc and self.index < n - 1)
+        if self.fit_width and has_doc:
+            sw, sh = d.choice.sheet_mm()
+            w = metrics.PREVIEW_BOX[2] - 2
+            self.area.set_content_height(round((w - 2 * metrics.PREVIEW_MARGIN) * sh / sw + 2 * metrics.PREVIEW_MARGIN))
+        else:
+            self.area.set_content_height(0)
         self.area.queue_draw()
 
     def go(self, delta):
         self.index += delta
+        self.refresh()
+
+    def set_fit_width(self, on):
+        self.fit_width = on
         self.refresh()
 
     def _draw(self, _area, cr, width, height):
@@ -171,10 +242,9 @@ class Preview(Gtk.Box):
         sw, sh = c.sheet_mm()
         m = metrics.PREVIEW_MARGIN
         avail_w, avail_h = max(1, width - 2 * m), max(1, height - 2 * m)
-        s = min(avail_w / sw, avail_h / sh)
+        s = avail_w / sw if self.fit_width else min(avail_w / sw, avail_h / sh)
         w, h = sw * s, sh * s
-        x, y = round((width - w) / 2), round((height - h) / 2)
-        # soft shadow: a few widening translucent rectangles
+        x, y = round((width - w) / 2), round((height - h) / 2) if not self.fit_width else m
         r, g, b, a = colors["shadow"]
         for i in range(metrics.PREVIEW_SHADOW, 0, -1):
             cr.set_source_rgba(r, g, b, a / metrics.PREVIEW_SHADOW)
@@ -198,34 +268,33 @@ class PrintDialog(Gtk.Window):
         super().__init__()
         self.opts = opts
         self.choice = choice
+        self.app_choice = dataclasses.replace(choice)     # what the app asked for
         self.doc = doc
         self.on_done = on_done
         self._finished = False
+        self._loading = False
         self._user_picked_printer = False
         self.printers: dict[str, printing.PrinterInfo] = {}
         self.add_css_class("fenestra-print")
         self.set_title(app_title or _("Print"))
-        self.set_default_size(metrics.WINDOW_WIDTH, metrics.WINDOW_HEIGHT)
-        self.set_size_request(metrics.MIN_WIDTH, metrics.MIN_HEIGHT)
+        self.set_default_size(metrics.CONTENT_WIDTH, metrics.CONTENT_HEIGHT)
+        self.set_size_request(metrics.CONTENT_WIDTH, metrics.CONTENT_HEIGHT)
+        self.set_resizable(False)
         self.set_modal(opts.modal)
-
-        header = Gtk.HeaderBar()
-        header.add_css_class("print-titlebar")
-        tl = Gtk.Label(label=app_title or _("Print"), ellipsize=3)
-        tl.add_css_class("print-window-title")
-        header.set_title_widget(tl)
-        self.set_titlebar(header)
+        # The title row is part of the body (no title bar): an empty titlebar widget keeps
+        # GTK from adding its own header bar.
+        self.set_titlebar(Gtk.Box(visible=False))
 
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(outer)
-        body = Gtk.Box()
-        body.set_vexpand(True)
-        outer.append(body)
+        outer.append(self._header(app_title))
 
+        body = Gtk.Box(vexpand=True)
+        outer.append(body)
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         left.add_css_class("print-pane")
         left.set_size_request(metrics.LEFT_COLUMN_WIDTH, -1)
-        left.set_hexpand(False)   # explicit: stops the controls' hexpand from widening the column
+        left.set_hexpand(False)
         body.append(left)
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT, vexpand=True)
         left.append(self.stack)
@@ -233,27 +302,12 @@ class PrintDialog(Gtk.Window):
         self.stack.add_named(self._scroll(self._more_page()), "more")
 
         self.preview = Preview(self)
+        px, py, pw, ph = metrics.PREVIEW_BOX
+        self.preview.set_margin_start(px - metrics.LEFT_COLUMN_WIDTH)
+        self.preview.set_margin_top(py - metrics.HEADER_HEIGHT)
         body.append(self.preview)
 
-        footer = Gtk.Box(spacing=metrics.BUTTON_GAP, halign=Gtk.Align.FILL)
-        footer.add_css_class("print-footer")
-        spacer = Gtk.Box(hexpand=True)
-        footer.append(spacer)
-        self.print_button = Gtk.Button(label=opts.accept_label or _("Print"), use_underline=True)
-        self.print_button.add_css_class("fluent-button")
-        self.print_button.add_css_class("print-button")
-        self.print_button.add_css_class("accent")
-        self.cancel_button = Gtk.Button(label=_("Cancel"))
-        self.cancel_button.add_css_class("fluent-button")
-        self.cancel_button.add_css_class("print-button")
-        for b in (self.print_button, self.cancel_button):
-            b.set_valign(Gtk.Align.CENTER)
-            footer.append(b)
-        spacer.set_size_request(metrics.FOOTER_PADDING, -1)
-        end_pad = Gtk.Box()
-        end_pad.set_size_request(metrics.FOOTER_PADDING - metrics.BUTTON_GAP, -1)
-        footer.append(end_pad)
-        outer.append(footer)
+        outer.append(self._footer())
         self.set_default_widget(self.print_button)
         self.print_button.connect("clicked", self._on_print)
         self.cancel_button.connect("clicked", lambda *_: self.finish(1))
@@ -264,13 +318,97 @@ class PrintDialog(Gtk.Window):
         if opts.parent_window:
             self.connect("realize", self._attach_parent)
 
+        if not self.allow_app.get_active():
+            self._apply_remembered()
         self._sync_from_choice()
         self.watcher = printing.PrinterWatcher(self._printer_added, self._printers_done, demo=opts.demo)
         theme.get().connect(self.preview.area.queue_draw)
+        # The reference opens with the keyboard focus (ring and pill) on the printer combo.
+        self.connect("map", lambda *_: (self.printer_dd.grab_focus(), self.set_focus_visible(True)))
         if os.environ.get("FENESTRA_PORTAL_TEST_ACCEPT"):
             GLib.timeout_add(int(os.environ["FENESTRA_PORTAL_TEST_ACCEPT"]), self._test_accept)
 
     # ------------------------------------------------------------------ building
+    def _header(self, app_title):
+        handle = Gtk.WindowHandle()
+        fixed = Gtk.Fixed()
+        fixed.set_size_request(metrics.CONTENT_WIDTH, metrics.HEADER_HEIGHT)
+        handle.set_child(fixed)
+        title = (_("{title} - Printing").format(title=app_title) if app_title else _("Printing"))
+        tl = Gtk.Label(label=title, xalign=0, ellipsize=3)
+        tl.add_css_class("print-title")
+        tl.set_size_request(metrics.PREV_GLYPH[0] - metrics.HEADER_BUTTON - metrics.TITLE_X, -1)
+        fixed.put(tl, metrics.TITLE_X, metrics.TITLE_Y + metrics.TEXT_NUDGE)
+        self.summary = Gtk.Label(xalign=0, visible=False)
+        self.summary.add_css_class("print-hint")
+        fixed.put(self.summary, metrics.TITLE_X, metrics.TITLE_Y + metrics.LINE_HEIGHT + 2)
+
+        hb = metrics.HEADER_BUTTON
+
+        def put_button(btn, glyph):
+            gx, gy, gw, gh = glyph
+            fixed.put(btn, gx + gw // 2 - hb // 2, gy + gh // 2 - hb // 2)
+
+        self.prev_btn = Gtk.Button(child=icon("fx-caret-left-symbolic", 8))
+        self.prev_btn.set_tooltip_text(_("Previous page"))
+        self.next_btn = Gtk.Button(child=icon("fx-caret-right-symbolic", 8))
+        self.next_btn.set_tooltip_text(_("Next page"))
+        self.fit_btn = Gtk.ToggleButton(child=icon("fx-fit-page-symbolic", 16))
+        self.fit_btn.set_tooltip_text(_("Fit to width"))
+        for b, g in ((self.prev_btn, metrics.PREV_GLYPH), (self.next_btn, metrics.NEXT_GLYPH),
+                     (self.fit_btn, metrics.FIT_GLYPH)):
+            b.add_css_class("print-nav")
+            put_button(b, g)
+        self.counter = Gtk.Label(xalign=0.5)
+        self.counter.add_css_class("print-counter")
+        cx0 = metrics.PREV_GLYPH[0] + metrics.PREV_GLYPH[2] // 2 + hb // 2
+        cx1 = metrics.NEXT_GLYPH[0] + metrics.NEXT_GLYPH[2] // 2 - hb // 2
+        self.counter.set_size_request(cx1 - cx0, hb)
+        fixed.put(self.counter, cx0, metrics.PREV_GLYPH[1] + metrics.PREV_GLYPH[3] // 2 - hb // 2)
+        self.prev_btn.connect("clicked", lambda *_: self.preview.go(-1))
+        self.next_btn.connect("clicked", lambda *_: self.preview.go(+1))
+        self.fit_btn.connect("toggled", lambda b: self.preview.set_fit_width(b.get_active()))
+
+        close = Gtk.Button(child=icon("fx-close-symbolic", metrics.CLOSE_GLYPH))
+        close.add_css_class("print-close")
+        close.set_tooltip_text(_("Close"))
+        close.set_focusable(False)
+        close.set_size_request(metrics.CLOSE_BOX[2], metrics.CLOSE_BOX[3])
+        close.connect("clicked", lambda *_: self.finish(1))
+        fixed.put(close, metrics.CLOSE_BOX[0], metrics.CLOSE_BOX[1])
+        return handle
+
+    def _footer(self):
+        footer = Gtk.Box()
+        footer.add_css_class("print-footer")
+        pad = metrics.FOOTER_PADDING
+        lbl = Gtk.Label(label=_("Allow the app to change print preferences."), xalign=0, wrap=True)
+        lbl.set_wrap_mode(2)   # Pango.WrapMode.WORD_CHAR
+        lbl.set_max_width_chars(10)       # natural width = the request below, never wider
+        lbl.set_lines(2)                  # and never taller than the footer
+        lbl.set_ellipsize(3)
+        lbl.set_size_request(metrics.BUTTON_X - 2 * pad - metrics.CHECK_SIZE - metrics.CHECK_TEXT_GAP, -1)
+        self.allow_app = Gtk.CheckButton(child=lbl, valign=Gtk.Align.START, hexpand=True)
+        self.allow_app.add_css_class("print-check")
+        self.allow_app.set_active(config_get("allow_app", "1") != "0")
+        self.allow_app.set_margin_start(pad)
+        self.allow_app.set_margin_end(pad)
+        self.allow_app.set_margin_top(pad + 1)
+        self.allow_app.connect("toggled", self._on_allow_app)
+        footer.append(self.allow_app)
+        self.print_button = Gtk.Button(label=self.opts.accept_label or _("Print"), use_underline=True)
+        self.cancel_button = Gtk.Button(label=_("Cancel"))
+        for b, w in zip((self.print_button, self.cancel_button), metrics.BUTTON_WIDTHS):
+            b.add_css_class("fluent-button")
+            b.add_css_class("print-button")
+            b.set_size_request(w, metrics.CONTROL_HEIGHT)
+            b.set_valign(Gtk.Align.START)
+            b.set_margin_top(pad)
+            footer.append(b)
+        self.print_button.set_margin_end(metrics.BUTTON_GAP)
+        self.cancel_button.set_margin_end(pad)
+        return footer
+
     @staticmethod
     def _scroll(child):
         sw = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, vexpand=True)
@@ -278,11 +416,16 @@ class PrintDialog(Gtk.Window):
         return sw
 
     @staticmethod
-    def _field(box, label, widget, first=False):
-        lbl = Gtk.Label(label=label, xalign=0)
-        lbl.add_css_class("print-label")
-        lbl.set_margin_top(0 if first else metrics.FIELD_GAP)
-        lbl.set_margin_bottom(metrics.LABEL_GAP)
+    def _label(text, top=0, css="print-label"):
+        lbl = Gtk.Label(label=text, xalign=0)
+        lbl.add_css_class(css)
+        lbl.set_margin_top(top + metrics.TEXT_NUDGE)
+        return lbl
+
+    def _field(self, box, label, widget, top=None):
+        """A label over its control; returns the label. top: gap above the label."""
+        lbl = self._label(label, metrics.FIELD_GAP if top is None else top)
+        lbl.set_margin_bottom(metrics.LABEL_GAP - metrics.TEXT_NUDGE)
         lbl.set_mnemonic_widget(widget)
         box.append(lbl)
         box.append(widget)
@@ -297,45 +440,72 @@ class PrintDialog(Gtk.Window):
         box.set_margin_start(l)
         return box
 
+    def _link(self, text, icon_name=None):
+        btn = Gtk.Button(halign=Gtk.Align.START)
+        btn.add_css_class("print-link")
+        lbl = Gtk.Label(label=text, valign=Gtk.Align.START)
+        lbl.set_margin_top(metrics.TEXT_NUDGE)
+        if icon_name:
+            btn.add_css_class("print-icon-link")
+            box = Gtk.Box()
+            img = icon(icon_name, metrics.LINK_ICON)
+            img.set_valign(Gtk.Align.CENTER)
+            box.append(img)
+            box.append(lbl)
+            btn.set_child(box)
+        else:
+            btn.set_child(lbl)
+        return btn
+
     def _main_page(self):
         box = self._column()
-        head = Gtk.Label(label=_("Print"), xalign=0)
-        head.add_css_class("print-heading")
-        box.append(head)
-        self.summary = Gtk.Label(xalign=0)
-        self.summary.add_css_class("print-summary")
-        box.append(self.summary)
-        spacer = Gtk.Box()
-        spacer.set_size_request(-1, metrics.FIELD_GAP)
-        box.append(spacer)
 
-        # Printer: a dropdown of names with the location under each in the list.
+        # Printer: a combo of names; the list shows the location under each name.
         self.printer_ids: list[str] = []
         self.printer_model = Gtk.StringList()
         self.printer_dd = Gtk.DropDown(model=self.printer_model)
         self.printer_dd.add_css_class("print-dropdown")
-        self.printer_dd.set_hexpand(True)
+        self.printer_dd.set_size_request(metrics.CONTROL_WIDTH, -1)
+        self.printer_dd.set_halign(Gtk.Align.START)
         self.printer_dd.set_factory(self._printer_factory(False))
         self.printer_dd.set_list_factory(self._printer_factory(True))
-        self._field(box, _("Printer"), self.printer_dd, first=True)
-        self.printer_status = Gtk.Label(xalign=0, wrap=True, max_width_chars=30)
+        menu_over_combo(self.printer_dd, metrics.MENU_ROW_HEIGHT)
+        self._field(box, _("Printer"), self.printer_dd, top=0)
+        # Only a printer that needs attention gets a status line (offline, out of paper...).
+        self.printer_status = Gtk.Label(xalign=0, wrap=True, max_width_chars=30, visible=False)
         self.printer_status.add_css_class("print-caption")
+        self.printer_status.set_margin_top(4)
         box.append(self.printer_status)
         self._add_printer(printing.PrinterInfo(name=printing.PDF_PRINTER, label=_("Save as PDF"), is_pdf=True))
         self.printer_dd.connect("notify::selected", self._on_printer_changed)
 
+        self.add_printer = self._link(_("Add a printer"), "fx-add-symbolic")
+        self.add_printer.set_margin_top(metrics.LINK_GAP_ABOVE)
+        self.add_printer.connect("clicked", self._on_add_printer)
+        self.add_printer.set_visible(self.opts.demo or printing.printer_settings_command() is not None)
+        box.append(self.add_printer)
+
         adj = Gtk.Adjustment(lower=1, upper=999, step_increment=1, page_increment=10, value=1)
-        self.copies = Gtk.SpinButton(adjustment=adj, numeric=True, hexpand=True)
+        self.copies = Gtk.SpinButton(adjustment=adj, numeric=True)
+        self.copies.set_size_request(metrics.CONTROL_WIDTH, -1)
+        self.copies.set_halign(Gtk.Align.START)
         self.copies.add_css_class("print-spin")
-        self._field(box, _("Copies"), self.copies)
+        self.copies_label = self._field(box, _("Copies"), self.copies, top=metrics.LINK_GAP_BELOW)
         self.collate = Gtk.CheckButton(label=_("Collate"))
         self.collate.add_css_class("print-check")
-        self.collate.set_margin_top(6)
+        self.collate.set_margin_top(8)
         box.append(self.collate)
 
-        self.orientation = Choices([("portrait", _("Portrait")), ("landscape", _("Landscape"))])
-        self._field(box, _("Orientation"), self.orientation)
+        self.orientation = Choices([("landscape", _("Landscape")), ("portrait", _("Portrait"))],
+                                   icons={"portrait": "fx-page-portrait-symbolic",
+                                          "landscape": "fx-page-landscape-symbolic"})
+        self.orientation_label = self._field(box, _("Orientation"), self.orientation)
 
+        # Pages: on this page for a printer; for Save as PDF it moves to the "more" page so
+        # the main page keeps the reference layout (printer, orientation, print to file).
+        self.pages_slot_main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(self.pages_slot_main)
+        self.pages_field = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         pages = [("all", _("All pages")), ("odd", _("Odd pages only")), ("even", _("Even pages only"))]
         if self.opts.has_current:
             pages.append(("current", _("Current page")))
@@ -343,48 +513,71 @@ class PrintDialog(Gtk.Window):
             pages.append(("selection", _("Selection")))
         pages.append(("ranges", _("Custom range")))
         self.pages = Choices(pages)
-        self._field(box, _("Pages"), self.pages)
-        self.ranges = Gtk.Entry(placeholder_text=_("e.g. 1-5, 8, 11-13"), hexpand=True)
+        self.pages_label = self._field(self.pages_field, _("Pages"), self.pages)
+        self.ranges = Gtk.Entry(placeholder_text=_("e.g. 1-5, 8, 11-13"))
+        self.ranges.set_size_request(metrics.CONTROL_WIDTH, -1)
+        self.ranges.set_halign(Gtk.Align.START)
         self.ranges.add_css_class("print-entry")
         self.ranges.set_margin_top(8)
-        box.append(self.ranges)
+        self.pages_field.append(self.ranges)
+        self.pages_slot_main.append(self.pages_field)
 
         self.color = Choices([("color", _("Color")), ("mono", _("Black and white"))])
-        self._field(box, _("Color mode"), self.color)
+        self.color_label = self._field(box, _("Color mode"), self.color)
 
-        more = Gtk.Button(label=_("More settings"), halign=Gtk.Align.START)
-        more.add_css_class("hyperlink")
-        more.set_margin_top(metrics.FIELD_GAP + 2)
+        self.to_file = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.to_file.add_css_class("print-switch")
+        lbl = self._field(box, _("Print to file"), Gtk.Box())
+        lbl.set_margin_bottom(0)
+        row = Gtk.Box(spacing=metrics.TOGGLE_TEXT_GAP)
+        row.set_margin_top(metrics.TOGGLE_LABEL_GAP - metrics.TEXT_NUDGE)
+        row.append(self.to_file)
+        self.to_file_state = Gtk.Label(xalign=0, valign=Gtk.Align.CENTER)
+        self.to_file_state.set_margin_top(2 * metrics.TEXT_NUDGE)
+        row.append(self.to_file_state)
+        lbl.set_mnemonic_widget(self.to_file)
+        box.append(row)
+        hint = self._label(_("Stores printing output to a file"), metrics.HINT_GAP, "print-hint")
+        hint.set_margin_bottom(-0)
+        hint.set_wrap(True)
+        hint.set_max_width_chars(10)      # natural width = the request below, never wider
+        hint.set_size_request(metrics.CONTROL_WIDTH, -1)
+        box.append(hint)
+
+        more = self._link(_("More settings"))
+        more.set_margin_top(metrics.MORE_GAP - metrics.TEXT_NUDGE)
         more.connect("clicked", lambda *_: self.stack.set_visible_child_name("more"))
         box.append(more)
 
         for w, sig in ((self.copies, "value-changed"), (self.collate, "toggled"),
                        (self.orientation, "notify::selected"), (self.pages, "notify::selected"),
-                       (self.ranges, "changed"), (self.color, "notify::selected")):
+                       (self.ranges, "changed"), (self.color, "notify::selected"),
+                       (self.to_file, "notify::active")):
             w.connect(sig, self._on_changed)
         return box
 
     def _more_page(self):
         box = self._column()
         top = Gtk.Box(spacing=8)
-        back = Gtk.Button(icon_name="go-previous-symbolic", valign=Gtk.Align.CENTER)
-        back.add_css_class("flat-icon")
+        back = Gtk.Button(child=icon("fx-back-symbolic", 16), valign=Gtk.Align.CENTER)
+        back.add_css_class("print-nav")
         back.set_tooltip_text(_("Back"))
+        back.set_margin_start(-8)
         back.connect("clicked", lambda *_: self.stack.set_visible_child_name("main"))
         top.append(back)
         head = Gtk.Label(label=_("More settings"), xalign=0)
-        head.add_css_class("print-subheading")
+        head.add_css_class("print-title")
         top.append(head)
+        top.set_margin_top(-8)
         box.append(top)
-        spacer = Gtk.Box()
-        spacer.set_size_request(-1, metrics.FIELD_GAP)
-        box.append(spacer)
+        self.pages_slot_more = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(self.pages_slot_more)
 
         papers = list(metrics.PAPER_SIZES)
         if self.choice.paper not in papers:
             papers.append(self.choice.paper)
         self.paper = Choices([(p, self._paper_label(p)) for p in papers])
-        self._field(box, _("Paper size"), self.paper, first=True)
+        self._field(box, _("Paper size"), self.paper, top=metrics.FIELD_GAP - 8)
         self.number_up = Choices([(str(n), str(n)) for n in metrics.PAGES_PER_SHEET])
         self._field(box, _("Pages per sheet"), self.number_up)
         self.margins = Choices([("normal", _("Normal")), ("narrow", _("Narrow")), ("none", _("None"))])
@@ -407,32 +600,35 @@ class PrintDialog(Gtk.Window):
             return name
 
     def _printer_factory(self, in_list):
+        """One line per printer, as the reference list (fixed row height keeps the open
+        list aligned on the combo); the location goes to the row's tooltip."""
         f = Gtk.SignalListItemFactory()
 
         def setup(_f, item):
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            name = Gtk.Label(xalign=0, ellipsize=3)
+            name = Gtk.Label(xalign=0, ellipsize=3, valign=Gtk.Align.CENTER)
+            name.add_css_class("print-item-label")
             if not in_list:
                 name.set_width_chars(1)
-            box.append(name)
-            if in_list:
-                sub = Gtk.Label(xalign=0, ellipsize=3)
-                sub.add_css_class("print-caption")
-                box.append(sub)
-            item.set_child(box)
+            item.set_child(name)
 
         def bind(_f, item):
             info = self.printers.get(item.get_item().get_string())
-            box = item.get_child()
-            name = box.get_first_child()
+            name = item.get_child()
             name.set_label(info.label if info else "")
             if in_list:
-                sub = name.get_next_sibling()
-                sub.set_label(info.location if info else "")
-                sub.set_visible(bool(info and info.location))
+                name.set_tooltip_text(info.location if info and info.location else None)
         f.connect("setup", setup)
         f.connect("bind", bind)
         return f
+
+    def _on_add_printer(self, *_args):
+        cmd = printing.printer_settings_command()
+        if cmd is None:
+            return
+        try:
+            Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
+        except GLib.Error as e:
+            print(f"fenestra-portal: cannot open printer settings: {e.message}", file=sys.stderr)
 
     # ------------------------------------------------------------------ printers
     def _add_printer(self, info: printing.PrinterInfo):
@@ -474,13 +670,12 @@ class PrintDialog(Gtk.Window):
         self._on_changed()
 
     def _update_status(self):
+        """A status line only for a printer that needs attention; ready printers and
+        Save as PDF keep the reference layout (the "Add a printer" link right under)."""
         info = self.printers.get(self._current_printer())
-        if info is None:
-            text = ""
-        elif info.is_pdf:
-            text = _("Saves the document as a PDF file")
-        else:
-            text = info.state or _("Ready")
+        text = ""
+        if info is not None and not info.is_pdf and info.state and info.state_problem:
+            text = info.state
         self.printer_status.set_label(text)
         self.printer_status.set_visible(bool(text))
 
@@ -499,13 +694,15 @@ class PrintDialog(Gtk.Window):
         self.number_up.set_value(str(c.number_up))
         self.margins.set_value(c.margins)
         self.duplex.set_value(c.duplex)
+        self.to_file.set_active(False)
         self._loading = False
         self._select_printer(self.preferred_printer)
         self._on_changed()
 
     def _read_choice(self):
         c = self.choice
-        c.printer = self._current_printer()
+        # Print to file: the job goes to a PDF file with this printer's settings.
+        c.printer = printing.PDF_PRINTER if self.to_file.get_active() else self._current_printer()
         c.copies = int(self.copies.get_value())
         c.collate = self.collate.get_active()
         c.orientation = self.orientation.value
@@ -531,7 +728,22 @@ class PrintDialog(Gtk.Window):
             return
         self._read_choice()
         c = self.choice
-        self.collate.set_visible(c.copies > 1)
+        info = self.printers.get(self._current_printer())
+        printer_is_pdf = info is None or info.is_pdf
+        # Copies and colour mean nothing for a PDF file; the reference shows the PDF
+        # printer with printer, orientation and print to file only.
+        for w in (self.copies_label, self.copies, self.color_label, self.color):
+            w.set_visible(not printer_is_pdf)
+        self.collate.set_visible(not printer_is_pdf and c.copies > 1)
+        self.orientation_label.set_margin_top(
+            (metrics.LINK_GAP_BELOW if printer_is_pdf else metrics.FIELD_GAP) + metrics.TEXT_NUDGE)
+        slot = self.pages_slot_more if printer_is_pdf else self.pages_slot_main
+        if self.pages_field.get_parent() is not slot:
+            self.pages_field.get_parent().remove(self.pages_field)
+            slot.append(self.pages_field)
+        self.pages_label.set_margin_top(
+            (metrics.FIELD_GAP - 8 if printer_is_pdf else metrics.FIELD_GAP) + metrics.TEXT_NUDGE)
+        self.to_file_state.set_label(_("On") if self.to_file.get_active() else _("Off"))
         self.ranges.set_visible(c.pages == "ranges")
         ok = self._ranges_valid()
         if ok:
@@ -539,12 +751,49 @@ class PrintDialog(Gtk.Window):
         else:
             self.ranges.add_css_class("error")
         self.print_button.set_sensitive(ok)
-        self.print_button.set_label(self.opts.accept_label or (_("Save") if c.is_pdf else _("Print")))
         self.duplex.set_visible(not c.is_pdf)
         self.duplex_label.set_visible(not c.is_pdf)
         self._update_status()
         self._update_summary()
         self.preview.refresh()
+
+    # "Allow the app to change print preferences": off = the last settings used here win
+    # over what the app asks for.
+    _REMEMBERED = ("orientation", "color", "paper", "number_up", "margins", "duplex")
+
+    def _remembered(self):
+        out = {}
+        for k in self._REMEMBERED:
+            v = config_get(k, "")
+            if v == "":
+                continue
+            if k == "color":
+                out[k] = v == "1"
+            elif k == "number_up":
+                try:
+                    out[k] = int(v)
+                except ValueError:
+                    continue
+            else:
+                out[k] = v
+        return out
+
+    def _apply_remembered(self):
+        for k, v in self._remembered().items():
+            setattr(self.choice, k, v)
+
+    def _on_allow_app(self, btn):
+        if self._loading:
+            return
+        if btn.get_active():
+            for k in self._REMEMBERED:
+                setattr(self.choice, k, getattr(self.app_choice, k))
+        else:
+            self._read_choice()
+            self._apply_remembered()
+        printer, self.choice.printer = self._current_printer(), self._current_printer()
+        self._sync_from_choice()
+        self._select_printer(printer)
 
     def _update_summary(self):
         if self.doc is None:
@@ -618,7 +867,10 @@ class PrintDialog(Gtk.Window):
         self._finished = True
         self.watcher.stop()
         if response == 0:
-            config_set(printer=self.choice.printer)
+            c = self.choice
+            config_set(printer=self._current_printer(), allow_app="1" if self.allow_app.get_active() else "0",
+                       orientation=c.orientation, color="1" if c.color else "0", paper=c.paper,
+                       number_up=c.number_up, margins=c.margins, duplex=c.duplex)
         cb, self.on_done = self.on_done, None
         self.set_visible(False)
         if cb:
@@ -655,6 +907,10 @@ class PrintDialog(Gtk.Window):
                 self.copies.set_value(int(v))
             elif k == "ranges":
                 self.ranges.set_text(v.replace(";", ","))
+            elif k == "to_file":
+                self.to_file.set_active(v in ("1", "on", "true"))
+            elif k == "allow_app":
+                self.allow_app.set_active(v in ("1", "on", "true"))
             elif isinstance(getattr(self, k, None), Choices):
                 getattr(self, k).set_value(v)
         shot_dir = os.environ.get("FENESTRA_PORTAL_TEST_SHOT")
@@ -670,10 +926,24 @@ class PrintDialog(Gtk.Window):
 
     # ------------------------------------------------------------------ screenshot (tests)
     def save_screenshot(self, path) -> bool:
+        """The window content plus any open combo list (pop-ups are separate surfaces)."""
         w, h = self.get_width(), self.get_height()
-        paintable = Gtk.WidgetPaintable.new(self)
         snap = Gtk.Snapshot()
-        paintable.snapshot(snap, w, h)
+        Gtk.WidgetPaintable.new(self).snapshot(snap, w, h)
+        wx, wy = self.get_surface_transform()
+        for dd in (self.printer_dd, self.orientation, self.pages, self.color,
+                   self.paper, self.number_up, self.margins, self.duplex):
+            pop = dropdown_popover(dd)
+            if pop is None or not pop.get_mapped():
+                continue
+            surf = pop.get_surface()
+            px, py = pop.get_surface_transform()
+            ox = surf.get_position_x() + px - wx
+            oy = surf.get_position_y() + py - wy
+            snap.save()
+            snap.translate(Graphene.Point().init(ox, oy))
+            Gtk.WidgetPaintable.new(pop).snapshot(snap, pop.get_width(), pop.get_height())
+            snap.restore()
         node = snap.to_node()
         if node is None:
             return False
