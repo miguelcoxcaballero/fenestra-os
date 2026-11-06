@@ -27,6 +27,9 @@ gnome-menus
 # Taskbar weather: GNOME Shell's WeatherClient needs the Weather app (locations, provider).
 gnome-weather
 git-core
+# Fenestra Hello: live camera preview (v4l2src, gtk4paintablesink)
+gstreamer1-plugins-good
+gstreamer1-plugin-gtk4
 python3-gobject
 python3-pillow
 python3-fonttools
