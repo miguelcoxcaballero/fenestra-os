@@ -165,6 +165,7 @@ apps/fenestra-taskmgr/    Windows-11-style Task Manager (Python + GTK 4)
 apps/fenestra-oobe/       Windows-11-style first-boot setup (replaces GNOME Initial Setup)
 apps/fenestra-notepad/    Notepad (Python + GTK 4 + GtkSourceView)
 apps/fenestra-paint/      Paint (Python + GTK 4 + cairo)
+apps/fenestra-store/      Fenestra Store: Flathub + Fedora apps (Python + GTK 4, libflatpak, PackageKit)
 desktop/extensions/       GNOME Shell extensions (Fenestra's own + modified ArcMenu/DING + upstream ones)
 desktop/nautilus/         Explorer layer for Files: nautilus-python extensions + UI overlay
 desktop/dconf/            System-wide defaults (/etc/dconf/db/local.d, gdm.d)
