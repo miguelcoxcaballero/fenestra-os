@@ -245,7 +245,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         self.fmt_table.connect("clicked", lambda b: self._table_picker(b))
         tb.append(self.fmt_table)
         tb.append(flat_button("np-clear-format-symbolic", "tool-btn", _("Clear formatting"),
-                              lambda: self._md(markdown.clear_formatting)))
+                              lambda: self._md(markdown.clear_formatting, convert=False)))
         return tb
 
     def _statusbar(self):
@@ -322,6 +322,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
 
     def _build_file_menu(self, m):
         s = util.settings()
+        m.shortcut_column = True
         m.add(_("New tab"), self.new_tab, menu_shortcut("Ctrl+N"))
         m.add(_("New window"), self.app.new_window, menu_shortcut("Ctrl+Shift+N"))
         if s["formatting"]:
@@ -357,7 +358,7 @@ class NotepadWindow(Gtk.ApplicationWindow):
         clip = self.get_clipboard()
         can_paste = clip.get_formats().contain_gtype(str) or clip.get_formats().contain_mime_type("text/plain")
         can_paste = can_paste or clip.get_formats().contain_mime_type("text/plain;charset=utf-8")
-        md = bool(doc and doc.markdown and doc.formatting)
+        fmt = bool(doc and doc.formatting)
         m.add(_("Undo"), self.undo, menu_shortcut("Ctrl+Z"), sensitive=bool(buf and buf.get_can_undo()))
         m.add_separator()
         m.add(_("Cut"), self.cut, menu_shortcut("Ctrl+X"), sensitive=has_sel)
@@ -365,7 +366,8 @@ class NotepadWindow(Gtk.ApplicationWindow):
         m.add(_("Paste"), self.paste, menu_shortcut("Ctrl+V"), sensitive=bool(can_paste))
         m.add(_("Delete"), self.delete, menu_shortcut("Del"), sensitive=has_sel)
         m.add_separator()
-        m.add(_("Clear formatting"), lambda: self._md(markdown.clear_formatting), sensitive=md)
+        m.add(_("Clear formatting"), lambda: self._md(markdown.clear_formatting, convert=False),
+              sensitive=fmt)
         m.add_separator()
         m.add(_("Find"), lambda: self.show_find(False), menu_shortcut("Ctrl+F"))
         m.add(_("Find next"), self.find_next, "F3")
@@ -971,11 +973,11 @@ class NotepadWindow(Gtk.ApplicationWindow):
             return
         d.set_encoding(enc)
 
-    def _md(self, fn, *args):
+    def _md(self, fn, *args, convert=True):
         d = self.doc
         if d is None:
             return
-        if not d.markdown:
+        if convert and not d.markdown:
             d.set_markdown(True)
         fn(d.buffer, *args)
         self._update_toolbar()

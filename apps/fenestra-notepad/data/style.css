@@ -141,12 +141,12 @@ popover.fluent-menu > contents {
   border-bottom-color: var(--popover-bottom);
   border-radius: 8px;
   padding: 2px 0 1px 0;
-  min-width: 228px;
+  min-width: 230px;
   box-shadow: 0 8px 16px var(--shadow);
 }
 popover.fluent-menu.combo-menu > contents { min-width: 120px; }
 popover.fluent-menu button.menu-item {
-  min-height: 29px; padding: 0 11px; margin: 2px 4px;
+  min-height: 29px; padding: 0 12px 0 11px; margin: 2px 4px;
   border: none; border-radius: 4px; box-shadow: none; background: none;
   font-size: 14px; font-weight: normal; color: var(--fg);
 }
