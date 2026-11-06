@@ -161,7 +161,12 @@ def state_fill(name, box, base=None):
         mask = np.abs(sub - shot(base).a[y0:y1, x0:x1]).max(axis=2) > 6
         p = s.pointer
         if p:
-            mask[max(0, p[1] - 2 - y0):max(0, p[1] + 34 - y0), max(0, p[0] - 2 - x0):max(0, p[0] + 24 - x0)] = False
+            l, t, r, b = L.POINTER_BOX
+            if L.POINTER_BOX == L.CROSS:
+                mask[max(0, p[1] - 2 - y0):max(0, p[1] + 3 - y0), max(0, p[0] + l - x0):max(0, p[0] + r - x0)] = False
+                mask[max(0, p[1] + t - y0):max(0, p[1] + b - y0), max(0, p[0] - 2 - x0):max(0, p[0] + 3 - x0)] = False
+            else:
+                mask[max(0, p[1] + t - y0):max(0, p[1] + b - y0), max(0, p[0] + l - x0):max(0, p[0] + r - x0)] = False
     c = L.mode_color(sub, mask)
     if c is None:
         return None
@@ -176,20 +181,23 @@ def state_box(name, base, org, near=None, merge=1, roi=None, min_px=60):
     the 1 px border. None when nothing (bigger than the I-beam) changed under the pointer."""
     s, b = shot(name), shot(base)
     p = near or s.pointer
-    m = L.diff_mask(s, b, roi=roi)
+    m = L.diff_mask(s, b, thr=2, roi=roi)
     comps = [c for c in L.components(m, min_px=min_px, merge=merge)
              if c[0] - 3 <= p[0] < c[2] + 3 and c[1] - 3 <= p[1] < c[3] + 3]
     if not comps:
         return None
     x0, y0 = max(0, p[0] - 24), max(0, p[1] - 14)
     x1, y1 = min(s.W, p[0] + 34), min(s.H, p[1] + 14)
+    if L.POINTER_BOX == L.CROSS:
+        x0, y0, x1, y1 = max(0, p[0] - 30), max(0, p[1] - 22), min(s.W, p[0] + 30), min(s.H, p[1] + 22)
     sub = s.a[y0:y1, x0:x1]
     mask = m[y0:y1, x0:x1].copy()
     c = L.mode_color(sub, mask)
     if c is None:
         return None
     ys, xs = np.nonzero(np.all(sub == np.array(c), axis=2) & mask)
-    k = int(np.argmin((xs + x0 - p[0]) ** 2 + (ys + y0 - p[1]) ** 2))
+    tx, ty = (p[0] - 12, p[1] - 12) if L.POINTER_BOX == L.CROSS else p   # crosshair: aim at the button corner
+    k = int(np.argmin((xs + x0 - tx) ** 2 + (ys + y0 - ty) ** 2))
     at = (x0 + int(xs[k]), y0 + int(ys[k]))
     inner = L.flood_box(s, at, 2, limit=(max(0, at[0] - 700), max(0, at[1] - 120), min(s.W, at[0] + 700), min(s.H, at[1] + 120)))
     box, sides = border_box(s, inner, c)
@@ -537,8 +545,470 @@ def focus_steps(p, org, win, labels):
     return steps
 
 
+# ----------------------------------------------------------------------------- generic screen
+def screen(prefixes, orgs, regions, controls, texts, focus_labels=None, window=None, extra_states=None):
+    """prefixes/orgs: {theme: shot prefix / window origin}. regions: {name: (seed_rel, tol[, limit_rel])} measured
+    on -normal with their colours re-read in the states listed in extra_states {name: {state: suffix}}.
+    controls: {name: (hover suffix, pressed suffix)} measured from the state screenshots.
+    texts: {name: (box_rel, string[, shot suffix])}. window: (w, h) measured outer size check."""
+    out = {}
+    for th, p in prefixes.items():
+        if not have(p + '-normal'):
+            continue
+        n = shot(p + '-normal')
+        org = orgs[th]
+        o = {}
+        if window:
+            wx1, wy1 = window
+            o['window'] = box_values(n, (org[0], org[1], org[0] + wx1, org[1] + wy1), org, org)
+            o['window']['frame'] = color(n, org[0], org[1] + wy1 // 2)
+            o['window']['radius'] = V(0, n.name, org, reliable=False,
+                                      note='square in the VM (no GPU); Windows 11 rounds top-level windows 8 px')
+        for name, spec in regions.items():
+            seed, tol = spec[:2]
+            lim = relbox(org, spec[2]) if len(spec) > 2 and spec[2] else None
+            st = {k: f'{p}-{v}' for k, v in (extra_states or {}).get(name, {}).items()}
+            o[name] = element(n, rel(org, seed), org, tol, limit=lim, states=st)
+            if name in OUTLINE:
+                bg_at = rel(org, OUTLINE[name])
+                ob = outline_box(n, rel(org, seed), n.px(*bg_at))
+                o[name].update(box_values(n, ob, org, rel(org, seed)))
+                o[name]['radius'] = V((ob[3] - ob[1]) // 2 if name == 'toggle' else o[name]['radius']['value'],
+                                      n.name, (ob[0], ob[1]),
+                                      note='outline box: first pixel that differs from the surrounding background')
+                o[name].pop('border', None)
+                o[name]['outline'] = color(n, ob[0], (ob[1] + ob[3]) // 2)
+        ctl = {}
+        for key, (hs, ps) in controls.items():
+            c = {}
+            for st, suf in (('hover', hs), ('pressed', ps)):
+                if not suf or not have(f'{p}-{suf}'):
+                    continue
+                b = state_box(f'{p}-{suf}', p + '-normal', org)
+                c[st] = b if b else V(None, f'{p}-{suf}', shot(f'{p}-{suf}').pointer,
+                                      note='no visible change under the pointer in this capture')
+            if c:
+                ctl[key] = c
+        if ctl:
+            o['states'] = ctl
+        if focus_labels:
+            o['focus_order'] = focus_steps(p, org, (org[0], org[1], org[0] + window[0], org[1] + window[1]),
+                                           focus_labels)
+        o['text'] = {}
+        for key, spec in texts.items():
+            b, string = spec[:2]
+            src = shot(f'{p}-{spec[2]}') if len(spec) > 2 else n
+            o['text'][key] = text(src, relbox(org, b), string, org)
+        out[th] = o
+    return out
+
+
+# controls measured by their outline against the background read at this point (relative to the window)
+OUTLINE = {'toggle': (20, 301), 'checkbox': (20, 693)}
+
+
+def outline_box(s, seed, bg, tol=0):
+    """Walk out from seed along its row and column until the pixel is the background colour again."""
+    x, y = seed
+    bg = np.array(bg)
+
+    def isbg(xx, yy):
+        return np.abs(s.a[yy, xx] - bg).max() <= tol
+    l = x
+    while not isbg(l - 1, y):
+        l -= 1
+    r = x
+    while not isbg(r + 1, y):
+        r += 1
+    cx = (l + r) // 2
+    t = y
+    while not isbg(cx, t - 1):
+        t -= 1
+    b = y
+    while not isbg(cx, b + 1):
+        b += 1
+    return (l, t, r + 1, b + 1)
+
+
+# ----------------------------------------------------------------------------- print dialog (32)
+PRINT_ORG = (374, 117)     # outer frame top-left, same in both themes (frame at x=374/1225, y=117/850)
+PRINT_REGIONS = {
+    'body': ((10, 10), 1),
+    'footer': ((10, 700), 1),
+    'footer_separator': ((10, 652), 1),
+    'printer_combo': ((226, 115), 1),
+    'orientation_combo': ((226, 213), 1),
+    'toggle': ((56, 301), 1),
+    'checkbox': ((26, 693), 1),
+    'print_button': ((446, 683), 1),
+    'cancel_button': ((646, 683), 1),
+    'preview_area': ((326, 183), 1),
+}
+PRINT_REGION_STATES = {
+    'printer_combo': {'hover': 'hover-printer', 'pressed': 'pressed-printer', 'unfocused': 'focus-01'},
+    'orientation_combo': {'hover': 'hover-orientation', 'focus': 'focus-04'},
+    'toggle': {'hover': 'hover-toggle', 'on': 'click-toggle-on', 'off_again': 'click-toggle-off', 'focus': 'focus-05'},
+    'checkbox': {'hover': 'hover-checkbox', 'focus': 'focus-07'},
+    'print_button': {'hover': 'hover-imprimir', 'pressed': 'pressed-imprimir'},
+    'cancel_button': {'hover': 'hover-cancelar', 'pressed': 'pressed-cancelar'},
+}
+PRINT_CONTROLS = {
+    'close_button': ('hover-close', None),
+    'fit_button': ('hover-fit', None),
+    'prev_page_button': ('hover-prev-page', None),
+    'next_page_button': ('hover-next-page', None),
+    'add_printer_link': ('hover-add-printer', None),
+    'more_options_link': ('hover-more-options', None),
+    'toggle': ('hover-toggle', None),
+    'checkbox': ('hover-checkbox', None),
+}
+PRINT_TEXT = {
+    'title': ((20, 24, 320, 48), 'Printing from Win32 application - Impresión'),
+    'printer_label': ((20, 82, 100, 102), 'Impresora'),
+    'printer_value': ((34, 112, 180, 136), 'Microsoft Print to PDF'),
+    'add_printer': ((46, 154, 200, 176), 'Agregar una impresora'),
+    'orientation_label': ((20, 176, 110, 198), 'Orientation'),
+    'orientation_value': ((60, 210, 120, 234), 'Portrait'),
+    'print_to_file_label': ((20, 262, 110, 282), 'Print to file'),
+    'toggle_off': ((74, 290, 160, 314), 'Desactivado'),
+    'toggle_on': ((74, 290, 160, 314), 'Activado', 'click-toggle-on'),
+    'print_to_file_hint': ((20, 320, 220, 344), 'Stores printing output to a file'),
+    'more_options': ((20, 356, 225, 380), 'Más opciones de configuración'),
+    'no_preview': ((400, 344, 745, 368), 'Esta aplicación no admite la vista previa de impresión'),
+    'checkbox_line1': ((50, 680, 380, 697), 'Permitir que la aplicación cambie las preferencias de'),
+    'checkbox_line2': ((50, 698, 120, 717), 'impresión.'),
+    'print_button': ((500, 683, 560, 703), 'Imprimir'),
+    'cancel_button': ((700, 683, 762, 703), 'Cancelar'),
+}
+PRINT_FOCUS = ['fit-to-page button in the preview header (the printer combo had the initial keyboard focus ring)',
+               'no visible change (focus on a disabled/invisible element, probably the preview)',
+               '«Agregar una impresora» link', 'Orientation combo', 'Print to file toggle',
+               '«Más opciones de configuración» link', 'checkbox «Permitir que la aplicación…»']
+
+
+def print_dialog():
+    out = {'_about': 'Modern print dialog (Win32 Notepad, Ctrl+P). Mixed languages in the VM: Spanish title suffix, '
+                     'labels «Impresora», «Desactivado/Activado», «Imprimir», «Cancelar»; English «Orientation», '
+                     '«Print to file», «Portrait». Only Printer, Orientation and Print to file exist with Microsoft Print '
+                     'to PDF and this app (no copies/pages/colour/preview).',
+           'coordinates': 'x/y relative to the window outer top-left (1 px frame); at = screen pixel',
+           'lang': 'es+en (mixed, as shown)'}
+    res = screen({th: f'{th}-100-32-print' for th in THEMES}, {th: PRINT_ORG for th in THEMES}, PRINT_REGIONS,
+                 PRINT_CONTROLS, PRINT_TEXT, PRINT_FOCUS, window=(852, 734), extra_states=PRINT_REGION_STATES)
+    for th, o in res.items():
+        p = f'{th}-100-32-print'
+        n = shot(p + '-normal')
+        # keyboard focus ring around the printer combo in the initial state (2 px outer + 2 px inner gap)
+        x, y = rel(PRINT_ORG, (21, 104))
+        o['focus_ring'] = {'outer_width': V(2, n.name, (x, y)), 'outer_color': color(n, x, y),
+                           'gap_width': V(2, n.name, (x + 2, y + 2)), 'gap_color': color(n, x + 2, y + 2),
+                           'note': 'drawn 4 px outside the control border box (ring 2 px + gap 2 px)'}
+        # the selected-item pill on the left of the printer combo (accent)
+        o['printer_combo_pill'] = element(n, rel(PRINT_ORG, (27, 124)), PRINT_ORG, 6, rad=False)
+        # toggle knob, off and on
+        o['toggle_knob'] = {}
+        for st, nm in (('off', p + '-normal'), ('on', p + '-click-toggle-on')):
+            t = shot(nm)
+            ky = rel(PRINT_ORG, (0, 301))[1]
+            row = t.a[ky, rel(PRINT_ORG, (25, 0))[0]:rel(PRINT_ORG, (65, 0))[0]]
+            xs0 = rel(PRINT_ORG, (25, 0))[0]
+            fill = t.px(xs0 + 2, ky)
+            knob = [i for i in range(len(row)) if np.abs(row[i] - np.array(fill)).max() > 40]
+            if knob:
+                a, z = knob[0], knob[-1]
+                # skip the outer ring pixels (first/last 2 px of the track)
+                inner = [i for i in knob if 2 < i < len(row) - 3]
+                a, z = inner[0], inner[-1]
+                o['toggle_knob'][st] = {'x': V(xs0 + a - PRINT_ORG[0], t.name, (xs0 + a, ky)),
+                                        'diameter': V(z - a + 1, t.name, (xs0 + a, ky)),
+                                        'color': V(L.hexc(t.px(xs0 + (a + z) // 2, ky)), t.name, (xs0 + (a + z) // 2, ky))}
+        o['toggle_knob']['hover'] = V(None, p + '-hover-toggle', (418, 418),
+                                      note='the knob grows on hover (about 14 px) but the pointer covers it: not measured')
+        o['preview_nav'] = {'note': 'prev/next page arrows are disabled (single page, no preview); hover shows nothing'}
+    out.update(res)
+    return out
+
+
+# ----------------------------------------------------------------------------- «Más opciones» (33)
+PREFS_ORG = (398, 134)      # Printing Preferences frame (x 398..930, y 134..605)
+ADV_ORG = (441, 189)        # Advanced Options frame (x 441..901, y 189..666)
+PREFS_REGIONS = {
+    'titlebar': ((202, 16), 1), 'body': ((202, 40), 1), 'tab_page': ((102, 316), 1),
+    'orientation_combo': ((25, 106), 1), 'preview_frame': ((252, 346), 1),
+    'advanced_button': ((427, 411), 1), 'accept_button': ((374, 446), 1), 'cancel_button': ((455, 446), 1),
+}
+PREFS_STATES = {'accept_button': {'hover': 'hover-aceptar'}, 'advanced_button': {'hover': 'hover-advanced'}}
+PREFS_TEXT = {
+    'title': ((7, 8, 117, 24), 'Printing Preferences'), 'tab': ((10, 38, 52, 57), 'Layout'),
+    'orientation_label': ((20, 72, 90, 89), 'Orientation:'), 'orientation_value': ((47, 96, 92, 113), 'Portrait'),
+    'advanced_button': ((430, 405, 500, 424), 'Advanced...'), 'accept_button': ((385, 444, 430, 462), 'Aceptar'),
+    'cancel_button': ((463, 444, 513, 462), 'Cancelar'),
+}
+ADV_REGIONS = {
+    'titlebar': ((259, 6), 1), 'body': ((19, 451), 1), 'tree': ((259, 311), 1), 'paper_size_combo': ((259, 87), 1),
+    'ok_button': ((271, 451), 1), 'cancel_button': ((365, 451), 1),
+}
+ADV_TEXT = {
+    'title': ((8, 8, 232, 24), 'Microsoft Print To PDF Advanced Options'),
+    'tree_root': ((38, 46, 322, 62), 'Microsoft Print To PDF Advanced Document Settings'),
+    'tree_group': ((57, 64, 135, 80), 'Paper/Output'), 'paper_size_label': ((76, 82, 137, 98), 'Paper Size:'),
+    'paper_size_value': ((145, 84, 180, 100), 'Letter'), 'copy_count_label': ((76, 100, 145, 116), 'Copy Count:'),
+    'copy_count_value': ((147, 100, 188, 117), '1 Copy'), 'ok_button': ((297, 446, 321, 463), 'OK'),
+    'cancel_button': ((383, 446, 425, 463), 'Cancel'),
+}
+
+
+def print_more():
+    out = {'_about': '«Más opciones de configuración» opens the classic Win32 Printing Preferences of Microsoft Print to '
+                     'PDF (English, with Spanish «Aceptar»/«Cancelar»), and «Advanced...» the Advanced Options tree '
+                     'dialog. Both are always light (not themed) even in dark mode.',
+           'coordinates': 'x/y relative to each window outer top-left', 'lang': 'en (+ es buttons)'}
+    for th in THEMES:
+        p = f'{th}-100-33-print-more'
+        if not have(p + '-normal'):
+            continue
+        n = shot(p + '-normal')
+        o = {'preferences': {}, 'advanced': {}}
+        pr = o['preferences']
+        pr['window'] = box_values(n, (PREFS_ORG[0], PREFS_ORG[1], 931, 606), PREFS_ORG, PREFS_ORG)
+        pr['window']['frame'] = color(n, PREFS_ORG[0], 400)
+        for name, (seed, tol) in PREFS_REGIONS.items():
+            st = {k: f'{p}-{v}' for k, v in PREFS_STATES.get(name, {}).items()}
+            pr[name] = element(n, rel(PREFS_ORG, seed), PREFS_ORG, tol, states=st)
+        pr['text'] = {k: text(n, relbox(PREFS_ORG, b), t, PREFS_ORG) for k, (b, t) in PREFS_TEXT.items()}
+        a = shot(p + '-advanced')
+        ad = o['advanced']
+        ad['window'] = box_values(a, (ADV_ORG[0], ADV_ORG[1], 902, 667), ADV_ORG, ADV_ORG)
+        ad['window']['frame'] = color(a, ADV_ORG[0], 400)
+        ad['parent_title_inactive'] = text(a, relbox(PREFS_ORG, PREFS_TEXT['title'][0]), 'Printing Preferences',
+                                           PREFS_ORG)
+        for name, (seed, tol) in ADV_REGIONS.items():
+            ad[name] = element(a, rel(ADV_ORG, seed), ADV_ORG, tol)
+        ad['text'] = {k: text(a, relbox(ADV_ORG, b), t, ADV_ORG) for k, (b, t) in ADV_TEXT.items()}
+        out[th] = o
+    return out
+
+
+# ----------------------------------------------------------------------------- Snipping Tool (34)
+SCREEN = (0, 0)
+SNIP_BUTTONS = {   # hover suffix -> (key, tooltip text as read, tooltip reliable)
+    'foto': ('snapshot_segment', 'Snip', True),
+    'video': ('video_segment', 'Snip', False),
+    'modo': ('mode_button', 'Snipping area', True),
+    'anotar': ('quick_markup_button', 'Quick markup (Ctrl + E)', True),
+    'lapiz': ('color_picker_button', 'Color picker', True),
+    'texto': ('text_extractor_button', 'Text extractor ( \u229e + Shift + T)', True),
+    'cerrar': ('close_button', 'Close (Esc)', True),
+}
+
+
+def dim_fit(th):
+    """Overlay = undimmed * k + c over the Notepad window area (same pixels with and without the overlay:
+    -overlay vs -after-capture). k = 1 - alpha of a black scrim."""
+    o, a = shot(f'{th}-100-34-snip-overlay'), shot(f'{th}-100-34-snip-after-capture')
+    x0, y0, x1, y1 = 300, 250, 1290, 750
+    O = o.a[y0:y1, x0:x1].reshape(-1, 3).astype(float)
+    A = a.a[y0:y1, x0:x1].reshape(-1, 3).astype(float)
+    res = {}
+    k, c = np.polyfit(A.ravel(), O.ravel(), 1)
+    resid = float(np.abs(O.ravel() - (k * A.ravel() + c)).mean())
+    alpha = 1 - k
+    res['scrim_color'] = V('#000000', o.name, (x0, y0), method='linear fit overlay = k * undimmed + c over x 300..1290, y 250..750 '
+                           'against ' + a.file + f' (k = {k:.4f}, c = {c:.2f}, mean residual {resid:.2f})')
+    res['scrim_opacity'] = V(round(alpha, 3), o.name, (x0, y0))
+    res['scrim_rgba'] = V('#000000%02x' % round(alpha * 255), o.name, (x0, y0))
+    for px in ((800, 500), (40, 300)):
+        res.setdefault('samples', []).append({'undimmed': color(a, *px), 'dimmed': color(o, *px)})
+    return res
+
+
+def snip():
+    L.POINTER_BOX = L.CROSS
+    try:
+        return _snip()
+    finally:
+        L.POINTER_BOX = L.ARROW
+
+
+def _snip():
+    ov, tb, ac = {}, {}, {}
+    for th in THEMES:
+        p = f'{th}-100-34-snip'
+        n = shot(p + '-overlay')
+        # ---- overlay
+        o = {'dim': dim_fit(th)}
+        o['printscreen_same_as_win_shift_s'] = V(
+            bool(np.abs(shot(p + '-printscreen').a[100:1000, 0:780] - n.a[100:1000, 0:780]).max() <= 2),
+            p + '-printscreen', (400, 500), note='Impr Pant opens the same overlay (only the teaching tip differs)')
+        # rectangle being dragged from (500,300) to (1000,600): undimmed inside, 1 px outline
+        r = shot(p + '-rect-dragging')
+        rect = {'from': V([500, 300], r.name, (500, 300)), 'to': V([1000, 600], r.name, (1000, 600))}
+        inside = r.px(750, 450)
+        rect['inside'] = V(L.hexc(inside), r.name, (750, 450), note='same as the undimmed screen: no tint inside')
+        # dashed 1 px outline just outside the selection: read the on/off run lengths along the left edge
+        col = (r.a[300:600, 499].min(axis=1) > 230).astype(int).tolist()
+        runs, cur, k = [], col[0], 0
+        for v in col:
+            if v == cur:
+                k += 1
+            else:
+                runs.append((cur, k))
+                cur, k = v, 1
+        on = [k for v, k in runs[1:-1] if v]
+        off = [k for v, k in runs[1:-1] if not v]
+        rect['outline'] = {'style': V('dashed', r.name, (499, 301)), 'width': V(1, r.name, (499, 301)),
+                           'color': color(r, 499, 301),
+                           'dash': V(max(set(on), key=on.count) if on else None, r.name, (499, 301)),
+                           'gap': V(max(set(off), key=off.count) if off else None, r.name, (499, 305)),
+                           'position': V('outside the selection: x-1 / y-1 on the left/top, x2 / y2 on the right/bottom',
+                                         r.name, (499, 299))}
+        o['rectangle_in_progress'] = rect
+        w = shot(p + '-window-mode')
+        o['window_mode'] = {'pointer': V(w.pointer, w.name, w.pointer),
+                            'highlight_outline': color(w, 304, 400), 'outline_width': V(1, w.name, (304, 400)),
+                            'window_inside': color(w, 700, 450),
+                            'note': 'the window under the pointer is shown undimmed with a 1 px outline just outside '
+                                    'its frame; the rest stays dimmed'}
+        # teaching tip shown the first time (Annotate live): only in the first (dark) pass
+        if np.abs(n.a[138, 830] - shot(p + '-printscreen').a[138, 830]).max() <= 2:
+            ov[th] = o
+            o['teaching_tip'] = V(None, n.name, (830, 138), note='not shown in this pass (already dismissed)')
+            tip = None
+        else:
+            tip = element(n, (830, 138), SCREEN, 1, rad=True)
+            tip['radius']['reliable'] = False
+            tip['radius']['note'] = 'box includes the beak pointing at «Quick markup»; corner estimate is rough'
+            tip['text'] = {
+                'title': text(n, (820, 75, 1010, 93), 'Annotate live on your screen', SCREEN),
+                'body_line1': text(n, (820, 95, 1110, 113), 'Quick markup lets you draw on your screen in', SCREEN),
+                'body_line2': text(n, (820, 114, 885, 131), 'real time.', SCREEN),
+                'button': text(n, (930, 150, 1000, 168), 'Got it', SCREEN)}
+            tip['button'] = element(n, (830, 150), SCREEN, 1)
+            o['teaching_tip'] = tip
+        ov[th] = o
+        # ---- toolbar
+        t = {}
+        bar = element(n, (800, 40), SCREEN, 1)
+        fb = L.flood_box(n, (800, 40), 1)
+        bar['fill_box'] = box_values(n, fb, SCREEN, (800, 40))
+        bar['fill_box']['note'] = 'fill without the 1 px outline (the outline is only visible on the dark pass)'
+        for side, (x, y) in {'top': (960, fb[1] - 1), 'bottom': (960, fb[3]), 'left': (fb[0] - 1, 36),
+                             'right': (fb[2], 36)}.items():
+            bar.setdefault('outline', {})[side] = color(n, x, y)
+        bar['background']['normal']['reliable'] = False
+        bar['background']['normal']['note'] = 'acrylic in Windows; flat in the VM'
+        bx = (fb[0] + fb[2]) / 2
+        bar['center_x'] = V(bx, n.name, (bar['x']['value'], 36), note='screen is 1920 wide: centred = 960')
+        bar['top'] = V(bar['y']['value'], n.name, (960, bar['y']['value']))
+        bar['shadow'] = V('not visible on the dimmed screen in the VM', n.name, (960, 62), reliable=False)
+        t['bar'] = bar
+        t['selector_selected_segment'] = element(n, (808, 26), SCREEN, 1, states={'video_mode': p + '-video-mode'})
+        t['selector_unselected_segment'] = element(n, (870, 26), SCREEN, 1, states={'video_mode': p + '-video-mode'})
+        a1, a2 = t['selector_selected_segment'], t['selector_unselected_segment']
+        sx0, sy0 = a1['x']['value'], a1['y']['value']
+        sx1 = a2['x']['value'] + a2['width']['value']
+        sy1 = max(a1['y']['value'] + a1['height']['value'], a2['y']['value'] + a2['height']['value'])
+        t['selector'] = box_values(n, (sx0, sy0, sx1, sy1), SCREEN, (806, 23))
+        t['selector']['note'] = 'Snapshot / Video segmented control = union of both segments'
+        # accent underline of the selected segment
+        acc = None
+        for y in range(40, 52):
+            for x in range(806, 840):
+                c = n.px(x, y)
+                if c[2] > 150 and c[2] - c[0] > 60:
+                    acc = (x, y)
+                    break
+            if acc:
+                break
+        if acc:
+            t['selected_indicator'] = element(n, (acc[0] + 3, acc[1] + 1), SCREEN, 30, rad=False)
+        # separators: 1 px columns between the groups
+        seps = []
+        y = 36
+        for x in range(bar['x']['value'] + 60, bar['x']['value'] + bar['width']['value'] - 40):
+            c, l_, r_ = n.px(x, y), n.px(x - 1, y), n.px(x + 1, y)
+            if l_ == r_ and max(abs(c[i] - l_[i]) for i in range(3)) > 10 and all(n.px(x, yy) == c for yy in range(30, 44)):
+                top = y
+                while n.px(x, top - 1) == c:
+                    top -= 1
+                bot = y
+                while n.px(x, bot + 1) == c:
+                    bot += 1
+                seps.append({'x': V(x, n.name, (x, y)), 'y': V(top, n.name, (x, top)),
+                             'height': V(bot - top + 1, n.name, (x, top)), 'width': V(1, n.name, (x, y)),
+                             'color': color(n, x, y)})
+        t['separators'] = seps
+        btn = {}
+        for suf, (key, tip_text, tip_ok) in SNIP_BUTTONS.items():
+            h = f'{p}-hover-{suf}'
+            if not have(h):
+                continue
+            d = state_box(h, p + '-overlay', SCREEN)
+            e = {'hover': d} if d else {'hover': V(None, h, shot(h).pointer, note='no change')}
+            tt = tooltip(h, p + '-overlay', SCREEN, tip_text)
+            if isinstance(tt, dict) and not tip_ok:
+                tt['reliable'] = False
+                tt['note'] = 'captured before the tooltip text updated (shows the previous control\'s «Snip»)'
+            e['tooltip'] = tt
+            btn[key] = e
+        t['buttons'] = btn
+        t['quick_markup_disabled_in_video'] = color(shot(p + '-video-mode'), 963, 40)
+        # mode menu
+        m = menu(p + '-menu-modo', p + '-overlay', SCREEN, (1003, 140), ['Rectangle', 'Window', 'Full screen', 'Freeform'],
+                 tol=1, lang='en', text_x=40, limit_diff=True)
+        m['selected_entry'] = 'Rectangle (accent pill on the left)'
+        m['background']['reliable'] = False
+        t['mode_menu'] = m
+        tb[th] = t
+        # ---- after capture
+        a = shot(p + '-after-capture')
+        toast = element(a, (1700, 955), SCREEN, 1)
+        toast['text'] = {
+            'app': text(a, (1575, 875, 1660, 893), 'Snipping Tool', SCREEN),
+            'title': text(a, (1552, 912, 1760, 931), 'Screenshot copied to clipboard', SCREEN),
+            'body': text(a, (1552, 932, 1830, 950), 'Automatically saved to screenshots folder.', SCREEN),
+            'button': text(a, (1660, 978, 1785, 996), 'Markup and share', SCREEN)}
+        toast['button'] = element(a, (1565, 980), SCREEN, 1)
+        if th == 'light':
+            toast['reliable'] = False
+            toast['note'] = 'light capture caught the toast while sliding in (top cut by a white block): use dark geometry'
+        ac[th] = {'toast': toast,
+                  'overlay_closed': V(True, a.name, (800, 500), note='the screen is undimmed right after the snip'),
+                  'after_2s': V(have(p + '-after-capture-2s') and bool(np.abs(
+                      shot(p + '-after-capture-2s').a[850:1025, 1530:1915] - a.a[850:1025, 1530:1915]).max() <= 2),
+                      p + '-after-capture-2s', (1700, 955), note='true = the toast is unchanged 2 s later') if have(
+                      p + '-after-capture-2s') else V(None, a.name, (1700, 955), note='no 2 s capture in this theme')}
+    about = 'Snipping Tool (Win+Mayús+S or Impr Pant), English UI; x/y are screen pixels (1920x1080, 100 %).'
+    return ({'_about': about, **ov}, {'_about': about, **tb}, {'_about': about, **ac})
+
+
+def print_menus():
+    out = {'_about': 'Pop-ups of the modern print dialog: they open over the combo, the selected entry aligned with it, '
+                     'with a 3 px accent pill. Acrylic is not rendered in the VM (the pop-up shows a flat colour).',
+           'coordinates': 'relative to the print dialog window'}
+    for th in THEMES:
+        p = f'{th}-100-32-print'
+        o = {}
+        for key, suf, seed, entries, tx in (('printer', 'menu-printer', (288, 123), ['Microsoft Print to PDF'], None),
+                                            ('orientation', 'menu-orientation', (288, 183), ['Landscape', 'Portrait'], 35)):
+            m = menu(f'{p}-{suf}', p + '-normal', PRINT_ORG, seed, entries, tol=0, lang='en', limit_diff=True,
+                     text_x=tx)
+            m['selected_entry'] = entries[-1]
+            m['acrylic'] = V('not rendered', f'{p}-{suf}', rel(PRINT_ORG, seed), reliable=False)
+            o[key] = m
+        q = f'{th}-100-33-print-more'
+        if have(q + '-menu-orientation'):
+            m = menu(q + '-menu-orientation', q + '-normal', PREFS_ORG, (212, 124), ['Landscape', 'Portrait'],
+                     tol=1, lang='en', frame='#0078d7', text_x=22)
+            m['selected_entry'] = 'Portrait'
+            m['coordinates'] = 'relative to the Printing Preferences window'
+            o['preferences_orientation'] = m
+        out[th] = o
+    return out
+
+
 # ----------------------------------------------------------------------------- menus
-def menu(state, base, org, seed, entries, tol=2, text_x=None, lang=None, frame=None):
+def menu(state, base, org, seed, entries, tol=2, text_x=None, lang=None, frame=None, limit_diff=False):
     """A popup menu or drop-down list: body = flood of its background from seed (relative to org);
     shadow = pixels beyond the border that differ from the base shot; lines of ink -> entries in order.
     entries: list of strings, '-' for a separator (only used to pair strings with ink lines)."""
@@ -547,6 +1017,14 @@ def menu(state, base, org, seed, entries, tol=2, text_x=None, lang=None, frame=N
     fill = s.px(*sd)
     if frame:
         inner = frame_scan(s, sd, frame)
+    elif limit_diff:
+        # the pop-up has the window's own colour: flood only inside the region that changed (minus its
+        # 1 px AA/shadow edge), so the fill does not leak into the dialog
+        m = L.diff_mask(s, b, thr=2)
+        comp = [c for c in L.components(m, min_px=50, merge=2) if c[0] <= sd[0] < c[2] and c[1] <= sd[1] < c[3]]
+        lim = comp[0][:4] if comp else None
+        inner = L.flood_box(s, sd, tol, limit=lim)
+        diffmask = m
     else:
         inner = L.flood_box(s, sd, tol)
     box, sides = border_box(s, inner, fill)
@@ -557,6 +1035,12 @@ def menu(state, base, org, seed, entries, tol=2, text_x=None, lang=None, frame=N
         d['border'] = {k: V(c, s.name, at) for k, (c, at) in sides.items()}
     outside = s.px(box[0] - 1, box[1] - 1)
     r, rat = radius(s, box, outside)
+    if limit_diff:
+        # same colour inside and outside: count unchanged pixels along the corner diagonal instead
+        i = 0
+        while i < 12 and not diffmask[box[1] + i, box[0] + i]:
+            i += 1
+        r, rat = (round(i / 0.2929) if i else 0), (box[0] + i, box[1] + i)
     d['radius'] = V(r, s.name, rat)
     # shadow: how far right of / below the border the screenshot still differs from the base
     my, mx = (box[1] + box[3]) // 2, (box[0] + box[2]) // 2
@@ -577,7 +1061,7 @@ def menu(state, base, org, seed, entries, tol=2, text_x=None, lang=None, frame=N
     ink = np.abs(sub - rowbg[:, None, :]).max(axis=2) > 60
     rows = ink.sum(axis=1)
     # highlighted rows (hover / selection): row background differs from the menu fill
-    hl = [i for i in range(len(rowbg)) if np.abs(rowbg[i] - np.array(fill)).max() > 6
+    hl = [i for i in range(len(rowbg)) if np.abs(rowbg[i] - np.array(fill)).max() > 3
           and np.abs(s.a[y0 + i, x0 + 2] - np.array(fill)).max() <= 6 or (np.abs(rowbg[i] - np.array(fill)).max() > 40)]
     hlrows = set()
     if hl:
@@ -760,9 +1244,21 @@ def main():
     a = ap.parse_args()
     ROOT = os.path.abspath(a.shots)
     doc = {}
-    doc['file_dialog_save'] = file_dialog('save')
-    doc['file_dialog_open'] = file_dialog('open')
-    doc['file_dialog_menus'] = file_menus()
+    makers = {'file_dialog_save': lambda: file_dialog('save'), 'file_dialog_open': lambda: file_dialog('open'),
+              'file_dialog_menus': file_menus, 'print_dialog': print_dialog, 'print_dialog_menus': print_menus,
+              'print_dialog_more': print_more}
+    snip_cache = {}
+
+    def snip_part(i):
+        if 'v' not in snip_cache:
+            snip_cache['v'] = snip()
+        return snip_cache['v'][i]
+    makers.update({'snip_overlay': lambda: snip_part(0), 'snip_toolbar': lambda: snip_part(1),
+                   'snip_after_capture': lambda: snip_part(2)})
+    only = [k for k in a.only.split(',') if k]
+    for k, f in makers.items():
+        if not only or k in only:
+            doc[k] = f()
     if a.print:
         json.dump(doc, sys.stdout, indent=1, ensure_ascii=False)
         return

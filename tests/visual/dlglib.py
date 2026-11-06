@@ -105,6 +105,13 @@ def components(mask, min_px=1, merge=0):
     return out
 
 
+# area covered by the mouse pointer relative to its hot spot: arrow by default; Snipping Tool draws a
+# crosshair centred on the hot spot (measure_dialogs sets CROSS for those shots)
+ARROW = (-2, -2, 24, 34)
+CROSS = (-18, -18, 19, 19)
+POINTER_BOX = ARROW
+
+
 def diff_mask(s1, s2, thr=6, roi=None, ignore_pointer=True):
     """Pixels that differ by more than thr (max channel) between two shots of the same size."""
     d = np.abs(s1.a - s2.a).max(axis=2) > thr
@@ -112,7 +119,12 @@ def diff_mask(s1, s2, thr=6, roi=None, ignore_pointer=True):
         p = s.pointer
         if ignore_pointer and p:
             x, y = p
-            d[max(0, y - 2):y + 34, max(0, x - 2):x + 24] = False
+            l, t, r, b = POINTER_BOX
+            if POINTER_BOX == CROSS:     # only the two bars of the crosshair (with their dark outline)
+                d[max(0, y - 2):y + 3, max(0, x + l):x + r] = False
+                d[max(0, y + t):y + b, max(0, x - 2):x + 3] = False
+            else:
+                d[max(0, y + t):y + b, max(0, x + l):x + r] = False
     # the normal shots were taken with the pointer parked at (1900, 20)
     d[0:60, 1880:1920] = False
     # taskbar clock / weather change between shots
