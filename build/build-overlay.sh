@@ -146,6 +146,10 @@ log "Portal backend (print dialog)"
 # xdg-desktop-portal-fenestra: org.freedesktop.impl.portal.Print for both sessions;
 # session/portals/*.conf route Print to it.
 (cd "$D/portal" && DESTDIR="$OUT" PREFIX=/usr ./install.sh >/dev/null)
+# GNOME session: GNOME's portal defaults + Fenestra's print dialog.
+install -Dm644 "$REPO/session/portals/gnome-portals.conf" "$OUT/etc/xdg-desktop-portal/gnome-portals.conf"
+# Firefox: always use the portal's file dialog (the Explorer's), also outside Flatpak.
+install -Dm644 "$D/firefox/fenestra-portals.js" "$OUT/usr/lib64/firefox/defaults/pref/fenestra-portals.js"
 
 log "Release stamp"
 # Which Fenestra build this is; Settings > Fenestra Update compares it with GitHub.
