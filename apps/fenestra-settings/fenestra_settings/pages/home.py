@@ -3,15 +3,12 @@ from __future__ import annotations
 
 from gi.repository import Gtk
 
-from .. import theme, util
-from ..backends import bluetooth
+from .. import theme
+from ..backends import appearance, bluetooth
 from ..i18n import _
 from ..widgets import SettingRow, button, clear, label, link
 from .base import Page, register
 from .common import device_hero, theme_preview
-
-IFACE = "org.gnome.desktop.interface"
-
 
 @register
 class HomePage(Page):
@@ -100,14 +97,12 @@ class HomePage(Page):
                 b.add_css_class("selected")
             b.set_child(theme_preview(dark, 132, 84))
             b.set_tooltip_text(_("Dark") if dark else _("Light"))
-            b.connect("clicked", lambda _b, d=dark: util.gset(IFACE, "color-scheme",
-                                                              "prefer-dark" if d else "default"))
+            b.connect("clicked", lambda _b, d=dark: appearance.set_color_scheme("dark" if d else "light"))
             row.append(b)
         c.append(row)
         from ..widgets import Dropdown
-        mode = Dropdown([("default", _("Light")), ("prefer-dark", _("Dark"))],
-                        "prefer-dark" if dark_now else "default",
-                        lambda v: util.gset(IFACE, "color-scheme", v))
+        mode = Dropdown([("light", _("Light")), ("dark", _("Dark"))], "dark" if dark_now else "light",
+                        appearance.set_color_scheme)
         r = SettingRow(_("Color mode"), None, "fs-dark-theme-symbolic", control=mode)
         r.set_margin_top(8)
         c.append(r)

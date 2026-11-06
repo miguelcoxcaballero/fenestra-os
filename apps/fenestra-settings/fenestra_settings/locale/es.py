@@ -593,6 +593,7 @@ STRINGS = {
     'Monospace text': 'Texto monoespaciado',
     'Picture': 'Imagen',
     'Solid color': 'Color sólido',
+    'Spotlight': 'Contenido destacado',
     'Browse photos': 'Examinar fotos',
     'The Start menu extension is not installed': 'La extensión del menú Inicio no está instalada',
     '24-hour': '24 horas',

@@ -73,6 +73,10 @@ def parse_args(argv):
     p.add_argument("--export-search-index", action="store_true",
                    help="print the search index (pages and indexed rows, in the UI language) as JSON and exit;"
                         " Fenestra Shell's Search uses it")
+    p.add_argument("--sync-appearance", action="store_true",
+                   help="regenerate the GTK accent theme and caption buttons for the current mode and accent"
+                        " (in the Fenestra session also copy shell.conf's mode/accent/wallpaper to GSettings)"
+                        " and exit")
     p.add_argument("page_pos", nargs="?", default=None, help=argparse.SUPPRESS)
     return p.parse_args(argv[1:])
 
@@ -93,6 +97,12 @@ class App(Gtk.Application):
         override = "dark" if self.opts.dark else "light" if self.opts.light else None
         theme.init(override)
         from . import pages  # noqa: F401  (registers pages)
+        from .backends import session
+        if session.is_fenestra() and not util.READ_ONLY:
+            # the shell can change the mode/accent itself (quick settings): keep GTK apps in step
+            from .backends import shellconf
+            from .backends.appearance import fenestra as fen_appearance
+            shellconf.watch(fen_appearance.sync_from_shell)
 
     def do_command_line(self, cmdline):
         args = cmdline.get_arguments()
@@ -209,6 +219,9 @@ def main(argv=None):
         for pid, cls in PAGES.items():
             print(f"{pid:22} {cls.title}  (parent: {cls.parent or '-'})")
         return 0
+    if opts.sync_appearance:
+        from .backends import appearance
+        return 0 if appearance.sync() else 1
     if opts.export_search_index:
         import json
         from . import pages  # noqa: F401
