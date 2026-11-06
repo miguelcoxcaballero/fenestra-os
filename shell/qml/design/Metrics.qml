@@ -76,4 +76,17 @@ QtObject {
     readonly property int windowButtonWidth: Tokens.px("window.button.width", 45)
     readonly property int windowButtonHeight: Tokens.px("window.button.height", 29)
     readonly property int switcherThumbHeight: Tokens.px("switcher.thumbnail.height", 243)
+
+    // Taskbar, Start, Search and menus as measured on the reference (design/tokens.json _sources).
+    // themed("x.fill") reads "x.fill.dark" / "x.fill.light" for the current scheme.
+    function themed(key) { return Tokens.v(key + (Theme.dark ? ".dark" : ".light"), "#ff00ff") }
+    function tok(key, fallback) { return Tokens.px(key, fallback) }
+    readonly property int taskPitch: Tokens.px("taskbar.button.pitch", 44)
+    readonly property int startInset: Tokens.px("start.inset", 33)
+    readonly property int startHeaderInset: Tokens.px("start.header.inset", 64)
+    readonly property int startPinnedRows: Tokens.px("start.pinned.rows", 3)
+    readonly property int menuPadding: Tokens.px("menu.padding", 2)
+    readonly property int menuIconX: Tokens.px("menu.icon.x", 16)
+    readonly property int menuTextX: Tokens.px("menu.text.x", 44)
+    readonly property int menuPaddingRight: Tokens.px("menu.padding.right", 16)
 }

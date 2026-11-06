@@ -15,4 +15,9 @@ QtObject {
     readonly property int centerOpen: Tokens.px("motion.notifications.open", 260)
     readonly property int centerOffset: Tokens.px("motion.notifications.offset", 312)
     readonly property var decelerate: [0.1, 0.9, 0.2, 1, 1, 1]
+    // Start rises 141 px and settles in about 180 ms (57 % of the way at 56 ms); Search does not
+    // move, it fades in (reference-shots/motion, start and search).
+    readonly property int startOpen: Tokens.px("motion.start.open", 180)
+    readonly property int startOffset: Tokens.px("motion.start.offset", 141)
+    readonly property int searchFade: Tokens.px("motion.search.fade", 250)
 }

@@ -53,7 +53,7 @@ QColor lighter(const QColor &c, double target = 0.72)
 }
 // GNOME accent names -> [base, fill on dark, fill on light] (appearance.js ENUM).
 const QHash<QString, std::array<const char *, 3>> kNamed{
-    {QStringLiteral("blue"), {"#0078d4", "#4cc2ff", "#005fb8"}},   {QStringLiteral("teal"), {"#038387", "#4fd6cb", "#00777b"}},
+    {QStringLiteral("blue"), {"#0078d4", "#4cc2ff", "#0067c0"}},   {QStringLiteral("teal"), {"#038387", "#4fd6cb", "#00777b"}},
     {QStringLiteral("green"), {"#107c10", "#6ccb5f", "#0f7b0f"}},  {QStringLiteral("yellow"), {"#ffb900", "#ffd75e", "#9d5d00"}},
     {QStringLiteral("orange"), {"#ca5010", "#ff9a5c", "#bc4b09"}}, {QStringLiteral("red"), {"#e81123", "#ff99a4", "#c42b1c"}},
     {QStringLiteral("pink"), {"#e3008c", "#f7a2cf", "#bf0077"}},   {QStringLiteral("purple"), {"#744da9", "#d6a4f2", "#8764b8"}},
