@@ -2,19 +2,21 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Generates the Fenestra window decoration for KWin (Aurorae SVG themes Fenestra-Dark and
 Fenestra-Light) into kwin/aurorae/. Values: design/tokens.json (window.*), the same as the GTK
-caption buttons (desktop/gtk/caption-buttons-gtk4.css): 46 × 32 buttons, close #c42b1c on hover,
-16 px glyph area, hover 6.05 % and pressed 4.19 % of the text colour, inactive glyphs at 36 %.
+caption buttons, measured on the reference (dark-100-24-caption-*): 45 × 29 buttons 1 px apart at the
+top of a 32 px title bar, close #c42b1c on hover, 10 px glyphs, hover 6.05 % and pressed 4.19 % of the
+text colour (#2d2d2d on #202020), glyphs of an inactive window at 40 % (#797979 on #202020).
 The glyphs are plain 1 px line art drawn here (no external artwork)."""
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 T = json.loads((ROOT / "design/tokens.json").read_text())
-BW, BH = T.get("window.button.width", 46), T.get("window.button.height", 32)
+BW, BH = T.get("window.button.width", 45), T.get("window.button.height", 29)
+GAP = T.get("window.button.spacing", 1)
 TITLE = T.get("window.title.height", 32)
 R = T.get("window.radius", 8)
 SCHEMES = {
-    "Dark": {"bar": "#202020", "bar_inactive": "#2b2b2b", "fg": "#ffffff", "fg_inactive": "#9a9a9a", "border": "#3a3a3a"},
+    "Dark": {"bar": "#202020", "bar_inactive": "#202020", "fg": "#ffffff", "fg_inactive": "#9a9a9a", "border": "#3a3a3a"},
     "Light": {"bar": "#f3f3f3", "bar_inactive": "#f9f9f9", "fg": "#000000", "fg_inactive": "#8a8a8a", "border": "#c8c8c8"},
 }
 GLYPHS = {  # in a 10 × 10 box, centred in the button
@@ -55,7 +57,7 @@ def button(s, glyph, close):
         "active": (None, s["fg"], 1),
         "hover": ("#c42b1c" if close else s["fg"], "#ffffff" if close else s["fg"], 1),
         "pressed": ("#c42b1c" if close else s["fg"], "#ffffff" if close else s["fg"], 0.786),
-        "inactive": (None, s["fg"], 0.3628),
+        "inactive": (None, s["fg"], 0.40),
         "deactivated": (None, s["fg_inactive"], 0.5),
     }
     alpha = {"hover": 1 if close else 0.0605, "pressed": 0.9 if close else 0.0419}
@@ -63,7 +65,7 @@ def button(s, glyph, close):
     for state, (bg, fg, opacity) in states.items():
         rect = f'<rect width="{BW}" height="{BH}" fill="{bg}" fill-opacity="{alpha.get(state, 1)}"/>' if bg else \
             f'<rect width="{BW}" height="{BH}" fill="none"/>'
-        g = (f'<g transform="translate({(BW - 10) / 2} {(BH - 10) / 2})" fill="none" stroke="{fg}" stroke-width="1" '
+        g = (f'<g transform="translate({(BW - 10) / 2} {(BH - 10) // 2})" fill="none" stroke="{fg}" stroke-width="1" '
              f'stroke-opacity="{opacity}" shape-rendering="crispEdges">{GLYPHS[glyph]}</g>')
         parts.append(f'<g id="{state}-center">{rect}{g}</g>')
     return f'<svg xmlns="http://www.w3.org/2000/svg" width="{BW}" height="{BH}">\n' + "\n".join(parts) + "\n</svg>\n"
@@ -98,7 +100,7 @@ TitleBorderRight=0
 TitleHeight={TITLE}
 ButtonWidth={BW}
 ButtonHeight={BH}
-ButtonSpacing=0
+ButtonSpacing={GAP}
 ButtonMarginTop=0
 ExplicitButtonSpacer=0
 PaddingTop=0

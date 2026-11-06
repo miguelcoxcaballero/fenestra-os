@@ -151,15 +151,33 @@ Window {
             }
         }
     }
-    // Rectangle, window and screen: the border just outside the selection (never in the picture).
+    // Window and screen: a solid 1 px line just outside the selection (never in the picture); a
+    // rectangle being drawn: the same line dashed 4 on, 3 off (snip_overlay.*.rectangle_in_progress).
     Rectangle {
         readonly property int bw: Metrics.snipBorderWidth
-        visible: ov.holeRect.width > 0 && ov.holeRect.height > 0
+        visible: ov.holeRect.width > 0 && ov.holeRect.height > 0 && Snip.mode !== "rectangle"
         x: ov.holeRect.x - bw; y: ov.holeRect.y - bw
         width: ov.holeRect.width + 2 * bw; height: ov.holeRect.height + 2 * bw
         color: "transparent"
         border.color: Metrics.snipBorderColor
         border.width: bw
+    }
+    Shape {
+        anchors.fill: parent
+        visible: ov.holeRect.width > 0 && ov.holeRect.height > 0 && Snip.mode === "rectangle"
+        ShapePath {
+            id: dashed
+            readonly property real o: Metrics.snipBorderWidth / 2
+            readonly property rect r: ov.holeRect
+            strokeColor: Metrics.snipBorderColor
+            strokeWidth: Metrics.snipBorderWidth
+            fillColor: "transparent"
+            strokeStyle: ShapePath.DashLine
+            dashPattern: [Metrics.n("snip.dash", 4), Metrics.n("snip.dash.gap", 3)]
+            capStyle: ShapePath.FlatCap
+            PathPolyline { path: [Qt.point(dashed.r.x - dashed.o, dashed.r.y - dashed.o), Qt.point(dashed.r.x + dashed.r.width + dashed.o, dashed.r.y - dashed.o), Qt.point(dashed.r.x + dashed.r.width + dashed.o, dashed.r.y + dashed.r.height + dashed.o),
+                                  Qt.point(dashed.r.x - dashed.o, dashed.r.y + dashed.r.height + dashed.o), Qt.point(dashed.r.x - dashed.o, dashed.r.y - dashed.o)] }
+        }
     }
     // Freeform: the lasso line.
     Shape {

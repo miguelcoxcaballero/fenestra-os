@@ -51,37 +51,45 @@ Window {
         }
     }
 
+    // dark-100-20-secure-attention: options as one column 87 px left of the centre, all as wide as
+    // the longest (+ 19 px), 44 px rows; the focus frame is 2 px white, 3 px above and below the row.
+    // Cancel 120 × 32, 78 px left of the centre.
     Column {
-        x: sec.width / 2 - 72; y: sec.height / 2 - 177
+        id: options
+        x: sec.width / 2 - 87; y: sec.height / 2 - 177
+        property real widest: 120
         Repeater {
             model: sec.items
             delegate: Rectangle {
                 required property var modelData
                 required property int index
-                width: Math.max(139, label.implicitWidth + 19); height: 44
+                width: options.widest + 19; height: 44
                 color: im.pressed ? Qt.rgba(1, 1, 1, 0.04) : im.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
-                border.color: sec.focusIndex === index ? "white" : "transparent"; border.width: 2
-                Text { id: label; x: 9; anchors.verticalCenter: parent.verticalCenter; text: Strings.tr(modelData.text)
-                       color: "white"; font.family: Metrics.fontFamily; font.pixelSize: 14 }
+                Rectangle { visible: sec.focusIndex === index; y: -3; width: parent.width; height: parent.height + 6
+                            color: "transparent"; border.color: "white"; border.width: 2 }
+                Text { id: label; x: 10; anchors.verticalCenter: parent.verticalCenter; text: Strings.tr(modelData.text)
+                       color: "white"; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
+                       onImplicitWidthChanged: options.widest = Math.max(options.widest, implicitWidth)
+                       Component.onCompleted: options.widest = Math.max(options.widest, implicitWidth) }
                 MouseArea { id: im; anchors.fill: parent; hoverEnabled: true; onClicked: modelData.action() }
             }
         }
     }
     Rectangle {
-        x: sec.width / 2 - 60; y: sec.height / 2 + 83; width: 120; height: 32; radius: 4
+        x: sec.width / 2 - 78; y: sec.height / 2 + 83; width: 120; height: 32; radius: 4
         color: cm.pressed ? "#2b2b2b" : cm.containsMouse ? "#3b3b3b" : "#333333"
         border.color: sec.focusIndex === sec.items.length ? "white" : "transparent"; border.width: 2
-        Text { anchors.centerIn: parent; text: Strings.tr("Cancel"); color: "white"; font.family: Metrics.fontFamily; font.pixelSize: 14 }
+        Text { anchors.centerIn: parent; text: Strings.tr("Cancel"); color: "white"; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; onClicked: sec.close() }
     }
-    // Corner buttons: 40 × 40 at 168 / 120 / 72 px from the right, 62 px from the bottom.
+    // Corner buttons: 40 × 40 at 168 / 120 / 72 px from the right, icons centred 42 px over the bottom.
     Repeater {
         model: [["network", NetworkStatus.kind === "wifi" ? "network-wifi" : NetworkStatus.connected ? "network-wired" : "network-offline", 168, "Network"],
                 ["accessibility", "accessibility", 120, "Accessibility"],
                 ["power", "power", 72, "Power"]]
         delegate: Rectangle {
             required property var modelData
-            x: sec.width - modelData[2]; y: sec.height - 62 - 40; width: 40; height: 40; radius: 4
+            x: sec.width - modelData[2]; y: sec.height - 62; width: 40; height: 40; radius: 4
             color: bm.pressed ? Qt.rgba(1, 1, 1, 0.04) : bm.containsMouse || sec.menu === modelData[0] ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
             Accessible.name: Strings.tr(modelData[3])
             Image { anchors.centerIn: parent; width: 16; height: 16; source: Metrics.assets + "security/" + modelData[1] + ".svg"
@@ -92,7 +100,7 @@ Window {
     // Corner menus: 12 px from the screen edge, 8 px above their button.
     Rectangle {
         visible: sec.menu !== ""
-        x: sec.width - width - 12; y: sec.height - 62 - 40 - 8 - height
+        x: sec.width - width - 12; y: sec.height - 62 - 8 - height
         width: 220; height: menuCol.height + 8; radius: 8
         color: "#2c2c2c"; border.color: Qt.rgba(1, 1, 1, 0.08)
         Column {
