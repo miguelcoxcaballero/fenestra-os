@@ -386,7 +386,8 @@ class ExpanderRow(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("expander")
         self.key = key
-        self.chev = icon("fs-chevron-down-symbolic", 16, "row-chevron")
+        self.chev = icon("fs-chevron-down-symbolic", 20, "row-chevron")
+        self.chev.add_css_class("expander-chevron")
         self.header = SettingRow(title, subtitle, icon_name, control, on_click=self.toggle,
                                  key=key)
         self.header.suffix.append(self.chev)
@@ -413,6 +414,7 @@ class ExpanderRow(Gtk.Box):
 
     def set_expanded(self, v):
         self.revealer.set_reveal_child(v)
+        self.chev.set_from_icon_name("fs-chevron-up-symbolic" if v else "fs-chevron-down-symbolic")
         if v:
             self.add_css_class("expanded")
         else:

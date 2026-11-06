@@ -295,29 +295,32 @@ scrollbar.hovering slider, scrollbar.dragging slider { min-width: 6px; backgroun
 .setting-row { transition: background-color 120ms ease-out; }
 
 .expander { }
+/* Expanded card: header and nested rows are separate cards whose 1 px borders, drawn
+   outside their fill, read as the dark dividers of the reference. */
 .expander.expanded > .expander-header {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
+  background-clip: padding-box;
 }
-.expander-content {
+.expander-content { background: none; border: none; margin: 0; }
+.expander-content > .setting-row.nested, .expander-content > .nested.plain {
   background-color: var(--card);
+  background-clip: padding-box;
   border: 1px solid var(--card-border);
   border-top: none;
-  border-radius: 0 0 4px 4px;
-  margin-top: 1px;
-}
-.expander-content > .setting-row.nested {
-  background: none;
-  border: none;
-  border-top: 1px solid var(--divider);
   border-radius: 0;
-  padding-left: 56px;
+  min-height: 50px;
+  padding-left: 60px;
 }
-.expander-content > .setting-row.nested:first-child { border-top: none; }
+.expander-content > .nested .row-lead { margin-right: 10px; }
+.row-chevron.expander-chevron { margin-right: -2px; }
+.expander-content > .setting-row.nested.has-toggle,
+.expander-content > .setting-row.nested.two-line { min-height: 58px; }
+.expander-content > :last-child { border-radius: 0 0 4px 4px; }
 .expander-content > .setting-row.nested.activatable:hover { background-color: var(--card-hover); }
-.expander-content > .nested.plain { padding: 12px 16px 12px 56px; border-top: 1px solid var(--divider); }
-.expander-content > .nested.plain:first-child { border-top: none; }
+.expander-content > .nested.plain { padding: 12px 16px 12px 56px; }
 .expander-content > .setting-row.nested.no-icon { padding-left: 56px; }
+.expander-header.no-icon { padding-left: 18px; }
 
 .page-note { color: var(--fg2); font-size: 12px; margin: 12px 0 0 2px; }
 .caption { font-size: 12px; color: var(--fg2); }
@@ -576,8 +579,6 @@ button.hero-status-item:hover { background-color: var(--subtle-hover); }
 .card.about-head { padding: 12px 16px; margin-bottom: 4px; }
 .spec-key { color: var(--fg2); font-size: 14px; min-width: 140px; }
 .spec-value { font-size: 14px; }
-.expander-content > .plain { padding: 12px 16px 14px 56px; border-top: 1px solid var(--divider); }
-.expander-content > .plain:first-child { border-top: none; }
 .mini-window { border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.35); }
 .mini-window.dark { background-color: #2b2b2b; }
 .mini-window.light { background-color: #f9f9f9; }
@@ -814,3 +815,18 @@ list.nav-list > row.nav-item:focus-visible, list.search-results > row:focus-visi
   outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
+
+/* Start layout picker */
+.start-picker { margin: 18px 0 -3px 4px; }
+.start-radio { margin-top: 20px; font-size: 14px; }
+.start-radio > radio { margin: 0 8px 0 2px; }
+
+/* Themes: summary of the current theme beside the preview */
+.theme-summary { margin: 9px 0 0 0; }
+button.theme-summary-item {
+  padding: 0; margin: 0 0 16px 0; min-height: 0; min-width: 0;
+  background: none; border: none; box-shadow: none; color: var(--fg);
+}
+.theme-summary-icon { color: var(--accent-base); margin-top: 0; }
+.theme-summary-title, .theme-summary-value { font-size: 14px; }
+.theme-summary-value { margin-top: 1px; }

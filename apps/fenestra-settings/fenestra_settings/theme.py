@@ -240,6 +240,8 @@ class ThemeManager:
         pal["accent-soft"] = f"rgba({r},{g},{b},0.18)"
         pal["accent-fg"] = on_accent(acc)
         pal["accent-text"] = accent_text(acc, dark)
+        # base system accent (glyphs such as the Themes summary icons use it in both modes)
+        pal["accent-base"] = "#0078d4" if acc.lower() in ACCENT_TEXT else self.accent_hex(dark=False)
         css = ":root {\n" + "".join(f"  --{k}: {v};\n" for k, v in pal.items()) + "}\n"
         # Gradients do not resolve var() reliably, so emit literal colors.
         css += (
