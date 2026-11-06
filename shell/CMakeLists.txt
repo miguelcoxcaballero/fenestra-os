@@ -17,6 +17,9 @@ find_package(KF6KIO 6.10 REQUIRED)
 find_package(KF6WindowSystem 6.10 REQUIRED)
 find_package(KF6NetworkManagerQt 6.10 REQUIRED)
 find_package(KF6PulseAudioQt 1.5 REQUIRED)
+find_package(KF6GlobalAccel 6.10 REQUIRED)
+find_package(KF6Config 6.10 REQUIRED)
+find_package(PolkitQt6-1 0.200 REQUIRED)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${ECM_FIND_MODULE_DIR})
 find_package(WaylandScanner REQUIRED)
 find_package(QtWaylandScanner REQUIRED)
@@ -40,6 +43,10 @@ qt_add_executable(fenestra-shell
     src/services/trayitems.cpp src/services/trayitems.h
     src/services/startservices.cpp src/services/startservices.h
     src/services/search.cpp src/services/search.h
+    src/services/notifications.cpp src/services/notifications.h
+    src/services/system.cpp src/services/system.h
+    src/services/shortcuts.cpp src/services/shortcuts.h
+    src/services/polkitagent.cpp src/services/polkitagent.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -61,16 +68,27 @@ qt_add_qml_module(fenestra-shell
     QML_FILES
         qml/Main.qml
         qml/ShellState.qml
+        qml/calendar/CalendarCard.qml
+        qml/components/Card.qml
         qml/components/ContextMenu.qml
         qml/components/Flyout.qml
         qml/components/MenuRow.qml
         qml/components/ShellPopup.qml
+        qml/components/Slider.qml
         qml/components/SymbolicIcon.qml
         qml/design/Metrics.qml
         qml/design/Motion.qml
         qml/design/Strings.qml
         qml/desktop/Wallpaper.qml
+        qml/notifications/NotificationCard.qml
+        qml/notifications/NotificationCenter.qml
+        qml/notifications/Toasts.qml
+        qml/osd/Osd.qml
+        qml/quicksettings/QuickSettings.qml
+        qml/quicksettings/QuickTile.qml
         qml/search/SearchFlyout.qml
+        qml/security/ConsentDialog.qml
+        qml/security/SecurityScreen.qml
         qml/start/AppTile.qml
         qml/start/SectionHeader.qml
         qml/start/StartMenu.qml
@@ -90,7 +108,8 @@ target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJ
 target_link_libraries(fenestra-shell PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::DBus Qt6::WaylandClient Qt6::WaylandClientPrivate
     LayerShellQt::Interface Wayland::Client
-    KF6::Service KF6::KIOGui KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt PkgConfig::GWEATHER)
+    KF6::Service KF6::KIOGui KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt KF6::GlobalAccel KF6::ConfigCore
+    PolkitQt6-1::Agent PkgConfig::GWEATHER)
 
 install(TARGETS fenestra-shell RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.fenestra.Shell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

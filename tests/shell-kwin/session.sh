@@ -175,6 +175,54 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     check S01-start-light shot_with fenestra-start 16-start-light
     probe "$(st 'close()')" >/dev/null
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
+    # ---- H4: notifications, calendar, quick settings, media, OSD, Ctrl+Alt+Del ----
+    notify() { # summary body [actions-json] [hints]
+        gdbus call --session -d org.freedesktop.Notifications -o /org/freedesktop/Notifications \
+            -m org.freedesktop.Notifications.Notify "${5:-Demo}" 0 "${6:-dialog-information}" "$1" "$2" "${3:-[]}" "${4:-{\}}" 5000
+    }
+    check N02-server-registered bash -c 'gdbus call --session -d org.freedesktop.Notifications -o /org/freedesktop/Notifications -m org.freedesktop.Notifications.GetServerInformation | grep -q Fenestra'
+    notify "Reunión en 10 minutos" "Sala Norte, planta 2" '["open", "Abrir", "snooze", "Posponer"]' >/dev/null
+    check N02-banner wait_for 'is "$(probe "Notifications.popups.length")" 1' 10
+    sleep 1; check N02-banner-shot shot_with fenestra-toasts 17-banner
+    notify "Captura de pantalla" "Demo" '[]' "{'image-path': <'$HOME/Pictures/playa-verano.jpg'>}" >/dev/null
+    sleep 1; check Q04-image-notification shot_with fenestra-toasts 18-image-toast
+    probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+    probe "ShellState.toggleCalendar(null, -1)" >/dev/null; sleep 1
+    check N01-center-and-calendar shot_with fenestra-flyout 19-center
+    check N01-history wait_for 'is "$(probe "Notifications.count")" 2' 5
+    probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
+    probe "Notifications.doNotDisturb = true" >/dev/null
+    log "popups before DND test: $(probe "Notifications.popups.length") dnd: $(probe "Notifications.doNotDisturb")"
+    notify "Silenciosa" "No debe salir como banner" >/dev/null; sleep 1
+    log "popups after: $(probe "JSON.stringify(Notifications.popups)")"
+    check N01-do-not-disturb wait_for 'is "$(probe "Notifications.popups.length")" 0' 3
+    probe "Notifications.doNotDisturb = false" >/dev/null
+    gdbus monitor --session -d org.freedesktop.Notifications > /out/notify-monitor.log 2>&1 & MON=$!
+    sleep 0.5
+    probe "Notifications.invoke(Notifications.data(Notifications.index(Notifications.count - 1, 0), 257), \"open\")" >/dev/null
+    check N02-action-invoked wait_for 'grep -q "ActionInvoked" /out/notify-monitor.log' 5
+    kill $MON 2>/dev/null
+    probe "Notifications.startFocus(25)" >/dev/null
+    check N01-focus-session wait_for '[ "$(probe "Notifications.focusRemaining > 1400")" = "('"'"'[true]'"'"',)" ]' 3
+    probe "Notifications.endFocus()" >/dev/null
+    probe "Notifications.clearAll()" >/dev/null
+    check N01-clear-all wait_for 'is "$(probe "Notifications.count")" 0' 3
+    probe "ShellState.toggleCalendar(null, -1)" >/dev/null
+    python3 /src/tests/shell-kwin/mpris-player.py > /out/mpris.log 2>&1 & MPRIS=$!
+    check Q02-media-player wait_for 'is "$(probe "Media.title")" "\"Canción de prueba\""' 10
+    probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null; sleep 1
+    check Q01-quick-settings shot_with fenestra-flyout 20-quick-settings
+    probe "Media.playPause()" >/dev/null
+    check Q02-play-pause wait_for 'grep -q MPRIS_PLAYPAUSE /out/mpris.log' 5
+    probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null
+    kill $MPRIS 2>/dev/null
+    probe "screensView.objectAt(0).osd.show(\"volume\", 40)" >/dev/null; sleep 0.5
+    check Q03-osd shot_with fenestra-osd 21-osd
+    probe "securityScreen.open()" >/dev/null; sleep 1
+    check Q05-security-screen shot_with fenestra-security 22-security
+    probe "securityScreen.menu = \"power\"" >/dev/null; sleep 0.5
+    check Q05-power-menu shot_with fenestra-security 22b-security-power
+    probe "securityScreen.close()" >/dev/null
     # A shell crash must not take KWin or the windows down; a new shell picks the windows up again.
     kill -SEGV $SHELL_PID; sleep 2
     check kwin-survives-shell-crash kill -0 $KWIN

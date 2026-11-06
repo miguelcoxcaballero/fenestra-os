@@ -21,8 +21,22 @@ Item {
                 onSearchRequested: (text) => { close(); search.openWith(text) }
             }
             property SearchFlyout search: SearchFlyout { targetScreen: modelData }
+            property QuickSettings quick: QuickSettings { targetScreen: modelData; rightAligned: true }
+            property NotificationCenter center: NotificationCenter { targetScreen: modelData; rightAligned: true }
+            property Osd osd: Osd { targetScreen: modelData }
         }
     }
+
+    // One per session, on the first screen: banners, Ctrl+Alt+Del, the administrator prompt.
+    // (Held by a QtObject like the per-screen surfaces: a Window declared directly as a child of
+    // the root Item was hidden again right after being shown.)
+    property QtObject sessionSurfaces: QtObject {
+        property Toasts toasts: Toasts { targetScreen: Qt.application.screens[0] }
+        property SecurityScreen security: SecurityScreen { targetScreen: Qt.application.screens[0] }
+        property ConsentDialog consent: ConsentDialog { }
+    }
+    readonly property var toastsWindow: sessionSurfaces.toasts
+    readonly property var securityScreen: sessionSurfaces.security
 
     // Start / Search for the screen that asked (taskbar button) or the first screen (Super, D-Bus).
     function screenObjects(screen) {
@@ -44,6 +58,19 @@ Item {
             o.start.close()
             o.search.shown ? o.search.close() : o.search.openWith("")
         }
+    }
+    Connections {
+        target: ShellState
+        function onQuickSettingsRequested(screen, x) { const o = root.screenObjects(screen); o.center.close(); o.quick.toggle() }
+        function onCalendarRequested(screen, x) { const o = root.screenObjects(screen); o.quick.close(); o.center.toggle() }
+    }
+    Connections {
+        target: Shortcuts
+        function onOsd(kind, value) { root.screenObjects(null).osd.show(kind, value) }
+        function onSecurityScreenRequested() { root.securityScreen.open() }
+        function onNotificationCenterRequested() { ShellState.toggleCalendar(null, -1) }
+        function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
+        function onSearchRequested() { ShellState.toggleSearch(null, -1) }
     }
     Connections {
         target: ShellControl

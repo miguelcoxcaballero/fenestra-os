@@ -20,6 +20,17 @@ Row {
         SymbolicIcon { name: "pan-up-symbolic"; size: 12 }
         onClicked: { overflow.anchorX = overflowButton.mapToItem(null, overflowButton.width / 2, 0).x; overflow.toggle() }
     }
+    // Privacy (B08): microphone and location in use, with the app names as tooltip.
+    Row {
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 8; rightPadding: 6; leftPadding: 4
+        visible: Privacy.microphoneApps.length > 0 || Privacy.locationInUse
+        SymbolicIcon { visible: Privacy.microphoneApps.length > 0; src: Metrics.assets + "privacy/mic.svg"
+            Accessible.name: Privacy.microphoneApps.length === 1 ? Privacy.microphoneApps[0] + " " + Strings.tr("is using your microphone")
+                             : Privacy.microphoneApps.length + " " + Strings.tr("apps are using your microphone") }
+        SymbolicIcon { visible: Privacy.locationInUse; src: Metrics.assets + "privacy/location.svg"
+            Accessible.name: Strings.tr("Your location is being used") }
+    }
     TrayButton {
         anchors.verticalCenter: parent.verticalCenter
         visible: KeyboardStatus.count > 1

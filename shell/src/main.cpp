@@ -10,7 +10,10 @@
 #include <QQuickImageProvider>
 #include <QQuickWindow>
 
+#include "notifications.h"
+#include "polkitagent.h"
 #include "shellcontrol.h"
+#include "shortcuts.h"
 #include "testprobe.h"
 #include "trayitems.h"
 
@@ -91,11 +94,15 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("icon"), new IconProvider);
     engine.addImageProvider(QStringLiteral("sni"), new TrayImageProvider);
     engine.addImageProvider(QStringLiteral("tint"), new TintProvider);
+    engine.addImageProvider(QStringLiteral("notification"), new NotificationImageProvider);
     TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("Fenestra.Shell", "Main");
     ShellControl::instance()->registerOnBus();
+    Notifications::instance()->registerOnBus();
+    PolkitAgent::instance()->registerAgent();
+    Shortcuts::instance()->install();
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }

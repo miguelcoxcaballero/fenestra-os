@@ -32,6 +32,23 @@ QtObject {
         "Document": "Documento", "File folder": "Carpeta de archivos", "Photo": "Foto",
         "Open": "Abrir", "Open results in browser": "Abrir resultados en el navegador", "Open file location": "Abrir ubicación del archivo",
         "Copy full path": "Copiar ruta de acceso completa",
+        "Playing": "Reproduciendo", "Previous": "Anterior", "Pause": "Pausar", "Play": "Reproducir", "Next": "Siguiente",
+        "Wi-Fi": "Wi-Fi", "Bluetooth": "Bluetooth", "Airplane mode": "Modo avión", "Battery saver": "Ahorro de batería",
+        "Night light": "Luz nocturna", "Accessibility": "Accesibilidad", "Sound output": "Salida de sonido", "All settings": "Toda la configuración",
+        "Connected": "Conectado", "Secured": "Segura", "Open": "Abrir", "No networks found": "No se encontraron redes",
+        "Paired": "Emparejado", "Add a device": "Agregar un dispositivo",
+        "Notifications": "Notificaciones", "Clear all": "Borrar todo", "Do not disturb": "No molestar", "No new notifications": "No hay notificaciones nuevas",
+        "Close": "Cerrar", "mins": "min", "Focus": "Concentración", "End session": "Finalizar sesión",
+        "Microphone on": "Micrófono activado", "Microphone muted": "Micrófono silenciado",
+        "Change a password": "Cambiar una contraseña", "Task Manager": "Administrador de tareas", "Cancel": "Cancelar",
+        "Network": "Red", "No internet access": "Sin acceso a Internet", "Not connected": "No conectado", "On": "Activado", "Off": "Desactivado",
+        "Accessibility settings": "Configuración de accesibilidad",
+        "User Account Control": "Control de cuentas de usuario",
+        "Do you want to allow this app to make changes to your device?": "¿Quieres permitir que esta aplicación haga cambios en el dispositivo?",
+        "Show more details": "Mostrar más detalles", "Hide details": "Ocultar detalles", "Action ID": "Id. de acción",
+        "Password": "Contraseña", "Yes": "Sí", "No": "No",
+        "is using your microphone": "está usando el micrófono", "apps are using your microphone": "aplicaciones están usando el micrófono",
+        "Your location is being used": "Se está usando tu ubicación",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }
 }

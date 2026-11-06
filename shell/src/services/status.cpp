@@ -130,7 +130,27 @@ AudioStatus::AudioStatus(QObject *parent)
 {
     auto *server = PulseAudioQt::Context::instance()->server();
     connect(server, &PulseAudioQt::Server::defaultSinkChanged, this, &AudioStatus::setSink);
+    connect(server, &PulseAudioQt::Server::defaultSinkChanged, this, &AudioStatus::outputsChanged);
+    auto *ctx = PulseAudioQt::Context::instance();
+    connect(ctx, &PulseAudioQt::Context::sinkAdded, this, &AudioStatus::outputsChanged);
+    connect(ctx, &PulseAudioQt::Context::sinkRemoved, this, &AudioStatus::outputsChanged);
     setSink(server->defaultSink());
+}
+
+QVariantList AudioStatus::outputs() const
+{
+    QVariantList out;
+    for (PulseAudioQt::Sink *s : PulseAudioQt::Context::instance()->sinks())
+        out.append(QVariantMap{{QStringLiteral("id"), s->name()}, {QStringLiteral("name"), s->description()},
+                               {QStringLiteral("isDefault"), s == m_sink}});
+    return out;
+}
+
+void AudioStatus::setDefaultOutput(const QString &id)
+{
+    for (PulseAudioQt::Sink *s : PulseAudioQt::Context::instance()->sinks())
+        if (s->name() == id)
+            PulseAudioQt::Context::instance()->server()->setDefaultSink(s);
 }
 
 void AudioStatus::setSink(PulseAudioQt::Sink *sink)

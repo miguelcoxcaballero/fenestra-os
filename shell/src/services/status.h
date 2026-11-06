@@ -9,6 +9,7 @@
 #include <QPointer>
 #include <QQmlEngine>
 #include <QStringList>
+#include <QVariantList>
 
 #include <PulseAudioQt/Sink>
 
@@ -55,8 +56,11 @@ class AudioStatus : public QObject
     Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY changed)
     Q_PROPERTY(QString outputName READ outputName NOTIFY changed)
     Q_PROPERTY(QString iconName READ iconName NOTIFY changed)
+    Q_PROPERTY(QVariantList outputs READ outputs NOTIFY outputsChanged) // [{id, name, isDefault}]
 public:
     static AudioStatus *instance();
+    QVariantList outputs() const;
+    Q_INVOKABLE void setDefaultOutput(const QString &id);
     static AudioStatus *create(QQmlEngine *, QJSEngine *);
     bool available() const { return m_sink; }
     int volume() const;
@@ -67,6 +71,7 @@ public:
     void setMuted(bool muted);
 Q_SIGNALS:
     void changed();
+    void outputsChanged();
 private:
     explicit AudioStatus(QObject *parent = nullptr);
     void setSink(PulseAudioQt::Sink *sink);
