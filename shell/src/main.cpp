@@ -8,6 +8,8 @@
 #include <QQuickImageProvider>
 #include <QQuickWindow>
 
+#include "testprobe.h"
+
 namespace
 {
 // image://icon/<name>: icons from the Fenestra icon theme (hicolor as fallback).
@@ -59,5 +61,6 @@ int main(int argc, char *argv[])
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("Fenestra.Shell", "Main");
+    TestProbe::installIfRequested();
     return app.exec();
 }

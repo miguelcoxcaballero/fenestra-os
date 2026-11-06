@@ -60,7 +60,9 @@ Window {
         font.pixelSize: 12
         lineHeight: 1.15
         property date now: new Date()
-        text: Qt.formatTime(now, Locale.ShortFormat) + "\n" + Qt.formatDate(now, Locale.ShortFormat)
+        // Hours and minutes in the system locale (the C locale's short format has seconds).
+        text: Qt.formatTime(now, Qt.locale().timeFormat(Locale.ShortFormat).replace(/[:.]ss/, "")) + "\n"
+              + Qt.formatDate(now, Locale.ShortFormat)
         Timer {
             // Wake once a minute, on the minute (no polling between).
             interval: 60000 - (new Date().getSeconds() * 1000)

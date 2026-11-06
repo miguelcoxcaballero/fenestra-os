@@ -1,0 +1,6 @@
+[Unit]
+Description=Fenestra session
+Documentation=https://github.com/miguelcoxcaballero/fenestra-os/tree/main/docs/fenestra-shell
+BindsTo=graphical-session.target
+Wants=fenestra-shell.service
+StopWhenUnneeded=no

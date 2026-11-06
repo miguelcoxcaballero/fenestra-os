@@ -1,0 +1,11 @@
+# KWin lab: Fedora N + KWin + Qt 6 build tools + GTK apps' runtime, for tests/shell-kwin.
+#   docker build -f tests/shell-kwin/Containerfile --build-arg FEDORA=45 -t fenestra-kwinlab .
+ARG FEDORA=45
+FROM registry.fedoraproject.org/fedora:${FEDORA}
+RUN dnf -y install --setopt=install_weak_deps=False \
+      kwin kwin-devel layer-shell-qt layer-shell-qt-devel xorg-x11-server-Xwayland \
+      qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtwayland-devel qt6-qtsvg \
+      plasma-wayland-protocols-devel wayland-devel extra-cmake-modules cmake gcc-c++ ninja-build \
+      dbus-daemon dbus-tools glib2 procps-ng python3-pillow python3-gobject gtk3 gtk4 libadwaita \
+      gtksourceview5 adwaita-icon-theme google-noto-sans-fonts systemd \
+    && dnf clean all

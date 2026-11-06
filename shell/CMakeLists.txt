@@ -21,6 +21,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 
 qt_add_executable(fenestra-shell
     src/main.cpp
+    src/core/testprobe.cpp src/core/testprobe.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
 )
 
@@ -43,7 +44,7 @@ qt_add_qml_module(fenestra-shell
         qml/taskbar/TaskButton.qml
 )
 
-target_include_directories(fenestra-shell PRIVATE src/services ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(fenestra-shell PRIVATE src/core src/services ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJECT_VERSION}")
 
 target_link_libraries(fenestra-shell PRIVATE
@@ -52,3 +53,16 @@ target_link_libraries(fenestra-shell PRIVATE
 
 install(TARGETS fenestra-shell RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.fenestra.Shell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+
+# The session itself (GDM entry, launcher, systemd user units, crash notice): ../session.
+option(FENESTRA_INSTALL_SESSION "Install the Fenestra session files from ../session" ON)
+if(FENESTRA_INSTALL_SESSION)
+    set(session_dir ${CMAKE_CURRENT_SOURCE_DIR}/../session)
+    install(FILES ${session_dir}/wayland-sessions/fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
+    install(PROGRAMS ${session_dir}/libexec/fenestra-session ${session_dir}/libexec/fenestra-session-inner
+                     ${session_dir}/libexec/fenestra-shell-crashlog ${session_dir}/libexec/fenestra-shell-failed
+            DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
+    install(FILES ${session_dir}/systemd/fenestra-session.target ${session_dir}/systemd/fenestra-shell.service
+                  ${session_dir}/systemd/fenestra-shell-failed.service
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
+endif()

@@ -1,0 +1,96 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Minimal notice when Fenestra Shell keeps crashing (OnFailure= of fenestra-shell.service).
+KWin and the open windows keep running; the user can retry, sign out, or pick the GNOME
+session for the next sign-in (AccountsService, the same setting GDM's session menu writes)."""
+import locale
+import os
+import subprocess
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+from gi.repository import Gio, GLib, Gtk  # noqa: E402
+
+ES = (locale.getlocale(locale.LC_MESSAGES)[0] or os.environ.get("LANG", "")).startswith("es")
+T = {
+    "title": ("Fenestra no se pudo iniciar del todo", "Fenestra couldn't start completely"),
+    "body": ("La barra de tareas y el escritorio se cerraron varias veces. Tus ventanas siguen "
+             "abiertas. Puedes volver a intentarlo, cerrar sesión o usar GNOME la próxima vez "
+             "que inicies sesión.",
+             "The taskbar and desktop closed several times. Your windows are still open. You can "
+             "try again, sign out, or use GNOME the next time you sign in."),
+    "retry": ("Reintentar", "Try again"),
+    "gnome": ("Usar GNOME la próxima vez", "Use GNOME next time"),
+    "gnome_done": ("La próxima vez que inicies sesión se usará GNOME.",
+                   "GNOME will be used the next time you sign in."),
+    "gnome_fail": ("No se pudo cambiar la sesión: {0}", "Couldn't change the session: {0}"),
+    "signout": ("Cerrar sesión", "Sign out"),
+}
+
+
+def tr(key):
+    return T[key][0 if ES else 1]
+
+
+def systemctl(*args):
+    subprocess.run(["systemctl", "--user", *args], check=False)
+
+
+def use_gnome_next_time():
+    """AccountsService User.SetSession for the current user (allowed for one's own account)."""
+    bus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
+    path = bus.call_sync("org.freedesktop.Accounts", "/org/freedesktop/Accounts",
+                         "org.freedesktop.Accounts", "FindUserById",
+                         GLib.Variant("(x)", (os.getuid(),)), GLib.VariantType("(o)"),
+                         Gio.DBusCallFlags.NONE, -1).unpack()[0]
+    for method in ("SetSession", "SetXSession"):
+        bus.call_sync("org.freedesktop.Accounts", path, "org.freedesktop.Accounts.User", method,
+                      GLib.Variant("(s)", ("gnome",)), None, Gio.DBusCallFlags.NONE, -1)
+
+
+class Notice(Gtk.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title="Fenestra", resizable=False, default_width=460)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=24,
+                      margin_bottom=24, margin_start=24, margin_end=24)
+        title = Gtk.Label(label=tr("title"), xalign=0, wrap=True)
+        title.add_css_class("title-2")
+        box.append(title)
+        self.body = Gtk.Label(label=tr("body"), xalign=0, wrap=True, max_width_chars=52)
+        box.append(self.body)
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END, margin_top=12)
+        for key, handler in (("gnome", self.on_gnome), ("signout", self.on_signout),
+                             ("retry", self.on_retry)):
+            b = Gtk.Button(label=tr(key))
+            b.connect("clicked", handler)
+            if key == "retry":
+                b.add_css_class("suggested-action")
+            buttons.append(b)
+        box.append(buttons)
+        self.set_child(box)
+
+    def on_retry(self, *_):
+        systemctl("reset-failed", "fenestra-shell.service")
+        systemctl("start", "fenestra-shell.service")
+        self.close()
+
+    def on_signout(self, *_):
+        systemctl("stop", "fenestra-session.target")
+
+    def on_gnome(self, *_):
+        try:
+            use_gnome_next_time()
+            self.body.set_label(tr("gnome_done"))
+        except GLib.Error as e:
+            self.body.set_label(tr("gnome_fail").format(e.message))
+
+
+def main():
+    app = Gtk.Application(application_id="org.fenestra.ShellFailed")
+    app.connect("activate", lambda a: Notice(a).present())
+    app.run(None)
+
+
+if __name__ == "__main__":
+    main()

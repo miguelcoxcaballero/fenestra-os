@@ -1,0 +1,12 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Fenestra session (started by GDM from /usr/share/wayland-sessions/fenestra.desktop).
+# KWin composites; everything else runs as systemd user units of fenestra-session.target,
+# so a crash of the shell never ends the session or loses windows.
+export XDG_CURRENT_DESKTOP=Fenestra XDG_SESSION_DESKTOP=fenestra XDG_SESSION_TYPE=wayland
+export DESKTOP_SESSION=fenestra
+# Qt apps follow Fenestra (no Plasma platform theme); GTK apps keep their own settings.
+export QT_QPA_PLATFORM="wayland;xcb" QT_WAYLAND_DISABLE_WINDOWDECORATION=0
+export MOZ_ENABLE_WAYLAND=1 ELECTRON_OZONE_PLATFORM_HINT=auto
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/fenestra"
+exec kwin_wayland_wrapper --xwayland --exit-with-session /usr/libexec/fenestra/fenestra-session-inner

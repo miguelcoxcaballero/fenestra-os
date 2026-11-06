@@ -1,0 +1,7 @@
+[Unit]
+Description=Fenestra Shell could not start: notice with "Sign out" and "Use GNOME next time"
+PartOf=fenestra-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/fenestra/fenestra-shell-failed

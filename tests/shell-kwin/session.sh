@@ -5,7 +5,9 @@
 set -u
 # No GPU in the container or CI: QPainter compositing in KWin, llvmpipe for clients.
 export KWIN_COMPOSE=${KWIN_COMPOSE:-Q} LIBGL_ALWAYS_SOFTWARE=1
-export XDG_RUNTIME_DIR=/tmp/xdg QT_QPA_PLATFORM=wayland XDG_CURRENT_DESKTOP=Fenestra XDG_SESSION_TYPE=wayland
+# Without a terminal, Qt logs to the journal; the bench reads stderr.
+export QT_FORCE_STDERR_LOGGING=1 QT_QUICK_BACKEND=${QT_QUICK_BACKEND:-software} LANG=C.UTF-8
+export FENESTRA_SHELL_TEST=1 XDG_RUNTIME_DIR=/tmp/xdg QT_QPA_PLATFORM=wayland XDG_CURRENT_DESKTOP=Fenestra XDG_SESSION_TYPE=wayland
 mkdir -p -m700 "$XDG_RUNTIME_DIR" /out
 rm -f /run/dbus/pid
 W=${WIDTH:-1920} H=${HEIGHT:-1080}
@@ -21,7 +23,12 @@ check() { # name condition-command...
     if "$@"; then log "CHECK $name PASS"; else log "CHECK $name FAIL"; FAILS=$((FAILS+1)); fi
 }
 FAILS=0; : > /out/checks.txt
-shot() { spectacle -b -n -f -o "/out/$1.png" >>/out/spectacle.log 2>&1; [ -s "/out/$1.png" ]; }
+# Shell surfaces through the test probe, composed by anchors (KWin's ScreenShot2 needs OpenGL;
+# with QPainter compositing KWin 6.8 crashes in RenderDevice::eglContext()).
+shot() {
+    gdbus call --session -d org.fenestra.Shell -o /org/fenestra/Shell/Test -m org.fenestra.Shell.Test.Grab "/out/$1" >/dev/null 2>>/out/probe.log &&
+        python3 /src/tests/shell-kwin/compose.py "/out/$1" "/out/$1.png" >>/out/probe.log 2>&1
+}
 ready_count() { grep -c FENESTRA_SHELL_READY /out/shell.log; }
 wait_for() { local i; for i in $(seq 1 "${2:-40}"); do eval "$1" && return 0; sleep 0.5; done; return 1; }
 
@@ -49,7 +56,8 @@ w=Gtk.Window(title='X11 client'); w.set_default_size(520,320); w.connect('destro
     check windows-survive-shell-crash bash -c 'pgrep -f fenestra_notepad >/dev/null'
     fenestra-shell >> /out/shell.log 2>&1 & SHELL_PID=$!
     check shell-restarted wait_for '[ "$(ready_count)" -ge 2 ]' 40
-    check windows-after-restart wait_for '[ "$(grep FENESTRA_SHELL_WINDOWS /out/shell.log | tail -1)" = "FENESTRA_SHELL_WINDOWS count=2" ]' 40
+    # After the second READY, the new shell must list both windows again.
+    check windows-after-restart wait_for 'awk "/FENESTRA_SHELL_READY/{r++} r==2 && /FENESTRA_SHELL_WINDOWS count=2/{f=1} END{exit !f}" /out/shell.log' 40
     sleep 2
     check screenshot-after-restart shot 02-after-restart
     kill $SHELL_PID $KWIN 2>/dev/null
@@ -59,4 +67,4 @@ export W H
 timeout "${TIMEOUT:-180}" dbus-run-session -- bash -c 'FAILS=0; session; exit $FAILS'
 rc=$?
 FAILS=$(grep -c "FAIL$" /out/checks.txt)
-[ "$rc" = 0 ] && [ "$FAILS" = 0 ] && echo "QA_RESULT PASS" || echo "QA_RESULT FAIL ($FAILS failed checks, rc=$rc)"
+if [ "$rc" = 0 ] && [ "$FAILS" = 0 ]; then echo "QA_RESULT PASS" | tee /out/result.txt; else echo "QA_RESULT FAIL ($FAILS failed checks, rc=$rc)" | tee /out/result.txt; exit 1; fi
