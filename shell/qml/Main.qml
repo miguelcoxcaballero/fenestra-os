@@ -35,6 +35,7 @@ Item {
         property SecurityScreen security: SecurityScreen { targetScreen: Qt.application.screens[0] }
         property ConsentDialog consent: ConsentDialog { }
         property SnapLayouts snap: SnapLayouts { targetScreen: Qt.application.screens[0] }
+        property FirstLoginCurtain curtain: FirstLoginCurtain { }
     }
     readonly property var toastsWindow: sessionSurfaces.toasts
     readonly property var securityScreen: sessionSurfaces.security

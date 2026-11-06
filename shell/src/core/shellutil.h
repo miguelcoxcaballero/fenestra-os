@@ -6,7 +6,9 @@
 #include <QGuiApplication>
 #include <QObject>
 #include <QQmlEngine>
+#include <QFileInfo>
 #include <QScreen>
+#include <QStandardPaths>
 #include <QWindow>
 
 class ShellUtil : public QObject
@@ -33,6 +35,10 @@ public:
             }
         }
         return false;
+    }
+    Q_INVOKABLE bool configFileExists(const QString &name) const
+    {
+        return QFileInfo::exists(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QLatin1Char('/') + name);
     }
     // KWin's blur behind the whole surface (org_kde_kwin_blur; drawn only with OpenGL compositing).
     Q_INVOKABLE void enableBlur(QWindow *window, int radius) const

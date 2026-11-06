@@ -83,6 +83,7 @@ qt_add_qml_module(fenestra-shell
         qml/design/Motion.qml
         qml/design/Strings.qml
         qml/desktop/Desktop.qml
+        qml/firstlogin/FirstLoginCurtain.qml
         qml/notifications/NotificationCard.qml
         qml/notifications/NotificationCenter.qml
         qml/notifications/Toasts.qml

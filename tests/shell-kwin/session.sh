@@ -31,6 +31,7 @@ for a in settings taskmgr; do
 done
 kbuildsycoca6 --noincremental >/dev/null 2>&1
 
+mkdir -p ~/.config && touch ~/.config/gnome-initial-setup-done
 # Demo data (never personal data): a user name and picture-less account, documents, a photo,
 # a folder and recently used files for Start's Recommended and Search.
 usermod -c "Usuario Demo" root 2>/dev/null
@@ -266,6 +267,12 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "KWinIntegration.placeActiveWindow(Qt.rect(0, 0, 0.5, 1))" >/dev/null
     check W03-snap-left-half wait_for '[ "$(probe "(() => { const g = WindowsModel.data(WindowsModel.index('$X11ROW', 0), 266); return g.x + \",\" + g.width })()")" = "('"'"'[\"0,960\"]'"'"',)" ]' 10
     log "snapped geometry: $(probe "JSON.stringify(WindowsModel.data(WindowsModel.index($X11ROW, 0), 266))")"
+    # W05: first login curtain (fresh state, no setup window): black first, then gone.
+    rm -f ~/.config/gnome-initial-setup-done
+    probe "root.sessionSurfaces.curtain.active = true; root.sessionSurfaces.curtain.visible = true" >/dev/null; sleep 1
+    check W05-curtain-shown shot_with fenestra-curtain 28-first-login
+    check W05-curtain-lifts wait_for 'is "$(probe "root.sessionSurfaces.curtain.visible")" false' 20
+    touch ~/.config/gnome-initial-setup-done
     # A shell crash must not take KWin or the windows down; a new shell picks the windows up again.
     kill -SEGV $SHELL_PID; sleep 2
     check kwin-survives-shell-crash kill -0 $KWIN
