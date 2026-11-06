@@ -10,7 +10,11 @@ _L = {
            'Search': 'Buscar', 'Search %s': 'Buscar en %s', 'New folder': 'Nueva carpeta', 'Cut': 'Cortar',
            'Copy': 'Copiar', 'Paste': 'Pegar', 'Rename': 'Cambiar nombre', 'Share': 'Compartir', 'Delete': 'Eliminar',
            'See more': 'Ver más', 'Copy as path': 'Copiar como ruta de acceso', 'Open': 'Abrir', 'Home': 'Inicio', 'Gallery': 'Galería', 'This PC': 'Este equipo', 'Network': 'Red', 'Desktop': 'Escritorio',
-           'Downloads': 'Descargas', 'Documents': 'Documentos', 'Pictures': 'Imágenes', 'Music': 'Música', 'Videos': 'Vídeos'},
+           'Downloads': 'Descargas', 'Documents': 'Documentos', 'Pictures': 'Imágenes', 'Music': 'Música', 'Videos': 'Vídeos',
+           # file chooser (fenestra_chooser.py)
+           'Organize': 'Organizar', 'File name:': 'Nombre de archivo:', 'Save as type:': 'Tipo:', 'Files of type:': 'Tipo:',
+           'Cancel': 'Cancelar', 'Select all': 'Seleccionar todo', 'Show hidden files': 'Mostrar archivos ocultos',
+           'Properties': 'Propiedades'},
 }
 
 
