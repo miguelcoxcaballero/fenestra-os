@@ -1,5 +1,5 @@
 {
- "_comment": "Capture number -> token key prefix (design/tokens.json) and how to find the panel. seed: a point inside it at 100 % ('center' = screen centre x), y counted from the bottom edge; a capture sidecar .json with \"seed\" overrides it. mode: panel (lighter than the solid background, default), region (flat colour around the seed), fullscreen.",
+ "_comment": "Capture number -> token key prefix (design/tokens.json) and how to find the panel. seed: a point inside it at 100 % ('center' = screen centre x), y counted from the bottom edge; a capture sidecar .json with \"seed\" overrides it, and \"seeds\" {\"dark-100\": [x, y]} (absolute pixels for that pass, checked by eye on the capture) override both. Without seeds the seed is found automatically (most frequent colour that differs from the empty desktop). mode: panel (differs from the empty desktop of the pass, default), region (flat colour around the seed; tol, reach), hoverdiff (differs from capture 'ref'), fullscreen. base: another capture of the pass with the same windows but without the panel, used instead of the empty desktop (panels opened over windows). mask_tol: differences up to this many levels are ignored (window shadows that change with focus). backdrop: [x, y] at 100 % of the dimmed screen behind a modal dialog. variants: overrides by capture name; passes: overrides by pass. bars: false = do not read the taskbar indicators on this capture. exclude: captures that do not show the panel (reason kept in measurements.json not_measured). probes: token probes on one capture. missing: panels with no capture. unmeasured_tokens: tokens that cannot be read off a screenshot.",
  "01": {
   "name": "taskbar"
  },
@@ -12,8 +12,18 @@
    "center",
    24
   ],
-  "tokens": {
-   "width": "taskbar.button"
+  "passes": {
+   "light-100": {
+    "mode": "region",
+    "tol": 1,
+    "_why": "el ratón quedó sobre Paint (no sobre el Bloc de notas) y las ventanas de esta pasada no son las de la captura 24"
+   }
+  },
+  "seeds": {
+   "light-100": [
+    1125,
+    1040
+   ]
   }
  },
  "03": {
@@ -22,7 +32,9 @@
   "seed": [
    "center",
    120
-  ]
+  ],
+  "base": "24-caption-buttons",
+  "mask_tol": 1
  },
  "04": {
   "name": "taskbar-menu",
@@ -30,7 +42,18 @@
   "seed": [
    "center",
    90
-  ]
+  ],
+  "base": "24-caption-buttons",
+  "seeds": {
+   "dark-100": [
+    1404,
+    995
+   ],
+   "light-100": [
+    1404,
+    995
+   ]
+  }
  },
  "05": {
   "name": "app-menu",
@@ -38,7 +61,18 @@
   "seed": [
    "center",
    150
-  ]
+  ],
+  "base": "24-caption-buttons",
+  "seeds": {
+   "dark-100": [
+    972,
+    935
+   ],
+   "dark-150": [
+    984,
+    860
+   ]
+  }
  },
  "06": {
   "name": "start",
@@ -66,7 +100,26 @@
   "seed": [
    "center",
    200
-  ]
+  ],
+  "base": "06-start",
+  "seeds": {
+   "dark-100": [
+    1155,
+    912
+   ],
+   "light-100": [
+    1155,
+    912
+   ],
+   "dark-150": [
+    1252,
+    830
+   ],
+   "light-150": [
+    1252,
+    830
+   ]
+  }
  },
  "09": {
   "name": "account-menu",
@@ -74,7 +127,26 @@
   "seed": [
    "center",
    200
-  ]
+  ],
+  "base": "06-start",
+  "seeds": {
+   "dark-100": [
+    660,
+    897
+   ],
+   "light-100": [
+    660,
+    897
+   ],
+   "dark-150": [
+    510,
+    805
+   ],
+   "light-150": [
+    510,
+    805
+   ]
+  }
  },
  "10": {
   "name": "search",
@@ -124,7 +196,21 @@
   "seed": [
    1720,
    300
-  ]
+  ],
+  "seeds": {
+   "dark-100": [
+    1556,
+    584
+   ],
+   "light-100": [
+    1556,
+    584
+   ],
+   "light-150": [
+    1370,
+    334
+   ]
+  }
  },
  "15": {
   "name": "notifications",
@@ -135,6 +221,30 @@
   ],
   "tokens": {
    "width": "notifications.width"
+  },
+  "seeds": {
+   "dark-100": [
+    1580,
+    540
+   ],
+   "light-100": [
+    1580,
+    540
+   ],
+   "dark-150": [
+    1404,
+    400
+   ],
+   "light-150": [
+    1404,
+    400
+   ]
+  },
+  "variants": {
+   "notifications-2": {
+    "key": "notifications.more",
+    "tokens": {}
+   }
   }
  },
  "16": {
@@ -143,7 +253,41 @@
   "seed": [
    1750,
    250
-  ]
+  ],
+  "seeds": {
+   "dark-100": [
+    1578,
+    1000
+   ],
+   "light-100": [
+    1578,
+    1000
+   ],
+   "dark-150": [
+    1404,
+    970
+   ],
+   "light-150": [
+    1404,
+    970
+   ]
+  },
+  "variants": {
+   "calendar-collapsed": {
+    "key": "calendar.collapsed",
+    "probe": false,
+    "seeds": {
+     "dark-100": [
+      1578,
+      1000
+     ],
+     "light-100": [
+      1578,
+      1000
+     ]
+    }
+   }
+  }
  },
  "17": {
   "name": "toast",
@@ -154,6 +298,24 @@
   ],
   "tokens": {
    "width": "toast.width"
+  },
+  "seeds": {
+   "dark-100": [
+    1545,
+    960
+   ],
+   "light-100": [
+    1545,
+    960
+   ],
+   "dark-150": [
+    1356,
+    900
+   ],
+   "light-150": [
+    1356,
+    900
+   ]
   }
  },
  "18": {
@@ -184,7 +346,8 @@
   "seed": [
    40,
    540
-  ]
+  ],
+  "bars": false
  },
  "21": {
   "name": "uac",
@@ -193,7 +356,12 @@
    "center",
    540
   ],
-  "above_taskbar": false
+  "above_taskbar": false,
+  "backdrop": [
+   300,
+   540
+  ],
+  "bars": false
  },
  "22": {
   "name": "tray-overflow",
@@ -235,7 +403,8 @@
    "center",
    540
   ],
-  "above_taskbar": false
+  "above_taskbar": false,
+  "base": "24-caption-buttons"
  },
  "26": {
   "name": "task-view",
@@ -244,7 +413,8 @@
   "seed": [
    40,
    540
-  ]
+  ],
+  "bars": false
  },
  "27": {
   "name": "snap-layouts",
@@ -252,7 +422,8 @@
   "seed": [
    1800,
    1000
-  ]
+  ],
+  "base": "24-caption-buttons"
  },
  "28": {
   "name": "lock",
@@ -261,7 +432,8 @@
   "seed": [
    40,
    540
-  ]
+  ],
+  "bars": false
  },
  "29": {
   "name": "login",
@@ -270,14 +442,28 @@
   "seed": [
    40,
    540
-  ]
+  ],
+  "bars": false
  },
  "exclude": {
   "-18-osd-volume": "el teclado USB emulado de QEMU no envía teclas multimedia: Windows no mostró el OSD",
   "-100-23-desktop-menu": "el clic derecho en el escritorio no abrió el menú en las pasadas al 100 % (sí al 150 %)",
   "-150-27-snap-layouts": "al 150 % el hover no cayó sobre Maximizar: no apareció el panel de ajuste",
   "-22-tray-overflow": "la bandeja no tiene iconos ocultos fijos: el clic abre otro flyout (OneDrive), no el desbordamiento",
-  "-24-caption-buttons": "estado de referencia sin hover para medir los botones de ventana (se usa como ref)"
+  "-24-caption-buttons": "estado de referencia sin hover para medir los botones de ventana (se usa como ref)",
+  "light-100-03-preview": "el ratón quedó sobre Paint: salió la etiqueta «Paint», no la vista previa del Bloc de notas",
+  "light-100-05-app-menu": "el clic derecho cayó sobre Paint: no se abrió la lista de saltos del Bloc de notas",
+  "-150-04-taskbar-menu": "al 150 % el clic derecho cayó sobre ^ de la bandeja: no se abrió el menú de la barra",
+  "dark-150-14-quick-media": "una ventana de Seguridad de Windows abierta toca la tarjeta multimedia: no se puede separar",
+  "dark-150-16-calendar-collapsed": "una ventana de Seguridad de Windows tapa el escritorio y el calendario no está plegado",
+  "light-150-16-calendar-collapsed": "al 150 % (claro) el calendario no se plegó: es la misma vista que 16-calendar",
+  "dark-150-23-desktop-menu": "salió el menú de sistema de la ventana de Seguridad de Windows, no el del escritorio",
+  "light-100-21-uac": "el diálogo de UAC no llegó a mostrarse en esta pasada (escritorio normal)",
+  "light-100-27-snap-layouts": "el ratón no quedó sobre Maximizar: no apareció el panel de ajuste",
+  "light-100-24-caption-(close|min)-hover": "la ventana del Explorador tapa los botones del Bloc de notas: el ratón no está sobre un botón",
+  "-150-24-caption-(close|min)-hover": "al 150 % la ventana del Bloc de notas sale por la derecha de la pantalla (o está en otro sitio): el ratón no está sobre un botón",
+  "dark-150-02-taskbar-hover": "al 150 % (oscuro) el botón del Bloc de notas no muestra fondo de hover ni de atención: el hover no llegó a pintarse",
+  "light-150-05-app-menu": "el relleno de la lista de saltos es idéntico a la ventana blanca de detrás: no se puede separar del fondo"
  },
  "motion": {
   "start-open": {
@@ -292,5 +478,23 @@
    "motion.notifications.open": "duration_ms",
    "motion.notifications.offset": "offset_x_px"
   }
- }
+ },
+ "missing": {
+  "13": "la VM no tiene adaptador Wi-Fi: no hay subpágina Wi-Fi",
+  "19": "la VM no tiene brillo y el teclado emulado no envía teclas multimedia: no hay OSD de brillo"
+ },
+ "unmeasured_tokens": {
+  "font.family": "la familia no se identifica con fiabilidad a partir de píxeles (no hay fuentes de referencia en el repositorio para comparar glifos)"
+ },
+ "probes": [
+  {
+   "source": "light-100-24-caption-buttons.png",
+   "probe": "title",
+   "at": [
+    100,
+    830
+   ],
+   "note": "diálogo Ejecutar (Win32 clásico, inactivo): del borde superior exterior a la primera fila del área cliente"
+  }
+ ]
 }

@@ -16,6 +16,9 @@ def main():
     dry = "--dry-run" in sys.argv
     tokens = json.loads(tokens_path.read_text())
     measured = json.loads(meas_path.read_text()) if meas_path.exists() else []
+    if isinstance(measured, dict):
+        # measure.py writes {"entries": [...], ...}; other top-level sections (dialogs) carry no token keys
+        measured = measured.get("entries", [])
     best = {}
     for m in measured:
         if not m.get("reliable") or float(m.get("scale", 1)) != 1.0:
@@ -26,8 +29,7 @@ def main():
     changed = 0
     for key, m in sorted(best.items()):
         if key not in tokens:
-            print(f"unknown key (add it to tokens.json first): {key}")
-            continue
+            continue    # panel geometry, elements, colours: reference data, not tokens
         if tokens[key] != m["value"]:
             print(f"{key}: {tokens[key]} -> {m['value']}  ({m.get('source')} {m.get('at')})")
             tokens[key] = m["value"]
