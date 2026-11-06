@@ -646,6 +646,9 @@ class PrintDialog(Gtk.Window):
         and saving a screenshot into FENESTRA_PORTAL_TEST_SHOT (a directory) if set."""
         for kv in filter(None, os.environ.get("FENESTRA_PORTAL_TEST_SET", "").split(",")):
             k, _sep, v = kv.partition("=")
+            if k == "cancel":
+                self.finish(1)
+                return False
             if k == "printer":
                 self._select_printer(v)
             elif k == "copies":

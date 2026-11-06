@@ -345,6 +345,10 @@ def job_settings(c: Choice, app_already_applied: bool) -> tuple[Gtk.PrintSetting
           .get(c.duplex, "one-sided"))
     if c.number_up > 1:
         s.set("cups-number-up", str(c.number_up))
+    if c.copies > 1:
+        # GTK only adds cups-copies for queues that report the copies capability (not raw ones).
+        s.set("cups-copies", str(c.copies))
+        s.set("cups-collate", "true" if c.collate else "false")
     if app_already_applied:
         # The app already left out unselected pages and applied reverse/scale.
         s.set_print_pages(Gtk.PrintPages.ALL)
