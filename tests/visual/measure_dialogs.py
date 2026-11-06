@@ -312,8 +312,8 @@ FILE_REGIONS = {
     'navigation_pane': ((12, 360), 1),
     'navigation_scrollbar': ((143, 300), 1),
     'details_list': ((560, 300), 1),
-    'bottom_fields_area': ((60, 445), 1),
-    'bottom_buttons_area': ((360, 516), 1),
+    'bottom_fields_area': ((60, 445), 0),
+    'bottom_buttons_area': ((360, 516), 0),
     'filename_field': ((660, 396), 1),
     'type_combo': ((660, 422), 1),
     'encoding_combo': ((660, 508), 1),
@@ -325,7 +325,7 @@ OPEN_REGIONS.update({
     'navigation_pane': ((12, 440), 1),
     'navigation_scrollbar': ((143, 300), 1, (100, 117, 200, 451)),
     'details_list': ((560, 260), 1),
-    'bottom_fields_area': ((60, 456), 1, (0, 451, 946, 533)),
+    'bottom_fields_area': ((60, 456), 0, (0, 451, 946, 533)),
     'filename_field': ((470, 471), 1),
     'type_combo': ((910, 465), 1),
 })
@@ -453,6 +453,13 @@ def file_dialog(kind):
             seed, tol = spec[:2]
             lim = relbox(org, spec[2]) if len(spec) > 2 else None
             o[name] = element(n, rel(org, seed), org, tol, limit=lim, rad=name.endswith(('button', 'combo')))
+        # the pane's own flood stops at the divider line in dark: take the scrollbar's vertical extent and
+        # everything left of it instead
+        sb = o['navigation_scrollbar']
+        npx, npy = rel(org, (1, sb['y']['value']))
+        o['navigation_pane'].update(box_values(n, (npx, npy, org[0] + sb['x']['value'], npy + sb['height']['value']),
+                                               org, (npx, npy)))
+        o['navigation_pane']['note'] = 'x from the window frame to the scrollbar, y = scrollbar extent'
         # selected (but unfocused) navigation item: OneDrive
         o['nav_item_selected'] = element(n, rel(org, (28, 191)), org, 1, rad=False,
                                          states={'focus': p + '-focus-01'})
@@ -699,10 +706,14 @@ def print_dialog():
         p = f'{th}-100-32-print'
         n = shot(p + '-normal')
         # keyboard focus ring around the printer combo in the initial state (2 px outer + 2 px inner gap)
-        x, y = rel(PRINT_ORG, (21, 104))
+        x, y = rel(PRINT_ORG, (21, 115))
         o['focus_ring'] = {'outer_width': V(2, n.name, (x, y)), 'outer_color': color(n, x, y),
-                           'gap_width': V(2, n.name, (x + 2, y + 2)), 'gap_color': color(n, x + 2, y + 2),
+                           'gap_width': V(2, n.name, (x + 2, y)), 'gap_color': color(n, x + 2, y),
                            'note': 'drawn 4 px outside the control border box (ring 2 px + gap 2 px)'}
+        # toggle track colour when on: read left of the knob (the seed is under the knob once it moves)
+        on = shot(p + '-click-toggle-on')
+        o['toggle']['background']['on'] = V(L.hexc(on.px(*rel(PRINT_ORG, (31, 301)))), on.name, rel(PRINT_ORG, (31, 301)))
+        o['toggle']['outline_on'] = color(on, *rel(PRINT_ORG, (25, 301)))
         # the selected-item pill on the left of the printer combo (accent)
         o['printer_combo_pill'] = element(n, rel(PRINT_ORG, (27, 124)), PRINT_ORG, 6, rad=False)
         # toggle knob, off and on
@@ -1259,11 +1270,127 @@ def main():
     for k, f in makers.items():
         if not only or k in only:
             doc[k] = f()
+    add_fenestra_maps(doc)
     if a.print:
         json.dump(doc, sys.stdout, indent=1, ensure_ascii=False)
         return
     write_merged(a.out, doc)
     print('wrote', ', '.join(doc), 'into', a.out)
+
+
+# Where each Fenestra knob should take its value from (theme-independent geometry from the light pass,
+# colours per theme). Paths are inside this file; "dark|light" means both.
+FENESTRA_MAP = {
+    'file_dialog_save': {
+        'gtk.css .win11-dialog-titlebar min-height (30 + 1 px frame)': 'light.titlebar.height',
+        'gtk.css .win11-dialog-titlebar background': '{t}.titlebar.background.normal',
+        'gtk.css .win11-dialog-title margin-left': 'light.text.title.ink.x',
+        'gtk.css .win11-dialog-title font-size': 'light.text.title.font_size',
+        'gtk.css windowcontrols > button min-width': 'light.states.close_button.hover.width',
+        'gtk.css windowcontrols > button min-height': 'light.states.close_button.hover.height',
+        'gtk.css close button hover': '{t}.states.close_button.hover.background',
+        'gtk.css .win11-commandbar min-height (30 + 1 px line)': 'light.command_bar.height',
+        'gtk.css .win11-commandbar background': '{t}.command_bar.background.normal',
+        'gtk.css .win11-chooser-bottom background (fields)': '{t}.bottom_fields_area.background.normal',
+        'gtk.css .win11-chooser-bottom background (buttons strip)': '{t}.bottom_buttons_area.background.normal',
+        'gtk.css label.win11-chooser-caption font-size': 'light.text.filename_label.font_size',
+        'gtk.css entry min-height': 'light.filename_field.height',
+        'gtk.css entry background': '{t}.filename_field.background.normal',
+        'gtk.css entry:focus-within border': '{t}.filename_field.border.top',
+        'gtk.css dropdown > button min-height': 'light.type_combo.height',
+        'gtk.css dropdown > button background': '{t}.type_combo.background.normal',
+        'gtk.css dropdown > button border': '{t}.type_combo.border.top',
+        'gtk.css button.win11-dialog-button min-width': 'light.cancel_button.width',
+        'gtk.css button.win11-dialog-button min-height': 'light.cancel_button.height',
+        'gtk.css button.win11-dialog-button border-radius': 'light.cancel_button.radius',
+        'gtk.css button.win11-dialog-button background': '{t}.cancel_button.background.normal',
+        'gtk.css button.win11-dialog-button border': '{t}.cancel_button.border.top',
+        'gtk.css button.win11-dialog-button:hover': '{t}.states.cancel_button.hover.background',
+        'gtk.css button.win11-dialog-button:active': '{t}.states.cancel_button.pressed.background',
+        'gtk.css .suggested-action border (default button)': '{t}.primary_button.border.top',
+        'nautilus-file-chooser.ui sidebar width (pane + scrollbar)': ['light.navigation_pane.width',
+                                                                      'light.navigation_scrollbar.width'],
+        'sidebar row height': 'light.nav_item_selected.height',
+        'sidebar row hover': '{t}.states.nav_item.hover.background',
+        'sidebar row selected': '{t}.nav_item_selected.background.normal',
+        'list row height': 'light.states.list_row.hover.height',
+        'list row hover': '{t}.states.list_row.hover.background',
+    },
+    'print_dialog': {
+        'metrics.py WINDOW_WIDTH (outer)': 'light.window.width',
+        'metrics.py WINDOW_HEIGHT (outer)': 'light.window.height',
+        'metrics.py LEFT_COLUMN_WIDTH (preview x)': 'light.preview_area.x',
+        'metrics.py LEFT_PADDING left (label ink x)': 'light.text.printer_label.ink.x',
+        'metrics.py HEADING_SIZE': 'light.text.title.font_size',
+        'metrics.py SUMMARY/label size': 'light.text.printer_label.font_size',
+        'metrics.py CONTROL_HEIGHT': 'light.printer_combo.height',
+        'metrics.py FOOTER_HEIGHT (separator + footer + frame)': 'light.footer.height',
+        'metrics.py BUTTON_MIN_WIDTH': 'light.print_button.width',
+        'metrics.py buttons height': 'light.print_button.height',
+        'metrics.py LIGHT/DARK bg': '{t}.body.background.normal',
+        'metrics.py LIGHT/DARK footer': '{t}.footer.background.normal',
+        'metrics.py LIGHT/DARK divider': '{t}.footer_separator.background.normal',
+        'metrics.py LIGHT/DARK ctl': '{t}.print_button.background.normal',
+        'metrics.py LIGHT/DARK ctl-hover': '{t}.print_button.background.hover',
+        'metrics.py LIGHT/DARK ctl-press': '{t}.print_button.background.pressed',
+        'metrics.py LIGHT/DARK ctl-border': '{t}.print_button.border.top',
+        'metrics.py LIGHT/DARK ctl-border-bottom': '{t}.print_button.border.bottom',
+        'metrics.py PREVIEW background': '{t}.preview_area.background.normal',
+        'metrics.py PREVIEW outline': '{t}.preview_area.border.top',
+        'metrics.py fg': '{t}.text.printer_label.color',
+        'metrics.py fg3 (hint)': '{t}.text.print_to_file_hint.color',
+        'metrics.py accent (checkbox)': '{t}.checkbox.background.normal',
+    },
+    'snip_toolbar': {
+        'tokens.json snip.toolbar.top': '{t}.bar.y',
+        'tokens.json snip.toolbar.radius': '{t}.bar.radius',
+        'tokens.json snip.toolbar.padding (fill to selector)': ['{t}.selector.x', '{t}.bar.fill_box.x'],
+        'tokens.json snip.button.width': '{t}.buttons.close_button.hover.width',
+        'tokens.json snip.button.height': '{t}.buttons.close_button.hover.height',
+        'tokens.json snip.button.radius': '{t}.buttons.close_button.hover.radius',
+        'tokens.json snip.separator.height': '{t}.separators.0.height',
+    },
+    'snip_overlay': {
+        'tokens.json snip.dim.opacity': '{t}.dim.scrim_opacity',
+        'tokens.json snip.border.width': '{t}.rectangle_in_progress.outline.width',
+        'tokens.json snip.border.color': '{t}.rectangle_in_progress.outline.color',
+    },
+}
+
+
+def _get(d, path):
+    for part in path.split('.'):
+        if isinstance(d, list):
+            d = d[int(part)]
+        else:
+            d = d.get(part) if isinstance(d, dict) else None
+        if d is None:
+            return None
+    return d
+
+
+def add_fenestra_maps(doc):
+    """Add «fenestra_map» to the sections: Fenestra knob -> path in this section (+ the value found there)."""
+    for sec, m in FENESTRA_MAP.items():
+        if sec not in doc:
+            continue
+        out = {}
+        for knob, path in m.items():
+            paths = path if isinstance(path, list) else [path]
+            entry = {}
+            for th in THEMES:
+                vals = []
+                for pp in paths:
+                    pp = pp.replace('{t}', th)
+                    if not pp.startswith(th + '.') and '{t}' not in path if isinstance(path, str) else False:
+                        pass
+                    v = _get(doc[sec], pp)
+                    vals.append({'path': pp, 'value': v.get('value') if isinstance(v, dict) else v})
+                entry[th] = vals if len(vals) > 1 else vals[0]
+                if not any('{t}' in q for q in paths):
+                    break
+            out[knob] = entry
+        doc[sec]['fenestra_map'] = out
 
 
 def write_merged(path, doc):

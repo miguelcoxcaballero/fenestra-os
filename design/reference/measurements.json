@@ -50415,35 +50415,35 @@
    },
    "navigation_pane": {
     "x": {
-     "value": 0,
+     "value": 1,
      "source": "light-100-30-save-normal.png",
      "at": [
-      259,
-      594
+      248,
+      350
      ]
     },
     "y": {
      "value": 116,
      "source": "light-100-30-save-normal.png",
      "at": [
-      259,
-      594
+      248,
+      350
      ]
     },
     "width": {
-     "value": 141,
+     "value": 140,
      "source": "light-100-30-save-normal.png",
      "at": [
-      259,
-      594
+      248,
+      350
      ]
     },
     "height": {
      "value": 259,
      "source": "light-100-30-save-normal.png",
      "at": [
-      259,
-      594
+      248,
+      350
      ]
     },
     "background": {
@@ -50481,7 +50481,8 @@
        480
       ]
      }
-    }
+    },
+    "note": "x from the window frame to the scrollbar, y = scrollbar extent"
    },
    "navigation_scrollbar": {
     "x": {
@@ -58840,35 +58841,35 @@
    },
    "navigation_pane": {
     "x": {
-     "value": 3,
+     "value": 1,
      "source": "dark-100-30-save-normal.png",
      "at": [
-      325,
-      560
+      314,
+      317
      ]
     },
     "y": {
-     "value": 218,
+     "value": 117,
      "source": "dark-100-30-save-normal.png",
      "at": [
-      325,
-      560
+      314,
+      317
      ]
     },
     "width": {
-     "value": 137,
+     "value": 139,
      "source": "dark-100-30-save-normal.png",
      "at": [
-      325,
-      560
+      314,
+      317
      ]
     },
     "height": {
-     "value": 157,
+     "value": 258,
      "source": "dark-100-30-save-normal.png",
      "at": [
-      325,
-      560
+      314,
+      317
      ]
     },
     "background": {
@@ -58898,7 +58899,8 @@
        418
       ]
      }
-    }
+    },
+    "note": "x from the window frame to the scrollbar, y = scrollbar extent"
    },
    "navigation_scrollbar": {
     "x": {
@@ -66822,7 +66824,275 @@
     }
    }
   },
-  "lang": "es"
+  "lang": "es",
+  "fenestra_map": {
+   "gtk.css .win11-dialog-titlebar min-height (30 + 1 px frame)": {
+    "light": {
+     "path": "light.titlebar.height",
+     "value": 31
+    }
+   },
+   "gtk.css .win11-dialog-titlebar background": {
+    "light": {
+     "path": "light.titlebar.background.normal",
+     "value": "#f3f3f3"
+    },
+    "dark": {
+     "path": "dark.titlebar.background.normal",
+     "value": "#202020"
+    }
+   },
+   "gtk.css .win11-dialog-title margin-left": {
+    "light": {
+     "path": "light.text.title.ink.x",
+     "value": 31
+    }
+   },
+   "gtk.css .win11-dialog-title font-size": {
+    "light": {
+     "path": "light.text.title.font_size",
+     "value": 12
+    }
+   },
+   "gtk.css windowcontrols > button min-width": {
+    "light": {
+     "path": "light.states.close_button.hover.width",
+     "value": 32
+    }
+   },
+   "gtk.css windowcontrols > button min-height": {
+    "light": {
+     "path": "light.states.close_button.hover.height",
+     "value": 31
+    }
+   },
+   "gtk.css close button hover": {
+    "light": {
+     "path": "light.states.close_button.hover.background",
+     "value": "#c42b1c"
+    },
+    "dark": {
+     "path": "dark.states.close_button.hover.background",
+     "value": "#c42b1c"
+    }
+   },
+   "gtk.css .win11-commandbar min-height (30 + 1 px line)": {
+    "light": {
+     "path": "light.command_bar.height",
+     "value": 31
+    }
+   },
+   "gtk.css .win11-commandbar background": {
+    "light": {
+     "path": "light.command_bar.background.normal",
+     "value": "#f5f6f7"
+    },
+    "dark": {
+     "path": "dark.command_bar.background.normal",
+     "value": "#202020"
+    }
+   },
+   "gtk.css .win11-chooser-bottom background (fields)": {
+    "light": {
+     "path": "light.bottom_fields_area.background.normal",
+     "value": "#f9f9f9"
+    },
+    "dark": {
+     "path": "dark.bottom_fields_area.background.normal",
+     "value": "#383838"
+    }
+   },
+   "gtk.css .win11-chooser-bottom background (buttons strip)": {
+    "light": {
+     "path": "light.bottom_buttons_area.background.normal",
+     "value": "#f0f0f0"
+    },
+    "dark": {
+     "path": "dark.bottom_buttons_area.background.normal",
+     "value": "#383838"
+    }
+   },
+   "gtk.css label.win11-chooser-caption font-size": {
+    "light": {
+     "path": "light.text.filename_label.font_size",
+     "value": 12
+    }
+   },
+   "gtk.css entry min-height": {
+    "light": {
+     "path": "light.filename_field.height",
+     "value": 23
+    }
+   },
+   "gtk.css entry background": {
+    "light": {
+     "path": "light.filename_field.background.normal",
+     "value": "#ffffff"
+    },
+    "dark": {
+     "path": "dark.filename_field.background.normal",
+     "value": "#383838"
+    }
+   },
+   "gtk.css entry:focus-within border": {
+    "light": {
+     "path": "light.filename_field.border.top",
+     "value": "#0078d4"
+    },
+    "dark": {
+     "path": "dark.filename_field.border.top",
+     "value": "#ffffff"
+    }
+   },
+   "gtk.css dropdown > button min-height": {
+    "light": {
+     "path": "light.type_combo.height",
+     "value": 23
+    }
+   },
+   "gtk.css dropdown > button background": {
+    "light": {
+     "path": "light.type_combo.background.normal",
+     "value": "#fdfdfd"
+    },
+    "dark": {
+     "path": "dark.type_combo.background.normal",
+     "value": "#333333"
+    }
+   },
+   "gtk.css dropdown > button border": {
+    "light": {
+     "path": "light.type_combo.border.top",
+     "value": "#d2d2d2"
+    },
+    "dark": {
+     "path": "dark.type_combo.border.top",
+     "value": "#9b9b9b"
+    }
+   },
+   "gtk.css button.win11-dialog-button min-width": {
+    "light": {
+     "path": "light.cancel_button.width",
+     "value": 86
+    }
+   },
+   "gtk.css button.win11-dialog-button min-height": {
+    "light": {
+     "path": "light.cancel_button.height",
+     "value": 24
+    }
+   },
+   "gtk.css button.win11-dialog-button border-radius": {
+    "light": {
+     "path": "light.cancel_button.radius",
+     "value": 3
+    }
+   },
+   "gtk.css button.win11-dialog-button background": {
+    "light": {
+     "path": "light.cancel_button.background.normal",
+     "value": "#fdfdfd"
+    },
+    "dark": {
+     "path": "dark.cancel_button.background.normal",
+     "value": "#333333"
+    }
+   },
+   "gtk.css button.win11-dialog-button border": {
+    "light": {
+     "path": "light.cancel_button.border.top",
+     "value": "#d0d0d0"
+    },
+    "dark": {
+     "path": "dark.cancel_button.border.top",
+     "value": "#9b9b9b"
+    }
+   },
+   "gtk.css button.win11-dialog-button:hover": {
+    "light": {
+     "path": "light.states.cancel_button.hover.background",
+     "value": "#e0eef9"
+    },
+    "dark": {
+     "path": "dark.states.cancel_button.hover.background",
+     "value": "#454545"
+    }
+   },
+   "gtk.css button.win11-dialog-button:active": {
+    "light": {
+     "path": "light.states.cancel_button.pressed.background",
+     "value": "#cce4f7"
+    },
+    "dark": {
+     "path": "dark.states.cancel_button.pressed.background",
+     "value": "#666666"
+    }
+   },
+   "gtk.css .suggested-action border (default button)": {
+    "light": {
+     "path": "light.primary_button.border.top",
+     "value": "#0078d4"
+    },
+    "dark": {
+     "path": "dark.primary_button.border.top",
+     "value": "#ffffff"
+    }
+   },
+   "nautilus-file-chooser.ui sidebar width (pane + scrollbar)": {
+    "light": [
+     {
+      "path": "light.navigation_pane.width",
+      "value": 140
+     },
+     {
+      "path": "light.navigation_scrollbar.width",
+      "value": 16
+     }
+    ]
+   },
+   "sidebar row height": {
+    "light": {
+     "path": "light.nav_item_selected.height",
+     "value": 32
+    }
+   },
+   "sidebar row hover": {
+    "light": {
+     "path": "light.states.nav_item.hover.background",
+     "value": "#e5f3ff"
+    },
+    "dark": {
+     "path": "dark.states.nav_item.hover.background",
+     "value": "#4d4d4d"
+    }
+   },
+   "sidebar row selected": {
+    "light": {
+     "path": "light.nav_item_selected.background.normal",
+     "value": "#d9d9d9"
+    },
+    "dark": {
+     "path": "dark.nav_item_selected.background.normal",
+     "value": "#333333"
+    }
+   },
+   "list row height": {
+    "light": {
+     "path": "light.states.list_row.hover.height",
+     "value": 24
+    }
+   },
+   "list row hover": {
+    "light": {
+     "path": "light.states.list_row.hover.background",
+     "value": "#e5f3ff"
+    },
+    "dark": {
+     "path": "dark.states.list_row.hover.background",
+     "value": "#4d4d4d"
+    }
+   }
+  }
  },
  "file_dialog_open": {
   "_about": "«Abrir» (Bloc de notas, Ctrl+A): the whole dialog is in English in this VM.",
@@ -67297,35 +67567,35 @@
    },
    "navigation_pane": {
     "x": {
-     "value": 0,
+     "value": 1,
      "source": "light-100-31-open-normal.png",
      "at": [
-      259,
-      674
+      248,
+      350
      ]
     },
     "y": {
      "value": 116,
      "source": "light-100-31-open-normal.png",
      "at": [
-      259,
-      674
+      248,
+      350
      ]
     },
     "width": {
-     "value": 141,
+     "value": 140,
      "source": "light-100-31-open-normal.png",
      "at": [
-      259,
-      674
+      248,
+      350
      ]
     },
     "height": {
      "value": 335,
      "source": "light-100-31-open-normal.png",
      "at": [
-      259,
-      674
+      248,
+      350
      ]
     },
     "background": {
@@ -67363,7 +67633,8 @@
        518
       ]
      }
-    }
+    },
+    "note": "x from the window frame to the scrollbar, y = scrollbar extent"
    },
    "navigation_scrollbar": {
     "x": {
@@ -75695,35 +75966,35 @@
    },
    "navigation_pane": {
     "x": {
-     "value": 3,
+     "value": 1,
      "source": "dark-100-31-open-normal.png",
      "at": [
-      325,
-      640
+      314,
+      317
      ]
     },
     "y": {
-     "value": 218,
+     "value": 117,
      "source": "dark-100-31-open-normal.png",
      "at": [
-      325,
-      640
+      314,
+      317
      ]
     },
     "width": {
-     "value": 137,
+     "value": 139,
      "source": "dark-100-31-open-normal.png",
      "at": [
-      325,
-      640
+      314,
+      317
      ]
     },
     "height": {
-     "value": 233,
+     "value": 334,
      "source": "dark-100-31-open-normal.png",
      "at": [
-      325,
-      640
+      314,
+      317
      ]
     },
     "background": {
@@ -75753,7 +76024,8 @@
        418
       ]
      }
-    }
+    },
+    "note": "x from the window frame to the scrollbar, y = scrollbar extent"
    },
    "navigation_scrollbar": {
     "x": {
@@ -93718,10 +93990,10 @@
       ]
      },
      "on": {
-      "value": "#ffffff",
+      "value": "#0067c0",
       "source": "light-100-32-print-click-toggle-on.png",
       "at": [
-       430,
+       405,
        418
       ]
      },
@@ -93868,6 +94140,14 @@
     "outline": {
      "value": "#8a8a8a",
      "source": "light-100-32-print-normal.png",
+     "at": [
+      399,
+      418
+     ]
+    },
+    "outline_on": {
+     "value": "#0469c1",
+     "source": "light-100-32-print-click-toggle-on.png",
      "at": [
       399,
       418
@@ -97087,15 +97367,15 @@
      "source": "light-100-32-print-normal.png",
      "at": [
       395,
-      221
+      232
      ]
     },
     "outer_color": {
-     "value": "#f9f9f9",
+     "value": "#1a1a1a",
      "source": "light-100-32-print-normal.png",
      "at": [
       395,
-      221
+      232
      ]
     },
     "gap_width": {
@@ -97103,15 +97383,15 @@
      "source": "light-100-32-print-normal.png",
      "at": [
       397,
-      223
+      232
      ]
     },
     "gap_color": {
-     "value": "#4b4b4b",
+     "value": "#fdfdfd",
      "source": "light-100-32-print-normal.png",
      "at": [
       397,
-      223
+      232
      ]
     },
     "note": "drawn 4 px outside the control border box (ring 2 px + gap 2 px)"
@@ -97865,10 +98145,10 @@
       ]
      },
      "on": {
-      "value": "#000000",
+      "value": "#4cc2ff",
       "source": "dark-100-32-print-click-toggle-on.png",
       "at": [
-       430,
+       405,
        418
       ]
      },
@@ -98015,6 +98295,14 @@
     "outline": {
      "value": "#9b9b9b",
      "source": "dark-100-32-print-normal.png",
+     "at": [
+      399,
+      418
+     ]
+    },
+    "outline_on": {
+     "value": "#4cc0fc",
+     "source": "dark-100-32-print-click-toggle-on.png",
      "at": [
       399,
       418
@@ -100758,15 +101046,15 @@
      "source": "dark-100-32-print-normal.png",
      "at": [
       395,
-      221
+      232
      ]
     },
     "outer_color": {
-     "value": "#282828",
+     "value": "#ffffff",
      "source": "dark-100-32-print-normal.png",
      "at": [
       395,
-      221
+      232
      ]
     },
     "gap_width": {
@@ -100774,15 +101062,15 @@
      "source": "dark-100-32-print-normal.png",
      "at": [
       397,
-      223
+      232
      ]
     },
     "gap_color": {
-     "value": "#d0d0d0",
+     "value": "#353535",
      "source": "dark-100-32-print-normal.png",
      "at": [
       397,
-      223
+      232
      ]
     },
     "note": "drawn 4 px outside the control border box (ring 2 px + gap 2 px)"
@@ -100930,6 +101218,198 @@
    },
    "preview_nav": {
     "note": "prev/next page arrows are disabled (single page, no preview); hover shows nothing"
+   }
+  },
+  "fenestra_map": {
+   "metrics.py WINDOW_WIDTH (outer)": {
+    "light": {
+     "path": "light.window.width",
+     "value": 852
+    }
+   },
+   "metrics.py WINDOW_HEIGHT (outer)": {
+    "light": {
+     "path": "light.window.height",
+     "value": 734
+    }
+   },
+   "metrics.py LEFT_COLUMN_WIDTH (preview x)": {
+    "light": {
+     "path": "light.preview_area.x",
+     "value": 316
+    }
+   },
+   "metrics.py LEFT_PADDING left (label ink x)": {
+    "light": {
+     "path": "light.text.printer_label.ink.x",
+     "value": 26
+    }
+   },
+   "metrics.py HEADING_SIZE": {
+    "light": {
+     "path": "light.text.title.font_size",
+     "value": 14
+    }
+   },
+   "metrics.py SUMMARY/label size": {
+    "light": {
+     "path": "light.text.printer_label.font_size",
+     "value": 14
+    }
+   },
+   "metrics.py CONTROL_HEIGHT": {
+    "light": {
+     "path": "light.printer_combo.height",
+     "value": 32
+    }
+   },
+   "metrics.py FOOTER_HEIGHT (separator + footer + frame)": {
+    "light": {
+     "path": "light.footer.height",
+     "value": 82
+    }
+   },
+   "metrics.py BUTTON_MIN_WIDTH": {
+    "light": {
+     "path": "light.print_button.width",
+     "value": 193
+    }
+   },
+   "metrics.py buttons height": {
+    "light": {
+     "path": "light.print_button.height",
+     "value": 32
+    }
+   },
+   "metrics.py LIGHT/DARK bg": {
+    "light": {
+     "path": "light.body.background.normal",
+     "value": "#f9f9f9"
+    },
+    "dark": {
+     "path": "dark.body.background.normal",
+     "value": "#282828"
+    }
+   },
+   "metrics.py LIGHT/DARK footer": {
+    "light": {
+     "path": "light.footer.background.normal",
+     "value": "#f3f3f3"
+    },
+    "dark": {
+     "path": "dark.footer.background.normal",
+     "value": "#202020"
+    }
+   },
+   "metrics.py LIGHT/DARK divider": {
+    "light": {
+     "path": "light.footer_separator.background.normal",
+     "value": "#eaeaea"
+    },
+    "dark": {
+     "path": "dark.footer_separator.background.normal",
+     "value": "#373737"
+    }
+   },
+   "metrics.py LIGHT/DARK ctl": {
+    "light": {
+     "path": "light.print_button.background.normal",
+     "value": "#fbfbfb"
+    },
+    "dark": {
+     "path": "dark.print_button.background.normal",
+     "value": "#2d2d2d"
+    }
+   },
+   "metrics.py LIGHT/DARK ctl-hover": {
+    "light": {
+     "path": "light.print_button.background.hover",
+     "value": "#f6f6f6"
+    },
+    "dark": {
+     "path": "dark.print_button.background.hover",
+     "value": "#323232"
+    }
+   },
+   "metrics.py LIGHT/DARK ctl-press": {
+    "light": {
+     "path": "light.print_button.background.pressed",
+     "value": "#f5f5f5"
+    },
+    "dark": {
+     "path": "dark.print_button.background.pressed",
+     "value": "#272727"
+    }
+   },
+   "metrics.py LIGHT/DARK ctl-border": {
+    "light": {
+     "path": "light.print_button.border.top",
+     "value": "#e5e5e5"
+    },
+    "dark": {
+     "path": "dark.print_button.border.top",
+     "value": null
+    }
+   },
+   "metrics.py LIGHT/DARK ctl-border-bottom": {
+    "light": {
+     "path": "light.print_button.border.bottom",
+     "value": "#cccccc"
+    },
+    "dark": {
+     "path": "dark.print_button.border.bottom",
+     "value": null
+    }
+   },
+   "metrics.py PREVIEW background": {
+    "light": {
+     "path": "light.preview_area.background.normal",
+     "value": "#f9f9f9"
+    },
+    "dark": {
+     "path": "dark.preview_area.background.normal",
+     "value": "#282828"
+    }
+   },
+   "metrics.py PREVIEW outline": {
+    "light": {
+     "path": "light.preview_area.border.top",
+     "value": "#d1d1d1"
+    },
+    "dark": {
+     "path": "dark.preview_area.border.top",
+     "value": "#3c3c3c"
+    }
+   },
+   "metrics.py fg": {
+    "light": {
+     "path": "light.text.printer_label.color",
+     "value": "#1a1a1a"
+    },
+    "dark": {
+     "path": "dark.text.printer_label.color",
+     "value": "#ffffff"
+    }
+   },
+   "metrics.py fg3 (hint)": {
+    "light": {
+     "path": "light.text.print_to_file_hint.color",
+     "value": "#8a8a8a"
+    },
+    "dark": {
+     "path": "dark.text.print_to_file_hint.color",
+     "value": "#9d9d9d"
+    }
+   },
+   "metrics.py accent (checkbox)": {
+    "light": {
+     "path": "light.checkbox.background.normal",
+     "value": "#0067c0"
+    },
+    "dark": {
+     "path": "dark.checkbox.background.normal",
+     "value": "#4cc2ff"
+    }
    }
   }
  },
@@ -109262,6 +109742,38 @@
      }
     }
    }
+  },
+  "fenestra_map": {
+   "tokens.json snip.dim.opacity": {
+    "light": {
+     "path": "light.dim.scrim_opacity",
+     "value": 0.603
+    },
+    "dark": {
+     "path": "dark.dim.scrim_opacity",
+     "value": 0.605
+    }
+   },
+   "tokens.json snip.border.width": {
+    "light": {
+     "path": "light.rectangle_in_progress.outline.width",
+     "value": 1
+    },
+    "dark": {
+     "path": "dark.rectangle_in_progress.outline.width",
+     "value": 1
+    }
+   },
+   "tokens.json snip.border.color": {
+    "light": {
+     "path": "light.rectangle_in_progress.outline.color",
+     "value": "#ffffff"
+    },
+    "dark": {
+     "path": "dark.rectangle_in_progress.outline.color",
+     "value": "#ffffff"
+    }
+   }
   }
  },
  "snip_toolbar": {
@@ -114291,6 +114803,90 @@
     },
     "lang": "en",
     "selected_entry": "Rectangle (accent pill on the left)"
+   }
+  },
+  "fenestra_map": {
+   "tokens.json snip.toolbar.top": {
+    "light": {
+     "path": "light.bar.y",
+     "value": 13
+    },
+    "dark": {
+     "path": "dark.bar.y",
+     "value": 12
+    }
+   },
+   "tokens.json snip.toolbar.radius": {
+    "light": {
+     "path": "light.bar.radius",
+     "value": 7
+    },
+    "dark": {
+     "path": "dark.bar.radius",
+     "value": 7
+    }
+   },
+   "tokens.json snip.toolbar.padding (fill to selector)": {
+    "light": [
+     {
+      "path": "light.selector.x",
+      "value": 803
+     },
+     {
+      "path": "light.bar.fill_box.x",
+      "value": 795
+     }
+    ],
+    "dark": [
+     {
+      "path": "dark.selector.x",
+      "value": 803
+     },
+     {
+      "path": "dark.bar.fill_box.x",
+      "value": 795
+     }
+    ]
+   },
+   "tokens.json snip.button.width": {
+    "light": {
+     "path": "light.buttons.close_button.hover.width",
+     "value": 32
+    },
+    "dark": {
+     "path": "dark.buttons.close_button.hover.width",
+     "value": 32
+    }
+   },
+   "tokens.json snip.button.height": {
+    "light": {
+     "path": "light.buttons.close_button.hover.height",
+     "value": 32
+    },
+    "dark": {
+     "path": "dark.buttons.close_button.hover.height",
+     "value": 32
+    }
+   },
+   "tokens.json snip.button.radius": {
+    "light": {
+     "path": "light.buttons.close_button.hover.radius",
+     "value": 3
+    },
+    "dark": {
+     "path": "dark.buttons.close_button.hover.radius",
+     "value": 3
+    }
+   },
+   "tokens.json snip.separator.height": {
+    "light": {
+     "path": "light.separators.0.height",
+     "value": 24
+    },
+    "dark": {
+     "path": "dark.separators.0.height",
+     "value": 24
+    }
    }
   }
  },
