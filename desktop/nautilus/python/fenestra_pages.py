@@ -2,6 +2,7 @@
 Nautilus' file view for those locations. Navigation and file actions stay native:
 items open through the slot's own 'open-location' action or the default application."""
 import json
+import locale
 import os
 import time
 from pathlib import Path
@@ -18,7 +19,7 @@ _L.setdefault('es', {}).update({
     'Quick access': 'Acceso rápido', 'Stored locally': 'Almacenado localmente', 'Recent': 'Reciente',
     'Favorites': 'Favoritos', 'Shared': 'Compartido', 'Your recent activity will show here': 'Tu actividad reciente se mostrará aquí',
     "You'll get quick access to your recently used files here.": 'Aquí tendrás acceso rápido a los archivos que usaste recientemente.',
-    'Name': 'Nombre', 'Date accessed': 'Fecha de acceso', 'File location': 'Ubicación del archivo',
+    'Name': 'Nombre', 'Date accessed': 'Fecha de acceso', 'File location': 'Ubicación del archivo', 'Activity': 'Actividad',
     'Devices and drives': 'Dispositivos y unidades', 'Local Disk': 'Disco local', '%s free of %s': '%s disponibles de %s',
     'Gallery is a place to view your photos in File Explorer': 'Galería es un lugar para ver tus fotos en el Explorador de archivos',
     'Add any folder with photos in it to get started.': 'Agrega cualquier carpeta que contenga fotos para empezar.',
@@ -86,7 +87,8 @@ def icon(name, size):
 def human_size(n):
     for unit in ('bytes', 'KB', 'MB', 'GB', 'TB'):
         if n < 1024 or unit == 'TB':
-            return f'{n:.0f} {unit}' if unit == 'bytes' else f'{n:.1f} {unit}'
+            # Explorer writes the locale's decimal separator (31,1 GB in Spanish).
+            return f'{n:.0f} {unit}' if unit == 'bytes' else f'{n:.1f} {unit}'.replace('.', locale.localeconv()['decimal_point'])
         n /= 1024.0
 
 
@@ -100,6 +102,13 @@ def _double_click(widget, callback):
     gesture = Gtk.GestureClick(button=1)
     gesture.connect('pressed', lambda g, n, x, y: callback() if n == 2 else None)
     widget.add_controller(gesture)
+
+
+def _shown_name(name):
+    """Explorer hides the extension of registered file types; Recent only lists files an
+    application opened, so drop it there."""
+    stem, dot, ext = name.rpartition('.')
+    return stem if dot and stem and ' ' not in ext and len(ext) <= 5 else name
 
 
 class Page:
@@ -144,7 +153,7 @@ class HomePage(Page):
         tabs = Gtk.Box(spacing=8)
         tabs.add_css_class('fenestra-home-tabs')
         chevron = Gtk.ToggleButton(active=True)
-        chevron.set_child(icon('win11-explorer-chevron-down', 12))
+        chevron.set_child(icon('win11-explorer-chevron-down', 18))
         chevron.add_css_class('flat')
         chevron.add_css_class('fenestra-section-chevron')
         tabs.append(chevron)
@@ -184,7 +193,7 @@ class HomePage(Page):
     def _section_header(self, text, box):
         button = Gtk.ToggleButton(active=True, halign=Gtk.Align.START)
         inner = Gtk.Box(spacing=12)
-        chev = icon('win11-explorer-chevron-down', 12)
+        chev = icon('win11-explorer-chevron-down', 18)
         inner.append(chev)
         inner.append(label(text, 'fenestra-section-title', ellipsize=False))
         button.set_child(inner)
@@ -208,12 +217,14 @@ class HomePage(Page):
             path = _special(kind)
             if not path or not os.path.isdir(path):
                 continue
-            tile = Gtk.Box(spacing=14)
+            tile = Gtk.Box(spacing=10)
             tile.add_css_class('fenestra-quick-tile')
             tile.append(icon(glyph, 48))
             text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
             text.append(label(tr(name), 'fenestra-tile-name'))
-            text.append(label(tr('Stored locally'), 'fenestra-tile-sub'))
+            sub = label(tr('Stored locally'), 'fenestra-tile-sub')
+            sub.set_max_width_chars(19)  # Explorer cuts it at the tile's 114 px text width
+            text.append(sub)
             pin = icon('win11-explorer-pin', 12)
             pin.set_halign(Gtk.Align.START)
             pin.add_css_class('fenestra-tile-pin')
@@ -226,7 +237,15 @@ class HomePage(Page):
             n += 1
         self.pinned = n
         self.refresh_recent()
-        GLib.timeout_add(400, lambda: (self.quick.get_mapped() and self.quick.grab_focus(), GLib.SOURCE_REMOVE)[1])
+        GLib.timeout_add(400, self._focus_quick)
+
+    def _focus_quick(self):
+        # Keyboard focus starts on Quick access, without a focus ring until a key is used (Explorer).
+        if self.quick.get_mapped() and self.quick.grab_focus():
+            root = self.quick.get_root()
+            if root:
+                root.set_focus_visible(False)
+        return GLib.SOURCE_REMOVE
 
     def select_tab(self, key):
         self.tab = key
@@ -265,7 +284,8 @@ class HomePage(Page):
         header = Gtk.Box()
         header.add_css_class('fenestra-details-header')
         # Column minimums shrink with the window (Name takes the slack), like Explorer's Details.
-        for i, (text, width) in enumerate(((tr('Name'), 160), (tr('Date accessed'), 150), (tr('File location'), 180))):
+        # Explorer: Name 314 px (takes the slack), Date accessed 184, File location 182, Activity 182.
+        for i, (text, width) in enumerate(((tr('Name'), 160), (tr('Date accessed'), 184), (tr('File location'), 182), (tr('Activity'), 182))):
             cell = label(text, 'fenestra-col-title')
             cell.set_size_request(width, -1)
             cell.set_hexpand(i == 0)
@@ -279,10 +299,10 @@ class HomePage(Page):
             row = Gtk.ListBoxRow()
             row._uri = info.get_uri()
             line = Gtk.Box()
-            name = Gtk.Box(spacing=8, hexpand=True)
+            name = Gtk.Box(spacing=17, hexpand=True)
             name.set_size_request(160, -1)
             name.append(icon(info.get_gicon() or 'text-x-generic', 16))
-            title = label(info.get_display_name(), 'fenestra-cell')
+            title = label(_shown_name(info.get_display_name()), 'fenestra-cell')
             title.set_max_width_chars(1)
             title.set_hexpand(True)
             name.append(title)
@@ -290,7 +310,7 @@ class HomePage(Page):
             visited = info.get_visited() or info.get_modified()
             stamp = time.strftime('%d/%m/%Y %H:%M', time.localtime(_unix(visited)))
             when = label(stamp, 'fenestra-cell', 'dim')
-            when.set_size_request(150, -1)
+            when.set_size_request(184, -1)
             line.append(when)
             parent = Gio.File.new_for_uri(info.get_uri()).get_parent()
             where = parent.get_path() if parent else ''
@@ -303,10 +323,13 @@ class HomePage(Page):
                     if p and parent.get_path() == p:
                         where = tr(nm)
             loc = label(where, 'fenestra-cell', 'dim')
-            loc.set_size_request(180, -1)
+            loc.set_size_request(182, -1)
             loc.set_max_width_chars(1)
             when.set_max_width_chars(1)
             line.append(loc)
+            activity = label('', 'fenestra-cell', 'dim')
+            activity.set_size_request(182, -1)
+            line.append(activity)
             row.set_child(line)
             rows.append(row)
         self.listing.append(rows)

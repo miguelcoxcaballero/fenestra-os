@@ -22,6 +22,9 @@ _L.setdefault('es', {}).update({
     'Rename': 'Cambiar nombre', 'Share': 'Compartir', 'Delete': 'Eliminar', 'No preview available.': 'No hay vista previa disponible.',
     'Select a single file to preview.': 'Selecciona un solo archivo para obtener una vista previa.',
     '%d items selected': '%d elementos seleccionados', 'Sort': 'Ordenar', 'View': 'Ver',
+    'Folder': 'Carpeta', 'Text Document': 'Documento de texto', 'New Text Document': 'Nuevo Documento de texto',
+    'Compressed (zipped) Folder': 'Carpeta comprimida (en zip)',
+    'New Compressed (zipped) Folder': 'Nueva carpeta comprimida (en zip)',
 })
 
 
@@ -391,11 +394,60 @@ class CommandMenus:
         menu.item(tr('Options'), 'win11-menu-settings', activate=lambda: Gio.Application.get_default().activate_action('preferences', None))
         return menu
 
+    def current_dir(self):
+        slot = self.slot()
+        location = slot.get_property('location') if slot else None
+        return location if location and location.get_path() else None
+
+    def create_file(self, name, ext, data=b''):
+        """Explorer's New > Text Document / Compressed folder: an empty file with the next free name."""
+        folder = self.current_dir()
+        if folder is None:
+            return
+        for n in range(1, 1000):
+            child = folder.get_child(f'{name}{"" if n == 1 else f" ({n})"}{ext}')
+            try:
+                stream = child.create(Gio.FileCreateFlags.NONE, None)
+            except GLib.Error:
+                continue
+            if data:
+                stream.write_bytes(GLib.Bytes.new(data), None)
+            stream.close(None)
+            return
+
+    def build_new_menu(self):
+        menu = WinMenu(marks=False)
+        # Explorer opens New's menu from the button's left edge (not centred, which would
+        # push it off the window's left side).
+        def align(popover):
+            # The menu's own width (its box + the 1 px borders), not the popover's shadow area.
+            width = popover.get_child().measure(Gtk.Orientation.HORIZONTAL, -1)[1] + 2
+            rect = Gdk.Rectangle()
+            rect.x, rect.y, rect.width = -1, 0, width
+            rect.height = popover.get_parent().get_height() if popover.get_parent() else 32
+            popover.set_pointing_to(rect)
+        menu.popover.connect('show', align)
+        menu.item(tr('Folder'), 'win11-menu-folder', activate=lambda: self.act('view.new-folder'))
+        menu.item(tr('Text Document'), 'win11-menu-document',
+                  activate=lambda: self.create_file(tr('New Text Document'), '.txt'))
+        # An empty ZIP archive is its 22-byte end-of-central-directory record.
+        menu.item(tr('Compressed (zipped) Folder'), 'win11-menu-zipfolder',
+                  activate=lambda: self.create_file(tr('New Compressed (zipped) Folder'), '.zip', b'PK\x05\x06' + bytes(18)))
+        return menu
+
     def ensure(self, bar):
         """Install the dropdown buttons in the command bar once per window."""
         if getattr(self.window, '_fenestra_menus', False):
             return
         self.window._fenestra_menus = True
+        # New is a dropdown in Explorer (Folder, ..., Text Document, Compressed folder).
+        new = next((w for w in walk(bar) if isinstance(w, Gtk.Actionable) and w.get_action_name() == 'view.new-folder'), None)
+        if new is not None and new.get_parent() is bar:
+            self.new_button = command_button('New', 'win11-explorer-add')
+            self.new_button.set_popover(self.build_new_menu().popover)
+            new.bind_property('sensitive', self.new_button, 'sensitive', GObject.BindingFlags.SYNC_CREATE)
+            bar.insert_child_after(self.new_button, new)
+            new.set_visible(False)
         controls = next((w for w in walk(bar) if GObject.type_name(w.__gtype__) == 'NautilusViewControls'), None)
         self.sort_button = command_button('Sort', 'win11-explorer-sort')
         self.sort_button.set_popover(self.build_sort_menu().popover)
