@@ -324,6 +324,8 @@ class SettingRow(Gtk.Box):
         self.control = control
         if control is not None:
             self.suffix.append(control)
+        if isinstance(control, ToggleSwitch):
+            self.add_css_class("has-toggle")  # toggle rows are 1 px taller in the reference
         if chevron or external:
             self.suffix.append(icon("fs-open-symbolic" if external else "fs-chevron-right-symbolic",
                                     20 if not external else 16, "row-chevron"))
@@ -368,6 +370,8 @@ class SettingRow(Gtk.Box):
         self.control = w
         if w is not None:
             self.suffix.prepend(w)
+        if isinstance(w, ToggleSwitch):
+            self.add_css_class("has-toggle")
 
     def flash(self):
         self.add_css_class("highlight")

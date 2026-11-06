@@ -12,7 +12,7 @@ from ..i18n import N_, _
 from ..widgets import (Dropdown, ExpanderRow, SettingRow, Slider, ToggleSwitch, button, label,
                        not_available_row, toast)
 from .base import Page, register
-from .common import Thumb, gsetting_dropdown, gsetting_toggle, theme_preview, wallpaper_thumb
+from .common import Thumb, gsetting_dropdown, gsetting_toggle, theme_preview, theme_tiles, wallpaper_thumb
 
 BG = "org.gnome.desktop.background"
 SS = "org.gnome.desktop.screensaver"
@@ -58,34 +58,42 @@ def set_wallpaper(path):
     return appearance.set_wallpaper(path)
 
 
-def preview_card(width=300, height=188):
-    """Large desktop preview with a mini taskbar."""
+def preview_card(width=319, height=172):
+    """Desktop preview like the reference: 8 px black bezel around the wallpaper and a
+    96x96 mini window (four text lines and an accent button) near the bottom right."""
+    frame = Gtk.Box()
+    frame.add_css_class("preview-frame")
+    frame.set_halign(Gtk.Align.START)
+    frame.set_valign(Gtk.Align.START)
     ov = Gtk.Overlay()
     ov.add_css_class("preview-card")
-    ov.set_halign(Gtk.Align.START)
     ov.set_child(wallpaper_thumb(width, height, "preview-thumb"))
-    bar = Gtk.Box()
-    bar.add_css_class("mini-taskbar")
-    bar.set_valign(Gtk.Align.END)
-    bar.set_size_request(width, 14)
-    dots = Gtk.Box(spacing=4, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER, hexpand=True)
-    for i in range(4):
-        d = Gtk.Box()
-        d.add_css_class("mini-taskbar-icon")
-        if i == 0:
-            d.add_css_class("accent")
-        d.set_size_request(8, 8)
-        dots.append(d)
-    bar.append(dots)
-    ov.add_overlay(bar)
-    win = Gtk.Box()
-    win.add_css_class("mini-window")
+    win = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+    win.add_css_class("preview-window")
     win.add_css_class("dark" if theme.get().dark else "light")
-    win.set_size_request(width // 3, height // 3)
-    win.set_halign(Gtk.Align.CENTER)
-    win.set_valign(Gtk.Align.CENTER)
+    win.set_size_request(96, 96)
+    win.set_halign(Gtk.Align.END)
+    win.set_valign(Gtk.Align.END)
+    win.set_margin_end(9)
+    win.set_margin_bottom(22)
+    for i, w in enumerate((72, 72, 72, 42)):
+        ln = Gtk.Box()
+        ln.add_css_class("preview-line")
+        ln.set_size_request(w, 1)
+        ln.set_halign(Gtk.Align.START)
+        ln.set_margin_start(12)
+        ln.set_margin_top(12 if i == 0 else 8)
+        win.append(ln)
+    btn = Gtk.Box()
+    btn.add_css_class("preview-button")
+    btn.set_size_request(24, 8)
+    btn.set_halign(Gtk.Align.START)
+    btn.set_margin_start(60)
+    btn.set_margin_top(34)
+    win.append(btn)
     ov.add_overlay(win)
-    return ov
+    frame.append(ov)
+    return frame
 
 
 @register
@@ -104,23 +112,14 @@ class PersonalizationPage(Page):
     ]
 
     def build(self, box):
-        top = Gtk.Box(spacing=24)
-        top.add_css_class("hero")
-        top.append(preview_card(300, 188))
-        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, hexpand=True)
-        right.append(label(_("Select a theme to apply"), "body-strong"))
-        flow = Gtk.Box(spacing=8)
-        dark_now = theme.get().dark
-        for dark in (False, True):
-            b = Gtk.Button()
-            b.add_css_class("theme-thumb")
-            if dark == dark_now:
-                b.add_css_class("selected")
-            b.set_child(theme_preview(dark, 128, 80))
-            b.connect("clicked", lambda _b, d=dark: appearance.set_color_scheme("dark" if d else "light"))
-            b.set_tooltip_text(_("Dark") if dark else _("Light"))
-            flow.append(b)
-        right.append(flow)
+        top = Gtk.Box(spacing=46)
+        top.add_css_class("personalization-hero")
+        pv = preview_card()
+        pv.set_valign(Gtk.Align.CENTER)
+        top.append(pv)
+        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0, hexpand=True)
+        right.append(label(_("Select a theme to apply"), ["body-strong", "theme-tiles-label"]))
+        right.append(theme_tiles())
         top.append(right)
         box.append(top)
         g = self.group()
@@ -146,8 +145,8 @@ class BackgroundPage(Page):
 
     def build(self, box):
         self.preview_holder = Gtk.Box()
-        self.preview_holder.add_css_class("hero")
-        self.preview_holder.append(preview_card(300, 188))
+        self.preview_holder.add_css_class("preview-hero")
+        self.preview_holder.append(preview_card())
         box.append(self.preview_holder)
         g = self.group()
         mode = appearance.background_mode()
@@ -210,7 +209,7 @@ class BackgroundPage(Page):
         from . import common
         common._thumb_cache.clear()
         clear(self.preview_holder)
-        self.preview_holder.append(preview_card(300, 188))
+        self.preview_holder.append(preview_card())
         return False
 
     def _browse(self):
@@ -256,6 +255,10 @@ class ColorsPage(Page):
     ]
 
     def build(self, box):
+        top = Gtk.Box()
+        top.add_css_class("preview-hero")
+        top.append(preview_card())
+        box.append(top)
         g = self.group()
         dd = Dropdown([("light", _("Light")), ("dark", _("Dark"))], appearance.color_scheme(),
                       appearance.set_color_scheme)
@@ -368,8 +371,8 @@ class ThemesPage(Page):
 
     def build(self, box):
         top = Gtk.Box(spacing=24)
-        top.add_css_class("hero")
-        top.append(preview_card(300, 188))
+        top.add_css_class("preview-hero")
+        top.append(preview_card())
         box.append(top)
         g = self.group(_("Current theme"))
         for key, sk, title, sub, ic, items in (

@@ -111,6 +111,46 @@ def theme_preview(dark: bool, width=120, height=80, wallpaper_dark=None):
     return ov
 
 
+def theme_tiles():
+    """Six 112x90 theme tiles (wallpaper + light/dark mini window), 3 per row, 8 px apart,
+    as on the reference Home and Personalization pages. A click applies wallpaper + mode."""
+    from ..backends import appearance
+    from .personalization import find_backgrounds
+    grid = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    grid.add_css_class("theme-tiles")
+    rows = [Gtk.Box(spacing=8, halign=Gtk.Align.START) for _r in range(2)]
+    for r in rows:
+        grid.append(r)
+    paths = find_backgrounds(6) or [system_info.wallpaper_path(theme.get().dark)]
+
+    def apply(path, dark):
+        if util.READ_ONLY:
+            return
+        appearance.set_wallpaper(path)
+        appearance.set_color_scheme("dark" if dark else "light")
+
+    for i in range(6):
+        path = paths[i % len(paths)]
+        dark = i % 3 == 1 or i >= 3
+        b = Gtk.Button()
+        b.add_css_class("home-theme-tile")
+        b.set_halign(Gtk.Align.START)
+        b.set_valign(Gtk.Align.START)
+        ov = Gtk.Overlay()
+        ov.set_child(Thumb(path, 112, 90, "thumb-picture"))
+        mw = MiniWindow(dark, theme.get().accent_hex(dark=dark), 41, 40)
+        mw.set_halign(Gtk.Align.END)
+        mw.set_valign(Gtk.Align.END)
+        mw.set_margin_end(5)
+        mw.set_margin_bottom(5)
+        ov.add_overlay(mw)
+        b.set_child(ov)
+        b.set_tooltip_text(_("Dark") if dark else _("Light"))
+        b.connect("clicked", lambda _b, p=path, d=dark: apply(p, d))
+        rows[i // 3].append(b)
+    return grid
+
+
 def device_hero(page, show_status=True):
     """Device banner: wallpaper thumb, device name, model, Rename link."""
     box = Gtk.Box(spacing=0)

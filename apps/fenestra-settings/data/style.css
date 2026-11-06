@@ -205,7 +205,7 @@ list.nav-list > row.nav-item:selected .nav-pill { background-color: var(--accent
 /* ------------------------------------------------------------------ content */
 .content-area { padding: 0; }
 .page-header {
-  padding: 6px 24px 18px 24px;
+  padding: 6px 24px 17px 24px;
   min-height: 40px;
 }
 .nav-pane.compact ~ .content-area .page-header { padding-left: 24px; }
@@ -223,12 +223,12 @@ button.crumb {
   background: none;
   border: none;
   box-shadow: none;
-  padding: 0 2px;
+  padding: 0;
   margin: 0;
   min-height: 0;
 }
 button.crumb:hover { color: var(--fg); background: none; }
-.crumb-sep { color: var(--fg2); margin: 6px 12px 0 12px; -gtk-icon-size: 16px; }
+.crumb-sep { color: var(--fg2); margin: 2px 10px 0 10px; }
 
 scrolledwindow.page-scroll { background: none; }
 .page-clamp { margin: 0 0 0 0; }
@@ -246,12 +246,13 @@ scrollbar slider {
 scrollbar.hovering slider, scrollbar.dragging slider { min-width: 6px; background-color: var(--fg2); }
 
 .group { margin-top: 0; }
-.group + .group { margin-top: 18px; }
+.group + .group { margin-top: 24px; }
+.group:first-child > .section-title { margin-top: 1px; }
 .group-rows { }
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  margin: 10px 0 8px 1px;
+  margin: 10px 0 9px 1px;
   color: var(--fg);
 }
 
@@ -263,10 +264,11 @@ scrollbar.hovering slider, scrollbar.dragging slider { min-width: 6px; backgroun
   border-radius: 4px;
 }
 .setting-row {
-  min-height: 48px;
+  min-height: 67px;
   padding: 0 16px 0 16px;
 }
 .setting-row.two-line { min-height: 67px; }
+.setting-row.has-toggle { min-height: 68px; }
 .setting-row.activatable:hover { background-color: var(--card-hover); }
 .setting-row.activatable.pressed { background-color: var(--card-press); }
 .setting-row.no-icon { padding-left: 16px; }
@@ -536,7 +538,7 @@ spinner.fluent-spinner { color: var(--accent); }
   padding: 0;
   margin-bottom: 20px;
 }
-.hero.device-hero { margin-top: 11px; margin-bottom: 29px; }
+.hero.device-hero { margin-top: 12px; margin-bottom: 29px; }
 .hero-texts { margin-top: 5px; }
 .hero-texts button.hyperlink { margin-top: 2px; }
 .hero-device {
@@ -606,6 +608,10 @@ button.hero-status-item:hover { background-color: var(--subtle-hover); }
 .home-card > .home-card-row .row-title { margin: 13px 0 9px 0; }
 .home-card > .home-card-body { border-top: 1px solid var(--divider); padding: 20px 24px 24px 24px; }
 .home-card > .home-card-info { padding: 0 24px 24px 24px; margin-top: -1px; }
+.theme-tiles-label { margin: 0 0 15px 0; }
+.personalization-hero { margin: 1px 0 21px 0; }
+.preview-hero { margin: 0 0 14px 2px; }
+.personalization-hero .theme-tiles { margin-left: 1px; }
 .home-card > .home-theme-grid { border: none; padding: 0 24px 34px 24px; margin-top: -2px; }
 .home-info-key { font-size: 14px; }
 .home-info-value { font-size: 14px; color: var(--fg2); margin-top: 9px; line-height: 18px; }
@@ -715,8 +721,14 @@ tooltip label { color: var(--fg); font-size: 12px; }
 
 .card.net-hero { padding: 16px 20px; margin-bottom: 4px; }
 .update-hero { padding: 4px 0 20px 0; }
-.preview-thumb { border-radius: 8px; }
-.preview-card { border-radius: 8px; border: 1px solid var(--card-border); }
+.preview-frame { background-color: #000000; padding: 8px; border-radius: 12px; }
+.preview-thumb { border-radius: 4px; background-color: #1f1f1f; }
+.preview-window { border-radius: 4px; }
+.preview-window.dark { background-color: #2b2b2b; }
+.preview-window.light { background-color: #f9f9f9; }
+.preview-window.dark .preview-line { background-color: rgba(255,255,255,0.80); }
+.preview-window.light .preview-line { background-color: rgba(0,0,0,0.62); }
+.preview-button { border-radius: 2px; background-color: var(--accent); }
 .mini-taskbar { background-color: rgba(32,32,32,0.85); border-radius: 0 0 8px 8px; min-height: 14px; }
 .mini-taskbar-icon { border-radius: 2px; background-color: rgba(255,255,255,0.6); }
 .mini-taskbar-icon.accent { background-color: var(--accent); }

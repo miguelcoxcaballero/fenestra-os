@@ -232,7 +232,7 @@ class SettingsWindow(Gtk.ApplicationWindow):
                 b.add_css_class("crumb")
                 b.connect("clicked", lambda _b, pid=pg.id: self.navigate(pid))
                 self.header.append(b)
-                self.header.append(icon("fs-chevron-right-symbolic", 16, "crumb-sep"))
+                self.header.append(icon("fs-chevron-right-symbolic", 20, "crumb-sep"))
 
     def _animate_in(self, w):
         if self._anim_id:

@@ -10,7 +10,7 @@ from ..backends import appearance, system_info
 from ..i18n import C_, _
 from ..widgets import Dropdown, SettingRow, icon, label
 from .base import Page, register
-from .common import MiniWindow, Thumb, device_hero
+from .common import device_hero, theme_tiles
 
 # text-scaling-factor for the four text size tiles
 TEXT_SIZES = [(1.0, "Default"), (1.15, "Medium"), (1.3, "Large"), (1.5, "Extra large")]
@@ -119,33 +119,8 @@ class HomePage(Page):
 
     def _personalize(self):
         c = self._card(_("Personalize your device"))
-        from .personalization import find_backgrounds
-        grid = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        grid = theme_tiles()
         grid.add_css_class("home-theme-grid")
-        rows = [Gtk.Box(spacing=8, halign=Gtk.Align.START) for _r in range(2)]
-        for r in rows:
-            grid.append(r)
-        paths = find_backgrounds(6) or [system_info.wallpaper_path(theme.get().dark)]
-        acc = theme.get().accent_hex
-        for i in range(6):
-            path = paths[i % len(paths)]
-            dark = i % 3 == 1 or i >= 3
-            b = Gtk.Button()
-            b.add_css_class("home-theme-tile")
-            b.set_halign(Gtk.Align.START)
-            b.set_valign(Gtk.Align.START)
-            ov = Gtk.Overlay()
-            ov.set_child(Thumb(path, 112, 90, "thumb-picture"))
-            mw = MiniWindow(dark, acc(dark=dark), 41, 40)
-            mw.set_halign(Gtk.Align.END)
-            mw.set_valign(Gtk.Align.END)
-            mw.set_margin_end(5)
-            mw.set_margin_bottom(5)
-            ov.add_overlay(mw)
-            b.set_child(ov)
-            b.set_tooltip_text(_("Dark") if dark else _("Light"))
-            b.connect("clicked", lambda _b, p=path, d=dark: self._apply_theme(p, d))
-            rows[i // 3].append(b)
         c.append(grid)
         dark_now = theme.get().dark
         mode = Dropdown([("light", _("Light")), ("dark", _("Dark"))], "dark" if dark_now else "light",
@@ -159,12 +134,6 @@ class HomePage(Page):
         c.append(self._section(more, "home-card-row"))
         more.add_css_class("tall")
         return c
-
-    def _apply_theme(self, path, dark):
-        if util.READ_ONLY:
-            return
-        appearance.set_wallpaper(path)
-        appearance.set_color_scheme("dark" if dark else "light")
 
     def _device_info(self):
         c = self._card(_("Your device info"), _("View your device and operating system specifications"))
