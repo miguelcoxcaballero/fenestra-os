@@ -36,6 +36,7 @@ def parse_args(argv):
     p.add_argument("--text", action="store_true", help="(screenshot) leave a text box open")
     p.add_argument("--select", action="store_true", help="(screenshot) leave a moved selection")
     p.add_argument("--zoom", type=float, default=None, help="(screenshot) zoom factor")
+    p.add_argument("--focus", type=int, default=0, help="(screenshot) press Tab N times")
     return p.parse_known_args(argv[1:])[0]
 
 
@@ -139,7 +140,16 @@ class App(Gtk.Application):
             elif m == "fill":
                 win.set_tool("shape")
                 win.fill_menu(win.ribbon.fill_btn)
+        if o.focus:
+            GLib.timeout_add(300, lambda: (self._tab(win, o.focus), False)[1])
         GLib.timeout_add(int(os.environ.get("FENESTRA_SHOT_DELAY", "700")), lambda: self._shoot(win))
+
+    @staticmethod
+    def _tab(win, n):
+        win.set_focus_visible(True)
+        target = win.dialog if win.dialog is not None else win
+        for _i in range(n):
+            target.child_focus(Gtk.DirectionType.TAB_FORWARD)
 
     def _open_sub(self, win, _level):
         fl = win.flyouts
