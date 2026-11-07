@@ -1,0 +1,73 @@
+{
+  "_comment": [
+    "Popup motion of Windows 11 (26100) measured on reference-shots/motion/*: QMP screendumps every 17-38 ms with",
+    "real timestamps (times.json). The VM has no GPU and screendump is not vsync'd: Windows presents every second",
+    "capture or so and sometimes stalls (notifications f41-f47), so each observation is an interval",
+    "(previous distinct capture, capture]. Offsets are measured on the panel's top edge (left edge for the right",
+    "panels) against f000 in the panel's columns (tools: tests/visual/motion.py frames + an edge scan); the fits",
+    "are least squares of offset(t) = travel * (1 - bezier((t - t0) / duration)) over those intervals, with the",
+    "travel fixed at 'fully hidden' (the panel starts just behind the taskbar / screen edge, see 'start').",
+    "Values used by the shell: shell/qml/design/Motion.qml. Kinds without frames say 'assumption'."
+  ],
+  "observations": {
+    "start": {
+      "frames": "start-open f052 (836.8 ms, nothing) f053 (866.1) f055 (921.8) f057 (991.5) f059 (1046.3, final)",
+      "top_px": {"f053": 435, "f055": 354, "f057": 295, "f059": 294},
+      "offset_px": {"f053": 141, "f055": 60, "f057": 1, "f059": 0},
+      "final_box": [639, 294, 1281, 1020],
+      "clip": "bottom edge 1032 (taskbar top) while moving: slides out from behind the taskbar",
+      "fill": "panel fill 36,36,36 from the first visible frame (= final): no fade; tiles and recommendations already drawn: no stagger"
+    },
+    "quick": {
+      "frames": "quick-open f018 (270.9, nothing) f019 290.9 f021 341.8 f023 372.8 f025 401.7 f029 465.7 f031 509.8 (final)",
+      "offset_px": {"f019": 178, "f021": 139, "f023": 67, "f025": 28, "f029": 13, "f031": 0},
+      "final_box": [1548, 685, 1908, 1020],
+      "clip": "bottom edge 1030-1027 while moving (taskbar top 1032), 1020 when settled",
+      "fill": "36,36,36 in every frame: no fade, no stagger"
+    },
+    "notifications": {
+      "frames": "notifications-open f034 (558.6, nothing) f035 572.3 f038 618.9 f040 648.1 f041 663.3 (stalls to f047) f048 768.0 f051 815.5 (final)",
+      "offset_x_px": {"f035": 312, "f038": 173, "f040": 85, "f041": 40, "f048": 7, "f051": 0},
+      "final_box": [1572, 8, 1908, 1020],
+      "note": "notifications and calendar cards move together, in from the right screen edge (clipped by it)",
+      "fill": "28,28,28 in every frame: no fade, no stagger"
+    },
+    "search": {
+      "frames": "search-open f030 (611.8, nothing) f031 627.7 f034 702.7 (final); results drawn at f048 (3096 ms, web content)",
+      "offset_px": {"f031": 19, "f034": 0},
+      "final_top": 294,
+      "note": "f001-f030 only show the search box hover. The first frame Windows presents is already 19 px from the end; with the Start curve that is the tail of the same full-height slide (the search host presents late). Treated as the Start motion."
+    }
+  },
+  "fits": {
+    "method": "/tmp fit script (numpy grid over curve, duration 80-700 ms, t0); rms in px over the observation intervals",
+    "start_travel_738_(0,0,0,1)": {"200": 0.7, "250": 0.8, "267": 0.7, "300": 1.4, "367": 5.1},
+    "quick_travel_347_(0,0,0,1)": {"200": 10.4, "220": 7.3, "250": 3.4, "267": 2.8, "300": 5.1, "367": 10.2},
+    "quick_travel_347_(0.1,0.9,0.2,1)": {"250": 21.9, "300": 15.9, "367": 9.9},
+    "notifications_travel_348_(0.33,0,0.1,1)": {"167": 12.2, "200": 6.5, "220": 4.3, "250": 5.7, "267": 7.1},
+    "notifications_travel_348_(0,0,0,1)": {"200": 14.3, "250": 12.4},
+    "conclusion": "bottom panels: cubic-bezier(0,0,0,1) 250 ms (start 0.8 px, quick 3.4 px rms); right panels: cubic-bezier(0.33,0,0.1,1) 220 ms (4.3 px rms). The old (0.1,0.9,0.2,1) is 3-6x worse on quick/notifications."
+  },
+  "used": {
+    "taskbar": {"what": "Start, Search, Quick settings (+ media card), tray overflow, jump lists, taskbar and tray menus",
+                "travel": "panel height + gap to the taskbar (starts fully hidden behind the taskbar's top edge, clipped there)",
+                "open": {"ms": 250, "bezier": [0, 0, 0, 1]}, "opacity": "1 throughout",
+                "close": {"ms": 167, "bezier": [0.7, 0, 1, 0.5], "source": "assumption: no close frames; Fluent accelerate-mid at WinUI's ControlFastAnimationDuration, back the same way"}},
+    "edge": {"what": "Notification Center + calendar, toasts",
+             "travel": "panel width + its margin to the right edge (starts off screen)",
+             "open": {"ms": 220, "bezier": [0.33, 0, 0.1, 1]}, "opacity": "1 throughout",
+             "close": {"ms": 167, "bezier": [0.7, 0, 1, 0.5], "source": "assumption, as taskbar"}},
+    "menu": {"what": "Start power / account / app menus, desktop context menu",
+             "source": "assumption: no frames. WinUI MenuFlyout (MenuPopupThemeTransition): reveals from half its height on the open curve, quick fade-in; closes with a quick fade",
+             "travel": "50 % of the menu height, clipped at its anchored edge", "open": {"ms": 250, "bezier": [0, 0, 0, 1], "fade_ms": 83},
+             "close": {"fade_ms": 83}},
+    "fade": {"what": "taskbar thumbnail previews, Snap layouts",
+             "source": "assumption: no frames; WinUI fast fade (167 ms in on the open curve, 83 ms out)",
+             "open": {"ms": 167, "bezier": [0, 0, 0, 1]}, "close": {"ms": 83}},
+    "osd": {"what": "volume / brightness / microphone OSD", "source": "assumption: no OSD frames (no media keys in the VM); taskbar pattern: rises from behind the taskbar's top edge",
+            "open": {"ms": 250, "bezier": [0, 0, 0, 1]}, "close": {"ms": 167, "bezier": [0.7, 0, 1, 0.5]}},
+    "page": {"what": "Start Pinned <-> All apps, Quick settings subpages", "source": "assumption: no frames; WinUI EntranceThemeTransition (40 px horizontal offset) on the open curve with a fade",
+             "offset_px": 40, "ms": 250, "bezier": [0, 0, 0, 1], "fade_ms": 167},
+    "task_view": "Task view is KWin's Overview effect, not a shell popup: not changed here"
+  }
+}

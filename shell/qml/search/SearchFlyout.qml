@@ -10,7 +10,6 @@ import Fenestra.Shell
 ShellPopup {
     id: search
     width: Metrics.searchWidth; height: Metrics.searchHeight
-    openOffset: 0; openDuration: Motion.searchFade
     property int selected: 0
     readonly property var flat: {
         const out = []

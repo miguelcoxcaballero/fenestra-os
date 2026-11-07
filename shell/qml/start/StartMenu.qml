@@ -9,7 +9,6 @@ import Fenestra.Shell
 ShellPopup {
     id: start
     width: Metrics.startWidth; height: Metrics.startHeight
-    openOffset: Motion.startOffset; openDuration: Motion.startOpen
     signal searchRequested(string text)
     property bool allApps: false
     property string allView: "list"   // list (reference) | category | grid
@@ -20,6 +19,15 @@ ShellPopup {
     readonly property int contentWidth: width - 2 * inset
 
     onOpened: { allApps = false; header.forceActiveFocus() }
+    // Pinned <-> All apps: the new page slides in 40 px with a fade (PopupMotion "page", assumption
+    // in design/motion.json); not while Start itself opens or closes.
+    onAllAppsChanged: {
+        if (!shown || moving) return pageMotion.reset()
+        pageMotion.target = allApps ? all : home
+        pageMotion.kind = allApps ? "page-forward" : "page-back"
+        pageMotion.enter()
+    }
+    PopupMotion { id: pageMotion }
 
     // ---- Search box ---------------------------------------------------------------------------
     Item {
@@ -63,6 +71,7 @@ ShellPopup {
     Item {
         id: home
         visible: !start.allApps
+        transform: pageMotion.target === home ? pageMotion.shift : []
         y: header.height; width: parent.width; height: footer.y - y
         Flickable {
             id: pinnedArea
@@ -126,6 +135,7 @@ ShellPopup {
     Item {
         id: all
         visible: start.allApps
+        transform: pageMotion.target === all ? pageMotion.shift : []
         y: Metrics.tok("start.all.y", 141); width: parent.width; height: footer.y - y
         readonly property int row: Metrics.tok("start.all.row", 40)
         // Alphabetical list (the reference): a letter row before each initial, 40 px rows.
@@ -298,6 +308,7 @@ ShellPopup {
     // a link to the account settings.
     Flyout {
         id: accountMenu
+        motion: "menu"
         targetScreen: start.targetScreen
         gap: start.aboveFooter(Metrics.tok("menu.account.gap", 6))
         padding: 0

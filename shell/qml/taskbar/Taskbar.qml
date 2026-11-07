@@ -177,10 +177,11 @@ Window {
 
     TaskPreview { id: preview; targetScreen: bar.targetScreen; onKeepOpenChanged: if (!keepOpen) closeTimer.restart() }
     // Jump list (B02): 296 px wide like the reference, centred on the button, 12 px above the bar.
-    ContextMenu { id: appMenu; targetScreen: bar.targetScreen; minWidth: Metrics.tok("jumplist.width", 296) }
+    ContextMenu { id: appMenu; targetScreen: bar.targetScreen; minWidth: Metrics.tok("jumplist.width", 296); motion: "taskbar" }
     ContextMenu {
         id: barMenu
         targetScreen: bar.targetScreen
+        motion: "taskbar"
         // Rows of 35 px touching the border, a full-width line between them (menu.taskbar.*).
         gap: 0
         padding: 1

@@ -25,13 +25,17 @@ Flyout {
         MouseArea { id: gm; anchors.fill: parent; hoverEnabled: true; enabled: gb.active; onClicked: gb.clicked() }
     }
 
-    // Opening: slides in (Motion.qml, measured on the reference).
-    onVisibleChanged: if (visible && !Motion.reduced) slideIn.restart()
-    NumberAnimation { id: slideIn; target: slide; property: "y"; from: Motion.quickOffset; to: 0; duration: Motion.quickOpen
-                      easing.type: Easing.Bezier; easing.bezierCurve: Motion.decelerate }
+    // Opening and closing: Flyout's taskbar motion (rises from behind the taskbar, design/motion.json).
+    // Subpages slide in from the right, the main page back from the left (PopupMotion "page").
+    onPageChanged: {
+        if (!visible) return pageMotion.reset()
+        pageMotion.target = page === "" ? main : sub
+        pageMotion.kind = page === "" ? "page-back" : "page-forward"
+        pageMotion.enter()
+    }
+    PopupMotion { id: pageMotion }
 
     Column {
-        transform: Translate { id: slide }
         spacing: Metrics.flyoutGap
         // ---- Media card (Q02): app line, title / artist, art on the right, transport centred ----
         Card {
@@ -73,11 +77,13 @@ Flyout {
         Card {
             id: card
             width: Metrics.quickWidth
+            clip: pageMotion.busy
             readonly property int footerH: Metrics.quickFooterHeight
             height: (qs.page === "" ? main.height : sub.height) + footerH + 2
             Item {
                 id: main
                 visible: qs.page === ""
+                transform: pageMotion.target === main ? pageMotion.shift : []
                 width: parent.width
                 // a page holds two rows of tiles, as on the reference (quick.rows.min)
                 readonly property int rows: Math.max(Metrics.n("quick.rows.min", 2), Math.ceil(tiles.visibleCount / 3))
@@ -176,6 +182,7 @@ Flyout {
             Column {
                 id: sub
                 visible: qs.page !== ""
+                transform: pageMotion.target === sub ? pageMotion.shift : []
                 width: parent.width
                 Item {
                     width: parent.width; height: 56

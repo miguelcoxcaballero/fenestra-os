@@ -3,21 +3,36 @@ pragma Singleton
 import QtQuick
 import Fenestra.Shell
 
+// Popup motion of Windows 11, measured on reference-shots/motion/* (frames, fits and assumptions in
+// design/motion.json). Every popup slides fully opaque (no fade, no stagger of its content):
+//   taskbar  Start, Search, Quick settings: rise from fully hidden behind the taskbar's top edge
+//            (travel = height + gap), cubic-bezier(0, 0, 0, 1), 250 ms (start 0.8 px, quick 3.4 px rms).
+//   edge     Notification Center + calendar: in from fully off the right edge (travel = width +
+//            margin), cubic-bezier(0.33, 0, 0.1, 1), 220 ms (4.3 px rms).
+//   close    no frames: back the same way, cubic-bezier(0.7, 0, 1, 0.5), 167 ms (assumption: Fluent
+//            accelerate at WinUI's "fast" duration).
+// Popups without frames use the closest measured pattern (PopupMotion.qml says which).
 QtObject {
     // Settings › Accessibility › Animation effects off, or the Saver power profile.
     readonly property bool reduced: ShellSettings.reduceMotion
-    // Opening animations measured on the reference (reference-shots/motion/*/analysis.json; VM
-    // screendumps every 17–38 ms, indicative): Quick settings rise 178 px from behind the taskbar,
-    // Notification Center slides in 312 px from the right edge; both decelerate hard (about 60 %
-    // of the way in the first third), as Fluent's "decelerate" curve.
-    readonly property int quickOpen: Tokens.px("motion.quick.open", 250)
-    readonly property int quickOffset: Tokens.px("motion.quick.offset", 178)
-    readonly property int centerOpen: Tokens.px("motion.notifications.open", 260)
-    readonly property int centerOffset: Tokens.px("motion.notifications.offset", 312)
-    readonly property var decelerate: [0.1, 0.9, 0.2, 1, 1, 1]
-    // Start rises 141 px and settles in about 180 ms (57 % of the way at 56 ms); Search does not
-    // move, it fades in (reference-shots/motion, start and search).
-    readonly property int startOpen: Tokens.px("motion.start.open", 180)
-    readonly property int startOffset: Tokens.px("motion.start.offset", 141)
-    readonly property int searchFade: Tokens.px("motion.search.fade", 250)
+
+    // Curves as easing.bezierCurve lists (x1, y1, x2, y2, 1, 1).
+    readonly property var decelerate: [0, 0, 0, 1, 1, 1]            // Fluent decelerate-mid
+    readonly property var decelerateEdge: [0.33, 0, 0.1, 1, 1, 1]   // Fluent decelerate-min
+    readonly property var accelerate: [0.7, 0, 1, 0.5, 1, 1]        // Fluent accelerate-mid
+
+    readonly property int taskbarOpen: 250
+    readonly property int edgeOpen: 220
+    readonly property int close: 167
+    // Menus (WinUI MenuFlyout, assumption): reveal from half their height, fast fade in and out.
+    readonly property real menuRatio: 0.5
+    readonly property int menuOpen: 250
+    readonly property int menuFade: 83
+    // Hover previews and Snap layouts (assumption): fade.
+    readonly property int fadeOpen: 167
+    readonly property int fadeClose: 83
+    // Start Pinned <-> All apps, Quick settings subpages (assumption: WinUI entrance, 40 px).
+    readonly property int pageOffset: 40
+    readonly property int pageOpen: 250
+    readonly property int pageFade: 167
 }
