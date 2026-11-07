@@ -6,11 +6,21 @@
 # screenshot, saved as OUT/NAME-1.png. Fails if the dialog never appears.
 #   tests/explorer-dialogs/run.sh NAME [SaveFile|OpenFile] [light|dark] [OUT]
 # The same dialog serves the Fenestra (KWin) session: only the portal routing differs.
+# IMAGE, ROOTFS and LANGDIR as in tests/explorer-window/run.sh (an image without the Explorer
+# layer, e.g. fenestra-f45lab, gets the wrapper, patched Nautilus and themes installed here).
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd); REPO=$(cd "$HERE/../.." && pwd)
 OUT=${4:-$REPO/tests/explorer-dialogs/out}
 mkdir -p "$OUT"; rm -f "$OUT/$1-1.png"
-docker run --rm --privileged -v "$REPO":/src:ro -v "$HERE":/w:ro -v "$OUT":/out -e NAME=$1 -e METHOD=${2:-SaveFile} -e SCHEME=${3:-light} fenestra-greeterlab bash -c '
+MNT=(); [ -n "${LANGDIR:-}" ] && MNT=(-v "$(realpath "$LANGDIR")":/lang:ro)
+[ -n "${ROOTFS:-}" ] && MNT+=(-v "$(realpath "$ROOTFS")":/rootfs:ro)
+docker run --rm --privileged "${MNT[@]}" -v "$REPO":/src:ro -v "$HERE":/w:ro -v "$OUT":/out -e NAME=$1 -e METHOD=${2:-SaveFile} -e SCHEME=${3:-light} "${IMAGE:-fenestra-greeterlab}" bash -c '
+[ -d /lang/usr ] && cp -a /lang/usr/. /usr/
+[ -d /rootfs/usr ] && { cp -a /rootfs/usr/. /usr/; cp -a /rootfs/etc/. /etc/; fc-cache -f >/dev/null 2>&1; dconf update 2>/dev/null; }
+cp -a /src/desktop/themes/Fenestra-Dark /src/desktop/themes/Fenestra-Light /usr/share/themes/
+install -Dm755 /src/desktop/libexec/fenestra-nautilus /usr/libexec/fenestra/fenestra-nautilus
+python3 /src/desktop/libexec/fenestra-patch-nautilus --force >/dev/null || echo "fenestra-patch-nautilus failed"
+mkdir -p /usr/share/fenestra/nautilus/overlay /usr/share/fenestra/lib; cp /src/desktop/lib/folder-icons/folder_icons.py /usr/share/fenestra/lib/
 cp -a /src/tests/explorer-dialogs/shotqa@local /usr/share/gnome-shell/extensions/; chmod -R a+rX /usr/share/gnome-shell/extensions
 rm -f /usr/share/nautilus-python/extensions/*.py; cp /src/desktop/nautilus/python/*.py /usr/share/nautilus-python/extensions/
 rm -rf /usr/share/fenestra/nautilus/overlay/51; cp -a /src/desktop/nautilus/overlay/51 /usr/share/fenestra/nautilus/overlay/51
@@ -31,7 +41,7 @@ chmod 777 /out
 install -d -m700 -o alex /run/user/1000
 runuser -u alex -- env XDG_RUNTIME_DIR=/run/user/1000 HOME=/home/alex XDG_SESSION_ID=c1 XDG_SESSION_CLASS=user XDG_SESSION_TYPE=wayland \
   LANG=es_ES.UTF-8 LC_ALL=es_ES.UTF-8 XDG_CURRENT_DESKTOP=GNOME dbus-run-session -- bash -c "
-cd; rm -rf ~/.config/gtk-4.0; cp -r /src/desktop/skel/.config/gtk-4.0 ~/.config/; cp /src/desktop/gtk/caption-buttons-gtk4.css ~/.config/gtk-4.0/fenestra-caption-buttons.css; printf \"@define-color fenestra_accent_dark #4cc2ff;\\n@define-color fenestra_accent_light #0067c0;\\n@define-color fenestra_accent_dark_fg #000000;\\n@define-color fenestra_accent_light_fg #ffffff;\\n\" > ~/.config/gtk-4.0/fenestra-accent.css; mkdir -p Documentos Descargas Imágenes Música Vídeos Escritorio
+cd; rm -rf ~/.config/gtk-4.0; mkdir -p ~/.config; cp -r /src/desktop/skel/.config/gtk-4.0 ~/.config/; cp /src/desktop/gtk/caption-buttons-gtk4.css ~/.config/gtk-4.0/fenestra-caption-buttons.css; printf \"@define-color fenestra_accent_dark #4cc2ff;\\n@define-color fenestra_accent_light #0067c0;\\n@define-color fenestra_accent_dark_fg #000000;\\n@define-color fenestra_accent_light_fg #ffffff;\\n\" > ~/.config/gtk-4.0/fenestra-accent.css; mkdir -p Documentos Descargas Imágenes Música Vídeos Escritorio
 LC_ALL=C xdg-user-dirs-update --force >/dev/null 2>&1 || true
 for f in Documentos/Notas.txt Documentos/Presupuesto.ods Documentos/Informe-anual.pdf Descargas/fondo.jpg Descargas/instalador.rpm; do echo demo > ~/\$f; done
 gsettings set org.gnome.desktop.interface color-scheme prefer-$SCHEME
