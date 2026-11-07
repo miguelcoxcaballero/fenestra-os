@@ -212,8 +212,8 @@ togglebutton.filter-chip, button.filter-chip {
   background: none; border: 1px solid var(--st-chip-border); box-shadow: none; color: var(--st-fg);
   font-size: 14px; font-weight: normal;
 }
-togglebutton.filter-chip:hover { background-color: var(--st-subtle-hover); }
-togglebutton.filter-chip:checked { background: none; border-color: var(--st-accent); color: var(--st-accent); }
+button.filter-chip:hover { background-color: var(--st-subtle-hover); }
+button.filter-chip:checked, button.filter-chip:checked:hover { background: none; border-color: var(--st-accent); color: var(--st-accent); }
 .page-body > .chip-scroll { margin: 3px 0 36px 0; }
 
 /* ------------------------------------------------------------------ app page */
