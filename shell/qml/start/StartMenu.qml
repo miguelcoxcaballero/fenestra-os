@@ -46,7 +46,7 @@ ShellPopup {
         property real bl
         y: bl - baselineOffset
         color: Theme.text
-        font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontCaption
+        font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontCaption
     }
     component Secondary: Label { color: Metrics.themed("popup.text.secondary") }
     // "Show all ˅" / "Show all ›" / "View: Category ˅": text and a Fluent chevron, right-aligned.
@@ -68,7 +68,7 @@ ShellPopup {
             id: lbText
             anchors.verticalCenter: parent.verticalCenter
             text: lb.text; color: Theme.text
-            font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontBody
+            font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontBody
         }
         FluentGlyph {
             id: chev
@@ -393,7 +393,7 @@ ShellPopup {
             x: 12; anchors.verticalCenter: parent.verticalCenter; spacing: Metrics.num("start.footer.name.gap", 12)
             Avatar { size: Metrics.tok("start.footer.avatar", 32) }
             Text { anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: Metrics.num("start.footer.name.offset", 0)
-                   text: UserInfo.name; color: Theme.text; font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontCaption }
+                   text: UserInfo.name; color: Theme.text; font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontCaption }
         }
         MouseArea { id: am2; anchors.fill: parent; hoverEnabled: true; onClicked: start.openAccountMenu() }
     }
@@ -405,7 +405,27 @@ ShellPopup {
         color: pm.pressed ? Metrics.themed("popup.pressed") : pm.containsMouse ? Metrics.themed("popup.hover") : "transparent"
         Accessible.name: Strings.tr("Power")
         FluentGlyph { anchors.centerIn: parent; size: 16; glyph: "\ue7e8"; fallback: Metrics.assets + "power/3.svg" }
-        MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; onClicked: start.openPowerMenu() }
+        MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; onClicked: { tipTimer.stop(); powerTip.close(); start.openPowerMenu() }
+                    onContainsMouseChanged: containsMouse ? tipTimer.restart() : (tipTimer.stop(), powerTip.close()) }
+        Timer { id: tipTimer; interval: Metrics.tok("tooltip.delay", 600); onTriggered: if (!powerMenu.shown) powerTip.open() }
+    }
+    // "Power" tooltip (user-win11 160039): 54 x 32, 12 px text, 10 px side padding, its bottom 13.33 px into
+    // the button, centred on it.
+    Flyout {
+        id: powerTip
+        targetScreen: start.targetScreen
+        takesFocus: false
+        motion: "fade"
+        recipe: "tooltip"
+        padding: 0
+        anchorX: start.screenX + powerButton.x + powerButton.width / 2
+        gap: Metrics.flyoutGap + start.panelHeight - powerButton.y - Metrics.num("tooltip.overlap", 13.67)
+        Item {
+            width: tipText.implicitWidth + 2 * Metrics.num("tooltip.padding.x", 10); height: Metrics.num("tooltip.height", 32)
+            Text { id: tipText; x: Metrics.num("tooltip.padding.x", 10); y: Metrics.num("tooltip.baseline", 20) - baselineOffset
+                   text: Strings.tr("Power"); color: Theme.text
+                   font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption; font.variableAxes: Metrics.textAxes }
+        }
     }
 
     // Menus above the footer buttons: the gap counts from the taskbar, so add Start's own place above it.
@@ -442,10 +462,10 @@ ShellPopup {
         gap: start.aboveFooter(Metrics.tok("menu.power.gap", 4))
         onDismissed: start.requestActivate()
         items: [
-            { text: Strings.tr("Lock"), iconSource: Metrics.assets + "power/1.svg", iconSize: 19, action: () => { start.close(); Session.lock() } },
-        ].concat(Session.canSuspend ? [{ text: Strings.tr("Sleep"), iconSource: Metrics.assets + "power/4.svg", iconSize: 19, action: () => { start.close(); Session.suspend() } }] : [], [
-            { text: Strings.tr("Shut down"), iconSource: Metrics.assets + "power/3.svg", iconSize: 19, action: () => { start.close(); Session.powerOff() } },
-            { text: Strings.tr("Restart"), iconSource: Metrics.assets + "power/2.svg", iconSize: 19, action: () => { start.close(); Session.reboot() } },
+            { text: Strings.tr("Lock"), iconSource: Metrics.assets + "power/1.svg", iconSize: 16, action: () => { start.close(); Session.lock() } },
+        ].concat(Session.canSuspend ? [{ text: Strings.tr("Sleep"), iconSource: Metrics.assets + "power/4.svg", iconSize: 16, action: () => { start.close(); Session.suspend() } }] : [], [
+            { text: Strings.tr("Shut down"), iconSource: Metrics.assets + "power/3.svg", iconSize: 16, action: () => { start.close(); Session.powerOff() } },
+            { text: Strings.tr("Restart"), iconSource: Metrics.assets + "power/2.svg", iconSize: 16, action: () => { start.close(); Session.reboot() } },
         ])
     }
     // Account card (362 x 128): switch user and sign out on top, picture, name, account kind and
@@ -475,11 +495,11 @@ ShellPopup {
             Column {
                 x: 87; y: 55
                 Item { width: nameText.implicitWidth; height: 24
-                       Text { id: nameText; y: -3; text: UserInfo.fullName || UserInfo.name; color: Theme.text; font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: 20; font.weight: Font.DemiBold } }
-                Text { height: 17; text: Strings.tr("Local account"); color: Metrics.themed("popup.text.secondary"); font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontCaption }
+                       Text { id: nameText; y: -3; text: UserInfo.fullName || UserInfo.name; color: Theme.text; font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: 20; font.weight: Font.DemiBold } }
+                Text { height: 17; text: Strings.tr("Local account"); color: Metrics.themed("popup.text.secondary"); font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontCaption }
                 Text {
                     height: 17; text: Strings.tr("Manage my account"); color: Theme.accentText
-                    font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontCaption
+                    font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontCaption
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                         onClicked: { accountMenu.close(); start.close(); Apps.runCommand("fenestra-settings --page yourinfo") } }
                 }
@@ -528,7 +548,7 @@ ShellPopup {
             SymbolicIcon { visible: link.iconSource.toString() !== ""; size: 18; src: link.iconSource; anchors.verticalCenter: parent.verticalCenter }
             Text { text: link.text; anchors.verticalCenter: parent.verticalCenter
                    color: link.secondary ? Metrics.themed("popup.text.secondary") : Theme.text
-                   font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: link.fontSize }
+                   font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: link.fontSize }
         }
         MouseArea { id: lmouse; anchors.fill: parent; hoverEnabled: true; onClicked: link.clicked() }
     }
@@ -537,7 +557,8 @@ ShellPopup {
     // Test hooks (tests/shell-kwin).
     function testPowerMenu() { openPowerMenu() }
     function testAccountMenu() { openAccountMenu() }
-    function testCloseMenus() { powerMenu.close(); accountMenu.close(); appMenu.close(); viewMenu.close() }
+    function testPowerTip() { powerTip.open(); return [powerTip.visible, powerTip.width, powerTip.height, powerTip.gap, powerTip.sheetWidth, powerTip.sheetHeight, powerTip.marginTop, powerTip.marginBottom].join(",") }
+    function testCloseMenus() { powerTip.close(); powerMenu.close(); accountMenu.close(); appMenu.close(); viewMenu.close() }
 
     function showAppMenu(item, storageId, name, pinnedTile) {
         const pinned = StartPins.isPinned(storageId)

@@ -44,6 +44,7 @@ Item {
         color: Metrics.themed("acrylic." + acrylic.recipe + (acrylic.translucent ? "" : ".solid"))
         // 2 device px at 150 % (4/3 logical), 1 at 100 %.
         border.width: acrylic.border ? (acrylic.dpr > 1 && acrylic.dpr < 2 ? 2 : Math.max(1, Math.round(acrylic.dpr))) / acrylic.dpr : 0
-        border.color: Metrics.themed("acrylic.border" + (acrylic.translucent ? "" : ".solid"))
+        border.color: Metrics.themed(!acrylic.translucent ? "acrylic.border.solid"
+                                     : acrylic.recipe.startsWith("menu") || acrylic.recipe === "tooltip" ? "acrylic.border.menu" : "acrylic.border")
     }
 }

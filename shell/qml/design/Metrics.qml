@@ -84,7 +84,9 @@ QtObject {
     // (14 px at 150 % = 15.75). Qt's default instance is opsz 8 ("Small"), 4 % wider than Windows'
     // text (user-win11 160039: "Search for apps, settings, and documents" 376 device px; opsz 8:
     // 395, opsz 15.75: 380).
-    function opsz(px) { return { "opsz": px * 0.75 * Number(Tokens.v("font.opsz.scale", 1.5)) } }
+    // One value for all sizes: 12-18 px text lands on opsz 13.5-20 at 150 %, where the widths differ
+    // by < 0.2 %; a per-size binding on font.pixelSize loops in Qt.
+    readonly property var textAxes: ({ "opsz": Number(Tokens.v("font.opsz", 15.75)) })
     // Fractional sizes (logical px measured at 150 %: device px / 1.5).
     function num(key, fallback) { return Number(Tokens.v(key, fallback)) }
     readonly property int taskPitch: Tokens.px("taskbar.button.pitch", 44)

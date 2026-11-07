@@ -38,7 +38,7 @@ Rectangle {
         visible: entry.text === ""
         text: box.placeholder
         color: Metrics.themed("search.field.placeholder")
-        font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontBody
+        font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontBody
     }
     TextInput {
         id: entry
@@ -48,7 +48,7 @@ Rectangle {
         enabled: box.editable
         color: Theme.text
         selectionColor: Theme.accentFill; selectedTextColor: Theme.accentOn
-        font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontBody
+        font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontBody
         clip: true
         Keys.onUpPressed: box.upPressed()
         Keys.onDownPressed: box.downPressed()

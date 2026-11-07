@@ -2,6 +2,7 @@
 // Fenestra Shell: taskbar, Start, quick settings and desktop of the Fenestra session.
 // KWin composites and manages windows; every surface here is a layer-shell surface.
 #include <QCommandLineParser>
+#include <QFont>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
@@ -21,6 +22,11 @@
 
 int main(int argc, char *argv[])
 {
+    // Windows draws the shell's text with greyscale antialiasing (user-win11 captures); Qt Quick's
+    // distance-field text otherwise follows fontconfig's rgba and draws colour fringes, which are
+    // also wrong on translucent surfaces.
+    if (!qEnvironmentVariableIsSet("QSG_DISTANCEFIELD_ANTIALIASING"))
+        qputenv("QSG_DISTANCEFIELD_ANTIALIASING", "gray");
     QGuiApplication::setDesktopFileName(QStringLiteral("org.fenestra.Shell"));
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("fenestra-shell"));
@@ -42,6 +48,12 @@ int main(int argc, char *argv[])
     if (QIcon::themeName().isEmpty() || QIcon::themeName() == QLatin1String("hicolor"))
         QIcon::setThemeName(QStringLiteral("Fenestra"));
 
+    // Native-rendered text (and QPainter text): no subpixel antialiasing either.
+    {
+        QFont f = QGuiApplication::font();
+        f.setStyleStrategy(QFont::StyleStrategy(f.styleStrategy() | QFont::NoSubpixelAntialias));
+        QGuiApplication::setFont(f);
+    }
     QQmlApplicationEngine engine;
     // Glyphs and app logos of an imported icon pack replace Fenestra's own (core/iconoverrides.h).
     IconOverrides::setDarkMode([] { return Theme::instance()->dark(); });

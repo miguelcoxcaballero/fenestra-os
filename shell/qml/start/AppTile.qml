@@ -44,7 +44,7 @@ Item {
         lineHeightMode: Text.FixedHeight
         lineHeight: 16
         color: Theme.text
-        font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize)
+        font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes
         font.pixelSize: Metrics.fontCaption
     }
     MouseArea {

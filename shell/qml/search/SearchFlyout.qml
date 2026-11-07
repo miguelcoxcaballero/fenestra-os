@@ -46,7 +46,7 @@ ShellPopup {
         property real bl
         y: bl - baselineOffset
         color: Theme.text
-        font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontCaption
+        font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontCaption
     }
     component Secondary: Label { color: Metrics.themed("popup.text.secondary") }
     component GlyphButton: Rectangle {
@@ -178,7 +178,7 @@ ShellPopup {
                     Text { id: chipText; anchors.horizontalCenter: parent.horizontalCenter
                            y: Metrics.num("search.chip.baseline", 20.67) - baselineOffset
                            text: Strings.tr(modelData[1]); color: parent.on ? Theme.accentOn : Theme.text
-                           font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontBody }
+                           font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontBody }
                     MouseArea { id: chipMouse; anchors.fill: parent; hoverEnabled: true
                                 onClicked: { Search.filter = modelData[0]; search.selected = 0; field.input.forceActiveFocus() } }
                 }
@@ -354,7 +354,7 @@ ShellPopup {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 10
             Text { id: pbText; y: Metrics.num("search.preview.button.baseline", 23.33) - baselineOffset; text: pb.text; color: Theme.text
-                   font.family: Metrics.fontFamily; font.variableAxes: Metrics.opsz(font.pixelSize); font.pixelSize: Metrics.fontBody }
+                   font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes; font.pixelSize: Metrics.fontBody }
             FluentGlyph { visible: pb.chevron; size: 12; y: pbText.y + pbText.baselineOffset - 10
                           glyph: "\ue70d"; fallback: Metrics.assets + "menu-icons/win11-chevron-down.svg" }
         }

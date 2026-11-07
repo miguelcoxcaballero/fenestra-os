@@ -65,7 +65,9 @@ Window {
     visible: false
 
     LayerShell.Window.scope: "fenestra-flyout"
-    LayerShell.Window.layer: LayerShell.Window.LayerTop
+    // Hover popups (tooltips, previews) never take the focus, and KWin keeps the focused layer
+    // surface (Start) above the others of its layer: they go one layer up.
+    LayerShell.Window.layer: takesFocus ? LayerShell.Window.LayerTop : LayerShell.Window.LayerOverlay
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
                                | (rightAligned ? LayerShell.Window.AnchorRight : LayerShell.Window.AnchorLeft)
     LayerShell.Window.margins.bottom: gap - marginBottom
