@@ -9,6 +9,8 @@
 #include <PulseAudioQt/Server>
 #include <PulseAudioQt/Sink>
 #include <QDBusArgument>
+#include <QHash>
+#include <QLocale>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDBusInterface>
@@ -295,6 +297,7 @@ void KeyboardStatus::reload()
     QDBusMessage reply = QDBusConnection::sessionBus().call(list, QDBus::Block, 2000);
     m_short.clear();
     m_long.clear();
+    m_layouts.clear();
     if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty()) {
         const QDBusArgument arg = reply.arguments().first().value<QDBusArgument>();
         arg.beginArray();
@@ -305,6 +308,7 @@ void KeyboardStatus::reload()
             arg.endStructure();
             m_short << (displayName.isEmpty() ? shortName : displayName);
             m_long << longName;
+            m_layouts << shortName;
         }
         arg.endArray();
     }
@@ -329,6 +333,32 @@ QString KeyboardStatus::shortName() const
     if (s.size() == 2 && m_current < m_long.size() && m_long.at(m_current).size() >= 3)
         s = m_long.at(m_current).left(3).toUpper();
     return s;
+}
+
+QString KeyboardStatus::language() const
+{
+    // The input language is the user's language (LC_MESSAGES, as Windows' display language), in
+    // the abbreviations Windows' indicator uses (ENG, ESP, FRA, DEU...); ISO 639-2 otherwise.
+    const QLocale::Language lang = QLocale(qEnvironmentVariable("LC_ALL", qEnvironmentVariable("LC_MESSAGES", qEnvironmentVariable("LANG")))
+                                               .section(QLatin1Char('.'), 0, 0)).language();
+    static const QHash<QLocale::Language, QString> windows = {
+        {QLocale::English, QStringLiteral("ENG")}, {QLocale::Spanish, QStringLiteral("ESP")}, {QLocale::French, QStringLiteral("FRA")},
+        {QLocale::German, QStringLiteral("DEU")}, {QLocale::Italian, QStringLiteral("ITA")}, {QLocale::Portuguese, QStringLiteral("POR")},
+        {QLocale::Dutch, QStringLiteral("NLD")}, {QLocale::Catalan, QStringLiteral("CAT")}, {QLocale::Basque, QStringLiteral("EUS")},
+        {QLocale::Galician, QStringLiteral("GLG")}, {QLocale::Russian, QStringLiteral("RUS")}, {QLocale::Polish, QStringLiteral("POL")},
+        {QLocale::Japanese, QStringLiteral("JPN")}, {QLocale::Chinese, QStringLiteral("CHN")}, {QLocale::Korean, QStringLiteral("KOR")}};
+    if (windows.contains(lang))
+        return windows.value(lang);
+    return QLocale::languageToCode(lang, QLocale::ISO639Part2).toUpper();
+}
+
+QString KeyboardStatus::region() const
+{
+    // The keyboard's country: the XKB layout code ("es", "us"; "gb" is "UK" in Windows).
+    if (m_current < 0 || m_current >= m_layouts.size())
+        return {};
+    const QString code = m_layouts.at(m_current).toUpper();
+    return code == QLatin1String("GB") ? QStringLiteral("UK") : code;
 }
 
 void KeyboardStatus::next()

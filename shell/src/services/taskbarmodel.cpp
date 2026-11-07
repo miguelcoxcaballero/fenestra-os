@@ -104,7 +104,9 @@ QVariant TaskbarModel::data(const QModelIndex &index, int role) const
             list.append(QVariantMap{{QStringLiteral("row"), WindowsModel::instance()->rowOf(w)},
                                     {QStringLiteral("title"), w->title},
                                     {QStringLiteral("active"), bool(w->state & WM::state_active)},
-                                    {QStringLiteral("minimized"), bool(w->state & WM::state_minimized)}});
+                                    {QStringLiteral("minimized"), bool(w->state & WM::state_minimized)},
+                                    {QStringLiteral("width"), w->geometry.width()},
+                                    {QStringLiteral("height"), w->geometry.height()}});
         return list;
     }
     }

@@ -2,6 +2,7 @@
 #include "acrylic.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QtMath>
 #include <QQuickWindow>
 #include <QSGImageNode>
@@ -115,6 +116,19 @@ Recipe taskbarRecipe(bool dark)
     r.tint = QColor(t->v(QStringLiteral("taskbar.acrylic.tint") + s, dark ? "#202020" : "#f3f3f3").toString());
     r.tintOpacity = t->v(QStringLiteral("taskbar.acrylic.tint.opacity") + s, dark ? 0.5 : 0.0).toDouble();
     r.luminosityOpacity = t->v(QStringLiteral("taskbar.acrylic.luminosity.opacity") + s, dark ? 0.96 : 0.90).toDouble();
+    r.blur = t->v(QStringLiteral("taskbar.acrylic.blur"), 30).toDouble();
+    r.noise = t->v(QStringLiteral("taskbar.acrylic.noise.opacity"), 0.02).toDouble();
+    return r;
+}
+
+Recipe flyoutRecipe(bool dark)
+{
+    auto *t = Tokens::instance();
+    const QString s = dark ? QStringLiteral(".dark") : QStringLiteral(".light");
+    Recipe r;
+    r.tint = QColor(t->v(QStringLiteral("flyout.acrylic.tint") + s, dark ? "#2c2c2c" : "#fcfcfc").toString());
+    r.tintOpacity = t->v(QStringLiteral("flyout.acrylic.tint.opacity") + s, dark ? 0.15 : 0.0).toDouble();
+    r.luminosityOpacity = t->v(QStringLiteral("flyout.acrylic.luminosity.opacity") + s, dark ? 0.96 : 0.85).toDouble();
     r.blur = t->v(QStringLiteral("taskbar.acrylic.blur"), 30).toDouble();
     r.noise = t->v(QStringLiteral("taskbar.acrylic.noise.opacity"), 0.02).toDouble();
     return r;
@@ -235,12 +249,89 @@ QImage shadowMask(const QImage &alpha8, qreal sigma, qreal dx, qreal dy, qreal s
 }
 }
 
+namespace
+{
+// The window preview's card (TaskPreview.qml), measured on user-win11 163657 at 150 %: radius 8,
+// 1 px border (2 device px) whose colour runs from white 12.5 % at the top through #ACACAC 15 % on the
+// sides to #5A5A5A 25 % at the bottom, drop shadow black 23 %, sigma 4.67, 7.67 below (fitted on
+// the wallpaper under it: 22 % right below the card, 10 % beside it).
+QImage renderCard(const QStringList &p)
+{
+    // card/<scheme>/<width>/<height>/<dpr>/<x>/<y>/<w>/<h>/<radius>/<margin>/<source>
+    const bool dark = p[1] != QLatin1String("light");
+    const qreal dpr = std::max(0.5, p[4].toDouble());
+    const QSize screen(qRound(p[2].toInt() * dpr), qRound(p[3].toInt() * dpr));
+    const int x = qRound(p[5].toDouble() * dpr), y = qRound(p[6].toDouble() * dpr);
+    const int w = qRound(p[7].toDouble() * dpr), h = qRound(p[8].toDouble() * dpr);
+    const qreal radius = p[9].toDouble() * dpr;
+    const int margin = qRound(p[10].toDouble() * dpr);
+    const QString source = QUrl::fromPercentEncoding(p.mid(11).join(QLatin1Char('/')).toUtf8());
+    if (w <= 0 || h <= 0 || screen.isEmpty() || y >= screen.height())
+        return {};
+    // The strip from the card's top edge down: only its columns under the card are kept.
+    const QImage strip = Acrylic::renderStrip(source, screen, screen.height() - y, dpr, Acrylic::flyoutRecipe(dark));
+    QImage fill = strip.copy(x, 0, w, h);
+    fill.setDevicePixelRatio(1);
+
+    QImage out(w + 2 * margin, h + margin, QImage::Format_ARGB32_Premultiplied);
+    out.fill(Qt::transparent);
+    QPainterPath shape;
+    shape.addRoundedRect(QRectF(margin, 0, w, h), radius, radius);
+    {
+        // Shadow: the card's shape blurred, below the card.
+        QImage mask(out.size(), QImage::Format_Alpha8);
+        mask.fill(0);
+        QPainter mp(&mask);
+        mp.setRenderHint(QPainter::Antialiasing);
+        mp.fillPath(shape, Qt::black);
+        mp.end();
+        auto *t = Tokens::instance();
+        const QImage shadow = Acrylic::shadowMask(mask, t->v(QStringLiteral("preview.shadow.blur"), 4.67).toDouble() * dpr, 0,
+                                                  t->v(QStringLiteral("preview.shadow.y"), 7.67).toDouble() * dpr,
+                                                  t->v(QStringLiteral("preview.shadow.opacity"), 0.23).toDouble());
+        QImage black(out.size(), QImage::Format_ARGB32_Premultiplied);
+        black.fill(Qt::black);
+        QPainter bp(&black);
+        bp.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+        bp.drawImage(0, 0, shadow);
+        bp.end();
+        QPainter op(&out);
+        op.drawImage(0, 0, black);
+    }
+    QPainter painter(&out);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setClipPath(shape);
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.drawImage(margin, 0, fill);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    painter.setClipping(false);
+    const qreal bw = std::ceil(dpr);
+    QLinearGradient g(0, 0, 0, h);
+    if (dark) {
+        g.setColorAt(0, QColor(255, 255, 255, 32));
+        g.setColorAt(0.5, QColor(172, 172, 172, 38));
+        g.setColorAt(1, QColor(90, 90, 90, 64));
+    } else {
+        g.setColorAt(0, QColor(0, 0, 0, 15));
+        g.setColorAt(1, QColor(0, 0, 0, 15));
+    }
+    painter.setPen(QPen(QBrush(g), bw));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRoundedRect(QRectF(margin + bw / 2, bw / 2, w - bw, h - bw), radius - bw / 2, radius - bw / 2);
+    painter.end();
+    out.setDevicePixelRatio(dpr);
+    return out;
+}
+}
+
 QImage AcrylicProvider::requestImage(const QString &id, QSize *size, const QSize &)
 {
     // dark/1920/1080/48/1/<source>
     const QStringList p = id.split(QLatin1Char('/'));
     QImage img;
-    if (p.size() >= 6) {
+    if (p.size() >= 12 && p[0] == QLatin1String("card")) {
+        img = renderCard(p);
+    } else if (p.size() >= 6) {
         const QString source = QUrl::fromPercentEncoding(p.mid(5).join(QLatin1Char('/')).toUtf8());
         const qreal dpr = std::max(0.5, p[4].toDouble());
         const QSize screen(qRound(p[1].toInt() * dpr), qRound(p[2].toInt() * dpr));
@@ -304,22 +395,27 @@ void ShadowLabel::relayout()
     int widest = 0;
     if (avail > 0 && !m_text.isEmpty()) {
         const QFontMetricsF fm(m_devFont);
-        QTextLayout layout(m_text, m_devFont);
-        QTextOption opt;
-        opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-        layout.setTextOption(opt);
-        layout.beginLayout();
-        for (QTextLine l = layout.createLine(); l.isValid(); l = layout.createLine()) {
-            l.setLineWidth(avail);
-            if (m_maxLines > 0 && lines.size() == m_maxLines - 1) {
-                // Last allowed line: the rest of the text, with "…" if it does not fit.
-                const QString rest = m_text.mid(l.textStart());
-                lines << fm.elidedText(rest, Qt::ElideRight, avail);
+        const QStringList paragraphs = m_text.split(QLatin1Char('\n'));
+        for (const QString &para : paragraphs) {
+            if (m_maxLines > 0 && lines.size() >= m_maxLines)
                 break;
+            QTextLayout layout(para, m_devFont);
+            QTextOption opt;
+            opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+            layout.setTextOption(opt);
+            layout.beginLayout();
+            for (QTextLine l = layout.createLine(); l.isValid(); l = layout.createLine()) {
+                l.setLineWidth(avail);
+                if (m_maxLines > 0 && lines.size() == m_maxLines - 1) {
+                    // Last allowed line: the rest of the text, with "…" if it does not fit.
+                    const QString rest = para.mid(l.textStart());
+                    lines << fm.elidedText(rest, Qt::ElideRight, avail);
+                    break;
+                }
+                lines << para.mid(l.textStart(), l.textLength()).trimmed();
             }
-            lines << m_text.mid(l.textStart(), l.textLength()).trimmed();
+            layout.endLayout();
         }
-        layout.endLayout();
         for (const QString &s : std::as_const(lines))
             widest = std::max(widest, int(std::ceil(fm.horizontalAdvance(s) / r)));
     }
@@ -352,7 +448,9 @@ QImage ShadowLabel::render() const
         const int base = qRound((m_lineDev - (fm.ascent() + fm.descent())) / 2 + fm.ascent());
         for (int i = 0; i < m_lines.size(); ++i) {
             const qreal lw = fm.horizontalAdvance(m_lines[i]);
-            p.drawText(QPointF(std::round(pad + (dev.width() - 2 * pad - lw) / 2), pad + i * m_lineDev + base), m_lines[i]);
+            const qreal x = (m_align & Qt::AlignRight) ? dev.width() - pad - lw
+                            : (m_align & Qt::AlignLeft) ? pad : pad + (dev.width() - 2 * pad - lw) / 2;
+            p.drawText(QPointF(std::round(x), pad + i * m_lineDev + base), m_lines[i]);
         }
     }
     QImage mask = text.convertToFormat(QImage::Format_Alpha8);

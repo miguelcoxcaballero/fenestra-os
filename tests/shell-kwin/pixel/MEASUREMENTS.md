@@ -72,3 +72,40 @@ Residuals: app icons the bench has no theme for, demo content (Windows' pinned a
 the Quick settings tile set (the VM has Live captions, Nearby sharing and Cast, the bench Airplane mode,
 Night light, Accessibility), grey-scale antialiasing against ClearType (Qt draws Segoe UI Variable about
 25 % lighter in ink), and at 150 % the calendar, which Windows cuts to four weeks on a 720 px screen.
+
+## Taskbar against the user's own Windows 11 at 150 % (2026-11-07)
+
+Reference: `reference-shots/user-win11/shots/Screenshot 2026-11-04 160039 / 160049 / 163657.png`
+(the 2880 x 1800 panel cropped to 2878 x 1798 at the right and bottom: x, y are screen pixels).
+Bench: the KWin lab at 2880 x 1800, scale 1.5, `QT_QUICK_BACKEND` unset (Qt's OpenGL renderer on
+llvmpipe, as the live session renders; the software renderer rounds fractional rectangles up and
+does not show what the user sees), the user's shell.conf, wallpaper, icon overrides, packs, fonts
+and icon theme, stand-in windows with Brave's, Explorer's and Spotify's app ids, the pointer and
+keys through `org_kde_kwin_fake_input` inside the container. Device px:
+
+| Element | Windows | before | after |
+|---|---|---|---|
+| top border, rows 1728-1729 | (62.3, 72.0, 69.5) | (64, 64, 64) | (62.5, 71.8, 69.8): #767676 at 40 % |
+| bar fill | (25.5, 41.5, 37.5) | (25.7, 41.4, 38.0) | unchanged |
+| Start logo | 1290-1324 x 1747-1781 | 1290-1324 x 1746-1780 | 1290-1324 x 1747-1781 (gradients refitted) |
+| Search lens (icon mode) | 1357-1391 x 1746-1781 | 1359-1387 x 1749-1778 (20 px) | 1357-1391 x 1746-1781 |
+| app cells | 1 px right of the 66 px grid Start starts | on the grid | Start's cell 1 px wider |
+| Explorer hover plate | 1477-1536 x 1734-1792, (39, 54, 50), top rows (49, 64, 60), no ring | opaque #2f2f2f, 60 x 60 | 1477-1536 x 1734-1792, (39, 54, 51), top (49, 64, 62) |
+| Start open plate (160039) | cell+2 .. +63, rows 1734-1792, ring (44, 59, 55), fill (38, 53, 49) | opaque #292929 | same extent, ring (44, 58, 55), fill (38, 53, 50) |
+| unfocused dash (Brave) | 1437-1445 x 1788-1791, (151, 158, 156) | 1436-1444 x 1788-1792, (152, 152, 152) | 1437-1445 x 1788-1791, (151, 159, 157) |
+| chevron | 2509-2524 x 1759-1767 | 2545-2558 x 1760-1767 | 2509-2524 x 1759-1767 |
+| "ENG" / "ES" | 2558-2590 / 2566-2582, tops 1746 / 1769 | "SPA", one line | 2558-2591 / 2566-2582, tops 1746 / 1769 |
+| wifi / volume / battery | 2619 / 2661 / 2703-2732 x 1752-1771 | not drawn on the bench, 24 apart | 2619 / 2661 / 2703-2732 x 1752-1771 |
+| clock | 2758-2850, glyph tops 1745 / 1769, "04/11/2026" | ISO date (Qt.formatDate bug), 2762-2848, 1 px low, blurred | 2758-2850, tops 1745 / 1769, hinted |
+| preview card | 1383-1631 x 1470-1709, fill (30, 57, 50), top border (57, 82, 75) | opaque card, 12 px gap, no shadow | 1470-1709, fill (28, 55, 49), top border (59, 82, 77), shadow |
+
+Residuals: app icon rasters (Brave and Spotify are the hicolor PNGs, not Windows' own icons), the
+preview's content (no live thumbnail), the clock's ink (Qt's grey-scale antialiasing is 0.8 level
+lighter than ClearType on average), the attention plate's translucency (only measured on the VM's
+opaque fallback: #7f434a, dash #ff99a4, 32 px).
+
+Widgets board (Windows 11 VM, 26100, 100 %): 12 from the left and top edges and above the taskbar,
+1000 wide, radius 8; opens ~600 ms after the pointer rests on the weather (~230 ms slide from the
+left), closes ~850 ms after the pointer leaves the weather without entering the board, ~270 ms
+after it leaves the board; a click opens it at once and keeps it until a click outside (~150 ms
+slide out).

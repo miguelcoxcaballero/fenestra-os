@@ -27,6 +27,9 @@ Window {
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
 
     readonly property bool leftAligned: ShellSettings.taskbarAlignment === "left"
+    // The window's real scale (1.5 at 150 %); Screen.devicePixelRatio is the screen's integer one (2).
+    readonly property real dpr: scaleProbe.devicePixelRatio > 0 ? scaleProbe.devicePixelRatio : 1
+    ShadowLabel { id: scaleProbe; visible: false; width: 1; height: 1 }
 
     // Material: acrylic over the wallpaper (src/core/acrylic.h: Microsoft's recipe, computed from
     // the wallpaper as the desktop draws it); the flat fallback colour with transparency effects off
@@ -48,7 +51,10 @@ Window {
                       + encodeURIComponent(WallpaperSource.image !== "" ? decodeURIComponent(WallpaperSource.image.replace(/^file:\/\//, ""))
                                                                        : WallpaperSource.color)
         }
-        Rectangle { width: parent.width; height: 1; color: Metrics.themed("taskbar.border") }
+        // Top edge: 1 px at 100 %, 2 device px at 150 % (user-win11 163657: rows 1728-1729), drawn in
+        // #767676 at 40 % over the acrylic ((62, 72, 69) over the user's green; #404040 over the VM's
+        // flat #1c1c1c fallback, both exactly).
+        Rectangle { width: parent.width; height: (Math.ceil(bar.dpr) - 0.001) / bar.dpr; color: Metrics.themed("taskbar.border") }
     }
 
     // Empty-area right click (B07): Task Manager, Taskbar settings.
@@ -81,12 +87,20 @@ Window {
                         : Metrics.assets + "branding/start-button-" + (Theme.dark ? "dark" : "light") + ".svg"
             label: Strings.tr("Start")
             checked: bar.startOpen
+            // Windows' Start cell is one device pixel wider than the others (user-win11 160039 /
+            // 160049 / 163657 at 150 %: Search, the apps, their plates and dashes all sit 1 px right of
+            // the 66 px grid that Start starts), and its 23 px logo sits 1 px below the 24 px box.
+            dpr: bar.dpr
+            trailing: 1 / bar.dpr
+            iconDy: Math.ceil(bar.dpr / 2) / bar.dpr
+            plateGrow: 1.999 / bar.dpr
             // No context menu on Start (B07).
             onClicked: ShellState.toggleStart(bar.targetScreen, startButton.mapToItem(null, width / 2, 0).x)
         }
         SearchButton {
             id: searchButton
             anchors.verticalCenter: parent.verticalCenter
+            dpr: bar.dpr
             checked: bar.searchOpen
             query: Search.text
             onClicked: ShellState.toggleSearch(bar.targetScreen, searchButton.mapToItem(null, width / 2, 0).x)
@@ -95,6 +109,7 @@ Window {
         TaskButton {
             id: taskViewButton
             visible: ShellSettings.showTaskView
+            dpr: bar.dpr
             anchors.verticalCenter: parent.verticalCenter
             // Windows' two-window picture (dark), traced from dark-100-01-taskbar.png; the glyph in light mode.
             iconSource: Theme.dark ? Metrics.assets + "taskview/task-view-dark.svg" : ""
@@ -110,6 +125,7 @@ Window {
                 required property int index
                 required property var model
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                dpr: bar.dpr
                 iconName: model.icon
                 label: model.name
                 windowCount: model.windowCount
@@ -160,7 +176,9 @@ Window {
     Tray {
         id: tray
         targetScreen: bar.targetScreen
-        anchors { right: parent.right; rightMargin: 12; top: parent.top; bottom: parent.bottom }
+        // The clock's text ends 20 px from the screen's right edge (user-win11 163657: x 2850 of 2880),
+        // its cell 8 px after it.
+        anchors { right: parent.right; rightMargin: Tokens.v("tray.right", 10.67); top: parent.top; bottom: parent.bottom }
         onQuickSettingsRequested: (x) => ShellState.toggleQuickSettings(bar.targetScreen, x)
         onCalendarRequested: (x) => ShellState.toggleCalendar(bar.targetScreen, x)
     }
@@ -189,6 +207,10 @@ Window {
         preview.open()
     }
     function testOverflow() { tray.testOverflow() }
+    function testWidgets(byClick) { weather.testOpenBoard(byClick) }
+    function testPreviewShown() { return preview.shown }
+    function testBoardState() { const b = weather.testBoard(); return b.shown + " " + b.visible + " " + b.slide + " " + b.width + "x" + b.height }
+    function testTray(status, ms) { tray.testStatus = status; if (ms) tray.testSetTime(ms) }
     function testMenuOfTray(row) { tray.testMenu(row) }
     function testCloseFlyouts() { preview.close(); appMenu.close(); barMenu.close(); tray.testCloseFlyouts() }
 

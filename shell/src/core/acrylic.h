@@ -33,6 +33,9 @@ struct Recipe {
     qreal noise = 0.02;   // opacity of the noise layer
 };
 Recipe taskbarRecipe(bool dark);
+// AcrylicBackgroundFillColorDefault (tint #2C2C2C at 15 %, luminosity 96 % / #FCFCFC, 0, 85 %): the
+// window previews' card (user-win11 163657: (30, 57, 50) over the green wallpaper (72, 104, 96)).
+Recipe flyoutRecipe(bool dark);
 // Bottom strip (stripHeight device px) of a screen (screenSize device px) whose backdrop is the
 // wallpaper `source` (file path) or a flat colour ("#rrggbb").
 QImage renderStrip(const QString &source, QSize screenSize, int stripHeight, qreal dpr, const Recipe &r);
@@ -41,6 +44,10 @@ QImage shadowMask(const QImage &alpha8, qreal sigma, qreal dx, qreal dy, qreal s
 }
 
 // image://acrylic/<dark|light>/<width>/<height>/<strip>/<dpr>/<percent-encoded source>
+//   the taskbar's strip;
+// image://acrylic/card/<dark|light>/<width>/<height>/<dpr>/<x>/<y>/<w>/<h>/<radius>/<margin>/<source>
+//   a rounded card (x, y, w, h: logical, on the screen) in the flyout acrylic with its gradient
+//   border and drop shadow, on a transparent image `margin` larger left, right and below.
 class AcrylicProvider : public QQuickImageProvider
 {
 public:
@@ -65,6 +72,9 @@ class ShadowLabel : public QQuickItem
     Q_PROPERTY(QFont font READ font WRITE setFont NOTIFY layoutChanged)
     Q_PROPERTY(QColor color MEMBER m_color WRITE setColor NOTIFY styleChanged)
     Q_PROPERTY(int maxLines MEMBER m_maxLines WRITE setMaxLines NOTIFY layoutChanged)
+    // Qt.AlignHCenter (desktop labels) or Qt.AlignLeft / Qt.AlignRight (the taskbar clock); "\n"
+    // starts a new line.
+    Q_PROPERTY(int horizontalAlignment MEMBER m_align WRITE setHorizontalAlignment NOTIFY styleChanged)
     // Line pitch in logical px; lineHeightDevice (> 0) overrides it in device px.
     Q_PROPERTY(qreal lineHeight MEMBER m_lineHeight WRITE setLineHeight NOTIFY layoutChanged)
     Q_PROPERTY(int lineHeightDevice MEMBER m_lineHeightDevice WRITE setLineHeightDevice NOTIFY layoutChanged)
@@ -89,6 +99,7 @@ public:
     void setFont(const QFont &f) { if (f != m_font) { m_font = f; relayout(); } }
     void setColor(const QColor &c) { if (c != m_color) { m_color = c; restyle(); } }
     void setMaxLines(int n) { if (n != m_maxLines) { m_maxLines = n; relayout(); } }
+    void setHorizontalAlignment(int a) { if (a != m_align) { m_align = a; restyle(); } }
     void setLineHeight(qreal n) { if (n != m_lineHeight) { m_lineHeight = n; relayout(); } }
     void setLineHeightDevice(int n) { if (n != m_lineHeightDevice) { m_lineHeightDevice = n; relayout(); } }
     void setPad(int n) { if (n != m_pad) { m_pad = n; Q_EMIT padChanged(); relayout(); } }
@@ -121,6 +132,7 @@ private:
     QString m_text;
     QFont m_font, m_devFont;
     QColor m_color = Qt::white, m_shadowColor = Qt::black;
+    int m_align = Qt::AlignHCenter;
     int m_maxLines = 2, m_pad = 6, m_textWidth = 0, m_lineHeightDevice = 0, m_lineDev = 15;
     qreal m_lineHeight = 15, m_dpr = 0;
     qreal m_shadowBlur = 1.6, m_shadowX = 0.5, m_shadowY = 1, m_shadowStrength = 1.7, m_gamma = 1;

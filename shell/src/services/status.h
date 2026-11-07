@@ -121,12 +121,18 @@ class KeyboardStatus : public QObject
     Q_PROPERTY(QString shortName READ shortName NOTIFY changed)  // "ESP", "ENG"…
     Q_PROPERTY(QString longName READ longName NOTIFY changed)
     Q_PROPERTY(int count READ count NOTIFY changed)
+    // Windows' input indicator, two lines: the language (3 letters, "ENG") over the keyboard's
+    // region (2 letters, "ES"), e.g. English (United Kingdom) with a Spanish keyboard.
+    Q_PROPERTY(QString language READ language NOTIFY changed)
+    Q_PROPERTY(QString region READ region NOTIFY changed)
 public:
     static KeyboardStatus *instance();
     static KeyboardStatus *create(QQmlEngine *, QJSEngine *);
     QString shortName() const;
     QString longName() const { return m_current >= 0 && m_current < m_long.size() ? m_long.at(m_current) : QString(); }
     int count() const { return m_short.size(); }
+    QString language() const;
+    QString region() const;
     Q_INVOKABLE void next();
 Q_SIGNALS:
     void changed();
@@ -135,6 +141,6 @@ private Q_SLOTS:
     void reload();
 private:
     explicit KeyboardStatus(QObject *parent = nullptr);
-    QStringList m_short, m_long;
+    QStringList m_short, m_long, m_layouts;
     int m_current = -1;
 };
