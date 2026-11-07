@@ -104,6 +104,7 @@ Window {
                 Keys.onEscapePressed: popup.close()
                 focus: true
             }
+            AcrylicOutline { acrylic: material }
         }
     }
 }

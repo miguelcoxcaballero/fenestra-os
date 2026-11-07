@@ -72,3 +72,55 @@ Residuals: app icons the bench has no theme for, demo content (Windows' pinned a
 the Quick settings tile set (the VM has Live captions, Nearby sharing and Cast, the bench Airplane mode,
 Night light, Accessibility), grey-scale antialiasing against ClearType (Qt draws Segoe UI Variable about
 25 % lighter in ink), and at 150 % the calendar, which Windows cuts to four weeks on a 720 px screen.
+
+## Start, Search and the popups' material against the user's own Windows 11 (2026-11-07)
+
+Reference: `reference-shots/user-win11/shots/Screenshot 2026-11-04 1600{39,49,110,127}.png` — the
+user's Windows 11 on this laptop, 2880×1800 at 150 %, dark, transparency on, wallpaper (72, 104, 96).
+Bench: `tests/shell-kwin/popups-gl.sh` (KWin `--virtual` with OpenGL compositing on the host's render
+node and its blur effect, 2880×1800 at 1.5, the user's wallpaper, fonts, icon theme and icon pack;
+`popups-ctl.sh` drives it and captures with ScreenShot2). The captures are 2878×1798 with the same
+origin as the screen (Start's panel centre = 1440).
+
+Geometry (logical px = device / 1.5, from the panel's outer top-left; tokens `start.*`, `search.*`):
+Start and Search panels 834 × 866, 18 device px above the taskbar's top edge; Start header band 66,
+footer band 64.67, 1.33 px dividers; search field 33.33..801.33 × 17.33..49.33; Pinned 8 × 96 × 84
+from x 33.33 (icons 32 at y 141.33, two rows, "Show all ˅"); Recent 3 × 256 × 56 (icons at y 382.67);
+All: category tiles 156 px, 183.33 / 204.67 px apart, from (65.33, 555.33), 2 × 2 icons of 32 at 28 / 96,
+the fourth slot 2 × 2 × 16 px when the category has more apps. Search: Recent searches (18 px semibold,
+40 px tiles, 60 px rows), chips 31.33 px high from x 64.67, Best match row 328.67 × 56, preview pane
+376.67..800.67 × 120.67..840.67. `cmpbb.py`-style bounding boxes of every element: within 1 device px of
+the reference except content (other icons and file names) and the power glyph (2 px taller).
+
+Text: Qt's default instance of Segoe UI Variable is opsz 8 (4 % wider than Windows' text); DirectWrite
+uses the device size in points (opsz 15.75 for 14 px at 150 %): `font.opsz`. Qt Quick's distance-field
+text drew ClearType-like colour fringes (fontconfig rgba); Windows' shell text is greyscale:
+`QSG_DISTANCEFIELD_ANTIALIASING=gray`.
+
+Material: KWin 6.8's blur (default settings, as the user's session; there is no contrast effect any
+more) saturates what it blurs: the flat wallpaper (72, 104, 97) comes out (62, 110, 99) ± 1.4 under a
+transparent surface. Each fill is the (alpha, grey) whose composite over that is the reference colour:
+Start's body (34, 50, 46) = #141414 at 67 %, header/footer (26, 42, 38) = #080808 at 67 % (separate
+fills: an overlay on the body cannot keep the chroma), the edge = white 20.5 % over the fill (28 % on
+top), menus over Start (38, 49, 45) = #2D2D2D at 57 % with a black 15 % edge. White/black overlays
+inside the panel (tiles, chips, hover, text) composite exactly like plain "over" and keep the measured
+alphas. Over a bright window Windows' acrylic pins the luminosity and this overlay cannot (no colour
+matrix in KWin): the panel follows the backdrop's brightness there.
+Shadow (`fitshadow-popup.py`, rms 0.004): black Gaussians σ 2.30 / 8.74 device px, dy 3.18 / 12.68,
+opacity 0.217 / 0.346, cut at the taskbar's edge; nothing under the panel.
+
+| Surface (150 %, vs user-win11) | before (origin 7fe14be) | after |
+|---|---|---|
+| Start, panel box incl. shadow: mean / > 24 levels | 39.99 / 40.9 % | 8.59 / 5.2 % |
+| Start, empty body / header / footer patches (mean colour) | 54.6 / 62.5 / 13.5 | 0.1 / 0.1 / 0.2 |
+| Start, shadow left / right / gap below / top | 4.6 / 4.6 / 25.6 / 1.7 | 1.2 / 1.1 / 1.0 / 1.2 |
+| Search home | 39.72 / 57.8 % | 3.78 / 2.3 % |
+| Search results + preview | 41.01 / 62.8 % | 4.18 / 2.3 % |
+| Power menu over Start | 45.85 / 68.2 % | 16.35 / 8.0 % (the bench has no Sleep row) |
+
+Motion: the blur region is the moving panel's rounded rectangle cut at the surface's bottom edge,
+sent on every frame (`ShellUtil.setBlurItems`); a capture 1 frame into Start's opening shows the
+blurred panel half risen and sharp wallpaper where it will land (no ghost). The surface reaches the
+taskbar's top edge (input region = panel only), so the panel is clipped there as on Windows.
+Quick settings, Notification Center and calendar have no capture on real hardware: same material,
+their inner VM greys turned into overlays (`*.acrylic` tokens), layout unchanged.

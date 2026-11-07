@@ -14,4 +14,5 @@ Item {
     default property alias content: inner.data
     Acrylic { id: material; anchors.fill: parent; recipe: "panel" }
     Item { id: inner; anchors.fill: parent; clip: card.clipContent }
+    AcrylicOutline { acrylic: material }
 }

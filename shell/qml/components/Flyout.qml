@@ -132,5 +132,6 @@ Window {
             focus: true
             Keys.onEscapePressed: flyout.close()
         }
+        AcrylicOutline { acrylic: material; visible: material.fill.visible }
     }
 }

@@ -7,7 +7,7 @@
 //     and pins its luminosity to the tint's; KWin has no colour matrix any more (6.8), so the fill
 //     is the overlay that gives the measured colour over the wallpaper: Start's body = black 52 %,
 //     its header and footer = black 61 % (acrylic.<recipe> tokens);
-//   - a 1 px light border (white over the fill), 2 device px at 150 % as on the reference;
+//   - a 1 px light edge (white over the fill, AcrylicOutline), 2 device px at 150 % as on the reference;
 //   - the two-layer shadow of image://popupshadow around it (nothing under the panel).
 // Appearance/Transparency=false: the opaque fallback colours (acrylic.<recipe>.solid), no blur.
 import QtQuick
@@ -37,14 +37,18 @@ Item {
         source: visible ? "image://popupshadow/" + acrylic.width + "/" + acrylic.height + "/" + acrylic.radius + "/"
                           + acrylic.shadowMargin + "/" + acrylic.dpr + "/" + acrylic.shadowKind : ""
     }
+    // 2 device px at 150 % (4/3 logical), 1 at 100 %.
+    readonly property real borderWidth: (dpr > 1 && dpr < 2 ? 2 : Math.max(1, Math.round(dpr))) / dpr
+    // The edge is drawn over the fill and the content by the owner (AcrylicOutline after its
+    // content): an overlay on the fill, as Windows draws it (an edge drawn beside a translucent
+    // fill leaves a half-covered seam at fractional scales).
+    readonly property color borderColor: Metrics.themed(!translucent ? "acrylic.border.solid"
+                                     : recipe.startsWith("menu") || recipe === "tooltip" ? "acrylic.border.menu" : "acrylic.border")
     Rectangle {
         id: fillRect
         anchors.fill: parent
         radius: acrylic.radius
         color: Metrics.themed("acrylic." + acrylic.recipe + (acrylic.translucent ? "" : ".solid"))
-        // 2 device px at 150 % (4/3 logical), 1 at 100 %.
-        border.width: acrylic.border ? (acrylic.dpr > 1 && acrylic.dpr < 2 ? 2 : Math.max(1, Math.round(acrylic.dpr))) / acrylic.dpr : 0
-        border.color: Metrics.themed(!acrylic.translucent ? "acrylic.border.solid"
-                                     : acrylic.recipe.startsWith("menu") || acrylic.recipe === "tooltip" ? "acrylic.border.menu" : "acrylic.border")
+        border.width: 0
     }
 }

@@ -24,7 +24,7 @@ ShellPopup {
     property string page: ""                // "" | "recent"
     property var category: null             // the open category {name, apps}
     property var pins: StartPins.apps
-    readonly property real bw: material.fill.border.width
+    readonly property real bw: material.borderWidth
     readonly property real headerH: Metrics.num("start.header.height", 66)
     readonly property real footerY: panelHeight - Metrics.num("start.footer.height", 64.67)
     readonly property real gridX: Metrics.num("start.grid.x", 33.33)
@@ -85,12 +85,12 @@ ShellPopup {
     // different acrylic, not an overlay on the body (an overlay cannot keep the chroma).
     Component.onCompleted: material.fill.color = "transparent"
     Rectangle {
-        x: start.bw; y: start.headerH; width: start.panelWidth - 2 * start.bw; height: start.footerY - y
+        y: start.headerH; width: start.panelWidth; height: start.footerY - y
         color: Metrics.themed("acrylic.panel" + (ShellSettings.transparency ? "" : ".solid"))
     }
     Rectangle {
-        x: start.bw; y: start.bw; width: start.panelWidth - 2 * start.bw; height: start.headerH - start.bw
-        topLeftRadius: Metrics.flyoutRadius - start.bw; topRightRadius: Metrics.flyoutRadius - start.bw
+        width: start.panelWidth; height: start.headerH
+        topLeftRadius: Metrics.flyoutRadius; topRightRadius: Metrics.flyoutRadius
         color: Metrics.themed("start.header.fill" + (ShellSettings.transparency ? "" : ".solid"))
         Rectangle { y: parent.height - height; width: parent.width; height: start.bw; color: Metrics.themed("start.divider") }
     }
@@ -375,9 +375,9 @@ ShellPopup {
     // ---- Footer band: account and power ---------------------------------------------------------
     Rectangle {
         id: footer
-        x: start.bw; y: start.footerY
-        width: start.panelWidth - 2 * start.bw; height: start.panelHeight - start.bw - y
-        bottomLeftRadius: Metrics.flyoutRadius - start.bw; bottomRightRadius: Metrics.flyoutRadius - start.bw
+        y: start.footerY
+        width: start.panelWidth; height: start.panelHeight - y
+        bottomLeftRadius: Metrics.flyoutRadius; bottomRightRadius: Metrics.flyoutRadius
         color: Metrics.themed("start.header.fill" + (ShellSettings.transparency ? "" : ".solid"))
         Rectangle { width: parent.width; height: start.bw; color: Metrics.themed("start.divider") }
     }

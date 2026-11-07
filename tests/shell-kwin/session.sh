@@ -173,7 +173,7 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     check S01-start-pins wait_for '[ "$(probe "StartPins.apps.length")" != "('"'"'[0]'"'"',)" ]' 5
     check S01-recommended wait_for 'is "$(probe "RecentFiles.items.length")" 3' 10
     sleep 1; check S01-start shot_with fenestra-start 09-start
-    check S01-start-size python3 -c "import json, sys; s = [x for x in json.load(open('/out/09-start/surfaces.json')) if x['scope'] == 'fenestra-start']; sys.exit(not s or (s[0]['width'], s[0]['height']) != (642, 726))"
+    check S01-start-size python3 -c "import json, sys; s = [x for x in json.load(open('/out/09-start/surfaces.json')) if x['scope'] == 'fenestra-start']; sys.exit(not s or (s[0]['width'], s[0]['height']) != (890, 906))"  # 834 x 866 panel + 28 px shadow room, down to the taskbar
     probe "$(st 'testPowerMenu()')" >/dev/null; sleep 1; check S01-power-menu shot_with fenestra-flyout 09b-power-menu
     probe "$(st 'testCloseMenus()')" >/dev/null
     probe "$(st 'testAccountMenu()')" >/dev/null; sleep 1; check S01-account-menu shot_with fenestra-flyout 09c-account-menu
@@ -187,7 +187,7 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "$(se "openWith('')")" >/dev/null; sleep 1
     check S04-search-home shot_with fenestra-start 13-search-home
     # Search lines up with the taskbar's search box (reference: both at x 785).
-    check S04-search-at-box bash -c '[ "$(probe "Math.round(screensView.objectAt(0).taskbar.searchBoxX)" | tr -dc 0-9)" = "$(python3 -c "import json; print([x for x in json.load(open(\"/out/13-search-home/surfaces.json\")) if x[\"scope\"] == \"fenestra-start\"][0][\"margins\"][0])")" ]'
+    check S04-search-at-box bash -c '[ "$(probe "Math.round(screensView.objectAt(0).taskbar.searchBoxX)" | tr -dc 0-9)" = "$(python3 -c "import json; print([x for x in json.load(open(\"/out/13-search-home/surfaces.json\")) if x[\"scope\"] == \"fenestra-start\"][0][\"margins\"][0] + 28)")" ]'
     probe "$(se "openWith('playa')")" >/dev/null
     check S05-finds-photo wait_for 'probe "Search.sections.map(s => s.items.map(i => i.kind).join()).join()" | grep -q photo' 20
     sleep 1; check S04-results-preview shot_with fenestra-start 14-results
