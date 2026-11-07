@@ -936,7 +936,11 @@ def install_glyphs_and_logos(root, pack_id, theme_name):
             log(f'glyphs: {n} code point SVGs (glyphs/u)')
     gtk_names = []
     for name, (orig, white) in installed.items():
-        for target in GLYPH_TARGETS.get(name, []):
+        # Glyphs with no explicit target (most of the app glyphs: Explorer, Notepad, Paint, Task
+        # Manager, Settings, Store) are named after the freedesktop icon they stand for, so they go
+        # into the theme under that name: apps that ask the theme for «edit-rename-symbolic» get it.
+        targets = GLYPH_TARGETS.get(name) or [f'icon:{name}-symbolic']
+        for target in targets:
             kind, _, what = target.partition(':')
             if kind in ('icon', 'shell'):
                 overrides['icons'][what] = [str(white)]

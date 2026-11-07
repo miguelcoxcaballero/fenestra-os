@@ -70,7 +70,7 @@ and older importers ignore them.
 
 ```
 glyphs/glyphs.json        index (required when glyphs/ exists)
-glyphs/<name>.svg         one per icons.json glyphs[] entry with a code point (85 of 89 today)
+glyphs/<name>.svg         one per icons.json glyphs[] entry with a code point (218 of 293 today)
 glyphs/u/<HEX>.svg        only with --all-glyphs: every code point of the font's cmap
 ```
 
@@ -101,7 +101,7 @@ Names are icons.json `glyphs[].name` (`^[a-z0-9][a-z0-9.+-]*$`), a namespace sep
 
 ### App logos: `icons/<theme>/<n>x<n>/apps/`, `apps/`
 
-For the 26 icons.json `apps[]` (sizes 256, 48, 32, 24, 16):
+For the 44 icons.json `apps[]` (sizes 256, 48, 32, 24, 16):
 
 * `Appx` / `SystemApps` entries with a package family: the packages of the family registered for the
   current user (`GetPackagesByPackageFamily` + `GetPackagePathByFullName`, resource packages included;
