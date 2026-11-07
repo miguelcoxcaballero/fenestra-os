@@ -42,7 +42,11 @@ Item {
             width: 16 + (search.mode === "box" ? 0 : 4); height: width
             anchors.verticalCenter: parent.verticalCenter
             sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-            source: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
+            // The box draws Windows' monochrome lens; the colour icon is for the icon modes.
+            source: search.mode === "box"
+                    ? "image://tint/" + Theme.text.toString().slice(1, 7) + "/"
+                      + encodeURIComponent(Metrics.assets + "search/search-glyph.svg")
+                    : ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
             scale: mouse.pressed ? 0.85 : 1
             Behavior on scale { NumberAnimation { duration: 110 } }
         }

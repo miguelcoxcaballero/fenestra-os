@@ -89,6 +89,14 @@ Window {
             query: Search.text
             onClicked: ShellState.toggleSearch(bar.targetScreen, searchButton.mapToItem(null, width / 2, 0).x)
         }
+        // Task view (B04), after search as in Windows 11: KWin's Overview with the virtual desktops.
+        TaskButton {
+            id: taskViewButton
+            anchors.verticalCenter: parent.verticalCenter
+            iconName: "task-view-symbolic"
+            label: Strings.tr("Task view")
+            onClicked: KWinIntegration.toggleOverview()
+        }
         Repeater {
             id: taskRepeater
             model: TaskbarModel
