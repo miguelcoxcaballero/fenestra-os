@@ -115,6 +115,7 @@ QVariant TaskbarModel::data(const QModelIndex &index, int role) const
         for (PlasmaWindow *w : e.windows)
             list.append(QVariantMap{{QStringLiteral("row"), WindowsModel::instance()->rowOf(w)},
                                     {QStringLiteral("title"), w->title},
+                                    {QStringLiteral("uuid"), w->uuid},
                                     {QStringLiteral("active"), bool(w->state & WM::state_active)},
                                     {QStringLiteral("minimized"), bool(w->state & WM::state_minimized)},
                                     {QStringLiteral("width"), w->geometry.width()},
