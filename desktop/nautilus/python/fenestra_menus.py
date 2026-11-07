@@ -442,6 +442,8 @@ class CommandMenus:
 
     def build_more_menu(self):
         menu = WinMenu(marks=False)
+        # Explorer opens "See more" leftwards: the menu's right edge under the button's.
+        menu.popover.set_halign(Gtk.Align.END)
         folded = lambda: self.folded
         for text, glyph, action in (('Cut', 'win11-menu-cut', 'view.cut'), ('Copy', 'win11-menu-copy', 'view.copy'),
                                     ('Paste', 'win11-menu-paste', 'view.paste'), ('Rename', 'win11-menu-rename', 'view.rename'),

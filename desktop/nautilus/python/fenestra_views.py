@@ -238,7 +238,9 @@ class FenestraViews:
         for c in children:
             if isinstance(c,Gtk.Actionable) and c.get_action_name()=='slot.search-visible':
                 c.set_visible(width>=700 and self.special=='home')
-            if isinstance(c,Gtk.Actionable) and c.get_action_name()=='view.current-directory-properties':
+            # CommandMenus takes the Details button's action away (it toggles the pane), so also
+            # match the button itself, or a window opened narrower than 900 px keeps it icon-only.
+            if c is getattr(self.menus,'details_button',None) or (isinstance(c,Gtk.Actionable) and c.get_action_name()=='view.current-directory-properties'):
                 for lab in walk(c):
                     if isinstance(lab,Gtk.Label):lab.set_visible(width>=900)
         self.menus.folded=collapse
