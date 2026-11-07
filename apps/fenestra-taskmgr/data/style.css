@@ -30,7 +30,7 @@ entry.title-search {
   color: var(--fg);
   caret-color: var(--fg);
 }
-entry.title-search > text > placeholder { color: var(--fg2); }
+entry.title-search > text > placeholder { color: var(--fg2); opacity: 1; }
 entry.title-search image { color: var(--fg2); -gtk-icon-size: 14px; margin-right: 12px; }
 entry.title-search > text { margin-left: 7px; }
 entry.title-search:focus-within {
