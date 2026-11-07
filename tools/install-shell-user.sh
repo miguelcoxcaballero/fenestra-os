@@ -2,7 +2,8 @@
 # Builds Fenestra Shell from this checkout in the KWin lab image (same Fedora as the PC) and
 # installs it for the current user only, without root:
 #   ~/.local/opt/fenestra-shell/{bin,share}   + a systemd user drop-in that runs it.
-# Assets stay those of the RPM in /usr/share/fenestra/assets (the shell reads that path).
+# Assets: the shell asks for /usr/share/fenestra/assets/X; this build also looks in
+#   ~/.local/share/fenestra/shell-assets/X first, which this script fills from assets/generated.
 # Undo: tools/install-shell-user.sh --remove   (back to /usr/bin/fenestra-shell from the RPM)
 #   env: IMAGE (default fenestra-kwinlab), ENGINE (default podman), JOBS (default 2)
 set -eu
@@ -30,6 +31,14 @@ rm -rf "$PREFIX.new"; mkdir -p "$PREFIX.new"
 cp -a "$STAGE/usr/." "$PREFIX.new/"
 rm -rf "$STAGE"
 rm -rf "$PREFIX.old"; [ -d "$PREFIX" ] && mv "$PREFIX" "$PREFIX.old"; mv "$PREFIX.new" "$PREFIX"
+
+SA=$HOME/.local/share/fenestra/shell-assets
+rm -rf "$SA.new"; mkdir -p "$SA.new"
+for d in "$REPO"/assets/generated/*/; do
+    n=$(basename "$d"); [ "$n" = wallpapers ] && continue
+    mkdir -p "$SA.new/$n"; cp -a "$d". "$SA.new/$n/"
+done
+rm -rf "$SA"; mv "$SA.new" "$SA"
 
 mkdir -p "$(dirname "$DROPIN")"
 cat > "$DROPIN" <<EOF

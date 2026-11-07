@@ -118,14 +118,33 @@ QString IconOverrides::snip(const QString &name) const
     return m_snip.value(name);
 }
 
+// A shell installed for one user (tools/install-shell-user.sh) brings its own copy of the assets
+// to ~/.local/share/fenestra/shell-assets, since it cannot write /usr/share/fenestra/assets.
+static QString userShellAsset(const QString &relative)
+{
+    static const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+        + QStringLiteral("/fenestra/shell-assets/");
+    static const bool present = QFileInfo(dir).isDir();
+    if (!present)
+        return {};
+    const QString file = dir + relative;
+    return QFileInfo::exists(file) ? file : QString();
+}
+
 QString IconOverrides::redirect(const QString &url) const
 {
-    if (isEmpty())
-        return {};
     if (url.startsWith(QLatin1String("file://"))) {
         const QString file = QUrl(url).toLocalFile();
-        return file.startsWith(kAssets) ? asset(file.mid(kAssets.size())) : QString();
+        if (!file.startsWith(kAssets))
+            return {};
+        const QString relative = file.mid(kAssets.size());
+        if (!isEmpty())
+            if (const QString pack = asset(relative); !pack.isEmpty())
+                return pack;
+        return userShellAsset(relative);
     }
+    if (isEmpty())
+        return {};
     if (url.startsWith(QLatin1String("qrc:"))) {
         static const QRegularExpression snipIcon(QStringLiteral("/snip/icons/([A-Za-z0-9._-]+)\\.svg$"));
         const auto m = snipIcon.match(QUrl(url).path());
