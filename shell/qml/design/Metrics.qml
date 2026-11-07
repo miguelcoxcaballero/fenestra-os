@@ -59,7 +59,7 @@ QtObject {
     readonly property int snipBorderWidth: Tokens.px("snip.border.width", 2)
     readonly property color snipBorderColor: Tokens.v("snip.border.color", "#ffffff")
     readonly property int snipTooltipDelay: Tokens.px("snip.tooltip.delay", 600)
-    readonly property string fontFamily: Tokens.v("font.family", "Segoe UI Variable Text")
+    readonly property string fontFamily: Tokens.v("font.family", "Segoe UI Variable")
     readonly property int fontBody: Tokens.px("font.body", 14)
     readonly property int fontCaption: Tokens.px("font.caption", 12)
     readonly property string assets: "file:///usr/share/fenestra/assets/"
