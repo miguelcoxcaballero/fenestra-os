@@ -202,14 +202,20 @@ class Theme:
         fam = family.replace('"', "") if family else util.DEFAULT_FONT
         weight = "bold" if "bold" in style else "normal"
         fstyle = "italic" if "italic" in style else "normal"
-        css = ("textview.editor { font-family: \"%s\", %s; font-size: %.2fpt; "
-               "font-weight: %s; font-style: %s; }\n" % (fam, util.FONT_FALLBACKS, size_pt, weight, fstyle))
+        # Line pitch in px, not a factor: Pango scales a factor by the font's own height, so
+        # 1.04 gave 18 px with DejaVu Sans Mono but 15 px with Consolas. Notepad: 18 px at 11 pt.
+        line = LINE_PITCH * 96.0 / 72.0
+        css = ("textview.editor { font-family: \"%s\", %s; font-size: %.2fpt; line-height: %.2fpx; "
+               "font-weight: %s; font-style: %s; }\n" % (fam, util.FONT_FALLBACKS, size_pt, size_pt * line,
+                                                         weight, fstyle))
         for z in ZOOM_LEVELS:
-            css += "textview.editor.z%d { font-size: %.2fpt; }\n" % (z, max(1.0, size_pt * z / 100.0))
+            zpt = max(1.0, size_pt * z / 100.0)
+            css += "textview.editor.z%d { font-size: %.2fpt; line-height: %.2fpx; }\n" % (z, zpt, zpt * line)
         self.font.load_from_string(css)
 
 
 ZOOM_LEVELS = list(range(10, 501, 10))
+LINE_PITCH = 18.0 / (11 * 96.0 / 72.0)  # reference: 18 px lines for 11 pt text
 
 
 _theme: Theme | None = None

@@ -98,7 +98,7 @@ button.tool-btn.tool-drop { padding: 0 11px 0 10px; }
 
 /* ------------------------------------------------------------------ editor */
 .editor-stack, scrolledwindow.editor-scroller { background-color: var(--editor); }
-textview.editor { line-height: 1.04; }
+textview.editor { line-height: 18px; } /* overridden per font size by theme.set_editor_font */
 textview.editor, textview.editor > text {
   background-color: var(--editor);
   color: var(--text);
