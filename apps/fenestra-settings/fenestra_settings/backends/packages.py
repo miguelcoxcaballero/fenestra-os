@@ -127,7 +127,7 @@ def download_and_prepare(callback):
     """Download updates and schedule the offline update: callback(ok, message)."""
     def triggered(ok, out, err):
         if ok:
-            set_state("pending_restart", True)
+            set_state("pending_restart", _boot_id() or True)
         callback(ok, (out + err).strip())
 
     def downloaded(ok, out, err):
@@ -144,10 +144,30 @@ def update_flatpaks(callback):
                    mutating=True)
 
 
+def _boot_id():
+    try:
+        with open("/proc/sys/kernel/random/boot_id") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
 def offline_pending() -> bool:
+    """An offline update is waiting for a restart: PackageKit's /system-update link exists, or this
+    Settings scheduled one during the current boot. The flag of an earlier boot is stale (the
+    restart happened: the update ran, or PackageKit dropped it), so it is cleared — otherwise
+    "Restart required" stayed forever after restarting."""
     if util.DEMO:
         return False
-    return os.path.exists("/system-update") or bool(get_state("pending_restart"))
+    if os.path.exists("/system-update"):
+        return True
+    flag = get_state("pending_restart")
+    if not flag:
+        return False
+    if flag is True or flag != _boot_id():
+        set_state("pending_restart", False)
+        return False
+    return True
 
 
 def reboot(callback=None):
