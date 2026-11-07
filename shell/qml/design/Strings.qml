@@ -64,6 +64,7 @@ QtObject {
         "Close (Esc)": "Cerrar (Esc)",
         "Good morning": "Buenos días", "Good afternoon": "Buenas tardes", "Good evening": "Buenas noches",
         "See full forecast": "Ver previsión completa", "Feels like": "Sensación térmica", "Humidity": "Humedad",
+        "Options": "Opciones", "More Wi-Fi settings": "Más configuraciones de Wi-Fi", "More Bluetooth settings": "Más configuraciones de Bluetooth", "Details": "Detalles", "System": "Sistema", "Best match": "Mejor coincidencia",
         "Rename": "Cambiar nombre", "Delete": "Eliminar", "Copy as path": "Copiar como ruta de acceso", "Properties": "Propiedades",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }

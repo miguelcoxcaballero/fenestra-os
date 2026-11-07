@@ -66,6 +66,9 @@ QtObject {
 
     // Measured colours of the shell's own surfaces: "<key>.dark" / "<key>.light" in tokens.json.
     function col(key) { return Tokens.v(key + (Theme.dark ? ".dark" : ".light"), "#ff00ff") }
+    // Colours inside the acrylic cards (Quick settings, Notification Center, calendar): overlays on
+    // the translucent card ("<key>.acrylic.dark"), the measured opaque greys without transparency.
+    function pcol(key) { return ShellSettings.transparency ? col(key + ".acrylic") : col(key) }
     function n(key, fallback) { return Tokens.px(key, fallback) }
     readonly property int quickHeight: Tokens.px("quick.height", 335)
     readonly property int quickMediaHeight: Tokens.px("quick.media.height", 178)
@@ -77,6 +80,15 @@ QtObject {
     // themed("x.fill") reads "x.fill.dark" / "x.fill.light" for the current scheme.
     function themed(key) { return Tokens.v(key + (Theme.dark ? ".dark" : ".light"), "#ff00ff") }
     function tok(key, fallback) { return Tokens.px(key, fallback) }
+    // Segoe UI Variable's optical size as DirectWrite picks it: the size in points on the device
+    // (14 px at 150 % = 15.75). Qt's default instance is opsz 8 ("Small"), 4 % wider than Windows'
+    // text (user-win11 160039: "Search for apps, settings, and documents" 376 device px; opsz 8:
+    // 395, opsz 15.75: 380).
+    // One value for all sizes: 12-18 px text lands on opsz 13.5-20 at 150 %, where the widths differ
+    // by < 0.2 %; a per-size binding on font.pixelSize loops in Qt.
+    readonly property var textAxes: ({ "opsz": Number(Tokens.v("font.opsz", 15.75)) })
+    // Fractional sizes (logical px measured at 150 %: device px / 1.5).
+    function num(key, fallback) { return Number(Tokens.v(key, fallback)) }
     readonly property int taskPitch: Tokens.px("taskbar.button.pitch", 44)
     readonly property int startInset: Tokens.px("start.inset", 33)
     readonly property int startHeaderInset: Tokens.px("start.header.inset", 64)

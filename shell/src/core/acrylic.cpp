@@ -343,6 +343,78 @@ QImage AcrylicProvider::requestImage(const QString &id, QSize *size, const QSize
     return img;
 }
 
+namespace
+{
+// Coverage of the rounded rectangle [0, w) x [0, h) (radius r) at the pixel centred on (x, y),
+// 4 x 4 supersampled near the corners.
+float roundedCoverage(float x, float y, float w, float h, float r)
+{
+    auto inside = [&](float px, float py) {
+        if (px < 0 || py < 0 || px >= w || py >= h)
+            return false;
+        const float cx = px < r ? r : px > w - r ? w - r : px, cy = py < r ? r : py > h - r ? h - r : py;
+        return (px - cx) * (px - cx) + (py - cy) * (py - cy) <= r * r;
+    };
+    const bool nearCorner = (x < r + 1 || x > w - r - 1) && (y < r + 1 || y > h - r - 1);
+    if (!nearCorner)
+        return x >= 0 && y >= 0 && x < w && y < h ? 1.f : (x > -0.5f && y > -0.5f && x < w + 0.5f && y < h + 0.5f ? 0.5f : 0.f);
+    int n = 0;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j)
+            n += inside(x - 0.375f + i * 0.25f, y - 0.375f + j * 0.25f);
+    return n / 16.f;
+}
+}
+
+QImage PopupShadowProvider::requestImage(const QString &id, QSize *size, const QSize &)
+{
+    const QStringList p = id.split(QLatin1Char('/'));
+    QImage img;
+    if (p.size() >= 5) {
+        auto *t = Tokens::instance();
+        const QString k = p.size() > 5 && p[5] == QLatin1String("menu") ? QStringLiteral("menu.shadow.") : QStringLiteral("popup.shadow.");
+        const qreal dpr = std::max(0.5, p[4].toDouble());
+        const float w = float(p[0].toDouble() * dpr), h = float(p[1].toDouble() * dpr), r = float(p[2].toDouble() * dpr);
+        const int m = qRound(p[3].toDouble() * dpr);
+        const int W = int(std::ceil(w)) + 2 * m, H = int(std::ceil(h)) + 2 * m;
+        // Two layers: sigma, dy (logical px) and opacity.
+        struct L { float s, dy, a; };
+        const L layers[2] = {{float(t->v(k + QStringLiteral("1.sigma"), 1.53).toDouble() * dpr), float(t->v(k + QStringLiteral("1.y"), 2.12).toDouble() * dpr),
+                              float(t->v(k + QStringLiteral("1.opacity"), 0.217).toDouble())},
+                             {float(t->v(k + QStringLiteral("2.sigma"), 5.83).toDouble() * dpr), float(t->v(k + QStringLiteral("2.y"), 8.45).toDouble() * dpr),
+                              float(t->v(k + QStringLiteral("2.opacity"), 0.346).toDouble())}};
+        auto phi = [](float z) { return 0.5f * std::erfc(-z / std::sqrt(2.f)); };
+        // A Gaussian-blurred rectangle is separable: (Phi(x - x0) - Phi(x - x1)) (Phi(y - y0) - Phi(y - y1)).
+        std::vector<float> fx[2], fy[2];
+        for (int l = 0; l < 2; ++l) {
+            const float s = std::max(0.3f, layers[l].s);
+            fx[l].resize(W); fy[l].resize(H);
+            for (int x = 0; x < W; ++x) {
+                const float c = x + 0.5f - m;
+                fx[l][x] = phi(c / s) - phi((c - w) / s);
+            }
+            for (int y = 0; y < H; ++y) {
+                const float c = y + 0.5f - m - layers[l].dy;
+                fy[l][y] = phi(c / s) - phi((c - h) / s);
+            }
+        }
+        img = QImage(W, H, QImage::Format_ARGB32_Premultiplied);
+        for (int y = 0; y < H; ++y) {
+            QRgb *line = reinterpret_cast<QRgb *>(img.scanLine(y));
+            for (int x = 0; x < W; ++x) {
+                const float a = layers[0].a * fx[0][x] * fy[0][y], b = layers[1].a * fx[1][x] * fy[1][y];
+                const float inside = roundedCoverage(x + 0.5f - m, y + 0.5f - m, w, h, r);
+                const float alpha = (1.f - (1.f - a) * (1.f - b)) * (1.f - inside);
+                line[x] = qRgba(0, 0, 0, std::clamp(int(std::lround(alpha * 255.f)), 0, 255));
+            }
+        }
+        img.setDevicePixelRatio(dpr);
+    }
+    if (size)
+        *size = img.size();
+    return img;
+}
+
 ShadowLabel::ShadowLabel(QQuickItem *parent)
     : QQuickItem(parent)
 {

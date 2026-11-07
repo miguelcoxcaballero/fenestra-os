@@ -9,7 +9,7 @@ Item {
     id: g
     property string glyph          // e.g. ""
     property string fallback       // icon name or file URL
-    property int size: 16
+    property real size: 16
     property color color: Theme.text
     readonly property bool fluent: FluentFont.available && glyph !== ""
     width: size; height: size

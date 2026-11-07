@@ -49,6 +49,7 @@ Rectangle {
         color: Theme.text
         font.family: Metrics.fontFamily
         font.pixelSize: Metrics.fontBody
+        font.variableAxes: Metrics.textAxes
     }
     MouseArea {
         id: mouse
