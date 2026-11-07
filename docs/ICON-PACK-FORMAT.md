@@ -70,7 +70,7 @@ and older importers ignore them.
 
 ```
 glyphs/glyphs.json        index (required when glyphs/ exists)
-glyphs/<name>.svg         one per icons.json glyphs[] entry with a code point (218 of 293 today)
+glyphs/<name>.svg         one per icons.json glyphs[] entry with a code point (237 of 293 today)
 glyphs/u/<HEX>.svg        only with --all-glyphs: every code point of the font's cmap
 ```
 
