@@ -3,11 +3,13 @@
 
 #include "apps.h"
 #include "kwinintegration.h"
+#include "shellcontrol.h"
 #include "snip.h"
 #include "status.h"
 #include "system.h"
 
 #include <KGlobalAccel>
+#include <KGlobalShortcutInfo>
 #include <PulseAudioQt/Context>
 #include <PulseAudioQt/Server>
 #include <PulseAudioQt/Source>
@@ -59,6 +61,18 @@ void Shortcuts::volume(int delta)
 
 void Shortcuts::install()
 {
+    // Super alone opens Start. KWin 6.8 no longer reads kwinrc [ModifierOnlyShortcuts]: modifier-only
+    // shortcuts are handled by the kglobalaccel built into KWin (GlobalShortcutsRegistry::keyEvent: a
+    // released Meta with nothing pressed in between looks up the shortcut "Meta"). Plasma registers
+    // "Meta" for plasmashell's "activate application launcher", and that entry in kglobalshortcutsrc
+    // keeps the key even with plasmashell not running, so Super did nothing. Take the key from whatever
+    // other component holds it, as Windows' Start does.
+    const QKeySequence super(Qt::Key_Meta);
+    for (const KGlobalShortcutInfo &info : KGlobalAccel::globalShortcutsByKey(super)) {
+        if (info.componentUniqueName() != QLatin1String("fenestra-shell"))
+            KGlobalAccel::stealShortcutSystemwide(super);
+    }
+    connect(add(QStringLiteral("start"), QStringLiteral("Start"), {super}), &QAction::triggered, ShellControl::instance(), &ShellControl::ToggleStart);
     connect(add(QStringLiteral("volume-up"), QStringLiteral("Volume up"), {QKeySequence(Qt::Key_VolumeUp)}), &QAction::triggered, this, [this] { volume(+2); });
     connect(add(QStringLiteral("volume-down"), QStringLiteral("Volume down"), {QKeySequence(Qt::Key_VolumeDown)}), &QAction::triggered, this, [this] { volume(-2); });
     connect(add(QStringLiteral("volume-mute"), QStringLiteral("Mute"), {QKeySequence(Qt::Key_VolumeMute)}), &QAction::triggered, this, [this] { volume(0); });
