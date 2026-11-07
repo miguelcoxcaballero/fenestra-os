@@ -40,7 +40,12 @@ def ensure_gallery():
         text = bookmarks.read_text() if bookmarks.exists() else ''
         if GALLERY.as_uri() not in text:
             bookmarks.parent.mkdir(parents=True, exist_ok=True)
-            bookmarks.write_text(f'{GALLERY.as_uri()} {tr("Gallery")}\n' + text)
+            text = f'{GALLERY.as_uri()} {tr("Gallery")}\n' + text
+            bookmarks.write_text(text)
+        # Explorer's 'This PC' row (Nautilus 47+ has no Computer entry); the special page is
+        # drawn by fenestra_pages. Sorted after the pinned folders by FenestraSidebar.
+        if 'computer:///' not in text:
+            bookmarks.write_text(text + ('' if not text or text.endswith('\n') else '\n') + f'computer:/// {tr("This PC")}\n')
     except OSError:
         pass
 
@@ -71,6 +76,10 @@ class FenestraSidebar:
                         child._fenestra_spacing=True;child.set_spacing(6)
                     if isinstance(child,Gtk.Label):
                         child.set_ellipsize(0)
+                if rank in (50,90):
+                    # Explorer draws This PC and Network as collapsed tree nodes: the CSS paints a
+                    # chevron left of the icon (a background, so the row's layout is untouched).
+                    row.add_css_class('fenestra-tree')
                 if 10 <= rank < 50 and not getattr(row,'_fenestra_pin',False):
                     box=next((c for c in self.walk(row) if isinstance(c,Gtk.Box)),None)
                     if box:
