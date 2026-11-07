@@ -136,13 +136,15 @@ Card {
         }
         ControlButton {
             x: parent.width - 16 - width; y: 12
-            // dark-100-15-notifications: 113 × 24, play glyph at +12, label 3 px after its 12 px box.
+            // dark-100-15-notifications: 113 × 24, 10 × 12 play glyph at +10, label at +25.
             width: Math.max(113, focusRow.implicitWidth + 20)
             Row {
                 id: focusRow
-                anchors.centerIn: parent; spacing: 3
-                SymbolicIcon { anchors.verticalCenter: parent.verticalCenter; size: 12
-                               name: Notifications.focusRemaining > 0 ? "media-playback-stop-symbolic" : "media-playback-start-symbolic" }
+                anchors.centerIn: parent; anchors.horizontalCenterOffset: -1; spacing: 1
+                // Filled play glyph like the reference (status/media-play.svg).
+                SymbolicIcon { anchors.verticalCenter: parent.verticalCenter; size: 14; monochrome: true; transform: Translate { x: -2; y: -1 }
+                               name: Notifications.focusRemaining > 0 ? "media-playback-stop-symbolic" : ""
+                               src: Notifications.focusRemaining > 0 ? "" : Metrics.assets + "status/media-play.svg" }
                 Text { text: Strings.tr(Notifications.focusRemaining > 0 ? "End session" : "Focus")
                        color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
             }
