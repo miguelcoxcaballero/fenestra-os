@@ -46,8 +46,9 @@ Item {
             source: {
                 const t = tile.iconSource.toString() !== "" ? tile.iconSource.toString() : tile.iconName
                 const onFill = tile.checked ? Theme.accentOn : Theme.text
-                return (Theme.dark && !tile.checked) ? (tile.iconSource.toString() !== "" ? tile.iconSource : "image://icon/" + tile.iconName)
-                                                     : "image://tint/" + onFill.toString().slice(1, 7) + "/" + encodeURIComponent(t)
+                // Always in the text colour: the theme's symbolic icons are #dedede, the reference's
+                // glyphs pure white (dark-100-14-quick-media).
+                return "image://tint/" + onFill.toString().slice(1, 7) + "/" + encodeURIComponent(t)
             }
         }
         MouseArea { id: bm; anchors.fill: parent; hoverEnabled: true; onClicked: tile.toggled() }
@@ -59,7 +60,7 @@ Item {
         hovered: cm.containsMouse; down: cm.pressed; on: tile.checked
         Rectangle { width: 1; height: 24; anchors.verticalCenter: parent.verticalCenter
                     color: tile.checked ? Qt.rgba(0, 0, 0, 0.2) : Metrics.col("panel.control.border") }
-        SymbolicIcon { anchors.centerIn: parent; name: "go-next-symbolic"; size: 12 }
+        SymbolicIcon { anchors.centerIn: parent; name: "go-next-symbolic"; size: 12; monochrome: true }
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; onClicked: tile.pageRequested() }
     }
     Text {
