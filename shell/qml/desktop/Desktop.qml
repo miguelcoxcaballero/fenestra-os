@@ -23,14 +23,24 @@ Window {
 
     property var selection: []          // model rows
     property int renaming: -1
-    readonly property int cellW: Metrics.desktopCellWidth
-    readonly property int cellH: Metrics.desktopCellHeight
     // Grid of Windows 11 at 100 % (design/tokens.json "desktop.*" and their _sources): 96 × 124 cells
     // from the top-left corner, 48 px icon centred 7 px down, label (Segoe UI 9 pt, 15 px lines,
     // two lines and "…" unless selected) 54 px below the icon's top, with a blurred black shadow.
-    readonly property int iconTop: Metrics.tok("desktop.icon.top", 7)
-    readonly property int labelTop: iconTop + Metrics.desktopIcon + Metrics.tok("desktop.label.gap", 3)
-    readonly property int labelLine: Metrics.tok("desktop.label.line", 15)
+    // Windows does not scale all of it with the display: at 150 % (solid/dark-150-01) the icons
+    // stay 7 device px from the top, rows are 190 px apart (124 × 1.5 + 4) and label lines 25 px
+    // (not 22.5): those are device-pixel values, computed here for the screen's scale.
+    // The window's fractional scale (Screen.devicePixelRatio is the screen's, rounded up).
+    readonly property real dpr: scaleProbe.devicePixelRatio > 0 ? scaleProbe.devicePixelRatio : 1
+    ShadowLabel { id: scaleProbe; visible: false; width: 1; height: 1 }
+    readonly property real cellW: Metrics.desktopCellWidth
+    readonly property real cellH: Math.round(Metrics.desktopCellHeight * dpr + Metrics.tok("desktop.cell.height.extra150", 8) * Math.max(0, dpr - 1)) / dpr
+    readonly property real iconTop: Metrics.tok("desktop.icon.top", 7) / dpr
+    readonly property real labelTop: iconTop + Metrics.desktopIcon + Metrics.tok("desktop.label.gap", 3)
+    readonly property int labelFontDevice: Math.round(Metrics.tok("desktop.label", 12) * dpr)
+    readonly property int labelLineDevice: dpr <= 1 ? Math.round(Metrics.tok("desktop.label.line", 15) * dpr)
+                                         : dpr <= 1.5 ? Math.round(Metrics.tok("desktop.label.line", 15) + 20 * (dpr - 1))
+                                         : Math.round(labelFontDevice * Metrics.tok("desktop.label.line.150", 25) / 18)
+    readonly property real labelLine: labelLineDevice / dpr
     readonly property int labelInset: Metrics.tok("desktop.label.inset", 2)
     readonly property int itemInset: Metrics.tok("desktop.item.inset", 2)
     readonly property int itemTop: Metrics.tok("desktop.item.top", 2)
@@ -139,10 +149,13 @@ Window {
                     z: 1   // its shadow may overhang the next cell
                     text: icon.model.name
                     maxLines: icon.isSelected ? 0 : Metrics.tok("desktop.label.lines", 2)
-                    lineHeight: desk.labelLine
+                    lineHeightDevice: desk.labelLineDevice
                     color: "white"
-                    font.family: Metrics.fontFamily; font.pixelSize: Metrics.tok("desktop.label", 12)
-                    font.hintingPreference: Font.PreferFullHinting   // GDI-like stems, as the reference
+                    // Windows' icon title font (SPI_GETICONTITLELOGFONT): Segoe UI 9 pt, not the
+                    // UI's Segoe UI Variable; hinted at its device size (ShadowLabel lays it out there).
+                    font.family: Tokens.v("desktop.label.font", "Segoe UI"); font.pixelSize: Metrics.tok("desktop.label", 12)
+                    font.hintingPreference: Font.PreferFullHinting
+                    gamma: Number(Tokens.v("desktop.label.gamma", 1.0))
                     shadowColor: Tokens.v("desktop.label.shadow.color", "#000000")
                     shadowBlur: Number(Tokens.v("desktop.label.shadow.blur", 1.6))
                     shadowX: Number(Tokens.v("desktop.label.shadow.x", 0.5))

@@ -1,79 +1,194 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Generates the Fenestra window decoration for KWin (Aurorae SVG themes Fenestra-Dark and
-Fenestra-Light) into kwin/aurorae/. Values: design/tokens.json (window.*), the same as the GTK
-caption buttons, measured on the reference (dark-100-24-caption-*): 45 × 29 buttons 1 px apart at the
-top of a 32 px title bar, close #c42b1c on hover, 10 px glyphs, hover 6.05 % and pressed 4.19 % of the
-text colour (#2d2d2d on #202020), glyphs of an inactive window at 40 % (#797979 on #202020).
-The glyphs are plain 1 px line art drawn here (no external artwork)."""
+Fenestra-Light) into kwin/aurorae/ (or the directory given as the first argument).
+
+Windows 11 standard (Win32) frame, measured on the reference shots (100 %):
+  - caption buttons 46 x 32, no gap, flush with the 1 px top and right border
+    (dialogs/dark-100-32-print-hover-close: close #c42b1c at x 1179-1224, y 118-149 under the
+    border row 117; apps/dark-100-40-explorer-home: glyphs 18 px from the button's left edge);
+  - glyphs = Segoe Fluent Icons ChromeMinimize / ChromeMaximize / ChromeRestore / ChromeClose at
+    10 px (their outlines are 1/10 em strokes with round ends: drawn here as the same 1 px line
+    art, no Microsoft artwork), the minimize bar on the 6th row of the 10 px box;
+  - hover 6 % / pressed 4 % of the text colour (#2d2d2d on #202020, solid/dark-100-24), close
+    #c42b1c with a white glyph, glyphs of an inactive window at 40 %;
+  - 1 px border #3e3e3e (dark; the reference frames measure 61-63), 8 px corner radius
+    (DWMWCP_ROUND), the window shadow of the GTK theme (window.csd box-shadow) so server-side
+    and client-side frames match.
+
+Aurorae draws the frame *under* the client, so only the title-bar corners can be round: the
+client's own bottom corners stay square (KWin rounds client corners only for decorations that
+set KDecoration3::BorderRadius, which Aurorae does not).
+
+Every frame piece is an <image> whose bounds are exactly the piece (KSvg sizes the 9-slice pieces
+from the element bounds, and clip-paths do not shrink them: the old theme drew a whole rounded
+rectangle in every piece, a grid of seams on screen). The pieces are rasters at 4x (shadow,
+body and border, antialiased), so they stay smooth at fractional scales; the shadow lives in the
+padding, which Aurorae hands to KWin as the window shadow.
+"""
+import base64
+import io
 import json
+import re
+import sys
 from pathlib import Path
+
+import numpy as np
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 T = json.loads((ROOT / "design/tokens.json").read_text())
-BW, BH = T.get("window.button.width", 45), T.get("window.button.height", 29)
-GAP = T.get("window.button.spacing", 1)
+BW, BH = T.get("window.button.width", 46), T.get("window.button.height", 32)
 TITLE = T.get("window.title.height", 32)
 R = T.get("window.radius", 8)
+SS = 4                      # shadow raster supersampling (crisp enough at 150-200 %)
+PAD_L = PAD_R = 36          # shadow extents (logical px): see SHADOWS
+PAD_T, PAD_B = 24, 48
+C = 48                      # frame corner size beyond the padding (covers the shadow fall-off)
+E = 40                      # edge / centre piece length (tiled: uniform along the edge)
+# CSS box-shadows (offset-y, blur radius, alpha) of the GTK theme's window.csd, active / inactive.
+SHADOWS = {"active": [(1, 3, 0.10), (16, 18, 0.15), (11, 23, 0.13)],
+           "inactive": [(1, 2, 0.10), (3, 4, 0.14), (1, 6, 0.12)]}
 SCHEMES = {
-    "Dark": {"bar": "#202020", "bar_inactive": "#202020", "fg": "#ffffff", "fg_inactive": "#9a9a9a", "border": "#3a3a3a"},
-    "Light": {"bar": "#f3f3f3", "bar_inactive": "#f9f9f9", "fg": "#000000", "fg_inactive": "#8a8a8a", "border": "#c8c8c8"},
+    "Dark": {"bar": "#202020", "bar_inactive": "#202020", "fg": "#ffffff", "fg_inactive": "#9a9a9a",
+             "border": "#3e3e3e", "border_inactive": "#3a3a3a", "shadow": 1.0},
+    "Light": {"bar": "#f3f3f3", "bar_inactive": "#f9f9f9", "fg": "#000000", "fg_inactive": "#8a8a8a",
+              "border": "#c8c8c8", "border_inactive": "#d0d0d0", "shadow": 0.85},
 }
-GLYPHS = {  # in a 10 × 10 box, centred in the button
-    "minimize": '<path d="M1 5.5H11" />',  # reference: x 18-27 in the 45 px button
-    "maximize": '<rect x="0" y="0.5" width="9" height="9" rx="1" />',  # antialiased corners like the reference
-    "restore": '<rect x="0.5" y="2.5" width="7" height="7" rx="1" /><path d="M2.5 2.5V1.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H7.5" />',
-    # antialiased like Windows' (crisp edges gave a 9 px stair-stepped X): x 17-26, y 9-18
-    "close": '<path d="M-0.25 0.25L9.25 9.75M9.25 0.25L-0.25 9.75" />',
+# 10 x 10 glyph box, 1 px strokes with round ends: the Chrome* glyphs of Segoe Fluent Icons.
+GLYPHS = {
+    "minimize": '<path d="M0.5 5.5H9.5"/>',
+    "maximize": '<rect x="0.5" y="0.5" width="9" height="9" rx="1"/>',
+    "restore": '<rect x="0.5" y="2.5" width="7" height="7" rx="1"/>'
+               '<path d="M2.1 0.5H7a2.5 2.5 0 0 1 2.5 2.5V7.9"/>',
+    "close": '<path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5"/>',
 }
 
 
-def frame(prefix, w, h, fill, stroke, radius):
-    """9-slice frame (Plasma FrameSvg element names) for a w × h decoration."""
-    c = radius
-    parts = {
-        "topleft": (0, 0, c, c), "top": (c, 0, w - 2 * c, c), "topright": (w - c, 0, c, c),
-        "left": (0, c, c, h - 2 * c), "center": (c, c, w - 2 * c, h - 2 * c), "right": (w - c, c, c, h - 2 * c),
-        "bottomleft": (0, h - c, c, c), "bottom": (c, h - c, w - 2 * c, c), "bottomright": (w - c, h - c, c, c),
-    }
+def blur(a, sigma):
+    k = int(3 * sigma) + 1
+    x = np.arange(-k, k + 1)
+    g = np.exp(-x * x / (2 * sigma * sigma)); g /= g.sum()
+    a = np.apply_along_axis(lambda r: np.convolve(r, g, mode="same"), 1, a)
+    return np.apply_along_axis(lambda c: np.convolve(c, g, mode="same"), 0, a)
+
+
+def rounded(w, h, x0, y0, x1, y1, r, top_only):
+    """Antialiased coverage (0-1) of a box, round top corners (and bottom ones unless top_only),
+    at SS x, from a 4x finer mask."""
+    f = 4
+    im = Image.new("L", (w * SS * f, h * SS * f), 0)
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(im)
+    X0, Y0, X1, Y1 = (int(round(v * SS * f)) for v in (x0, y0, x1, y1))
+    if r > 0:
+        d.rounded_rectangle([X0, Y0, X1 - 1, Y1 - 1], radius=int(round(r * SS * f)), fill=255)
+        if top_only:
+            d.rectangle([X0, (Y0 + Y1) // 2, X1 - 1, Y1 - 1], fill=255)
+    else:
+        d.rectangle([X0, Y0, X1 - 1, Y1 - 1], fill=255)
+    im = im.resize((w * SS, h * SS), Image.BOX)
+    return np.asarray(im, dtype=np.float32) / 255
+
+
+def hexrgb(h):
+    return np.array([int(h[i:i + 2], 16) for i in (1, 3, 5)], np.float32) / 255
+
+
+def frame(prefix, fill, stroke, layers, shadow_scale, radius, pad=True):
+    """9-slice frame rendered as SS x rasters (shadow, body, 1 px border), one <image> per piece
+    whose bounds are exactly the piece: KSvg takes the 9-slice sizes from the element bounds."""
+    pl, pr, pt, pb = (PAD_L, PAD_R, PAD_T, PAD_B) if pad else (0, 0, 0, 0)
+    body = 2 * C + E
+    w, h = pl + body + pr, pt + body + pb
+    bx0, by0, bx1, by1 = pl, pt, pl + body, pt + body
+    outer = rounded(w, h, bx0, by0, bx1, by1, radius, True)
+    alpha = np.zeros_like(outer)
+    if pad:
+        base = rounded(w, h, bx0, by0, bx1, by1, radius, False)
+        for dy, b, a in layers:
+            m = blur(np.roll(base, int(round(dy * SS)), axis=0), b / 2 * SS)
+            alpha = 1 - (1 - alpha) * (1 - a * shadow_scale * m)
+    rgb = np.zeros(outer.shape + (3,), np.float32)
+    if stroke:
+        inner = rounded(w, h, bx0 + 1, by0 + 1, bx1 - 1, by1 - 1, max(radius - 1, 0), True)
+        inner[(by1 - 1) * SS:, :] = 0                       # bottom border row
+        col = hexrgb(stroke)[None, None] * (outer - inner)[..., None] + hexrgb(fill)[None, None] * inner[..., None]
+    else:
+        col = hexrgb(fill)[None, None] * outer[..., None]
+    # premultiplied: window (outer) over shadow (black, alpha)
+    a_tot = outer + alpha * (1 - outer)
+    rgb = col  # black shadow adds no colour
+    with np.errstate(invalid="ignore", divide="ignore"):
+        straight = np.where(a_tot[..., None] > 0, rgb / np.maximum(a_tot[..., None], 1e-6), 0)
+    rgba = np.concatenate([straight, a_tot[..., None]], axis=2)
+    rgba = (np.clip(rgba, 0, 1) * 255 + 0.5).astype(np.uint8)
+    cx, cy, ex, ey = pl + C, pt + C, pl + C + E, pt + C + E
+    parts = {"topleft": (0, 0, cx, cy), "top": (cx, 0, ex, cy), "topright": (ex, 0, w, cy),
+             "left": (0, cy, cx, ey), "center": (cx, cy, ex, ey), "right": (ex, cy, w, ey),
+             "bottomleft": (0, ey, cx, h), "bottom": (cx, ey, ex, h), "bottomright": (ex, ey, w, h)}
     out = []
-    for name, (x, y, ww, hh) in parts.items():
-        out.append(f'<g id="{prefix}-{name}"><clipPath id="c-{prefix}-{name}"><rect x="{x}" y="{y}" width="{ww}" height="{hh}"/></clipPath>'
-                   f'<rect clip-path="url(#c-{prefix}-{name})" x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="{radius}" '
-                   f'fill="{fill}" stroke="{stroke}" stroke-width="1"/></g>')
-    return "\n".join(out)
+    for name, (x0, y0, x1, y1) in parts.items():
+        tile = rgba[y0 * SS:y1 * SS, x0 * SS:x1 * SS]
+        buf = io.BytesIO(); Image.fromarray(tile, "RGBA").save(buf, "PNG", optimize=True)
+        href = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+        out.append(f'<image id="{prefix}-{name}" x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}" '
+                   f'preserveAspectRatio="none" xlink:href="{href}"/>')
+    return w, h, out
+
+
+def _shift(image_tag, dy):
+    """Moves an <image ... y="Y" ...> down by dy (no transforms: KSvg bounds stay exact)."""
+    return re.sub(r' y="(\d+)"', lambda m: f' y="{int(m.group(1)) + dy}"', image_tag, count=1)
 
 
 def decoration(s):
-    w, h = 200, 200
-    body = [frame("decoration", w, h, s["bar"], s["border"], R),
-            frame("decoration-inactive", w, h, s["bar_inactive"], s["border"], R),
-            frame("decoration-maximized", w, h, s["bar"], s["bar"], 0),
-            frame("decoration-maximized-inactive", w, h, s["bar_inactive"], s["bar_inactive"], 0)]
-    return f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}">\n' + "\n".join(body) + "\n</svg>\n"
+    pieces, W, H = [], 0, 0
+    for prefix, fill, stroke, layers, pad, radius in (
+            ("decoration", s["bar"], s["border"], SHADOWS["active"], True, R),
+            ("decoration-inactive", s["bar_inactive"], s["border_inactive"], SHADOWS["inactive"], True, R),
+            ("decoration-maximized", s["bar"], None, None, False, 0),
+            ("decoration-maximized-inactive", s["bar_inactive"], None, None, False, 0)):
+        w, h, out = frame(prefix, fill, stroke, layers, s["shadow"], radius, pad)
+        # Stack the four frames vertically so their pieces do not overlap.
+        pieces.append("\n".join(_shift(o, H) for o in out))
+        W, H = max(W, w), H + h + 4
+    # No hint-stretch-borders: KSvg tiles the edge pieces at their native size (their content is
+    # uniform along the edge), while stretching resamples them and blurs the border off the
+    # corners' pixel rows at fractional scales.
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{W}" height="{H}">\n'
+            + "\n".join(pieces) + "\n</svg>\n")
 
 
 def button(s, glyph, close):
-    states = {
-        "active": (None, s["fg"], 1),
-        "hover": ("#c42b1c" if close else s["fg"], "#ffffff" if close else s["fg"], 1),
-        "pressed": ("#c42b1c" if close else s["fg"], "#ffffff" if close else s["fg"], 0.786),
-        "inactive": (None, s["fg"], 0.40),
-        "deactivated": (None, s["fg_inactive"], 0.5),
+    fg, inact = s["fg"], s["fg_inactive"]
+    hover_bg = ("#c42b1c", 1) if close else (fg, 0.0605)
+    pressed_bg = ("#c42b1c", 0.9) if close else (fg, 0.0419)
+    hover_fg = "#ffffff" if close else fg
+    states = {  # prefix: (background, glyph colour, glyph opacity)
+        "active": (None, fg, 1), "hover": (hover_bg, hover_fg, 1), "pressed": (pressed_bg, hover_fg, 0.786),
+        "inactive": (None, fg, 0.40), "hover-inactive": (hover_bg, hover_fg, 1),
+        "pressed-inactive": (pressed_bg, hover_fg, 0.786),
+        "deactivated": (None, inact, 0.5), "deactivated-inactive": (None, inact, 0.4),
     }
-    alpha = {"hover": 1 if close else 0.0605, "pressed": 0.9 if close else 0.0419}
     parts = []
-    render = "auto" if glyph in ("close", "maximize") else "crispEdges"
-    for state, (bg, fg, opacity) in states.items():
-        rect = f'<rect width="{BW}" height="{BH}" fill="{bg}" fill-opacity="{alpha.get(state, 1)}"/>' if bg else \
-            f'<rect width="{BW}" height="{BH}" fill="none"/>'
-        g = (f'<g transform="translate({(BW - 10) / 2} {(BH - 10) // 2})" fill="none" stroke="{fg}" stroke-width="1" '
-             f'stroke-opacity="{opacity}" shape-rendering="{render}">{GLYPHS[glyph]}</g>')
+    gx, gy = (BW - 10) // 2, (BH - 10) // 2          # 18, 11: the reference's glyph position
+    for state, (bg, col, op) in states.items():
+        # Close sits in the window's round top-right corner: its plate follows the border's inner
+        # curve (radius R - 1). Aurorae has no maximized button state, so a maximized window's
+        # close plate keeps that curve too.
+        r = R - 1
+        shape = (f'<path d="M0 0H{BW - r}A{r} {r} 0 0 1 {BW} {r}V{BH}H0Z" ' if close else f'<rect width="{BW}" height="{BH}" ')
+        rect = shape + (f'fill="{bg[0]}" fill-opacity="{bg[1]}"/>' if bg else 'fill="#000" fill-opacity="0"/>')
+        if not bg:
+            rect = f'<rect width="{BW}" height="{BH}" fill="#000" fill-opacity="0"/>'
+        g = (f'<g transform="translate({gx} {gy})" fill="none" stroke="{col}" stroke-opacity="{op}" stroke-width="1" '
+             f'stroke-linecap="round" stroke-linejoin="round">{GLYPHS[glyph]}</g>')
         parts.append(f'<g id="{state}-center">{rect}{g}</g>')
     return f'<svg xmlns="http://www.w3.org/2000/svg" width="{BW}" height="{BH}">\n' + "\n".join(parts) + "\n</svg>\n"
 
 
-def rc(name, s):
+def rc(s):
     rgb = lambda h: ",".join(str(int(h[i:i + 2], 16)) for i in (1, 3, 5))
     return f"""[General]
 ActiveTextColor={rgb(s['fg'])}
@@ -89,7 +204,7 @@ HaloInactive=false
 BorderLeft=1
 BorderRight=1
 BorderBottom=1
-TitleEdgeTop=0
+TitleEdgeTop=1
 TitleEdgeBottom=0
 TitleEdgeLeft=1
 TitleEdgeRight=1
@@ -102,29 +217,30 @@ TitleBorderRight=0
 TitleHeight={TITLE}
 ButtonWidth={BW}
 ButtonHeight={BH}
-ButtonSpacing={GAP}
+ButtonSpacing=0
 ButtonMarginTop=0
 ExplicitButtonSpacer=0
-PaddingTop=0
-PaddingBottom=0
-PaddingLeft=0
-PaddingRight=0
+PaddingTop={PAD_T}
+PaddingBottom={PAD_B}
+PaddingLeft={PAD_L}
+PaddingRight={PAD_R}
 """
 
 
 def main():
+    dest = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "kwin/aurorae"
     for scheme, s in SCHEMES.items():
         name = f"Fenestra-{scheme}"
-        out = ROOT / "kwin/aurorae" / name
+        out = dest / name
         out.mkdir(parents=True, exist_ok=True)
         (out / "decoration.svg").write_text(decoration(s))
         for glyph in GLYPHS:
             (out / f"{glyph}.svg").write_text(button(s, glyph, glyph == "close"))
-        (out / f"{name}rc").write_text(rc(name, s))
+        (out / f"{name}rc").write_text(rc(s))
         (out / "metadata.json").write_text(json.dumps({
             "KPlugin": {"Id": name, "Name": f"Fenestra ({'dark' if scheme == 'Dark' else 'light'})",
                         "Description": "Fenestra window decoration", "License": "GPL-3.0-or-later",
-                        "Version": "1.0"},
+                        "Version": "1.1"},
             "X-Plasma-API": "javascript",
         }, indent=2) + "\n")
         print(out)
