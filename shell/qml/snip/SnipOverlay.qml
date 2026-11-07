@@ -11,9 +11,12 @@ Window {
     id: ov
     property var targetScreen
     property bool hasToolbar: false
-    color: "black"
+    // Transparent: until the frozen picture is drawn the live screen (the same pixels) shows through.
+    color: "transparent"
     visible: false
-    LayerShell.Window.scope: "fenestra-snip"
+    // "dock": KWin's scale effect animates surfaces with other names as opening apps (scale + fade),
+    // which made the overlay look like an app starting. Windows has no such motion (see `dimLevel`).
+    LayerShell.Window.scope: "dock"
     LayerShell.Window.layer: LayerShell.Window.LayerOverlay
     LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
     LayerShell.Window.exclusionZone: -1
@@ -36,14 +39,38 @@ Window {
         hoverRow = -1; hoverRect = Qt.rect(0, 0, 0, 0)
         if (toolbarLoader.item) toolbarLoader.item.tipIndex = -1
     }
+    // Motion, recorded on Windows 11 (26100, 2026-11-07, reference-shots/motion-snip-2026-11-07):
+    // the toolbar and the frozen screen appear at once, already in place; only the dim fades in
+    // (to black at 60 %: 238 -> 95) in ~250 ms, decelerating. Esc fades the dim out the same way
+    // (~250-300 ms) with the toolbar still shown, then everything goes. A capture closes at once.
+    property real dimLevel: 0
+    property bool instantClose: false
+    property string shot: ""
+    NumberAnimation { id: dimIn; target: ov; property: "dimLevel"; to: 1; duration: Motion.reduced ? 0 : 250
+                      easing.type: Easing.BezierSpline; easing.bezierCurve: [0, 0, 0, 1, 1, 1] }
+    SequentialAnimation {
+        id: dimOut
+        NumberAnimation { target: ov; property: "dimLevel"; to: 0; duration: Motion.reduced ? 0 : 280
+                          easing.type: Easing.BezierSpline; easing.bezierCurve: [0, 0, 0, 1, 1, 1] }
+        ScriptAction { script: { ov.visible = false; ov.shot = ""; ov.reset() } }
+    }
     function open() {
         if (targetScreen) ShellUtil.placeOnScreen(ov, targetScreen.name)
+        dimOut.stop()
         reset()
+        instantClose = false
+        shot = targetScreen ? "image://snip/" + encodeURIComponent(targetScreen.name) + "/" + Snip.serial : ""
+        dimLevel = 0
         visible = true
         requestActivate()
         keys.forceActiveFocus()
+        dimIn.restart()
     }
-    function close() { visible = false; reset() }
+    function close() {
+        dimIn.stop()
+        if (instantClose || !visible) { dimOut.stop(); visible = false; shot = ""; reset(); return }
+        dimOut.restart()
+    }
     Connections {
         target: Snip
         function onActiveChanged() { Snip.active ? ov.open() : ov.close() }
@@ -100,6 +127,7 @@ Window {
         const r = sel
         selecting = false
         if (r.width < 2 || r.height < 2) { sel = Qt.rect(0, 0, 0, 0); return false }
+        instantClose = true
         return Snip.captureRect(toGlobal(r))
     }
     function commitLasso() {
@@ -108,11 +136,13 @@ Window {
         if (pts.length < 3) { lasso = []; return false }
         const xy = []
         for (const p of pts) xy.push(p.x + originX, p.y + originY)
+        instantClose = true
         return Snip.captureFreeform(xy)
     }
     function commitWindow() {
         if (hoverRow < 0) return false
         const g = WindowsModel.data(WindowsModel.index(hoverRow, 0), 266)
+        instantClose = true
         return Snip.captureRect(Qt.rect(g.x, g.y, g.width, g.height))
     }
 
@@ -133,14 +163,14 @@ Window {
     // ---- drawing ----
     Image {
         anchors.fill: parent
-        source: Snip.active && ov.targetScreen ? "image://snip/" + encodeURIComponent(ov.targetScreen.name) + "/" + Snip.serial : ""
+        source: ov.shot   // kept while the dim fades out after Esc
         cache: false
         smooth: false
     }
     Shape {
         anchors.fill: parent
         ShapePath {
-            fillColor: Qt.rgba(0, 0, 0, Metrics.snipDim)
+            fillColor: Qt.rgba(0, 0, 0, Metrics.snipDim * ov.dimLevel)
             strokeWidth: -1
             fillRule: ShapePath.OddEvenFill
             PathMultiline {
@@ -221,7 +251,7 @@ Window {
         }
         onClicked: {
             if (Snip.mode === "window") ov.commitWindow()
-            else if (Snip.mode === "screen" && ov.targetScreen) Snip.captureScreen(ov.targetScreen.name)
+            else if (Snip.mode === "screen" && ov.targetScreen) { ov.instantClose = true; Snip.captureScreen(ov.targetScreen.name) }
         }
     }
 

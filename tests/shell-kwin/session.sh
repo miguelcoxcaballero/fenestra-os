@@ -364,18 +364,18 @@ im = Image.open(f); print(f, im.size, im.mode); sys.exit(im.size != ($1, $2))" >
     sleep 1
     check Q04-snip-overlay-per-output bash -c 'shot 30-snip-open && python3 -c "
 import json, sys
-s = [x for x in json.load(open(\"/out/30-snip-open/surfaces.json\")) if x[\"scope\"] == \"fenestra-snip\"]
+s = [x for x in json.load(open(\"/out/30-snip-open/surfaces.json\")) if x[\"scope\"] == \"dock\" and x.get(\"layer\", 3) == 3]
 sys.exit(len(s) != ${OUTPUTS:-1} or any(x[\"layer\"] != 3 or x[\"anchors\"] != 15 for x in s))"'
     # Rectangle selection in progress (with the first button's tooltip), then window mode hovering
     # the snapped X11 window (left half, active, top of the stacking order).
     probe "$(sn 'testSelect(560, 300, 800, 450, false)'); $(sn 'toolbar.tipIndex = 0')" >/dev/null; sleep 0.5
-    check Q04-snip-rectangle-dark shot_with fenestra-snip 31-snip-rectangle-dark
+    check Q04-snip-rectangle-dark shot_with dock 31-snip-rectangle-dark
     # Its output (W px wide each) and a point in its middle, in that overlay's coordinates.
     X11X=$(probe "WindowsModel.data(WindowsModel.index($X11ROW, 0), 266).x" | tr -dc 0-9)
     X11S=$((X11X / W))
     HOVER=$(sn "testHover($((X11X - X11S * W + 480)), 500)" $X11S)
     check Q04-snip-window-hover wait_for 'is "$(probe "$HOVER")" "$X11ROW"' 5
-    sleep 0.5; check Q04-snip-window-dark shot_with fenestra-snip 32-snip-window-dark
+    sleep 0.5; check Q04-snip-window-dark shot_with dock 32-snip-window-dark
     N=$(pngs)
     probe "$(sn 'testClickWindow()' $X11S)" >/dev/null
     check Q04-snip-window-saved wait_for '[ "$(pngs)" -gt "$N" ] && newest_png_is 960 1032' 10
@@ -419,9 +419,9 @@ sys.exit(not (399 <= w <= 401 and 299 <= h <= 301 and im.getpixel((2, h - 3))[3]
     snip_source 33-snip-source-light
     probe "Snip.start()" >/dev/null; wait_for 'is "$(probe "Snip.active")" true' 10; sleep 0.5
     probe "$(sn 'testSelect(560, 300, 800, 450, false)'); $(sn 'toolbar.tipIndex = 0')" >/dev/null; sleep 0.5
-    check Q04-snip-rectangle-light shot_with fenestra-snip 34-snip-rectangle-light
+    check Q04-snip-rectangle-light shot_with dock 34-snip-rectangle-light
     probe "$HOVER; $(sn 'toolbar.tipIndex = 1')" >/dev/null; sleep 0.5
-    check Q04-snip-window-light shot_with fenestra-snip 35-snip-window-light
+    check Q04-snip-window-light shot_with dock 35-snip-window-light
     probe "Snip.cancel()" >/dev/null
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
     if [ -n "${PERF:-}" ]; then
