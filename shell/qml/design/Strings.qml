@@ -16,7 +16,7 @@ QtObject {
         "Close all windows": "Cerrar todas las ventanas",
         "Show desktop": "Mostrar escritorio",
         "Show hidden icons": "Mostrar iconos ocultos",
-        "Search for apps, settings, and documents": "Buscar aplicaciones, configuración y documentos",
+        "Search for apps, settings, and documents": "Buscar aplicaciones, configuraciones y documentos",
         "Pinned": "Anclado", "All": "Todo", "Show less": "Mostrar menos", "Show all": "Mostrar todo",
         "Recommended": "Recomendaciones", "Your recent files will appear here.": "Tus archivos recientes aparecerán aquí.",
         "Recent": "Recientes", "All apps": "Todos", "Local account": "Cuenta local", "Manage my account": "Administrar mi cuenta",

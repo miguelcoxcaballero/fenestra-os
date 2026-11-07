@@ -36,25 +36,41 @@ ShellPopup {
             x: start.inset; y: Metrics.tok("start.search.y", 33)
             width: start.contentWidth; height: Metrics.tok("start.search.height", 32)
             radius: height / 2
-            color: Metrics.themed("start.search.fill")
-            border.color: Metrics.themed("start.search.border")
+            // Home: the box has the keyboard focus (dark fill, colour icon, caret); All apps: it
+            // does not (lighter fill, monochrome glyph, brighter placeholder), as on the reference.
+            readonly property string state_: start.allApps ? "start.search.idle" : "start.search"
+            color: Metrics.themed(state_ + ".fill")
+            border.color: Metrics.themed(state_ + ".border")
             Image { x: Metrics.tok("start.search.icon.x", 15); anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18
+                    visible: !start.allApps
                     source: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
                     sourceSize: Qt.size(18 * Screen.devicePixelRatio, 18 * Screen.devicePixelRatio) }
+            SymbolicIcon { x: Metrics.tok("start.search.icon.x", 15); anchors.verticalCenter: parent.verticalCenter; size: 18
+                           visible: start.allApps; monochrome: true; src: Metrics.assets + "search/search-glyph.svg" }
             Text {
                 x: Metrics.tok("start.search.text.x", 44); anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: Metrics.tok("start.text.offset", 0)
                 text: Strings.tr("Search for apps, settings, and documents")
-                color: Metrics.themed("start.search.text"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
+                color: Metrics.themed(parent.state_ + ".text"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
+            }
+            Rectangle {
+                id: caret
+                x: Metrics.tok("start.search.text.x", 44); y: 6; width: 1; height: 19
+                color: Metrics.themed("start.search.caret")
+                visible: !start.allApps && start.shown && blink.on
+                Timer { id: blink; property bool on: true; interval: 530; repeat: true
+                        running: !start.allApps && start.shown && !Motion.reduced
+                        onRunningChanged: on = true; onTriggered: on = !on }
             }
             MouseArea { anchors.fill: parent; onClicked: start.searchRequested("") }
         }
         SectionHeader {
             x: Metrics.startHeaderInset; y: Metrics.tok("start.header.y", 105)
-            width: start.width - 2 * Metrics.startHeaderInset - 1
+            width: start.width - 2 * Metrics.startHeaderInset - 2
             title: Strings.tr(start.allApps ? "All apps" : "Pinned")
             action: Strings.tr(start.allApps ? "Back" : "All apps")
             chevron: start.allApps ? "left" : "right"
+            titleOffset: Metrics.tok("start.header.title.offset", -1)
             onActionClicked: start.allApps = !start.allApps
         }
     }
@@ -87,7 +103,7 @@ ShellPopup {
         }
         SectionHeader {
             x: Metrics.startHeaderInset; y: Metrics.tok("start.recommended.y", 424) - header.height
-            width: start.width - 2 * Metrics.startHeaderInset - 1
+            width: start.width - 2 * Metrics.startHeaderInset - 2
             title: Strings.tr("Recommended")
         }
         Grid {
@@ -146,7 +162,7 @@ ShellPopup {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: Metrics.tok("start.text.offset", 0)
                     text: section; color: Theme.text
-                    font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold
+                    font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
                 }
             }
             delegate: Item {

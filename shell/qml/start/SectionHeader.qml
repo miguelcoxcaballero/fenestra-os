@@ -10,11 +10,14 @@ Item {
     property string action
     // Chevron side of the button: "right" (All ›) or "left" (‹ Back).
     property string chevron: "right"
+    // Pinned / All apps title sits 1 px above the button's centre on the reference
+    // (Recommended does not): start.header.title.offset.
+    property int titleOffset: 0
     signal actionClicked()
     height: Metrics.tok("start.header.button.height", 24)
     Text {
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: Metrics.tok("start.text.offset", 0)
+        anchors.verticalCenterOffset: Metrics.tok("start.text.offset", 0) + header.titleOffset
         text: header.title
         color: Theme.text
         font.family: Metrics.fontFamily
@@ -26,7 +29,7 @@ Item {
         visible: header.action !== ""
         readonly property int pad: Metrics.tok("start.header.button.padding", 8)
         anchors.right: parent.right
-        width: actionRow.implicitWidth + 2 * pad - (header.chevron === "right" ? 2 : 0)
+        width: actionRow.implicitWidth + 2 * pad - (header.chevron === "right" ? 1 : 2)
         height: parent.height
         radius: Metrics.controlRadius
         color: am.containsMouse ? Metrics.themed("start.hover") : Metrics.themed("start.button.fill")
