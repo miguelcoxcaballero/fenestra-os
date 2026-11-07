@@ -191,6 +191,16 @@ Window {
                 attention: model.demandsAttention
                 onClicked: { preview.close(); TaskbarModel.activate(index) }
                 onMiddleClicked: TaskbarModel.newInstance(index)
+                // The button's place for KWin: its windows minimize into it and restore from it
+                // (kwin/effects/fenestra-window-motion). Sent once the row stops moving.
+                readonly property var minimizeTarget: [tasks.x, x, width, model.windowCount, bar.width]
+                onMinimizeTargetChanged: geometryTimer.restart()
+                Component.onCompleted: geometryTimer.restart()
+                Timer {
+                    id: geometryTimer
+                    interval: 260   // after the row's 200 ms slide
+                    onTriggered: if (task.model.windowCount > 0) TaskbarModel.setButtonGeometry(task.index, task)
+                }
                 onRightClicked: {
                     preview.close()
                     const items = []

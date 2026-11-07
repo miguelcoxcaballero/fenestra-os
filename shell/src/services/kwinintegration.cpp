@@ -73,6 +73,23 @@ void KWinIntegration::applyTheme()
         wm.sync();
         changed = true;
     }
+    // App window motion as Windows 11 (kwin/effects/fenestra-window-motion): open, close,
+    // minimize to the taskbar button, restore and maximize. KWin's own effects for the same
+    // transitions are switched off, or both would animate. Fenestra's popups are layer-shell
+    // "dock" surfaces, which neither animates.
+    KConfigGroup plugins = cfg->group(QStringLiteral("Plugins"));
+    const QList<QPair<QString, bool>> effects = {
+        {QStringLiteral("fenestra-window-motionEnabled"), true},
+        {QStringLiteral("scaleEnabled"), false}, {QStringLiteral("glideEnabled"), false},
+        {QStringLiteral("fadeEnabled"), false}, {QStringLiteral("squashEnabled"), false},
+        {QStringLiteral("magiclampEnabled"), false}, {QStringLiteral("maximizeEnabled"), false},
+    };
+    for (const auto &[key, enabled] : effects) {
+        if (!plugins.hasKey(key) || plugins.readEntry(key, !enabled) != enabled) {
+            plugins.writeEntry(key, enabled);
+            changed = true;
+        }
+    }
     KConfigGroup tabbox = cfg->group(QStringLiteral("TabBox"));
     if (tabbox.readEntry("LayoutName") != QLatin1String("fenestra")) {
         tabbox.writeEntry("LayoutName", QStringLiteral("fenestra"));
