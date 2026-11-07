@@ -30,6 +30,11 @@ Item {
     // kscreenlocker gives "config" (kscreenlockerrc [Greeter][LnF][General], contents/lockscreen/config.xml).
     function cfg(key, fallback) { return typeof config !== "undefined" && config && config[key] !== undefined && config[key] !== "" ? config[key] : fallback }
     readonly property color accent: cfg("Accent", "#0078D4")
+    // AccentTextFillColorPrimary (dark): the accent towards white; #0078D4 -> #99EBFF as measured.
+    readonly property color lightAccent: Qt.colorEqual(accent, "#0078D4") ? "#99EBFF" : Qt.lighter(accent, 1.9)
+    // A Spotlight / weather link clicked on the clock view: opened once the session is unlocked.
+    property string pendingUrl: ""
+    function openAfterUnlock(url) { pendingUrl = url; showSignin("") }
     readonly property string userName: typeof kscreenlocker_userName !== "undefined" ? kscreenlocker_userName : ""
     readonly property string userImage: typeof kscreenlocker_userImage !== "undefined" ? kscreenlocker_userImage : ""
 
@@ -109,7 +114,15 @@ Item {
         phase = "welcome"
         quitTimer.start()
     }
-    Timer { id: quitTimer; interval: 250; onTriggered: Qt.quit() }
+    Timer {
+        id: quitTimer; interval: 250
+        onTriggered: {
+            // The desktop portal opens it in the session (a child of the greeter would inherit its sandbox).
+            if (root.pendingUrl !== "")
+                root.run("gdbus call --session --dest org.freedesktop.portal.Desktop --object-path /org/freedesktop/portal/desktop --method org.freedesktop.portal.OpenURI.OpenURI '' '" + root.pendingUrl.replace(/'/g, "") + "' {}")
+            Qt.quit()
+        }
+    }
     // A new PAM conversation: Howdy looks again (Windows: "Try again" / the face option).
     function retryFace() { faceState = ""; promptPending = false; authenticator.cancel(); authenticator.startAuthenticating() }
     function faceFailed() {
@@ -248,8 +261,16 @@ Item {
             anchors { right: parent.right; bottom: parent.bottom; rightMargin: 48 - 7; bottomMargin: 28 - 7 }
             source: "StatusIcons.qml"
         }
+        // Spotlight's "Learn more about this picture" and hotspots.
+        Loader { anchors.fill: parent; source: "Spotlight.qml"; onLoaded: item.open.connect(root.openAfterUnlock) }
+        // Widgets (24H2): the weather card, bottom centre, 50 px over the bottom; media above it.
+        WeatherCard {
+            id: weatherCard
+            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 50 }
+            onForecast: root.openAfterUnlock("https://www.msn.com/weather")
+        }
         Loader {
-            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 48 }
+            anchors { horizontalCenter: parent.horizontalCenter; bottom: weatherCard.visible ? weatherCard.top : parent.bottom; bottomMargin: weatherCard.visible ? 16 : 50 }
             source: "MediaCard.qml"
         }
     }

@@ -5,6 +5,7 @@
 # fprintd (pam_exec), the user's fonts and icon pack. The container stays up (fenestra-lockbench);
 # drive it with tests/lockscreen/ctl.sh. Never touches the user's session.
 #   env: BG (picture; default today's Spotlight), HELLO (atlas dir), SCALE W H, LANGUAGE (es_ES.UTF-8)
+# The other plasma modules are stand-ins (tests/lockscreen/mock-qml); MPRIS is the real module.
 set -u
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=$(realpath -m "$1"); mkdir -p "$OUT"
@@ -14,6 +15,13 @@ M=()
 [ -d "$HOME/.local/share/fonts" ] && M+=(-v "$HOME/.local/share/fonts:/root/.local/share/fonts:ro")
 [ -d "$HOME/.local/share/fenestra/packs" ] && M+=(-v "$HOME/.local/share/fenestra/packs:/root/.local/share/fenestra/packs:ro")
 [ -n "${HELLO:-}" ] && M+=(-v "$(realpath "$HELLO"):/root/.local/share/fenestra/assets/hello-windows:ro")
+# The real MPRIS QML module (plasma-workspace, not in the lab image) from this Fedora: the media
+# card is checked against a real MPRIS player (tests/lockscreen/mpris-player.py).
+MP=/usr/lib64/qt6/qml/org/kde/plasma/private/mpris
+if [ -d "$MP" ]; then
+    M+=(-v "$MP:$MP:ro")
+    for l in /usr/lib64/libkmpris.so.6*; do M+=(-v "$l:$l:ro"); done
+fi
 podman rm -f fenestra-lockbench >/dev/null 2>&1
 exec podman run -d --name fenestra-lockbench --security-opt label=disable --device /dev/dri/renderD128 --cap-add SYS_NICE \
     -e SCALE="${SCALE:-1.5}" -e W="${W:-2880}" -e H="${H:-1800}" -e LOCKLANG="${LANGUAGE:-es_ES.UTF-8}" \

@@ -26,4 +26,5 @@ private:
     void applyLockScreen();
     void runScript(const QString &name, const QString &code);
     QFileSystemWatcher m_spotlightWatcher;
+    QString m_spotlightFor, m_spotlightMeta;
 };

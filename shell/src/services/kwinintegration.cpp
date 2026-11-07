@@ -5,6 +5,8 @@
 #include "shellsettings.h"
 #include "status.h"
 #include "theme.h"
+#include "weather.h"
+#include "iconoverrides.h"
 
 #include <QUrl>
 
@@ -18,7 +20,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QJsonObject>
+#include <QPixmap>
 #include <QRegularExpression>
 #include <QStandardPaths>
 
@@ -40,6 +44,7 @@ KWinIntegration::KWinIntegration(QObject *parent)
     connect(ShellSettings::instance(), &ShellSettings::changed, this, &KWinIntegration::applyTheme);
     connect(WallpaperSource::instance(), &WallpaperSource::changed, this, &KWinIntegration::applyLockScreen);
     connect(Theme::instance(), &Theme::changed, this, &KWinIntegration::applyLockScreen);
+    connect(Weather::instance(), &Weather::changed, this, &KWinIntegration::applyLockScreen);
     connect(&m_spotlightWatcher, &QFileSystemWatcher::directoryChanged, this, &KWinIntegration::applyLockScreen);
     applyTheme();
     applyLockScreen();
@@ -172,6 +177,66 @@ static QString spotlightPicture()
     return {};
 }
 
+// What Windows shows about today's Spotlight photo on the lock screen ("info" hotspot: the place
+// and the copyright; "basic" hotspots: a sentence and a link, at a corner or a point of the
+// photo). Windows keeps it next to the photos it downloaded (ContentDeliveryManager's
+// TargetedContentCache, JSON); the photo is matched by its SHA-256, the name of Fenestra's copy.
+static QJsonObject spotlightMetadata(const QString &picture)
+{
+    const QString hex = QFileInfo(picture).completeBaseName().toLower();
+    if (hex.size() != 64)
+        return {};
+    const QString rel = QStringLiteral("AppData/Local/Packages/Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy/LocalState/TargetedContentCache/v3");
+    for (const QFileInfo &mnt : QDir(QStringLiteral("/mnt")).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        for (const QFileInfo &user : QDir(mnt.filePath() + QStringLiteral("/Users")).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            QDir cache(user.filePath() + QLatin1Char('/') + rel);
+            if (!cache.exists())
+                continue;
+            for (const QFileInfo &sub : cache.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                for (const QFileInfo &item : QDir(sub.filePath()).entryInfoList(QDir::Files)) {
+                    if (item.size() > 2 * 1024 * 1024)
+                        continue;
+                    QFile f(item.filePath());
+                    if (!f.open(QIODevice::ReadOnly))
+                        continue;
+                    const QJsonObject o = QJsonDocument::fromJson(f.readAll()).object();
+                    if (o.value(QStringLiteral("name")).toString() != QLatin1String("LockScreen"))
+                        continue;
+                    const QJsonObject img = o.value(QStringLiteral("properties")).toObject().value(QStringLiteral("landscapeImage")).toObject();
+                    if (QByteArray::fromBase64(img.value(QStringLiteral("sha256")).toString().toLatin1()).toHex() != hex.toLatin1())
+                        continue;
+                    QJsonObject out;
+                    QJsonArray spots;
+                    const double w = img.value(QStringLiteral("width")).toDouble(1920), h = img.value(QStringLiteral("height")).toDouble(1080);
+                    for (const QJsonValue &v : o.value(QStringLiteral("items")).toArray()) {
+                        const QJsonObject p = v.toObject().value(QStringLiteral("properties")).toObject();
+                        const auto text = [&p](const char *k) { return p.value(QLatin1String(k)).toObject().value(QStringLiteral("text")).toString(); };
+                        const QJsonObject click = p.value(QStringLiteral("onClick")).toObject().value(QStringLiteral("parameters")).toObject();
+                        const QString uri = click.value(QStringLiteral("uri")).toString();
+                        const bool web = uri.startsWith(QLatin1String("https://"));
+                        if (text("template") == QLatin1String("infoHotspot")) {
+                            out[QStringLiteral("title")] = text("description");
+                            out[QStringLiteral("copyright")] = text("copyright");
+                            out[QStringLiteral("url")] = web ? uri : QString();
+                        } else {
+                            QJsonObject spot{{QStringLiteral("title"), text("title")}, {QStringLiteral("action"), text("actionText")},
+                                             {QStringLiteral("location"), text("location")}, {QStringLiteral("url"), web ? uri : QString()}};
+                            if (click.contains(QStringLiteral("landscapeX"))) {
+                                spot[QStringLiteral("x")] = click.value(QStringLiteral("landscapeX")).toString().toDouble() / w;
+                                spot[QStringLiteral("y")] = click.value(QStringLiteral("landscapeY")).toString().toDouble() / h;
+                            }
+                            spots.append(spot);
+                        }
+                    }
+                    out[QStringLiteral("hotspots")] = spots;
+                    return out;
+                }
+            }
+        }
+    }
+    return {};
+}
+
 void KWinIntegration::applyLockScreen()
 {
     // KWin's screen locker (kscreenlocker) draws shells/org.fenestra.desktop's lockscreen (Plasma 6
@@ -194,11 +259,43 @@ void KWinIntegration::applyLockScreen()
     if (picture.isEmpty())
         picture = QUrl(WallpaperSource::instance()->image()).toLocalFile();
     const QString accent = Theme::instance()->accent().name(QColor::HexRgb);
-    if (general.readEntry("Picture") == picture && general.readEntry("Background") == picture && general.readEntry("Accent") == accent)
+    QMap<QString, QString> values{{QStringLiteral("Picture"), picture}, {QStringLiteral("Background"), picture}, {QStringLiteral("Accent"), accent}};
+    // Spotlight: the photo's place, copyright and hotspots (JSON), as Windows' lock screen shows them.
+    if (picture != m_spotlightFor) {
+        m_spotlightFor = picture;
+        m_spotlightMeta = QString::fromUtf8(QJsonDocument(spotlightMetadata(picture)).toJson(QJsonDocument::Compact));
+    }
+    values[QStringLiteral("Spotlight")] = m_spotlightMeta == QLatin1String("{}") ? QString() : m_spotlightMeta;
+    // Weather card of the clock view (Windows 11 24H2's lock screen widgets): the taskbar's weather,
+    // its icon rendered from the icon pack into the cache (the lock screen has no icon theme).
+    auto *w = Weather::instance();
+    QString icon;
+    if (w->available() && !w->iconName().isEmpty()) {
+        const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + QStringLiteral("/fenestra/lockscreen");
+        QDir().mkpath(dir);
+        icon = dir + QStringLiteral("/weather-") + w->iconName() + QStringLiteral(".png");
+        if (!QFileInfo::exists(icon)) {
+            QSize size;
+            const QPixmap px = IconProvider().requestPixmap(w->iconName(), &size, QSize(168, 168));
+            if (px.isNull() || !px.save(icon))
+                icon.clear();
+        }
+    }
+    static const QRegularExpression number(QStringLiteral("^(-?[0-9]+)(.*)$"));
+    const auto m = number.match(w->temperature());
+    values[QStringLiteral("WeatherLocation")] = w->available() ? w->location() : QString();
+    values[QStringLiteral("WeatherTemperature")] = w->available() && m.hasMatch() ? m.captured(1) : QString();
+    values[QStringLiteral("WeatherUnit")] = m.hasMatch() ? m.captured(2) : QString();
+    values[QStringLiteral("WeatherCondition")] = w->available() ? w->condition() : QString();
+    values[QStringLiteral("WeatherFeelsLike")] = w->available() ? w->feelsLike() : QString();
+    values[QStringLiteral("WeatherIcon")] = icon;
+    bool same = true;
+    for (auto it = values.cbegin(); it != values.cend(); ++it)
+        same = same && general.readEntry(it.key()) == it.value();
+    if (same)
         return;
-    general.writeEntry("Picture", picture);
-    general.writeEntry("Background", picture);
-    general.writeEntry("Accent", accent);
+    for (auto it = values.cbegin(); it != values.cend(); ++it)
+        general.writeEntry(it.key(), it.value());
     general.deleteEntry("Network");
     general.deleteEntry("Battery");
     locker->sync();

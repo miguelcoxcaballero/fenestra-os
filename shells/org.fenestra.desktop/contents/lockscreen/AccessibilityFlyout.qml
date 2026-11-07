@@ -22,14 +22,15 @@ Acrylic {
         root.run("pgrep -x orca", (out, code) => fly.narrator = code === 0)
     }
     // Glyphs matched against the reference capture (Segoe Fluent Icons): magnifier E8A3, contrast
-    // E7A1, narrator ED4D, keyboard E765; Sticky/Filter keys are the keyboard with a badge.
+    // E7A1, narrator ED4D, keyboard E765, Sticky keys E3BB, Filter keys E3BA (without the font:
+    // the keyboard with a drawn badge).
     readonly property var rows: [
         { key: "magnifier", g: "\uE8A3", text: root.tr("Magnifier", "Lupa") },
         { key: "contrast", g: "\uE7A1", text: root.tr("Contrast themes", "Temas de contraste") },
         { key: "narrator", g: "\uED4D", text: root.tr("Narrator", "Narrador") },
         { key: "osk", g: "\uE765", text: root.tr("On-screen keyboard", "Teclado en pantalla") },
-        { key: "sticky", g: "\uE765", badge: "sticky", text: root.tr("Sticky keys", "Teclas especiales") },
-        { key: "filter", g: "\uE765", badge: "filter", text: root.tr("Filter keys", "Teclas filtro") }]
+        { key: "sticky", g: Fluent.available ? "\uE3BB" : "\uE765", badge: "sticky", text: root.tr("Sticky keys", "Teclas especiales") },
+        { key: "filter", g: Fluent.available ? "\uE3BA" : "\uE765", badge: "filter", text: root.tr("Filter keys", "Teclas filtro") }]
     function state(k) {
         return k === "magnifier" ? magnifier : k === "contrast" ? root.highContrast : k === "narrator" ? narrator
              : k === "osk" ? root.osk : k === "sticky" ? sticky : filter
@@ -56,15 +57,15 @@ Acrylic {
                 Rectangle { anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4; radius: 4
                             color: m.pressed ? Qt.rgba(1, 1, 1, 0.04) : m.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent" }
                 Glyph { id: g; x: 24.7 - 8; anchors.verticalCenter: parent.verticalCenter; size: 16; glyph: modelData.g
-                        scale: modelData.badge ? 0.8 : 1; transformOrigin: Item.TopLeft }
+                        scale: modelData.badge && !Fluent.available ? 0.8 : 1; transformOrigin: Item.TopLeft }
                 // Badge of Sticky keys (two keys) / Filter keys (a "no" sign), bottom right of the keyboard.
                 Row {
-                    visible: modelData.badge === "sticky"
+                    visible: modelData.badge === "sticky" && !Fluent.available
                     x: g.x + 8.5; y: g.y + 9.5; spacing: 1
                     Repeater { model: 2; Rectangle { width: 3.5; height: 3.5; radius: 0.7; color: "white" } }
                 }
                 Rectangle {
-                    visible: modelData.badge === "filter"
+                    visible: modelData.badge === "filter" && !Fluent.available
                     x: g.x + 8.5; y: g.y + 8; width: 8; height: 8; radius: 4; color: "white"
                     Rectangle { anchors.centerIn: parent; width: 6; height: 1.2; rotation: -45; color: "#202020" }
                 }

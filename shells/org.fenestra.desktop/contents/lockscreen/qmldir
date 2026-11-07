@@ -15,4 +15,6 @@ NetworkStatus 1.0 NetworkStatus.qml
 Osk 1.0 Osk.qml
 PowerMenu 1.0 PowerMenu.qml
 ProgressRing 1.0 ProgressRing.qml
+Spotlight 1.0 Spotlight.qml
 StatusIcons 1.0 StatusIcons.qml
+WeatherCard 1.0 WeatherCard.qml

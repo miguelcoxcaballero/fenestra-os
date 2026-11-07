@@ -6,6 +6,7 @@
 #   shot NAME          KWin ScreenShot2, device px -> OUT/NAME.png
 #   key CODE... | type TEXT | click X Y | move X Y     input (logical px)
 #   face success|fail|wait, finger success|fail|wait   what the PAM stand-ins answer next
+#   player [art]       start a real MPRIS player on the bench's session bus (log: OUT/mpris.log)
 #   sh CMD             anything inside
 set -u
 C=${CONTAINER:-fenestra-lockbench}
@@ -17,5 +18,6 @@ stop) x "pkill -f '^/usr/libexec/kscreenlocker_greet'; sleep 0.5; true" ;;
 shot) x "python3 /src/tests/window-frames/shot.py /out/$2.png >/dev/null" ;;
 key|type|click|move|down|up) op=$1; shift; podman exec $C bash -c '. /tmp/env; fakeinput "$@"' _ $op "$@" ;;
 face|finger) x "echo $2 > /tmp/$1" ;;
+player) x "(python3 /src/tests/lockscreen/mpris-player.py ${2:-} > /out/player.log 2>&1 &)" ;;
 sh) shift; x "$*" ;;
 esac
