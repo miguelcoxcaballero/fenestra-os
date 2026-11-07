@@ -15,14 +15,23 @@
 # The image has no Spanish locale or translations (Nautilus' own strings come out in English);
 # LANGDIR may hold usr/share/locale/es and usr/lib/locale/es_ES.utf8 unpacked from Fedora's
 # glibc-langpack-es, nautilus, gtk4, libadwaita and glib2 packages, copied over the image's.
+# IMAGE picks another image (default fenestra-greeterlab; it must have nautilus and gnome-shell,
+# e.g. fenestra-f45lab). ROOTFS (a build/build-overlay.sh output) is copied over the image when
+# it lacks Fenestra (icons, fonts, themes, dconf). The fenestra-nautilus wrapper and patched copy are made here.
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd); REPO=$(cd "$HERE/../.." && pwd)
 OUT=$(realpath -m "$1"); shift
 mkdir -p "$OUT/jobs"; chmod 777 "$OUT"
 for j in "$@"; do cp "$j" "$OUT/jobs/"; done
 LANGMNT=(); [ -n "${LANGDIR:-}" ] && LANGMNT=(-v "$(realpath "$LANGDIR")":/lang:ro)
-docker run --rm --privileged "${LANGMNT[@]}" -v "$REPO":/src:ro -v "$HERE":/w:ro -v "$OUT":/out fenestra-greeterlab bash -c '
+[ -n "${ROOTFS:-}" ] && LANGMNT+=(-v "$(realpath "$ROOTFS")":/rootfs:ro)
+docker run --rm --privileged "${LANGMNT[@]}" -v "$REPO":/src:ro -v "$HERE":/w:ro -v "$OUT":/out "${IMAGE:-fenestra-greeterlab}" bash -c '
 [ -d /lang/usr ] && cp -a /lang/usr/. /usr/
+[ -d /rootfs/usr ] && { cp -a /rootfs/usr/. /usr/; cp -a /rootfs/etc/. /etc/; fc-cache -f >/dev/null 2>&1; dconf update 2>/dev/null; }
+cp -a /src/desktop/themes/Fenestra-Dark /src/desktop/themes/Fenestra-Light /usr/share/themes/
+install -Dm755 /src/desktop/libexec/fenestra-nautilus /usr/libexec/fenestra/fenestra-nautilus
+python3 /src/desktop/libexec/fenestra-patch-nautilus --force >/dev/null || echo "fenestra-patch-nautilus failed"
+mkdir -p /usr/share/fenestra/nautilus/overlay /usr/share/fenestra/lib; cp /src/desktop/lib/folder-icons/folder_icons.py /usr/share/fenestra/lib/
 cp -a /w/explorerqa@local /usr/share/gnome-shell/extensions/; chmod -R a+rX /usr/share/gnome-shell/extensions
 rm -f /usr/share/nautilus-python/extensions/*.py; cp /src/desktop/nautilus/python/*.py /w/fenestra_treedump.py /usr/share/nautilus-python/extensions/
 rm -rf /usr/share/fenestra/nautilus/overlay/51; cp -a /src/desktop/nautilus/overlay/51 /usr/share/fenestra/nautilus/overlay/51
