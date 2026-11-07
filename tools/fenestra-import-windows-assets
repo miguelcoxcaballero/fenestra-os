@@ -430,7 +430,8 @@ def apply_start_logo(path):
     """Use ``path`` as the taskbar Start button: ArcMenu's menu button icon (GNOME session) and
     Fenestra Shell's StartIcon (Fenestra session)."""
     gsettings_set('org.gnome.shell.extensions.arcmenu', 'menu-button-icon', str(path))
-    shell_conf_set('Appearance', 'StartIcon', str(path))
+    # Not Fenestra Shell's StartIcon: WindowsLogo.svg is not what Windows' taskbar draws (its logo is
+    # lighter); the shell keeps its traced start-button-dark/light.svg.
 
 
 def apply_search_icon(path):
@@ -1759,6 +1760,74 @@ def import_samsung_osd(win, dry):
         (out / 'strings.json').write_text(json.dumps(strings, ensure_ascii=False, indent=1), encoding='utf-8')
     log(f'samsung osd: {n} pictures, strings in {len(strings)} languages')
 
+
+# ------------------------------------------------- Store apps' file icons ---
+# Windows' default Store apps register their own document icons (AppxManifest FileTypeAssociation
+# Logo, Assets/<name>.targetsize-N.png), and Explorer shows those instead of the generic page: Notepad's
+# for .txt/.log/.ini/.ps1… The pack export (a VM) may not have them; take them from the user's Windows.
+STORE_FILE_ICON_APPS = ('Microsoft.WindowsNotepad',)
+
+
+def import_store_file_icons(win, dry):
+    from PIL import Image
+    apps_dir = ci(win / 'Program Files/WindowsApps')
+    theme_dir = DATA / 'icons' / 'Fenestra-Windows'
+    if not apps_dir or not theme_dir.is_dir():
+        log('store file icons: no WindowsApps or no Fenestra-Windows theme yet')
+        return
+    globs, mime_icons, _g, _p, _t, _a = load_mime_db()
+    done = 0
+    for app in STORE_FILE_ICON_APPS:
+        pkgs = sorted(apps_dir.glob(app + '_*_x64__*'))
+        if not pkgs:
+            continue
+        pkg = pkgs[-1]
+        try:
+            manifest = (pkg / 'AppxManifest.xml').read_text(encoding='utf-8', errors='ignore')
+        except OSError:
+            continue
+        for m in re.finditer(r'<uap:FileTypeAssociation Name="([^"]+)">(.*?)</uap:FileTypeAssociation>', manifest, re.S):
+            logo = re.findall(r'Logo>([^<]+)<', m.group(2))
+            exts = [e.lower().lstrip('.') for e in re.findall(r'<uap:FileType[^>]*>([^<]+)</uap:FileType>', m.group(2))]
+            if not logo or not exts:
+                continue
+            stem = Path(logo[0].replace('\\', '/')).stem       # Assets\txtfile.png -> txtfile
+            assets = pkg / Path(logo[0].replace('\\', '/')).parent
+            sizes = {}
+            for f in assets.glob(stem + '.targetsize-*.png'):
+                mm = re.match(re.escape(stem) + r'\.targetsize-(\d+)\.png$', f.name)
+                if mm:
+                    sizes[int(mm.group(1))] = f
+            if not sizes:
+                continue
+            mimes = {mime for e in exts for _w, mime in globs.get(e, [])}
+            names = {mime_icons.get(mi) or mi.replace('/', '-') for mi in mimes}
+            if dry:
+                log(f'store file icons: {app} {stem} -> {sorted(names)}')
+                continue
+            dirs = []
+            for d in sorted(theme_dir.glob('*x*')):
+                mm = re.match(r'^(\d+)x\1$', d.name)
+                if not mm:
+                    continue
+                n = int(mm.group(1))
+                best = min(sizes, key=lambda k: (k < n, abs(k - n)))   # the same size, else the next bigger
+                img = Image.open(sizes[best]).convert('RGBA')
+                if img.size != (n, n):
+                    img = img.resize((n, n), Image.LANCZOS)
+                for name in names:
+                    out = d / 'mimetypes' / f'{name}.png'
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    if out.exists() or out.is_symlink():
+                        out.unlink()   # theme icons are hard links shared by many types: never write through
+                    img.save(out)
+                    done += 1
+                dirs.append(f'{n}x{n}/mimetypes')
+            _index_dirs(theme_dir, dirs)
+    if not dry:
+        subprocess.run(['gtk-update-icon-cache', '-f', '-t', str(theme_dir)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    log(f'store file icons: {done} files')
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--windows', help='path where the Windows partition is mounted')
@@ -1796,6 +1865,7 @@ def main():
     import_folders(win, args.dry_run)
     import_taskbar_icons(win, args.dry_run)
     import_samsung_settings(win, args.dry_run)
+    import_store_file_icons(win, args.dry_run)
     import_samsung_osd(win, args.dry_run)
     import_settings_icon(win, args.dry_run)
     if not args.dry_run:

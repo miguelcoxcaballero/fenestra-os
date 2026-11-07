@@ -47,6 +47,7 @@ qt_add_executable(fenestra-shell
     src/services/status.cpp src/services/status.h
     src/services/batteryalerts.cpp src/services/batteryalerts.h
     src/services/performancemode.cpp src/services/performancemode.h
+    src/services/recordingblock.cpp src/services/recordingblock.h
     src/services/kbdbacklight.cpp src/services/kbdbacklight.h
     src/services/trayitems.cpp src/services/trayitems.h
     src/services/startservices.cpp src/services/startservices.h
@@ -185,6 +186,10 @@ if(FENESTRA_INSTALL_MIGRATOR)
 endif()
 
 # KWin parts: Fenestra decoration (Aurorae SVG themes), Alt+Tab switcher and window motion (../kwin).
+# Privacy: firmware recording block switchable by the user; face set-up with the user's own password.
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/privacy/70-fenestra-recording-block.rules DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/udev/rules.d)
+install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/privacy/fenestra-hello-enroll DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/privacy/org.fenestra.hello.policy DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/actions)
 # Power on battery (any laptop): tuned profile that tuned-ppd uses for "Balanced" unplugged.
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/power/tuned/fenestra-battery DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tuned/profiles)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMAKE_INSTALL_DATADIR}/aurorae/themes)
