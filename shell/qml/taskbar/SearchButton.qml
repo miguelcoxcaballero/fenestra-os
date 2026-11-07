@@ -42,11 +42,16 @@ Item {
             width: 16 + (search.mode === "box" ? 0 : 4); height: width
             anchors.verticalCenter: parent.verticalCenter
             sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-            // The box draws Windows' monochrome lens; the colour icon is for the icon modes.
-            source: search.mode === "box"
-                    ? "image://tint/" + Theme.text.toString().slice(1, 7) + "/"
-                      + encodeURIComponent(Metrics.assets + "search/search-glyph.svg")
-                    : ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
+            // Windows' lens: in the box it is drawn in the text colour (its translucent inside a
+            // lighter grey, dark-100-12-quick) and in colour while Search is open (dark-100-10-search);
+            // the icon modes always draw it in colour.
+            readonly property string lens: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
+            source: search.mode === "box" && !search.checked
+                    ? "image://tint/" + Theme.text.toString().slice(1, 7) + "/" + encodeURIComponent(lens)
+                    : lens
+            // In the box Windows draws the lens 1 px right of our 10 px inset, and its closed-state glyph
+            // 1 px further right and down (dark-100-12-quick: 797..810 × 1049; open, dark-100-10-search: 796 × 1048).
+            transform: Translate { x: search.mode !== "box" ? 0 : search.checked ? 1 : 2; y: search.mode === "box" && !search.checked ? 1 : 0 }
             scale: mouse.pressed ? 0.85 : 1
             Behavior on scale { NumberAnimation { duration: 110 } }
         }
