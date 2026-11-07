@@ -176,5 +176,7 @@ endif()
 # KWin parts: Fenestra decoration (Aurorae SVG themes) and Alt+Tab switcher (../kwin).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMAKE_INSTALL_DATADIR}/aurorae/themes)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)
-# Lock screen for KWin's screen locker (look-and-feel package with only a lockscreen).
+# Look-and-feel package (kdeglobals defaults) and the lock screen: Plasma 6's kscreenlocker takes
+# it from the shell package named in plasmashellrc [Shell] ShellPackage (KWinIntegration sets it).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../lnf/org.fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/look-and-feel)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../shells/org.fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/shells)

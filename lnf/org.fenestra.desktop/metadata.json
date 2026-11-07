@@ -3,8 +3,8 @@
     "KPlugin": {
         "Id": "org.fenestra.desktop",
         "Name": "Fenestra",
-        "Description": "Fenestra lock screen for the Fenestra session (KWin)",
-        "Description[es]": "Pantalla de bloqueo de Fenestra para la sesión Fenestra (KWin)",
+        "Description": "Fenestra defaults for KDE applications in the Fenestra session (the lock screen is the shell package org.fenestra.desktop)",
+        "Description[es]": "Valores de Fenestra para las aplicaciones de KDE en la sesión Fenestra (la pantalla de bloqueo es el paquete de shell org.fenestra.desktop)",
         "License": "GPL-3.0-or-later",
         "Version": "1.0"
     },

@@ -1,0 +1,18 @@
+singleton Fluent 1.0 Fluent.qml
+AccessibilityFlyout 1.0 AccessibilityFlyout.qml
+Acrylic 1.0 Acrylic.qml
+CornerButton 1.0 CornerButton.qml
+Exec 1.0 Exec.qml
+FieldButton 1.0 FieldButton.qml
+FluentButton 1.0 FluentButton.qml
+Glyph 1.0 Glyph.qml
+Hello 1.0 Hello.qml
+KeyboardButton 1.0 KeyboardButton.qml
+LockScreen 1.0 LockScreen.qml
+MediaCard 1.0 MediaCard.qml
+NetworkFlyout 1.0 NetworkFlyout.qml
+NetworkStatus 1.0 NetworkStatus.qml
+Osk 1.0 Osk.qml
+PowerMenu 1.0 PowerMenu.qml
+ProgressRing 1.0 ProgressRing.qml
+StatusIcons 1.0 StatusIcons.qml
