@@ -42,6 +42,8 @@ def build_index() -> list[Entry]:
     backends/session.py are left out (PAGES never contains hidden pages)."""
     out = []
     for pid, cls in PAGES.items():
+        if not getattr(cls, "searchable", True):
+            continue  # pages that need a target (e.g. one Wi-Fi network's properties)
         hidden = session.hidden_rows(pid)
         icon = _root_icon(cls)
         crumb = _crumb(cls)

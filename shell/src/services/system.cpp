@@ -26,6 +26,12 @@
 #include <QDBusReply>
 #include <QDir>
 #include <QFile>
+#include <algorithm>
+#include <QDebug>
+#include <QTimer>
+#include <QUuid>
+#include <QProcess>
+#include <QLocale>
 
 #define SINGLETON(Class)                                                                                               \
     Class *Class::instance()                                                                                           \
@@ -310,24 +316,84 @@ void PowerProfiles::setActive(const QString &profile)
 }
 
 // ---- Wi-Fi (NetworkManagerQt) ----------------------------------------------------------------
+namespace {
+// Same rule as Strings.qml (Spanish by system locale); the row status is composed here.
+QString wtr(const char *en, const char *es)
+{
+    return QLocale().name().startsWith(QLatin1String("es")) ? QString::fromUtf8(es) : QString::fromUtf8(en);
+}
+constexpr int kStatePrepare = 40, kStateActivated = 100, kStateDisconnected = 30, kStateFailed = 120;
+constexpr int kReasonNoSecrets = 7, kReasonSupplicantFirst = 8, kReasonSupplicantLast = 11;
+constexpr int kReasonUserRequested = 39, kReasonNewActivation = 60;
+
+QString keyMgmtFor(const NetworkManager::AccessPoint::Ptr &ap, bool *enterprise)
+{
+    const int sec = int(ap->wpaFlags()) | int(ap->rsnFlags());
+    *enterprise = sec & NetworkManager::AccessPoint::KeyMgmt8021x;
+    if (*enterprise)
+        return QStringLiteral("wpa-eap");
+    if (sec & NetworkManager::AccessPoint::KeyMgmtPsk)
+        return QStringLiteral("wpa-psk");      // WPA2 and WPA2/WPA3 transition
+    if (sec & NetworkManager::AccessPoint::KeyMgmtSAE)
+        return QStringLiteral("sae");          // WPA3-only: wpa-psk would be refused
+    if (sec & (NetworkManager::AccessPoint::KeyMgmtOWE | NetworkManager::AccessPoint::KeyMgmtOWETM))
+        return QStringLiteral("owe");
+    if (ap->capabilities() & NetworkManager::AccessPoint::Privacy)
+        return QStringLiteral("none");         // WEP
+    return {};
+}
+} // namespace
+
 SINGLETON(WifiNetworks)
 
 WifiNetworks::WifiNetworks(QObject *parent)
     : QAbstractListModel(parent)
 {
+    m_rebuildTimer = new QTimer(this);
+    m_rebuildTimer->setSingleShot(true);
+    m_rebuildTimer->setInterval(80);   // a scan adds dozens of access points at once
+    connect(m_rebuildTimer, &QTimer::timeout, this, &WifiNetworks::rebuild);
     auto *n = NetworkManager::notifier();
-    connect(n, &NetworkManager::Notifier::wirelessEnabledChanged, this, [this] { Q_EMIT enabledChanged(); rebuild(); });
+    connect(n, &NetworkManager::Notifier::wirelessEnabledChanged, this, [this] { Q_EMIT enabledChanged(); scheduleRebuild(); });
     connect(n, &NetworkManager::Notifier::wwanEnabledChanged, this, &WifiNetworks::enabledChanged);
-    connect(n, &NetworkManager::Notifier::deviceAdded, this, [this] { rebuild(); });
-    connect(n, &NetworkManager::Notifier::deviceRemoved, this, [this] { rebuild(); });
-    connect(n, &NetworkManager::Notifier::activeConnectionsChanged, this, [this] { rebuild(); });
-    for (const NetworkManager::Device::Ptr &d : NetworkManager::networkInterfaces()) {
-        if (auto w = d.objectCast<NetworkManager::WirelessDevice>()) {
-            connect(w.data(), &NetworkManager::WirelessDevice::accessPointAppeared, this, [this] { rebuild(); });
-            connect(w.data(), &NetworkManager::WirelessDevice::accessPointDisappeared, this, [this] { rebuild(); });
-        }
-    }
+    connect(n, &NetworkManager::Notifier::deviceAdded, this, [this](const QString &uni) { watchDevice(uni); Q_EMIT enabledChanged(); scheduleRebuild(); });
+    connect(n, &NetworkManager::Notifier::deviceRemoved, this, [this] { Q_EMIT enabledChanged(); scheduleRebuild(); });
+    connect(n, &NetworkManager::Notifier::activeConnectionsChanged, this, [this] { scheduleRebuild(); });
+    auto *sn = NetworkManager::settingsNotifier();
+    connect(sn, &NetworkManager::SettingsNotifier::connectionAdded, this, [this] { scheduleRebuild(); });
+    connect(sn, &NetworkManager::SettingsNotifier::connectionRemoved, this, [this] { scheduleRebuild(); });
+    for (const NetworkManager::Device::Ptr &d : NetworkManager::networkInterfaces())
+        watchDevice(d->uni());
     rebuild();
+}
+
+void WifiNetworks::watchDevice(const QString &uni)
+{
+    auto w = NetworkManager::findNetworkInterface(uni).objectCast<NetworkManager::WirelessDevice>();
+    if (!w)
+        return;
+    connect(w.data(), &NetworkManager::WirelessDevice::accessPointAppeared, this, [this, w](const QString &ap) {
+        if (auto p = w->findAccessPoint(ap))
+            connect(p.data(), &NetworkManager::AccessPoint::signalStrengthChanged, this, &WifiNetworks::scheduleRebuild,
+                    Qt::UniqueConnection);
+        scheduleRebuild();
+    });
+    connect(w.data(), &NetworkManager::WirelessDevice::accessPointDisappeared, this, &WifiNetworks::scheduleRebuild);
+    connect(w.data(), &NetworkManager::WirelessDevice::activeAccessPointChanged, this, &WifiNetworks::scheduleRebuild);
+    connect(w.data(), &NetworkManager::Device::stateChanged, this,
+            [this, uni](NetworkManager::Device::State ns, NetworkManager::Device::State, NetworkManager::Device::StateChangeReason r) {
+                onDeviceState(uni, int(ns), int(r));
+            });
+    for (const QString &apUni : w->accessPoints())
+        if (auto p = w->findAccessPoint(apUni))
+            connect(p.data(), &NetworkManager::AccessPoint::signalStrengthChanged, this, &WifiNetworks::scheduleRebuild,
+                    Qt::UniqueConnection);
+}
+
+void WifiNetworks::scheduleRebuild()
+{
+    if (!m_rebuildTimer->isActive())
+        m_rebuildTimer->start();
 }
 
 bool WifiNetworks::hasWifi() const
@@ -369,33 +435,106 @@ void WifiNetworks::rebuild()
     const auto connections = NetworkManager::listConnections();
     for (const NetworkManager::Device::Ptr &d : NetworkManager::networkInterfaces()) {
         auto w = d.objectCast<NetworkManager::WirelessDevice>();
-        if (!w)
+        if (!w || !NetworkManager::isWirelessEnabled())
             continue;
+        const int state = int(d->state());
+        const auto ac = d->activeConnection();
+        const QString acUuid = ac ? ac->uuid() : QString();
         const QString activeAp = w->activeAccessPoint() ? w->activeAccessPoint()->uni() : QString();
         for (const QString &apUni : w->accessPoints()) {
             const NetworkManager::AccessPoint::Ptr ap = w->findAccessPoint(apUni);
             if (!ap || ap->ssid().isEmpty())
                 continue;
-            Net net{ap->ssid(), ap->uni(), d->uni(), {}, ap->signalStrength(),
-                    ap->capabilities() != NetworkManager::AccessPoint::None || ap->wpaFlags() || ap->rsnFlags(), ap->uni() == activeAp};
+            Net net;
+            net.ssid = ap->ssid();
+            net.apPath = ap->uni();
+            net.devicePath = d->uni();
+            net.signal = ap->signalStrength();
+            net.keyMgmt = keyMgmtFor(ap, &net.enterprise);
+            net.secured = !net.keyMgmt.isEmpty() && net.keyMgmt != QLatin1String("owe");
+            QString uuid;
+            qlonglong newest = -1;
             for (const NetworkManager::Connection::Ptr &c : connections) {
-                auto wifi = c->settings()->setting(NetworkManager::Setting::Wireless).dynamicCast<NetworkManager::WirelessSetting>();
-                if (wifi && QString::fromUtf8(wifi->ssid()) == net.ssid)
+                const auto cs = c->settings();
+                auto wifi = cs->setting(NetworkManager::Setting::Wireless).dynamicCast<NetworkManager::WirelessSetting>();
+                if (!wifi || QString::fromUtf8(wifi->ssid()) != net.ssid)
+                    continue;
+                if (wifi->mode() != NetworkManager::WirelessSetting::Infrastructure)
+                    continue;   // a hotspot profile with the same name is not this network
+                const qlonglong ts = cs->timestamp().isValid() ? cs->timestamp().toSecsSinceEpoch() : 0;
+                if (ts > newest) {   // several profiles for one SSID: the most recently used one
+                    newest = ts;
                     net.connectionPath = c->path();
+                    uuid = cs->uuid();
+                }
             }
+            const bool mine = (!acUuid.isEmpty() && acUuid == uuid) || ap->uni() == activeAp
+                || (!m_attempt.ssid.isEmpty() && m_attempt.ssid == net.ssid && m_attempt.devicePath == d->uni());
+            net.active = mine && state == kStateActivated && ac;
+            net.connecting = mine && ((state >= kStatePrepare && state < kStateActivated)
+                                      || (m_attempt.ssid == net.ssid && !m_attempt.uuid.isEmpty()));
+            if (net.active)
+                net.connecting = false;
             auto it = bySsid.find(net.ssid);
-            if (it == bySsid.end() || net.active || (!it->active && net.signal > it->signal))
+            if (it == bySsid.end() || net.active || net.connecting
+                || (!it->active && !it->connecting && net.signal > it->signal))
                 bySsid.insert(net.ssid, net);
         }
     }
     QList<Net> nets = bySsid.values();
-    std::sort(nets.begin(), nets.end(), [](const Net &a, const Net &b) { return a.active != b.active ? a.active : a.signal > b.signal; });
-    beginResetModel();
-    m_nets = nets;
-    endResetModel();
+    std::sort(nets.begin(), nets.end(), [](const Net &a, const Net &b) {
+        const bool pa = a.active || a.connecting, pb = b.active || b.connecting;
+        return pa != pb ? pa : a.signal != b.signal ? a.signal > b.signal : a.ssid < b.ssid;
+    });
+
+    // Update in place: delegates (and a password being typed) survive the update.
+    const int oldCount = m_nets.size();
+    for (int i = m_nets.size() - 1; i >= 0; --i) {
+        const QString &ssid = m_nets.at(i).ssid;
+        if (std::none_of(nets.cbegin(), nets.cend(), [&](const Net &n) { return n.ssid == ssid; })) {
+            beginRemoveRows({}, i, i);
+            m_nets.removeAt(i);
+            endRemoveRows();
+        }
+    }
+    for (int i = 0; i < nets.size(); ++i) {
+        int j = -1;
+        for (int k = i; k < m_nets.size(); ++k)
+            if (m_nets.at(k).ssid == nets.at(i).ssid) {
+                j = k;
+                break;
+            }
+        if (j < 0) {
+            beginInsertRows({}, i, i);
+            m_nets.insert(i, nets.at(i));
+            endInsertRows();
+            continue;
+        }
+        if (j != i) {
+            beginMoveRows({}, j, j, {}, i);
+            m_nets.move(j, i);
+            endMoveRows();
+        }
+        m_nets[i] = nets.at(i);
+        Q_EMIT dataChanged(index(i), index(i));
+    }
+    if (oldCount != m_nets.size())
+        Q_EMIT countChanged();
 }
 
 int WifiNetworks::rowCount(const QModelIndex &parent) const { return parent.isValid() ? 0 : m_nets.size(); }
+
+QString WifiNetworks::statusOf(const Net &n) const
+{
+    if (n.active)
+        return n.secured ? wtr("Connected, secured", "Conectado, protegida") : wtr("Connected", "Conectado");
+    if (n.connecting)
+        return m_attempt.ssid == n.ssid && m_attempt.withKey ? wtr("Verifying and connecting", "Comprobando y conectando")
+                                                             : wtr("Connecting", "Conectando");
+    if (m_errors.contains(n.ssid))
+        return m_errors.value(n.ssid);
+    return n.secured ? wtr("Secured", "Segura") : wtr("Open", "Abierta");
+}
 
 QVariant WifiNetworks::data(const QModelIndex &index, int role) const
 {
@@ -409,36 +548,167 @@ QVariant WifiNetworks::data(const QModelIndex &index, int role) const
     case SecuredRole: return n.secured;
     case ActiveRole: return n.active;
     case KnownRole: return !n.connectionPath.isEmpty();
+    case ConnectingRole: return n.connecting;
+    case StatusRole: return statusOf(n);
+    case ErrorRole: return m_errors.value(n.ssid);
+    case EnterpriseRole: return n.enterprise;
     }
     return {};
 }
 
 QHash<int, QByteArray> WifiNetworks::roleNames() const
 {
-    return {{SsidRole, "ssid"}, {SignalRole, "signal"}, {SecuredRole, "secured"}, {ActiveRole, "active"}, {KnownRole, "known"}};
+    return {{SsidRole, "ssid"}, {SignalRole, "signal"}, {SecuredRole, "secured"}, {ActiveRole, "active"}, {KnownRole, "known"},
+            {ConnectingRole, "connecting"}, {StatusRole, "status"}, {ErrorRole, "error"}, {EnterpriseRole, "enterprise"}};
 }
 
 bool WifiNetworks::needsPassword(int row) const
 {
-    return row >= 0 && row < m_nets.size() && m_nets.at(row).secured && m_nets.at(row).connectionPath.isEmpty();
+    if (row < 0 || row >= m_nets.size())
+        return false;
+    const Net &n = m_nets.at(row);
+    return n.secured && !n.enterprise && (n.connectionPath.isEmpty() || m_rejected.contains(n.ssid));
 }
 
 void WifiNetworks::connectTo(int row, const QString &password)
 {
     if (row < 0 || row >= m_nets.size())
         return;
-    const Net &n = m_nets.at(row);
-    if (!n.connectionPath.isEmpty()) {
-        NetworkManager::activateConnection(n.connectionPath, n.devicePath, n.apPath);
+    const Net n = m_nets.at(row);
+    if (n.enterprise && n.connectionPath.isEmpty()) {
+        // user name + password: Settings › Wi-Fi asks for both inline
+        QProcess::startDetached(QStringLiteral("fenestra-settings"), {QStringLiteral("--page"), QStringLiteral("wifi")});
         return;
     }
-    // New network: NetworkManager fills in the rest from the access point; the key is stored
-    // for this user (agent-owned secrets would need a secret agent; system-owned is NM's default).
+    m_errors.remove(n.ssid);
+    m_attempt = Attempt{n.ssid, {}, n.devicePath, false, !password.isEmpty(), false};
+
+    auto watch = [this, ssid = n.ssid](const QDBusPendingCall &call) {
+        auto *w = new QDBusPendingCallWatcher(call, this);
+        connect(w, &QDBusPendingCallWatcher::finished, this, [this, ssid](QDBusPendingCallWatcher *w) {
+            w->deleteLater();
+            if (w->isError() && m_attempt.ssid == ssid) {
+                qWarning() << "Wi-Fi: activation refused:" << w->error().message();
+                finishAttempt(false, 0);
+            }
+        });
+    };
+    auto securitySettings = [&n, &password]() {
+        QVariantMap sec{{QStringLiteral("key-mgmt"), n.keyMgmt}};
+        if (n.keyMgmt == QLatin1String("none")) {
+            sec.insert(QStringLiteral("wep-key0"), password);
+            sec.insert(QStringLiteral("wep-key-flags"), 0u);
+            const bool hex = (password.size() == 10 || password.size() == 26);
+            sec.insert(QStringLiteral("wep-key-type"), (hex || password.size() == 5 || password.size() == 13) ? 1u : 2u);
+        } else if (n.keyMgmt != QLatin1String("owe")) {
+            sec.insert(QStringLiteral("psk"), password);
+            sec.insert(QStringLiteral("psk-flags"), 0u);   // stored by NetworkManager (no secret agent needed)
+        }
+        return sec;
+    };
+
+    if (!n.connectionPath.isEmpty()) {
+        auto c = NetworkManager::findConnection(n.connectionPath);
+        m_attempt.uuid = c ? c->uuid() : QString();
+        if (c && !password.isEmpty()) {
+            // a saved network whose key was rejected: update that profile, never add a duplicate
+            NMVariantMapMap map = c->settings()->toMap();
+            map.insert(QStringLiteral("802-11-wireless-security"), securitySettings());
+            auto *w = new QDBusPendingCallWatcher(c->update(map), this);
+            connect(w, &QDBusPendingCallWatcher::finished, this, [this, n, watch](QDBusPendingCallWatcher *w) {
+                w->deleteLater();
+                if (w->isError()) {
+                    finishAttempt(false, 0);
+                    return;
+                }
+                m_rejected.remove(n.ssid);
+                watch(NetworkManager::activateConnection(n.connectionPath, n.devicePath, n.apPath));
+            });
+        } else {
+            watch(NetworkManager::activateConnection(n.connectionPath, n.devicePath, n.apPath));
+        }
+        scheduleRebuild();
+        return;
+    }
+    // New network: our own uuid, so the attempt can be followed (and the profile removed if
+    // it never connects: Windows keeps no profile for a network it could not join).
+    const QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_attempt.uuid = uuid;
+    m_attempt.created = true;
     NMVariantMapMap settings;
-    if (n.secured)
-        settings.insert(QStringLiteral("802-11-wireless-security"),
-                        QVariantMap{{QStringLiteral("key-mgmt"), QStringLiteral("wpa-psk")}, {QStringLiteral("psk"), password}});
-    NetworkManager::addAndActivateConnection(settings, n.devicePath, n.apPath);
+    settings.insert(QStringLiteral("connection"), QVariantMap{{QStringLiteral("id"), n.ssid}, {QStringLiteral("uuid"), uuid},
+                                                              {QStringLiteral("type"), QStringLiteral("802-11-wireless")},
+                                                              {QStringLiteral("autoconnect"), true}});
+    settings.insert(QStringLiteral("802-11-wireless"), QVariantMap{{QStringLiteral("ssid"), n.ssid.toUtf8()},
+                                                                   {QStringLiteral("mode"), QStringLiteral("infrastructure")}});
+    if (!n.keyMgmt.isEmpty())
+        settings.insert(QStringLiteral("802-11-wireless-security"), securitySettings());
+    watch(NetworkManager::addAndActivateConnection(settings, n.devicePath, n.apPath));
+    scheduleRebuild();
+}
+
+void WifiNetworks::onDeviceState(const QString &devicePath, int newState, int reason)
+{
+    if (!m_attempt.ssid.isEmpty() && m_attempt.devicePath == devicePath) {
+        auto d = NetworkManager::findNetworkInterface(devicePath);
+        const auto ac = d ? d->activeConnection() : NetworkManager::ActiveConnection::Ptr();
+        const bool mine = ac && ac->uuid() == m_attempt.uuid;
+        if (mine && newState >= kStatePrepare && newState <= kStateActivated)
+            m_attempt.started = true;
+        if (newState == kStateActivated && mine)
+            finishAttempt(true, 0);
+        else if (newState == kStateFailed && (mine || m_attempt.started))
+            finishAttempt(false, reason);
+        else if (m_attempt.started && !mine && newState == kStateDisconnected
+                 && (reason == kReasonNewActivation || reason == kReasonUserRequested))
+            m_attempt = Attempt{};   // replaced by another connection or cancelled
+    }
+    scheduleRebuild();
+}
+
+void WifiNetworks::finishAttempt(bool ok, int reason)
+{
+    const Attempt a = m_attempt;
+    m_attempt = Attempt{};
+    if (!ok) {
+        if (a.created && !a.uuid.isEmpty())
+            QTimer::singleShot(300, this, [uuid = a.uuid] {
+                if (auto c = NetworkManager::findConnectionByUuid(uuid))
+                    c->remove();
+            });
+        const bool keyProblem = reason == kReasonNoSecrets || (reason >= kReasonSupplicantFirst && reason <= kReasonSupplicantLast);
+        bool secured = false;
+        for (const Net &n : std::as_const(m_nets))
+            if (n.ssid == a.ssid)
+                secured = n.secured;
+        if (keyProblem && secured) {
+            m_errors.insert(a.ssid, wtr("The network security key isn't correct. Please try again.",
+                                        "La clave de seguridad de red no es correcta. Inténtalo de nuevo."));
+            if (!a.created)
+                m_rejected.insert(a.ssid);
+            Q_EMIT keyRejected(a.ssid);
+        } else {
+            m_errors.insert(a.ssid, wtr("Can't connect to this network", "No se puede conectar a esta red"));
+        }
+    }
+    scheduleRebuild();
+}
+
+void WifiNetworks::cancel(int row)
+{
+    if (row < 0 || row >= m_nets.size() || m_attempt.ssid != m_nets.at(row).ssid)
+        return;
+    const Attempt a = m_attempt;
+    m_attempt = Attempt{};
+    for (const NetworkManager::ActiveConnection::Ptr &ac : NetworkManager::activeConnections())
+        if (ac->uuid() == a.uuid)
+            NetworkManager::deactivateConnection(ac->path());
+    if (a.created)
+        QTimer::singleShot(300, this, [uuid = a.uuid] {
+            if (auto c = NetworkManager::findConnectionByUuid(uuid))
+                c->remove();
+        });
+    scheduleRebuild();
 }
 
 void WifiNetworks::disconnectFrom(int row)

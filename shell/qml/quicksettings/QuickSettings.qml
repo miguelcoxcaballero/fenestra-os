@@ -299,11 +299,15 @@ Flyout {
                     SymbolicIcon { monochrome: true; x: 12; y: 16; name: "network-wireless-signal-" + ["none", "weak", "ok", "good", "excellent"][Math.min(4, Math.floor(model.signal / 20))] + "-symbolic" }
                     Column { x: 40; y: 8
                         Text { text: model.ssid; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14 }
-                        Text { text: Strings.tr(model.active ? "Connected" : model.secured ? "Secured" : "Open"); color: Theme.textSecondary
+                        Text { text: model.status; color: Theme.textSecondary
                                font.family: Metrics.fontFamily; font.pixelSize: 12 } }
                     MouseArea { id: wm; anchors.fill: parent; hoverEnabled: true
                         onClicked: model.active ? WifiNetworks.disconnectFrom(index)
+                                   : model.connecting ? WifiNetworks.cancel(index)
                                    : WifiNetworks.needsPassword(index) ? (parent.asking = true, pw.forceActiveFocus()) : WifiNetworks.connectTo(index) }
+                    Connections { target: WifiNetworks
+                        // wrong key: the password field comes back, the status shows Windows' message
+                        function onKeyRejected(ssid) { if (ssid === model.ssid) { pw.parent.parent.asking = true; pw.text = ""; pw.forceActiveFocus() } } }
                     Rectangle {
                         visible: parent.asking
                         x: 40; y: 52; width: parent.width - 52; height: 32; radius: 4
@@ -311,11 +315,12 @@ Flyout {
                         border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.1)
                         TextInput { id: pw; x: 10; width: parent.width - 20; anchors.verticalCenter: parent.verticalCenter
                                     echoMode: TextInput.Password; color: Theme.text; font.pixelSize: 13
-                                    onAccepted: { WifiNetworks.connectTo(index, text); parent.parent.asking = false } }
+                                    onAccepted: { if (text.length > 0) { WifiNetworks.connectTo(index, text); text = ""; parent.parent.asking = false } }
+                                    Keys.onEscapePressed: { text = ""; parent.parent.asking = false } }
                     }
                 }
             }
-            Text { visible: qs.testWifi.count === 0 && WifiNetworks.rowCount() === 0; x: 20; text: Strings.tr("No networks found"); color: Theme.textSecondary
+            Text { visible: qs.testWifi.count === 0 && WifiNetworks.count === 0; x: 20; text: Strings.tr("No networks found"); color: Theme.textSecondary
                    font.family: Metrics.fontFamily; font.pixelSize: 12 }
         }
     }
