@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include <functional>
+#include <QFile>
 #include <memory>
 #include <atomic>
 #include <poll.h>
@@ -326,4 +328,30 @@ QImage SnipImageProvider::requestImage(const QString &id, QSize *size, const QSi
     if (size)
         *size = img.size();
     return img;
+}
+
+void Snip::testBurst(const QString &dir, int count)
+{
+    if (qEnvironmentVariableIntValue("FENESTRA_SHELL_TEST") != 1 || count <= 0)
+        return;
+    QDir().mkpath(dir);
+    auto t0 = std::make_shared<QElapsedTimer>();
+    t0->start();
+    auto times = std::make_shared<QStringList>();
+    auto step = std::make_shared<std::function<void(int)>>();
+    *step = [this, dir, count, t0, times, step](int i) {
+        const qint64 asked = t0->elapsed();
+        grabWorkspace([this, dir, count, t0, times, step, i, asked](const QImage &img) {
+            img.save(dir + QStringLiteral("/f%1.png").arg(i, 3, 10, QLatin1Char('0')), "PNG", 0);
+            *times << QStringLiteral("%1 %2 %3").arg(i).arg(asked).arg(t0->elapsed());
+            if (i + 1 < count)
+                (*step)(i + 1);
+            else {
+                QFile f(dir + QStringLiteral("/times.txt"));
+                if (f.open(QIODevice::WriteOnly))
+                    f.write(times->join(QLatin1Char('\n')).toUtf8());
+            }
+        });
+    };
+    (*step)(0);
 }
