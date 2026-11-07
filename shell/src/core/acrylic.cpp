@@ -4,6 +4,7 @@
 #include <QPainter>
 #include <QtMath>
 #include <QQuickWindow>
+#include <QSGImageNode>
 #include <QTextLayout>
 #include <QUrl>
 #include <cmath>
@@ -252,26 +253,58 @@ QImage AcrylicProvider::requestImage(const QString &id, QSize *size, const QSize
 }
 
 ShadowLabel::ShadowLabel(QQuickItem *parent)
-    : QQuickPaintedItem(parent)
+    : QQuickItem(parent)
 {
-    setAntialiasing(true);
+    setFlag(ItemHasContents, true);
+}
+
+qreal ShadowLabel::dpr() const
+{
+    return window() ? window()->effectiveDevicePixelRatio() : 1.0;
 }
 
 void ShadowLabel::geometryChange(const QRectF &n, const QRectF &o)
 {
-    QQuickPaintedItem::geometryChange(n, o);
+    QQuickItem::geometryChange(n, o);
     if (n.width() != o.width())
         relayout();
+    else
+        update();   // a move only re-snaps the texture to the device grid
+}
+
+void ShadowLabel::itemChange(ItemChange change, const ItemChangeData &value)
+{
+    QQuickItem::itemChange(change, value);
+    if (change == ItemSceneChange || change == ItemDevicePixelRatioHasChanged) {
+        relayout();
+    } else if (change == ItemParentHasChanged) {
+        // The delegate around the label moves when an icon is dragged to another cell.
+        disconnect(m_px);
+        disconnect(m_py);
+        if (value.item) {
+            m_px = connect(value.item, &QQuickItem::xChanged, this, &QQuickItem::update);
+            m_py = connect(value.item, &QQuickItem::yChanged, this, &QQuickItem::update);
+        }
+    }
 }
 
 void ShadowLabel::relayout()
 {
+    const qreal r = dpr();
+    m_dpr = r;
+    // The font at its device size: hinting and advances computed there, as Windows does.
+    m_devFont = m_font;
+    if (m_font.pixelSize() > 0)
+        m_devFont.setPixelSize(qMax(1, qRound(m_font.pixelSize() * r)));
+    else
+        m_devFont.setPointSizeF(m_font.pointSizeF() * r);
+    m_lineDev = m_lineHeightDevice > 0 ? m_lineHeightDevice : qMax(1, qRound(m_lineHeight * r));
     QStringList lines;
-    const qreal avail = width() - 2 * m_pad;
+    const qreal avail = std::floor((width() - 2 * m_pad) * r);
     int widest = 0;
     if (avail > 0 && !m_text.isEmpty()) {
-        const QFontMetricsF fm(m_font);
-        QTextLayout layout(m_text, m_font);
+        const QFontMetricsF fm(m_devFont);
+        QTextLayout layout(m_text, m_devFont);
         QTextOption opt;
         opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
         layout.setTextOption(opt);
@@ -288,57 +321,104 @@ void ShadowLabel::relayout()
         }
         layout.endLayout();
         for (const QString &s : std::as_const(lines))
-            widest = std::max(widest, int(std::ceil(fm.horizontalAdvance(s))));
+            widest = std::max(widest, int(std::ceil(fm.horizontalAdvance(s) / r)));
     }
     m_lines = lines;
     m_textWidth = widest;
-    setImplicitHeight(m_lines.size() * m_lineHeight + 2 * m_pad);
+    setImplicitHeight(m_lines.size() * m_lineDev / r + 2 * m_pad);
     m_cache = QImage();
+    m_dirty = true;
     Q_EMIT layoutChanged();
     update();
 }
 
-void ShadowLabel::paint(QPainter *painter)
+QImage ShadowLabel::render() const
 {
-    const qreal dpr = window() ? window()->effectiveDevicePixelRatio() : 1.0;
-    const QSize dev(qCeil(width() * dpr), qCeil(height() * dpr));
+    const qreal r = m_dpr > 0 ? m_dpr : 1.0;
+    const QSize dev(qCeil(width() * r), qCeil(height() * r));
     if (dev.isEmpty() || m_lines.isEmpty())
-        return;
-    if (m_cache.size() != dev) {
-        // Text alone, then its shadow under it.
-        QImage text(dev, QImage::Format_ARGB32_Premultiplied);
-        text.fill(Qt::transparent);
-        text.setDevicePixelRatio(dpr);
-        {
-            QPainter p(&text);
-            p.setRenderHint(QPainter::TextAntialiasing);
-            p.setFont(m_font);
-            p.setPen(m_color);
-            const QFontMetricsF fm(m_font);
-            // Each line box is lineHeight tall; the font's ascent+descent is centred in it.
-            const qreal base = (m_lineHeight - (fm.ascent() + fm.descent())) / 2 + fm.ascent();
-            for (int i = 0; i < m_lines.size(); ++i) {
-                const qreal lw = fm.horizontalAdvance(m_lines[i]);
-                p.drawText(QPointF(m_pad + (width() - 2 * m_pad - lw) / 2, m_pad + i * m_lineHeight + base), m_lines[i]);
-            }
+        return {};
+    // Text alone (white coverage), in device pixels.
+    QImage text(dev, QImage::Format_ARGB32_Premultiplied);
+    text.fill(Qt::transparent);
+    const int pad = qRound(m_pad * r);
+    {
+        QPainter p(&text);
+        p.setRenderHint(QPainter::TextAntialiasing);
+        p.setFont(m_devFont);
+        p.setPen(Qt::white);
+        const QFontMetricsF fm(m_devFont);
+        // Each line box is lineDev px tall; the font's ascent+descent centred in it, on a whole pixel.
+        const int base = qRound((m_lineDev - (fm.ascent() + fm.descent())) / 2 + fm.ascent());
+        for (int i = 0; i < m_lines.size(); ++i) {
+            const qreal lw = fm.horizontalAdvance(m_lines[i]);
+            p.drawText(QPointF(std::round(pad + (dev.width() - 2 * pad - lw) / 2), pad + i * m_lineDev + base), m_lines[i]);
         }
-        const QImage mask = Acrylic::shadowMask(text.convertToFormat(QImage::Format_Alpha8), m_shadowBlur * dpr,
-                                                m_shadowX * dpr, m_shadowY * dpr, m_shadowStrength * m_shadowColor.alphaF());
-        m_cache = QImage(dev, QImage::Format_ARGB32_Premultiplied);
-        m_cache.fill(Qt::transparent);
-        {
-            QPainter p(&m_cache);
-            QImage shadow(dev, QImage::Format_ARGB32_Premultiplied);
-            shadow.fill(QColor(m_shadowColor.red(), m_shadowColor.green(), m_shadowColor.blue()));
-            QPainter sp(&shadow);
-            sp.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-            sp.drawImage(0, 0, mask);
-            sp.end();
-            p.drawImage(0, 0, shadow);
-            text.setDevicePixelRatio(1);
-            p.drawImage(0, 0, text);
-        }
-        m_cache.setDevicePixelRatio(dpr);
     }
-    painter->drawImage(QRectF(0, 0, width(), height()), m_cache);
+    QImage mask = text.convertToFormat(QImage::Format_Alpha8);
+    if (m_gamma != 1.0) {
+        // Coverage a -> a^(1/gamma): fuller stems, as ClearType's gamma/contrast gives Windows' labels.
+        uchar lut[256];
+        for (int i = 0; i < 256; ++i)
+            lut[i] = uchar(std::lround(255 * std::pow(i / 255.0, 1.0 / m_gamma)));
+        for (int y = 0; y < mask.height(); ++y) {
+            uchar *line = mask.scanLine(y);
+            for (int x = 0; x < mask.width(); ++x)
+                line[x] = lut[line[x]];
+        }
+    }
+    // The shadow is in device pixels: Windows draws the same σ 1.6 px, (+0.5, +1) px shadow at 100 %
+    // and 150 % (fit of solid/dark-100-01 and dark-150-01: σ 1.6 at both).
+    const QImage shadow8 = Acrylic::shadowMask(mask, m_shadowBlur, m_shadowX, m_shadowY,
+                                               m_shadowStrength * m_shadowColor.alphaF());
+    QImage out(dev, QImage::Format_ARGB32_Premultiplied);
+    out.fill(Qt::transparent);
+    QPainter p(&out);
+    QImage shadow(dev, QImage::Format_ARGB32_Premultiplied);
+    shadow.fill(QColor(m_shadowColor.red(), m_shadowColor.green(), m_shadowColor.blue()));
+    {
+        QPainter sp(&shadow);
+        sp.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+        sp.drawImage(0, 0, shadow8);
+    }
+    p.drawImage(0, 0, shadow);
+    QImage fg(dev, QImage::Format_ARGB32_Premultiplied);
+    fg.fill(QColor(m_color.red(), m_color.green(), m_color.blue()));
+    {
+        QPainter fp(&fg);
+        fp.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+        fp.drawImage(0, 0, mask);
+    }
+    p.setOpacity(m_color.alphaF());
+    p.drawImage(0, 0, fg);
+    return out;
+}
+
+QSGNode *ShadowLabel::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
+{
+    auto *node = static_cast<QSGImageNode *>(old);
+    if (m_cache.isNull() && m_dirty) {
+        m_cache = render();
+    }
+    if (m_cache.isNull() || !window()) {
+        delete node;
+        return nullptr;
+    }
+    if (!node) {
+        node = window()->createImageNode();
+        node->setOwnsTexture(true);
+        node->setFiltering(QSGTexture::Nearest);
+        m_dirty = true;
+    }
+    if (m_dirty) {
+        node->setTexture(window()->createTextureFromImage(m_cache));
+        m_dirty = false;
+    }
+    // On whole device pixels: the label's own position in the window may be fractional.
+    const qreal r = m_dpr > 0 ? m_dpr : 1.0;
+    const QPointF scene = mapToScene(QPointF(0, 0));
+    const QPointF off((std::round(scene.x() * r) - scene.x() * r) / r, (std::round(scene.y() * r) - scene.y() * r) / r);
+    node->setRect(QRectF(off, QSizeF(m_cache.width() / r, m_cache.height() / r)));
+    node->setSourceRect(QRectF(0, 0, m_cache.width(), m_cache.height()));
+    return node;
 }
