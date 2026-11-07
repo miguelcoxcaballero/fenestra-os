@@ -483,8 +483,10 @@ window.win11-explorer:not(.win11-chooser) .win11-commandbar separator.win11-cmd-
    (window 1125 x 634 at 100 %, both themes; tests/explorer-window/ renders the same views).
    Scoped to the Explorer window, not the open / save dialog (window.win11-chooser). ---- */
 /* Caption buttons 46 x 33 at the top; 10 px glyphs centred 14 px down (not in the 38 px band). */
-window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols { margin-bottom: 5px; }
-window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { min-height: 26px; padding: 1px 0 6px 0; }
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols { margin-bottom: 9px; }
+/* Caption buttons as in the reference: 45 x 29, 1 px apart, glyphs 9 px from the top. */
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { min-width: 45px; min-height: 20px; padding: 4px 0 5px 0; }
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button:not(:first-child) { margin-left: 1px; }
 window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button image { -gtk-icon-size: 20px; }
 window.win11-explorer:not(.win11-chooser) .win11-titlebar .win11-new-tab { margin-top: 10px; }
 window.win11-explorer:not(.win11-chooser) .win11-tabs .tab-close-button { margin: 0 6px 4px 4px; }
@@ -587,6 +589,7 @@ window.win11-explorer:not(.win11-chooser) .fenestra-location-box > button image 
 /* Light (the VM draws the title bar and navigation row solid, without Mica). */
 @media (prefers-color-scheme: light) {
   window.win11-explorer:not(.win11-chooser) .win11-titlebar { background: #e8e8e8; }
+  window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { color: #000000; }
   window.win11-explorer:not(.win11-chooser) .win11-navigation { background: #f8f8f8; border-top: 1px solid #dadada; border-bottom: 1px solid #d6d6d6; }
   window.win11-explorer:not(.win11-chooser) .fenestra-crumbs, window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search, window.win11-explorer:not(.win11-chooser) #NautilusPathBar { background: #fdfdfd; border: 0; }
   window.win11-explorer:not(.win11-chooser) .win11-navigation box.linked.fenestra-crumbs { background: #fdfdfd; }
