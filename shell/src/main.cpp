@@ -7,6 +7,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 
+#include "acrylic.h"
 #include "iconoverrides.h"
 #include "kwinintegration.h"
 #include "notifications.h"
@@ -50,6 +51,7 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("tint"), new TintProvider);
     engine.addImageProvider(QStringLiteral("notification"), new NotificationImageProvider);
     engine.addImageProvider(QStringLiteral("snip"), new SnipImageProvider);
+    engine.addImageProvider(QStringLiteral("acrylic"), new AcrylicProvider);
     TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);

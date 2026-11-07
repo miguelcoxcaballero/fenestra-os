@@ -28,9 +28,26 @@ Window {
 
     readonly property bool leftAligned: ShellSettings.taskbarAlignment === "left"
 
+    // Material: acrylic over the wallpaper (src/core/acrylic.h: Microsoft's recipe, computed from
+    // the wallpaper as the desktop draws it); the flat fallback colour with transparency effects off
+    // and while the acrylic is being computed. Measurements: design/tokens.json "taskbar.acrylic.*".
     Rectangle {
         anchors.fill: parent
         color: Metrics.themed("taskbar.fill")
+        Image {
+            id: acrylic
+            anchors.fill: parent
+            visible: ShellSettings.transparency && status === Image.Ready
+            asynchronous: true
+            cache: false
+            smooth: false
+            readonly property var scr: bar.targetScreen
+            source: !ShellSettings.transparency || !scr ? ""
+                    : "image://acrylic/" + (Theme.dark ? "dark" : "light") + "/" + scr.width + "/" + scr.height + "/"
+                      + Metrics.taskbarHeight + "/" + (scr.devicePixelRatio || 1) + "/"
+                      + encodeURIComponent(WallpaperSource.image !== "" ? decodeURIComponent(WallpaperSource.image.replace(/^file:\/\//, ""))
+                                                                       : WallpaperSource.color)
+        }
         Rectangle { width: parent.width; height: 1; color: Metrics.themed("taskbar.border") }
     }
 

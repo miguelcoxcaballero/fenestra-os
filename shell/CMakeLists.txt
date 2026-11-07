@@ -39,6 +39,7 @@ qt_add_executable(fenestra-shell
     src/core/shellcontrol.h
     src/core/iconoverrides.cpp src/core/iconoverrides.h
     src/core/tokens.cpp src/core/tokens.h
+    src/core/acrylic.cpp src/core/acrylic.h
     src/services/apps.cpp src/services/apps.h
     src/services/taskbarmodel.cpp src/services/taskbarmodel.h
     src/services/weather.cpp src/services/weather.h

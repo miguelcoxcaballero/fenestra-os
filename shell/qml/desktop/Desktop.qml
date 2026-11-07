@@ -25,6 +25,15 @@ Window {
     property int renaming: -1
     readonly property int cellW: Metrics.desktopCellWidth
     readonly property int cellH: Metrics.desktopCellHeight
+    // Grid of Windows 11 at 100 % (design/tokens.json "desktop.*" and their _sources): 96 × 124 cells
+    // from the top-left corner, 48 px icon centred 7 px down, label (Segoe UI 9 pt, 15 px lines,
+    // two lines and "…" unless selected) 54 px below the icon's top, with a blurred black shadow.
+    readonly property int iconTop: Metrics.tok("desktop.icon.top", 7)
+    readonly property int labelTop: iconTop + Metrics.desktopIcon + Metrics.tok("desktop.label.gap", 3)
+    readonly property int labelLine: Metrics.tok("desktop.label.line", 15)
+    readonly property int labelInset: Metrics.tok("desktop.label.inset", 2)
+    readonly property int itemInset: Metrics.tok("desktop.item.inset", 2)
+    readonly property int itemTop: Metrics.tok("desktop.item.top", 2)
     readonly property int rows: Math.max(1, Math.floor((height - Metrics.taskbarHeight - 2 * Metrics.desktopMargin) / cellH))
     onRowsChanged: if (primary) DesktopModel.setRowsPerColumn(rows)
     function selected(row) { return selection.indexOf(row) >= 0 }
@@ -99,39 +108,50 @@ Window {
                 readonly property bool isSelected: desk.selected(index)
                 x: Metrics.desktopMargin + model.cell.x * desk.cellW
                 y: Metrics.desktopMargin + model.cell.y * desk.cellH
-                width: desk.cellW; height: desk.cellH - 4
+                width: desk.cellW; height: desk.cellH
                 Drag.active: drag.drag.active
                 Drag.dragType: Drag.Automatic
                 Drag.supportedActions: Qt.CopyAction | Qt.MoveAction
                 Drag.mimeData: model.isTrash ? ({}) : ({ "text/uri-list": model.url.toString() })
                 Accessible.role: Accessible.ListItem
                 Accessible.name: model.name
+                // Hover / selection: the item's box (icon + label), square like Windows' desktop.
                 Rectangle {
-                    anchors.fill: parent
-                    radius: 2
-                    color: icon.isSelected ? Qt.rgba(Theme.accentFill.r, Theme.accentFill.g, Theme.accentFill.b, 0.35)
-                           : drag.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
-                    border.color: icon.isSelected ? Qt.rgba(Theme.accentFill.r, Theme.accentFill.g, Theme.accentFill.b, 0.7) : "transparent"
+                    x: desk.itemInset; y: desk.itemTop
+                    width: parent.width - 2 * desk.itemInset
+                    height: desk.labelTop - desk.itemTop + Math.max(1, label.lineCount) * desk.labelLine + Metrics.tok("desktop.item.bottom", 4)
+                    color: icon.isSelected ? Tokens.v("desktop.item.selected", "#4dcce8ff")
+                           : drag.containsMouse ? Tokens.v("desktop.item.hover", "#33e5f3ff") : "transparent"
+                    border.color: icon.isSelected ? Tokens.v("desktop.item.selected.border", "#8c99d1ff") : "transparent"
                 }
                 Image {
-                    x: (parent.width - Metrics.desktopIcon) / 2; y: 6
+                    x: (parent.width - Metrics.desktopIcon) / 2; y: desk.iconTop
                     width: Metrics.desktopIcon; height: Metrics.desktopIcon
                     sourceSize: Qt.size(Metrics.desktopIcon * Screen.devicePixelRatio, Metrics.desktopIcon * Screen.devicePixelRatio)
                     source: icon.model.iconSource !== "" ? icon.model.iconSource : "image://icon/" + icon.model.icon
                 }
-                Text {
+                ShadowLabel {
+                    id: label
                     visible: desk.renaming !== icon.index
-                    x: 2; y: 10 + Metrics.desktopIcon; width: parent.width - 4
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap; maximumLineCount: icon.isSelected ? 4 : 2; elide: Text.ElideRight
+                    x: desk.labelInset - pad; y: desk.labelTop - pad
+                    width: parent.width - 2 * desk.labelInset + 2 * pad
+                    height: implicitHeight
+                    z: 1   // its shadow may overhang the next cell
                     text: icon.model.name
+                    maxLines: icon.isSelected ? 0 : Metrics.tok("desktop.label.lines", 2)
+                    lineHeight: desk.labelLine
                     color: "white"
-                    style: Text.Outline; styleColor: Qt.rgba(0, 0, 0, 0.35)   // legible on any wallpaper
-                    font.family: Metrics.fontFamily; font.pixelSize: 12
+                    font.family: Metrics.fontFamily; font.pixelSize: Metrics.tok("desktop.label", 12)
+                    font.hintingPreference: Font.PreferFullHinting   // GDI-like stems, as the reference
+                    shadowColor: Tokens.v("desktop.label.shadow.color", "#000000")
+                    shadowBlur: Number(Tokens.v("desktop.label.shadow.blur", 1.6))
+                    shadowX: Number(Tokens.v("desktop.label.shadow.x", 0.5))
+                    shadowY: Number(Tokens.v("desktop.label.shadow.y", 1))
+                    shadowStrength: Number(Tokens.v("desktop.label.shadow.strength", 1.7))
                 }
                 Rectangle {
                     visible: desk.renaming === icon.index
-                    x: 0; y: 8 + Metrics.desktopIcon; width: parent.width; height: 22
+                    x: 0; y: desk.labelTop - 4; width: parent.width; height: 22
                     color: "white"; border.color: Theme.accentFill
                     TextInput {
                         id: editor
