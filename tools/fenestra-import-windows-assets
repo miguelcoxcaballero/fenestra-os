@@ -728,7 +728,8 @@ GLYPH_TARGETS = {
     'audio-volume-high': ['icon:audio-volume-high-symbolic'],
     'network-wired': ['icon:network-wired-symbolic'],
     'notifications': ['icon:notifications-symbolic'],
-    'notifications-disabled': ['icon:notifications-disabled-symbolic'],
+    'notifications-disabled': ['icon:notifications-disabled-symbolic', 'asset:status/notifications-dnd.svg'],  # notification centre «No molestar»
+    'location-services': ['icon:location-services-symbolic', 'asset:privacy/location.svg'],   # tray: location in use
     'window-close': ['icon:window-close-symbolic', 'snip:snip-close'],     # toasts, title bars, snipping bar
     'window-minimize': ['icon:window-minimize-symbolic'],
     'window-maximize': ['icon:window-maximize-symbolic'],
@@ -780,7 +781,7 @@ GLYPH_TARGETS = {
     'selection-fullscreen': ['snip:snip-screen'],
     'selection-freeform': ['snip:snip-freeform'],
     'camera-photo-symbolic': ['icon:camera-photo-symbolic'],
-    'camera-video-symbolic': ['icon:camera-video-symbolic'],
+    'camera-video-symbolic': ['icon:camera-video-symbolic', 'asset:privacy/camera.svg'],  # also the tray camera-in-use mark
     # GTK apps (headerbars, entries, text editors)
     'system-search': ['icon:system-search-symbolic'],
     'help-browser': ['icon:help-browser-symbolic'],
@@ -812,7 +813,7 @@ SVG_ELEMENTS = {'svg', 'g', 'path', 'title', 'desc', 'defs', 'use', 'rect', 'cir
                 'polygon', 'linearGradient', 'radialGradient', 'stop', 'clipPath', 'mask', 'symbol'}
 
 
-def svg_problem(data, limit=GLYPH_MAX_FILE):
+def svg_problem(data, limit=GLYPH_MAX_FILE, extra=()):
     """None when ``data`` is a small, self-contained SVG; otherwise the reason it is refused:
     not well-formed, root not <svg>, DOCTYPE/entities, scripts, foreignObject or any element outside a
     plain-shapes allow-list, event attributes, or references to anything but '#...'."""
@@ -829,7 +830,7 @@ def svg_problem(data, limit=GLYPH_MAX_FILE):
         return 'root element is not <svg>'
     for el in root.iter():
         tag = el.tag[len(SVG_NS):] if isinstance(el.tag, str) and el.tag.startswith(SVG_NS) else el.tag
-        if tag not in SVG_ELEMENTS:
+        if tag not in SVG_ELEMENTS and tag not in extra:
             return f'element <{tag}> not allowed'
         for k, v in el.attrib.items():
             local = k.rsplit('}', 1)[-1]
@@ -872,6 +873,477 @@ def _ensure_scalable_dir(theme_dir, context_dir='scalable/actions', context='Act
     if f'[{context_dir}]' not in text:
         text = text.rstrip('\n') + f'\n\n[{context_dir}]\nSize=16\nMinSize=8\nMaxSize=512\nType=Scalable\nContext={context}\n'
     index.write_text(text)
+
+
+# ------------------------------------------- file types, weather, code point glyphs ---
+# docs/ICON-PACK-FORMAT.md, "File types, folders and places" / "Weather" / "Code point glyphs".
+_FT_KEY_RE = re.compile(r'^[a-z0-9][a-z0-9.+_-]{0,63}$')
+FT_SIZES = (16, 20, 24, 32, 48, 64, 96, 256)
+MIME_DIRS = [Path(p) / 'mime' for p in
+             [str(DATA)] + (os.environ.get('XDG_DATA_DIRS') or '/usr/local/share:/usr/share').split(':') if p]
+
+# Places and devices: pack key -> freedesktop icon names (Context dir).
+PLACE_NAMES = {
+    'folder': ('places', ['folder', 'inode-directory', 'folder-open-recent', 'folder-saved-search', 'folder-recent']),
+    'folder-full': ('places', ['folder-full']),
+    'folder-open': ('places', ['folder-open', 'folder-drag-accept', 'folder-visiting']),
+    'user-desktop': ('places', ['user-desktop', 'folder-desktop']),
+    'documents': ('places', ['folder-documents']),
+    'downloads': ('places', ['folder-download', 'folder-downloads']),
+    'music': ('places', ['folder-music']),
+    'pictures': ('places', ['folder-pictures', 'folder-images']),
+    'videos': ('places', ['folder-videos', 'folder-video']),
+    'home': ('places', ['user-home', 'folder-home']),
+    'public': ('places', ['folder-publicshare']),
+    'templates': ('places', ['folder-templates']),
+    'this-pc': ('devices', ['computer', 'user-bookmarks-computer']),
+    'network': ('places', ['network-workgroup', 'folder-remote', 'network-server']),
+    'onedrive': ('places', ['folder-cloud']),
+    'recycle-bin-empty': ('places', ['user-trash']),
+    'recycle-bin-full': ('places', ['user-trash-full']),
+    'drive-system': ('devices', ['drive-harddisk-system', 'drive-harddisk-root']),
+    'drive-harddisk': ('devices', ['drive-harddisk', 'drive-multidisk', 'drive-harddisk-solidstate']),
+    'drive-removable': ('devices', ['drive-removable-media', 'drive-removable-media-usb', 'media-removable',
+                                    'media-flash', 'drive-harddisk-usb']),
+    'drive-optical': ('devices', ['drive-optical', 'media-optical', 'media-optical-cd', 'media-optical-dvd']),
+    'drive-network': ('devices', ['folder-remote-ftp', 'network-server-database']),
+    'printer': ('devices', ['printer', 'printer-network']),
+    'computer-laptop': ('devices', ['computer-laptop']),
+    'shortcut-overlay': ('emblems', ['emblem-symbolic-link']),
+    'shared-overlay': ('emblems', ['emblem-shared']),
+    # Fenestra's patched Nautilus asks for these names in its sidebar (desktop/libexec/fenestra-patch-nautilus)
+    'home-quick-access': ('places', ['hwin', 'rwin']),
+    'recycle-bin-empty#': ('places', ['twne']),
+    'recycle-bin-full#': ('places', ['twnf']),
+    'documents#': ('places', ['dwin']),
+    'downloads#': ('places', ['dlwin']),
+    'music#': ('places', ['mwin']),
+    'pictures#': ('places', ['pwin']),
+    'videos#': ('places', ['vwin']),
+    'public#': ('places', ['pubwin']),
+    'templates#': ('places', ['tmpwin']),
+    'network#': ('places', ['nwin']),
+    'drive-harddisk#': ('devices', ['drvwin']),
+    'this-pc#': ('devices', ['network-drvwin']),
+    'gallery': ('places', ['folder-gallery']),
+}
+
+# Text types with no extension Windows knows (subclasses of text/plain are found through the
+# subclass chain already): Notepad's text document icon, like .txt.
+def _textish(mime):
+    return mime.startswith('text/') or mime in ('application/json', 'application/xml', 'application/javascript',
+                                                 'application/x-shellscript', 'application/x-desktop', 'application/toml',
+                                                 'application/yaml', 'application/x-yaml', 'application/sql', 'application/x-ini')
+
+
+def load_mime_db():
+    """(globs: ext -> [(weight, mime)], icons: mime -> icon, generic: mime -> generic, parents: mime -> [mime],
+    types: [mime], aliases: alias -> mime) from shared-mime-info (user dir first)."""
+    globs, icons, generic, parents, types, aliases = {}, {}, {}, {}, [], {}
+    for d in reversed(MIME_DIRS):
+        if not (d / 'types').is_file():
+            continue
+        for line in (d / 'globs2').read_text(errors='replace').splitlines() if (d / 'globs2').is_file() else []:
+            if line.startswith('#'):
+                continue
+            parts = line.split(':')
+            if len(parts) < 3:
+                continue
+            weight, mime, glob = parts[0], parts[1], parts[2]
+            m = re.match(r'^\*\.([A-Za-z0-9+_-]+(?:\.[A-Za-z0-9+_-]+)?)$', glob)
+            if m:
+                globs.setdefault(m.group(1).lower(), []).append((int(weight) if weight.isdigit() else 50, mime))
+        for fname, into in (('icons', icons), ('generic-icons', generic)):
+            for line in (d / fname).read_text(errors='replace').splitlines() if (d / fname).is_file() else []:
+                if ':' in line:
+                    k, v = line.split(':', 1)
+                    into[k.strip()] = v.strip()
+        for line in (d / 'subclasses').read_text(errors='replace').splitlines() if (d / 'subclasses').is_file() else []:
+            p = line.split()
+            if len(p) == 2:
+                parents.setdefault(p[0], []).append(p[1])
+        for line in (d / 'aliases').read_text(errors='replace').splitlines() if (d / 'aliases').is_file() else []:
+            p = line.split()
+            if len(p) == 2:
+                aliases[p[0]] = p[1]
+        types += [t.strip() for t in (d / 'types').read_text(errors='replace').splitlines() if '/' in t]
+    return globs, icons, generic, parents, sorted(set(types)), aliases
+
+
+def _index_dirs(theme_dir, dirs):
+    """Add fixed-size / scalable directories to an installed theme's index.theme."""
+    index = theme_dir / 'index.theme'
+    if not index.exists():
+        theme_dir.mkdir(parents=True, exist_ok=True)
+        index.write_text(f'[Icon Theme]\nName={theme_dir.name}\nComment=Icons from your Fenestra icon pack\n'
+                         'Inherits=Fenestra,Win11,Adwaita,hicolor\nDirectories=\n')
+    text = index.read_text(errors='replace')
+    m = re.search(r'^Directories\s*=\s*(.*)$', text, re.M)
+    have = [d.strip() for d in (m.group(1).split(',') if m else []) if d.strip()]
+    for d in dirs:
+        if d not in have:
+            have.append(d)
+    line = 'Directories=' + ','.join(have)
+    text = (text[:m.start()] + line + text[m.end():]) if m else text.replace('[Icon Theme]\n', '[Icon Theme]\n' + line + '\n', 1)
+    contexts = {'mimetypes': 'MimeTypes', 'places': 'Places', 'devices': 'Devices', 'emblems': 'Emblems',
+                'status': 'Status', 'actions': 'Actions', 'apps': 'Applications'}
+    for d in dirs:
+        if f'[{d}]' in text:
+            continue
+        size, ctx = d.split('/', 1)
+        if size == 'scalable':
+            text = text.rstrip('\n') + f'\n\n[{d}]\nSize=48\nMinSize=8\nMaxSize=512\nType=Scalable\nContext={contexts.get(ctx, "Status")}\n'
+        else:
+            n = int(size.split('x')[0])
+            text = text.rstrip('\n') + f'\n\n[{d}]\nSize={n}\nContext={contexts.get(ctx, "Status")}\nType=Fixed\n'
+    index.write_text(text)
+
+
+def _place(src, dest):
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() or dest.is_symlink():
+        dest.unlink()
+    try:
+        os.link(src, dest)
+    except OSError:
+        shutil.copyfile(src, dest)
+
+
+def install_filetypes(root, dest, theme_dir, overrides):
+    """filetypes/ -> pack folder, freedesktop mimetype/place/device icons in the theme (every MIME type
+    of the shared-mime-info database whose extension Windows knows, its subclasses, and the rest as
+    Windows' unknown-type page), and icon-overrides.json entries for Fenestra Shell. Returns counts."""
+    fdir = root / 'filetypes'
+    try:
+        index = json.loads((fdir / 'filetypes.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError, UnicodeDecodeError):
+        return {}
+    items = index.get('items') if isinstance(index.get('items'), dict) else {}
+    have = {}   # key -> {size: Path}
+    for key, meta in items.items():
+        if not _FT_KEY_RE.match(key) or not isinstance(meta, dict) or not isinstance(meta.get('files'), dict):
+            continue
+        sizes = {}
+        for s, rel in meta['files'].items():
+            if not (isinstance(s, str) and s.isdigit() and int(s) in FT_SIZES and rel == f'{s}x{s}/{key}.png'):
+                continue
+            src = fdir / rel
+            if not src.is_file() or src.is_symlink() or src.stat().st_size > LOGO_MAX_FILE:
+                continue
+            data = src.read_bytes()
+            if _png_size(data[:32]) != (int(s), int(s)):
+                continue
+            out = dest / 'filetypes' / rel
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(data)
+            sizes[int(s)] = out
+        if sizes:
+            have[key] = sizes
+    shutil.copyfile(fdir / 'filetypes.json', dest / 'filetypes' / 'filetypes.json')
+    if not have:
+        return {}
+    globs, mime_icons, generic, parents, types, aliases = load_mime_db()
+    # MIME type -> pack key: exported extensions through the globs (highest weight wins), the content
+    # type Windows registers for the extension, then the subclass chain, then Windows' unknown page.
+    direct = {}
+    for key, meta in items.items():
+        if key not in have or meta.get('kind') != 'extension':
+            continue
+        ext = key
+        for weight, mime in globs.get(ext, []):
+            cur = direct.get(mime)
+            if cur is None or weight > cur[0]:
+                direct[mime] = (weight, key)
+        ct = meta.get('content_type')
+        if isinstance(ct, str) and re.match(r'^[a-z0-9.+-]+/[a-z0-9.+-]+$', ct):
+            ct = aliases.get(ct, ct)
+            if ct in types and ct not in direct:
+                direct[ct] = (0, key)
+    # Exactly what Explorer shows: a type nothing handles on that PC keeps Windows' blank page.
+    choice = {m: k for m, (_, k) in direct.items()}
+    text_key = 'txt' if 'txt' in have else None
+
+    def resolve(m, seen=()):
+        if m in choice:
+            return choice[m]
+        for p in parents.get(m, []):
+            if p not in seen and p not in ('application/octet-stream',):
+                k = resolve(p, seen + (m,))
+                if k:
+                    return k
+        return None
+    names = {}   # icon name -> (context, key)
+    for m in types:
+        if m.startswith(('inode/', 'x-content/', 'multipart/')) and m not in ('inode/directory',):
+            continue
+        key = 'folder' if m == 'inode/directory' else resolve(m)
+        if key is None:
+            key = text_key if (text_key and _textish(m)) else ('unknown' if 'unknown' in have else None)
+        if key is None:
+            continue
+        for icon in {mime_icons.get(m) or m.replace('/', '-')}:
+            names.setdefault(icon, ('mimetypes', key))
+    # aliases (application/x-ms-dos-executable for application/x-msdownload, ...): same icon
+    for alias, canon in aliases.items():
+        ctx_key = names.get(mime_icons.get(canon) or canon.replace('/', '-'))
+        if ctx_key:
+            names.setdefault(alias.replace('/', '-'), ctx_key)
+    # generic names (asked when a specific one is missing): Windows' icon of a representative type
+    for gname, key in (('text-x-generic', 'txt'), ('image-x-generic', 'png'), ('audio-x-generic', 'mp3'),
+                       ('video-x-generic', 'mp4'), ('package-x-generic', 'zip'), ('font-x-generic', 'ttf'),
+                       ('x-office-document', 'docx'), ('x-office-spreadsheet', 'xlsx'), ('x-office-presentation', 'pptx'),
+                       ('x-office-drawing', 'odg'), ('application-x-executable', 'exe'), ('text-x-script', 'bat'),
+                       ('text-html', 'html'), ('application-x-generic', 'unknown'), ('unknown', 'unknown'),
+                       ('application-octet-stream', 'unknown'), ('text-x-generic-template', 'txt'),
+                       ('application-x-addon', 'dll'), ('application-x-firmware', 'bin'),
+                       ('x-office-calendar', 'ics'), ('x-office-address-book', 'vcf'), ('text-x-preview', 'txt')):
+        if key in have:
+            names[gname] = ('mimetypes', key)
+    for key, (ctx, icons) in PLACE_NAMES.items():
+        key = key.rstrip('#')               # '#': a second row for the same pack key
+        if key in have:
+            for icon in icons:
+                names[icon] = (ctx, key)
+    dirs = set()
+    for icon, (ctx, key) in names.items():
+        files = []
+        for s, src in sorted(have[key].items()):
+            d = f'{s}x{s}/{ctx}'
+            dirs.add(d)
+            if theme_dir is not None:
+                _place(src, theme_dir / d / f'{icon}.png')
+            files.append(str(src))
+        overrides['icons'][icon] = files
+        overrides['icons_light'][icon] = files
+    if theme_dir is not None:
+        _index_dirs(theme_dir, sorted(dirs, key=lambda d: (int(d.split('x')[0]), d)))
+    # Empty / non-empty folder pictures of the Explorer layer (desktop/lib/folder-icons) and of Fenestra
+    # Shell's desktop: Explorer's own 256 px folder and folder-with-content preview.
+    # UAC shield of the consent dialog (SIID_SHIELD)
+    shield = have.get('shield', {})
+    if shield:
+        src = shield.get(96) or shield[max(shield)]
+        overrides['assets']['consent/shield.svg'] = str(src)
+        overrides['assets_light']['consent/shield.svg'] = str(src)
+    for key, name in (('folder', 'folder-empty'), ('folder-full', 'folder-full')):
+        src = have.get(key, {}).get(256)
+        if src is None:
+            continue
+        out = ASSETS / 'folders' / f'{name}.png'
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, out)
+        for rel in (f'folders/{name}.svg', f'folders/{name}.png'):
+            overrides['assets'][rel] = str(src)
+            overrides['assets_light'][rel] = str(src)
+    n_types = sum(1 for _, (c, _k) in names.items() if c == 'mimetypes')
+    log(f'file types: {len(have)} Windows icons ({len([k for k in items if items[k].get("kind") == "extension" and k in have])} '
+        f'extensions, {len([k for k in items if items[k].get("kind") == "special" and k in have])} places), '
+        f'{n_types} MIME icon names, {len(names) - n_types} place/device names')
+    return {'keys': len(have), 'names': len(names), 'mime_names': n_types}
+
+
+# Fenestra / GWeather condition icon names -> Windows' Widgets icon (first available wins).
+WEATHER_TARGETS = {
+    'weather-clear': ['SunnyDayV3', 'MostlySunnyDay'],
+    'weather-clear-night': ['ClearNightV3', 'MostlyClearNight'],
+    'weather-few-clouds': ['PartlyCloudyDayV3', 'MostlySunnyDay'],
+    'weather-few-clouds-night': ['PartlyCloudyNightV2', 'MostlyCloudyNightV2', 'MostlyCloudyNight'],
+    'weather-overcast': ['CloudyV3', 'MostlyCloudyDayV2'],
+    'weather-fog': ['FogV2', 'Haze'],
+    'weather-showers': ['ModerateRainV2', 'LightRainV3', 'LightRainV2'],
+    'weather-showers-scattered': ['RainShowersDayV2', 'LightRainShowerDay', 'LightRainV2'],
+    'weather-snow': ['LightSnowV2', 'HeavySnowV2', 'Snow'],
+    'weather-storm': ['ThunderstormsV2'],
+    'weather-severe-alert': ['ThunderstormsV2'],
+    'weather-windy': ['WindyV2'],
+    'weather-tornado': ['WindyV2'],
+    'weather-hail': ['HailDayV2', 'BlowingHailV2'],
+    'weather-freezing-rain': ['FreezingRainV2', 'IcePelletsV2'],
+}
+WEATHER_SVG_EXTRA = {'filter', 'feGaussianBlur', 'feOffset', 'feFlood', 'feBlend', 'feColorMatrix', 'feComposite',
+                     'feMerge', 'feMergeNode', 'feMorphology', 'feDropShadow'}
+
+
+def install_weather(root, dest, theme_dir, overrides):
+    wdir = root / 'weather'
+    try:
+        index = json.loads((wdir / 'weather.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError, UnicodeDecodeError):
+        return 0
+    icons = index.get('icons') if isinstance(index.get('icons'), dict) else {}
+    have = {}
+    for name, meta in icons.items():
+        if not re.match(r'^[A-Za-z0-9_-]{1,64}$', name) or not isinstance(meta, dict) or meta.get('file') != f'{name}.svg':
+            continue
+        src = wdir / f'{name}.svg'
+        if not src.is_file() or src.is_symlink():
+            continue
+        data = src.read_bytes()
+        why = svg_problem(data, limit=256 * 1024, extra=WEATHER_SVG_EXTRA)
+        if why:
+            log(f'weather: {name}.svg refused ({why})')
+            continue
+        out = dest / 'weather' / f'{name}.svg'
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(data)
+        have[name] = out
+    (dest / 'weather').mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(wdir / 'weather.json', dest / 'weather' / 'weather.json')
+    mapped = 0
+    for target, choices in WEATHER_TARGETS.items():
+        src = next((have[c] for c in choices if c in have), None)
+        if src is None:
+            continue
+        mapped += 1
+        # Windows draws the coloured condition icon on light and dark taskbars alike.
+        for name in (target, target + '-symbolic'):
+            overrides['icons'][name] = [str(src)]
+            overrides['icons_light'][name] = [str(src)]
+        if theme_dir is not None:
+            _place(src, theme_dir / 'scalable' / 'status' / f'{target}.svg')
+    if theme_dir is not None and mapped:
+        _index_dirs(theme_dir, ['scalable/status'])
+    log(f'weather: {len(have)} Windows condition icons, {mapped} of {len(WEATHER_TARGETS)} Fenestra weather states mapped')
+    return mapped
+
+
+# Segoe Fluent Icons code points (glyphs/u, --all-glyphs) Fenestra asks for by name: Quick Settings
+# tiles and sliders, tray network / volume / battery. Several code points are layered like Windows
+# draws them (the Wi-Fi bars over the dimmed full fan). Targets as in GLYPH_TARGETS, plus
+#   gtk:NAME  only in the pack's icon theme (the shell keeps its Sysbatt battery pictures).
+CODEPOINT_TARGETS = {
+    # Wi-Fi: E701 full fan; E872/E873/E874 one/two/three bars; E871 "no internet" badge.
+    'wifi-0': (['E701@0.3', 'E872'], ['icon:network-wireless-signal-none-symbolic']),
+    'wifi-1': (['E701@0.3', 'E872'], ['icon:network-wireless-signal-weak-symbolic']),
+    'wifi-2': (['E701@0.3', 'E873'], ['icon:network-wireless-signal-ok-symbolic']),
+    'wifi-3': (['E701@0.3', 'E874'], ['icon:network-wireless-signal-good-symbolic']),
+    'wifi-4': (['E701'], ['icon:network-wireless-signal-excellent-symbolic', 'icon:network-wireless-symbolic',
+                          'icon:network-wireless-connected-symbolic', 'icon:network-wireless-disabled-symbolic',
+                          'icon:network-wireless-acquiring-symbolic', 'icon:network-wireless-hotspot-symbolic']),
+    'wifi-offline': (['E701@0.3', 'E871'], ['icon:network-wireless-offline-symbolic', 'icon:network-wireless-no-route-symbolic']),
+    'wired': (['E839'], ['icon:network-wired-symbolic', 'icon:network-wired-acquiring-symbolic']),
+    'wired-offline': (['E839', 'E871'], ['icon:network-wired-no-route-symbolic', 'icon:network-wired-disconnected-symbolic',
+                                         'icon:network-offline-symbolic']),
+    'vpn': (['E705'], ['icon:network-vpn-symbolic']),
+    # volume: E74F muted, E992 0, E993 low, E994 medium, E995 high
+    'volume-muted': (['E74F'], ['icon:audio-volume-muted-symbolic']),
+    'volume-0': (['E992'], ['icon:audio-volume-off-symbolic']),
+    'volume-1': (['E993'], ['icon:audio-volume-low-symbolic']),
+    'volume-2': (['E994'], ['icon:audio-volume-medium-symbolic']),
+    'volume-3': (['E995'], ['icon:audio-volume-high-symbolic', 'icon:audio-speakers-symbolic']),
+    'brightness': (['E706'], ['icon:display-brightness-symbolic']),
+    'airplane': (['E709'], ['icon:airplane-mode-symbolic', 'icon:airplane-mode-disabled-symbolic']),
+    'bluetooth': (['E702'], ['icon:bluetooth-active-symbolic', 'icon:bluetooth-symbolic', 'icon:bluetooth-disabled-symbolic',
+                             'icon:bluetooth-disconnected-symbolic']),
+    'night-light': (['F08C'], ['icon:night-light-symbolic', 'icon:night-light-disabled-symbolic']),
+    'accessibility': (['E776'], ['icon:preferences-desktop-accessibility-symbolic']),
+    'settings': (['E713'], ['shell:emblem-system-symbolic', 'icon:preferences-system-symbolic']),
+    'edit': (['E70F'], ['icon:document-edit-symbolic', 'icon:edit-symbolic']),
+    'cast': (['EC15'], ['icon:video-display-cast-symbolic', 'icon:screen-shared-symbolic']),
+    'nearby-share': (['F0B9'], []),
+    'live-captions': (['ED1E'], ['icon:media-view-subtitles-symbolic']),
+    'battery-saver': (['F1E8'], ['shell:battery-level-50-symbolic']),
+    'mic': (['E720'], ['icon:audio-input-microphone-symbolic']),
+    'mic-muted': (['F781'], ['icon:microphone-sensitivity-muted-symbolic', 'asset:osd/mic-off.svg']),
+    # On-screen display (volume / brightness / microphone / keyboard layout flyouts)
+    'osd-volume-0': (['E992'], ['asset:osd/speaker-0.svg']),
+    'osd-volume-1': (['E993'], ['asset:osd/speaker-1.svg']),
+    'osd-volume-2': (['E994'], ['asset:osd/speaker-2.svg']),
+    'osd-volume-3': (['E995'], ['asset:osd/speaker-3.svg']),
+    'osd-volume-muted': (['E74F'], ['asset:osd/speaker-mute.svg']),
+    'osd-brightness': (['E706'], ['asset:osd/brightness.svg']),
+    'osd-mic': (['E720'], ['asset:osd/mic.svg', 'asset:privacy/mic.svg']),
+    'osd-keyboard': (['E765'], ['asset:osd/keyboard.svg']),
+    # Ctrl+Alt+Del corner buttons, consent dialog
+    'security-sleep': (['E708'], ['asset:security/sleep.svg']),
+    'security-power': (['E7E8'], ['asset:security/power.svg']),
+    'security-wifi': (['E701'], ['asset:security/network-wifi.svg']),
+    'security-wired': (['E839'], ['asset:security/network-wired.svg']),
+    'security-offline': (['E701@0.3', 'E871'], ['asset:security/network-offline.svg']),
+    'consent-close': (['E8BB'], ['asset:consent/close.svg']),
+    # desktop context menu
+    'menu-rename': (['E8AC'], ['asset:menu-icons/win11-menu-rename.svg']),
+    'menu-document': (['E8A5'], ['asset:menu-icons/win11-menu-document.svg']),
+    'search-lens': (['E721'], ['asset:search/search-glyph.svg']),
+    # Start power menu (Sleep, the power button), notification fallback icon
+    'power-sleep': (['E708'], ['asset:power/4.svg']),
+    'power-button': (['E7E8'], ['asset:power/7.svg']),
+    'info': (['E946'], ['icon:dialog-information', 'icon:dialog-information-symbolic']),
+    # Quick Settings media card and calendar focus timer: filled transport glyphs
+    'media-play-solid': (['F5B0'], ['asset:status/media-play.svg']),
+    'media-pause-solid': (['F8AE'], ['asset:status/media-pause.svg']),
+    'media-next-solid': (['F8AD'], ['asset:status/media-next.svg']),
+    'media-previous-solid': (['F8AC'], ['asset:status/media-previous.svg']),
+}
+# The status/ copies of the Wi-Fi pictures (Quick Settings Wi-Fi list)
+for _k, _n in (('wifi-0', 'none'), ('wifi-1', 'weak'), ('wifi-2', 'ok'), ('wifi-3', 'good'), ('wifi-4', 'excellent')):
+    CODEPOINT_TARGETS[_k][1].append(f'asset:status/network-wireless-signal-{_n}-symbolic.svg')
+CODEPOINT_TARGETS['wifi-4'][1].append('asset:status/network-wireless-disabled-symbolic.svg')
+CODEPOINT_TARGETS['wifi-offline'][1].extend(['asset:status/network-wireless-offline-symbolic.svg',
+                                             'asset:status/network-wireless-no-route-symbolic.svg'])
+# Battery (Segoe Fluent: E850…E859 0–90 %, E83F full; E85A…E862 charging 0–80 %, E83E charging full).
+for _lvl in range(0, 101, 10):
+    _plain = 'E83F' if _lvl == 100 else f'{0xE850 + _lvl // 10:04X}'
+    _chg = 'E83E' if _lvl >= 90 else f'{0xE85A + _lvl // 10:04X}'
+    CODEPOINT_TARGETS[f'battery-{_lvl}'] = ([_plain], [f'gtk:battery-level-{_lvl}-symbolic'] if _lvl != 50 else [])
+    CODEPOINT_TARGETS[f'battery-{_lvl}-charging'] = ([_chg], [f'gtk:battery-level-{_lvl}-charging-symbolic'])
+for _name, _cp in (('full', 'E83F'), ('good', 'E857'), ('low', 'E852'), ('caution', 'E851'), ('empty', 'E850'),
+                   ('missing', 'E996')):
+    CODEPOINT_TARGETS[f'battery-{_name}'] = ([_cp], [f'gtk:battery-{_name}-symbolic'])
+CODEPOINT_TARGETS['battery-full-charged'] = (['E83E'], ['gtk:battery-full-charged-symbolic', 'gtk:battery-full-charging-symbolic'])
+
+
+def _svg_paths(data):
+    """viewBox and the <path> elements of a glyph SVG written by the extractor."""
+    import xml.etree.ElementTree as ET
+    root = ET.fromstring(data)
+    return root.get('viewBox'), [el.get('d') for el in root.iter(SVG_NS + 'path') if el.get('d')]
+
+
+def install_codepoint_glyphs(dest, theme_dir, overrides, gtk_names):
+    udir = dest / 'glyphs' / 'u'
+    if not udir.is_dir():
+        log('quick settings / tray glyphs: the pack has no glyphs/u (export with --all-glyphs)')
+        return 0
+    out_dir = dest / 'glyphs' / 'cp'
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / 'white').mkdir(exist_ok=True)
+    done = 0
+    for key, (layers, targets) in CODEPOINT_TARGETS.items():
+        parts, box = [], None
+        for layer in layers:
+            cp, _, alpha = layer.partition('@')
+            f = udir / f'{cp}.svg'
+            if not f.is_file():
+                parts = None
+                break
+            vb, ds = _svg_paths(f.read_bytes())
+            box = box or vb
+            op = f' fill-opacity="{float(alpha):g}"' if alpha else ''
+            parts += [f'<path fill="currentColor"{op} fill-rule="nonzero" d="{d}"/>' for d in ds]
+        if not parts:
+            continue
+        svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{box}" width="16" height="16">' + ''.join(parts) + '</svg>\n').encode()
+        orig, white = out_dir / f'{key}.svg', out_dir / 'white' / f'{key}.svg'
+        orig.write_bytes(svg)
+        white.write_bytes(_white(svg))
+        done += 1
+        for target in targets:
+            kind, _, what = target.partition(':')
+            if kind in ('icon', 'shell') and what in overrides['icons']:
+                continue                     # a glyph of icons.json (checked on the reference shots) already
+            if kind == 'asset':
+                if what not in overrides['assets']:
+                    overrides['assets'][what] = str(white)
+                    overrides['assets_light'][what] = str(orig)
+                continue
+            if kind in ('icon', 'shell'):
+                overrides['icons'][what] = [str(white)]
+                overrides['icons_light'][what] = [str(orig)]
+            if kind in ('icon', 'gtk') and theme_dir is not None:
+                gtk_names.append((what, orig))
+    log(f'quick settings / tray glyphs: {done} of {len(CODEPOINT_TARGETS)} from Segoe Fluent Icons code points')
+    return done
 
 
 def install_glyphs_and_logos(root, pack_id, theme_name):
@@ -952,6 +1424,8 @@ def install_glyphs_and_logos(root, pack_id, theme_name):
                 overrides['assets_light'][what] = str(orig)
             elif kind == 'snip':
                 overrides['snip'][what] = str(white)
+    if theme_dir is not None or (gdir / 'u').is_dir():
+        install_codepoint_glyphs(dest, theme_dir, overrides, gtk_names)
     if gtk_names:
         _ensure_scalable_dir(theme_dir)
         sdir = theme_dir / 'scalable' / 'actions'
@@ -1020,6 +1494,17 @@ def install_glyphs_and_logos(root, pack_id, theme_name):
     if (gdir / 'glyphs.json').is_file():
         (dest / 'glyphs').mkdir(parents=True, exist_ok=True)
         shutil.copyfile(gdir / 'glyphs.json', dest / 'glyphs' / 'glyphs.json')
+
+    # Taskbar / Quick Settings battery pictures composed from Sysbatt.ttf (build_battery): Fenestra Shell
+    # asks for /usr/share/fenestra/assets/battery/... and status/...
+    for f in sorted((ASSETS / 'battery').glob('*.svg')) if (ASSETS / 'battery').is_dir() else []:
+        for rel in (f'battery/{f.name}',) + ((f'status/{f.name}',) if re.match(r'^(normal|charging)-0-\d+\.svg$', f.name) else ()):
+            overrides['assets'][rel] = str(f)
+            overrides['assets_light'][rel] = str(f)
+
+    # file types, folders, drives and places (filetypes/) and weather condition icons (weather/)
+    install_filetypes(root, dest, theme_dir, overrides)
+    install_weather(root, dest, theme_dir, overrides)
 
     OVERRIDES.parent.mkdir(parents=True, exist_ok=True)
     tmp = OVERRIDES.with_suffix('.json.tmp')
@@ -1107,6 +1592,11 @@ def import_pack(path, dry=False):
         install_glyphs_and_logos(root, pack_id, chosen)
         if chosen:
             gsettings_set('org.gnome.desktop.interface', 'icon-theme', chosen)
+            # KDE Frameworks apps and the KDE file dialogs of the Fenestra (KWin) session read kdeglobals.
+            if APPLY and shutil.which('kwriteconfig6'):
+                subprocess.run(['kwriteconfig6', '--file', 'kdeglobals', '--group', 'Icons', '--key', 'Theme', chosen], check=False)
+            if APPLY and shutil.which('kbuildsycoca6'):
+                subprocess.run(['kbuildsycoca6'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             log(f'icons: theme {chosen}')
         # accent colour
         accent = m.get('accent') or m.get('accent_color')
