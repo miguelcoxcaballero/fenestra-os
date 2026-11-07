@@ -431,7 +431,19 @@ class ThemesPage(Page):
         top.append(preview_card())
         top.append(self._summary())
         box.append(top)
-        g = self.group(_("Current theme"))
+        g = self.group()
+        # Reference: «Tema actual» is an expander (value «Personalizado») holding the theme tiles.
+        cur_theme = ExpanderRow(_("Current theme"),
+                                _("Choose a combination of wallpapers, sounds and colors to give your desktop more personality"),
+                                None, control=label(_("Custom"), "row-value"), key="current-theme", expanded=True)
+        holder = Gtk.Box()
+        holder.add_css_class("plain")
+        holder.add_css_class("themes-page-tiles")
+        tiles = theme_tiles(per_row=6)
+        tiles.set_halign(Gtk.Align.START)
+        holder.append(tiles)
+        cur_theme.add(holder)
+        g.add(cur_theme)
         for key, sk, title, sub, ic, items in (
                 ("gtk", "gtk-theme", _("App style"), _("Theme used by GTK 3 apps"), "fs-window-brush-symbolic",
                  _list_themes(["gtk-3.0", "gtk-4.0"])),

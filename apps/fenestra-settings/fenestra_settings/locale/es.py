@@ -569,6 +569,7 @@ STRINGS = {
     'A picture background applies to your current desktop': 'Un fondo de imagen se aplica a tu escritorio actual',
     'Change the colors that appear in Fenestra and your apps': 'Cambiar los colores que aparecen en Fenestra y tus aplicaciones',
     'Current theme': 'Tema actual',
+    'Choose a combination of wallpapers, sounds and colors to give your desktop more personality': 'Elige una combinación de papeles tapiz, sonidos y colores juntos para darle a tu escritorio más personalidad',
     'Taskbar items': 'Elementos de la barra de tareas',
     'Clock': 'Reloj',
     'Font settings': 'Configuración de fuentes',

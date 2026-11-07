@@ -111,14 +111,14 @@ def theme_preview(dark: bool, width=120, height=80, wallpaper_dark=None):
     return ov
 
 
-def theme_tiles():
+def theme_tiles(per_row=3):
     """Six 112x90 theme tiles (wallpaper + light/dark mini window), 3 per row, 8 px apart,
     as on the reference Home and Personalization pages. A click applies wallpaper + mode."""
     from ..backends import appearance
     from .personalization import find_backgrounds
     grid = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
     grid.add_css_class("theme-tiles")
-    rows = [Gtk.Box(spacing=8, halign=Gtk.Align.START) for _r in range(2)]
+    rows = [Gtk.Box(spacing=8, halign=Gtk.Align.START) for _r in range((5 + per_row) // per_row)]
     for r in rows:
         grid.append(r)
     paths = find_backgrounds(6) or [system_info.wallpaper_path(theme.get().dark)]
@@ -147,7 +147,7 @@ def theme_tiles():
         b.set_child(ov)
         b.set_tooltip_text(_("Dark") if dark else _("Light"))
         b.connect("clicked", lambda _b, p=path, d=dark: apply(p, d))
-        rows[i // 3].append(b)
+        rows[i // per_row].append(b)
     return grid
 
 
