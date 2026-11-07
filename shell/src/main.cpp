@@ -11,6 +11,7 @@
 #include "acrylic.h"
 #include "backdrop.h"
 #include "batteryalerts.h"
+#include "performancemode.h"
 #include "iconoverrides.h"
 #include "kwinintegration.h"
 #include "notifications.h"
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
     Shortcuts::instance()->install();
     KWinIntegration::instance(); // Fenestra decoration and switcher in kwinrc
     BatteryAlerts::instance(); // low-battery notices and Energy saver, as Windows
+    PerformanceMode::instance(); // the OEM performance-mode key's notification
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }

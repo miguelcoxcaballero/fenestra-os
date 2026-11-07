@@ -1,27 +1,95 @@
-#!/bin/bash
-# Restarts camera-relay-login.service when an app has the loopback camera open
-# but the relay never starts the libcamera pipeline (v4l2loopback event bug
-# after a quick open/close cycle, e.g. Brave/Meet probing the camera).
-DEV=${CAMERA_RELAY_DEVICE:-/dev/video0}
-UNIT=camera-relay-login.service
-stuck=0
-while sleep 2; do
-    rdev=$(stat -Lc '%t:%T' "$DEV" 2>/dev/null) || continue
-    relay_pids=" $(pgrep -d ' ' -f 'camera-relay-monitor|camera-relay start|gst-launch-1.0.*libcamerasrc') "
-    clients=0
-    for fd in /proc/[0-9]*/fd/*; do
-        [ "$(readlink "$fd" 2>/dev/null)" = "$DEV" ] || continue
-        pid=${fd#/proc/}; pid=${pid%%/*}
-        [[ "$relay_pids" == *" $pid "* ]] && continue
-        clients=$((clients+1)); break
-    done
-    if [ "$clients" -gt 0 ] && ! pgrep -f 'gst-launch-1.0.*libcamerasrc' >/dev/null; then
-        stuck=$((stuck+1))
-    else
-        stuck=0
-    fi
-    if [ "$stuck" -ge 3 ]; then
-        echo "camera-relay-watchdog: client waiting ${stuck}x2s with no pipeline, restarting $UNIT"
-        systemctl restart "$UNIT"; stuck=0; sleep 8
-    fi
-done
+#!/usr/bin/python3 -I
+"""Restart camera-relay-login.service when an app opens the loopback camera but the relay
+never starts the libcamera pipeline (v4l2loopback event bug after a quick open/close cycle,
+e.g. Brave/Meet probing the camera).
+
+Event driven, so it costs nothing while the camera is not used (it runs all day on battery):
+it sleeps on inotify until someone opens the device, then checks once, 6 s later, whether a
+client still holds it with no pipeline running. The first version polled every 2 s by walking
+/proc/*/fd/* in bash with one readlink process per open file of every process: a pass took
+longer than the 2 s period, ~11 % of a core around the clock, and the CPU never idled.
+"""
+import ctypes
+import os
+import select
+import struct
+import subprocess
+import time
+
+DEV = os.environ.get('CAMERA_RELAY_DEVICE', '/dev/video0')
+UNIT = 'camera-relay-login.service'
+WAIT = float(os.environ.get('CAMERA_RELAY_WAIT', '6'))   # the relay normally starts the pipeline well within this
+DRY_RUN = os.environ.get('CAMERA_RELAY_DRY_RUN') == '1'  # tests: report instead of restarting
+IN_OPEN = 0x20
+IN_DELETE_SELF = 0x400
+IN_IGNORED = 0x8000
+
+libc = ctypes.CDLL(None, use_errno=True)
+
+
+def pids(*args):
+    r = subprocess.run(['pgrep', *args], capture_output=True, text=True)
+    return set(r.stdout.split())
+
+
+def pipeline_running():
+    # By process name: camera-relay-monitor's own command line contains "gst-launch-1.0 ...
+    # libcamerasrc" (what it starts), so a pattern match always saw a pipeline (the bash version
+    # never restarted anything because of that).
+    return bool(pids('-x', 'gst-launch-1.0'))
+
+
+def waiting_client():
+    """Someone other than the relay has the device open."""
+    r = subprocess.run(['fuser', DEV], capture_output=True, text=True)
+    holders = set(r.stdout.split())
+    relay = pids('-f', r'camera-relay-monitor|camera-relay start') | pids('-x', 'gst-launch-1.0')
+    return bool(holders - relay)
+
+
+def watch():
+    fd = libc.inotify_init1(os.O_CLOEXEC)
+    if fd < 0 or libc.inotify_add_watch(fd, DEV.encode(), IN_OPEN | IN_DELETE_SELF) < 0:
+        if fd >= 0:
+            os.close(fd)
+        return None
+    return fd
+
+
+def main():
+    while True:
+        while not os.path.exists(DEV):
+            time.sleep(5)
+        fd = watch()
+        if fd is None:
+            time.sleep(5)
+            continue
+        deadline = None
+        while True:
+            timeout = None if deadline is None else max(0.0, deadline - time.monotonic())
+            ready, _, _ = select.select([fd], [], [], timeout)
+            if ready:
+                data = os.read(fd, 4096)
+                gone = False
+                for off in range(0, len(data), 16):
+                    _, mask, _, _ = struct.unpack_from('iIII', data, off)
+                    if mask & (IN_DELETE_SELF | IN_IGNORED):
+                        gone = True
+                if gone:
+                    break   # device recreated (module reload): watch the new one
+                if deadline is None:
+                    deadline = time.monotonic() + WAIT
+                continue
+            # WAIT seconds after an open: is a client stuck without a pipeline?
+            deadline = None
+            if not pipeline_running() and waiting_client():
+                print(f'camera-relay-watchdog: client waiting {WAIT:.0f}s with no pipeline, restarting {UNIT}', flush=True)
+                if not DRY_RUN:
+                    subprocess.run(['systemctl', 'restart', UNIT])
+                time.sleep(8)
+                os.read(fd, 65536) if select.select([fd], [], [], 0)[0] else None
+        os.close(fd)
+
+
+if __name__ == '__main__':
+    main()

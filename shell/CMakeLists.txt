@@ -46,6 +46,7 @@ qt_add_executable(fenestra-shell
     src/services/weather.cpp src/services/weather.h
     src/services/status.cpp src/services/status.h
     src/services/batteryalerts.cpp src/services/batteryalerts.h
+    src/services/performancemode.cpp src/services/performancemode.h
     src/services/trayitems.cpp src/services/trayitems.h
     src/services/startservices.cpp src/services/startservices.h
     src/services/search.cpp src/services/search.h
@@ -174,6 +175,8 @@ if(FENESTRA_INSTALL_MIGRATOR)
 endif()
 
 # KWin parts: Fenestra decoration (Aurorae SVG themes) and Alt+Tab switcher (../kwin).
+# Power on battery (any laptop): tuned profile that tuned-ppd uses for "Balanced" unplugged.
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/power/tuned/fenestra-battery DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tuned/profiles)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMAKE_INSTALL_DATADIR}/aurorae/themes)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)
 # Lock screen for KWin's screen locker (look-and-feel package with only a lockscreen).

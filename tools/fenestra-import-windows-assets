@@ -1634,6 +1634,37 @@ def import_pack(path, dry=False):
     return info
 
 
+
+# -------------------------------------------------------- OEM: Samsung ---
+def import_samsung_settings(win, dry):
+    """Samsung Settings' performance-mode icons and app logo (Fn+F11 notification on Galaxy
+    Books: shell/src/services/performancemode.cpp), from the user's own Windows install."""
+    apps = ci(win / 'Program Files/WindowsApps')
+    pkg = None
+    if apps:
+        hits = sorted(p for p in apps.glob('SAMSUNGELECTRONICSCO.LTD.SamsungSettings*_x64__*') if (p / 'SamsungSettings/Resources').is_dir())
+        pkg = hits[-1] if hits else None
+    if not pkg:
+        log('samsung settings: not installed')
+        return
+    if dry:
+        log(f'samsung settings: {pkg.name}')
+        return
+    out = DATA / 'fenestra' / 'oem' / 'samsung'
+    n = 0
+    for theme in ('Dark', 'Light'):
+        (out / theme.lower()).mkdir(parents=True, exist_ok=True)
+        for name in ('silent', 'optimised', 'high_performance', 'no_fan', 'fan_0', 'fan_1', 'fan_2', 'fan_3'):
+            src = pkg / 'SamsungSettings/Resources' / theme / f'{name}.svg'
+            if src.is_file():
+                shutil.copyfile(src, out / theme.lower() / f'{name}.svg')
+                n += 1
+    for logo in ('Images/Square44x44Logo.scale-150.png', 'Images/Square44x44Logo.scale-100.png'):
+        if (pkg / logo).is_file():
+            shutil.copyfile(pkg / logo, out / 'app.png')
+            break
+    log(f'samsung settings: {n} performance-mode icons and the app logo')
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--windows', help='path where the Windows partition is mounted')
@@ -1670,6 +1701,7 @@ def main():
     import_battery(win, args.dry_run)
     import_folders(win, args.dry_run)
     import_taskbar_icons(win, args.dry_run)
+    import_samsung_settings(win, args.dry_run)
     import_settings_icon(win, args.dry_run)
     if not args.dry_run:
         (ASSETS / '.imported').parent.mkdir(parents=True, exist_ok=True)
