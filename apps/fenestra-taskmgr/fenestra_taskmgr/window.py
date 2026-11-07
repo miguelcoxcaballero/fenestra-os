@@ -275,7 +275,10 @@ class TaskWindow(Gtk.ApplicationWindow):
     # ------------------------------------------------------------ chrome
     def _draw_caption(self, area, cr, w, h, name):
         c = theme.get().c["fg"]
-        cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
+        if theme.get().dark:
+            cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
+        else:
+            cr.set_source_rgba(0, 0, 0, 1)  # reference light caption glyphs are pure black
         cr.set_line_width(1.0)
         cx, cy = int(w / 2), int(h / 2) - 1
         if name == "minimize":
@@ -293,10 +296,11 @@ class TaskWindow(Gtk.ApplicationWindow):
                 cr.rectangle(cx - 4.5, cy - 4.5, 9, 9)
                 cr.stroke()
         else:
-            cr.move_to(cx - 4, cy - 5)
-            cr.line_to(cx + 6, cy + 5)
-            cr.move_to(cx + 6, cy - 5)
-            cr.line_to(cx - 4, cy + 5)
+            # 10 x 10 px like the reference (through pixel centres, not 12 px of antialiasing)
+            cr.move_to(cx - 4.5, cy - 4.5)
+            cr.line_to(cx + 4.5, cy + 4.5)
+            cr.move_to(cx + 4.5, cy - 4.5)
+            cr.line_to(cx - 4.5, cy + 4.5)
             cr.stroke()
 
     def set_expanded(self, on):
