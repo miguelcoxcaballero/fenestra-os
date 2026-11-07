@@ -406,6 +406,7 @@ popover.fenestra-winmenu .fenestra-winmenu-label { font-size: 14px; font-weight:
 popover.fenestra-winmenu .fenestra-winmenu-icon { margin: 0 2px 0 11px; }
 popover.fenestra-winmenu .fenestra-winmenu-icon + .fenestra-winmenu-label { margin-left: 9px; }
 popover.fenestra-winmenu .fenestra-winmenu-mark { font-size: 15px; color: #d0d0d0; }
+popover.fenestra-winmenu .fenestra-winmenu-dot { min-width: 6px; min-height: 6px; border-radius: 3px; background-color: currentColor; }
 popover.fenestra-winmenu .fenestra-winmenu-accel { font-size: 12px; color: #c5c5c5; margin-left: 24px; }
 popover.fenestra-winmenu .fenestra-winmenu-chevron { margin-left: 24px; }
 popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; background: #3d3d3d; margin: 0 0 1px 0; }
