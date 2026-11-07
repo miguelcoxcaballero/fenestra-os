@@ -3905,7 +3905,7 @@
     {
       "name": "edit-copy-path",
       "glyph": null,
-      "codepoint": null,
+      "codepoint": "U+E62F",
       "verificado": false,
       "seen": [
         "menú contextual «Copiar como ruta de acceso»",
@@ -3916,7 +3916,7 @@
         "U+E71B Link"
       ],
       "alt": "Copy U+E8C8",
-      "nota": "rectángulo con «\\…» (dos tonos); no se encontró en la tabla pública",
+      "nota": "rectángulo con «\\…» (dos tonos); no se encontró en la tabla pública; código por forma (SegoeIcons.ttf, puntuación 0.976); fuera de la tabla pública de Learn",
       "where": [
         {
           "source": "apps/dark-100-40-explorer-folder-menu-context-file-hover-abrir-con.png",
@@ -3925,7 +3925,7 @@
             667
           ],
           "size": "16x12",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "menú contextual: Copiar como ruta de acceso"
         },
         {
@@ -3935,7 +3935,7 @@
             426
           ],
           "size": "16x12",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "menú «…»: Copiar ruta de acceso"
         }
       ],
@@ -4296,8 +4296,8 @@
     },
     {
       "name": "search-options",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "Equalizer",
+      "codepoint": "U+E9E9",
       "verificado": false,
       "seen": [
         "barra de comandos de resultados «Opciones de búsqueda»",
@@ -4308,7 +4308,7 @@
         "U+E773 SearchAndApps",
         "U+EE1A FolderSearch"
       ],
-      "nota": "lupa con engranaje azul (dos tonos); sin glifo en la tabla pública",
+      "nota": "lupa con engranaje azul (dos tonos); sin glifo en la tabla pública; código por forma (SegoeIcons.ttf, puntuación 0.994); el código vale para el Bloc de notas (en find-menu-options el puntero tapa parte del glifo); la lupa con engranaje del Explorador no tiene equivalente en la fuente",
       "where": [
         {
           "source": "apps/dark-100-40-explorer-folder-click-search-typed.png",
@@ -4317,7 +4317,7 @@
             318
           ],
           "size": "15x15",
-          "forma": "sin comparar",
+          "forma": "distinta",
           "what": "Opciones de búsqueda"
         },
         {
@@ -4327,7 +4327,7 @@
             189
           ],
           "size": "16x14",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Buscar: opciones (dos deslizadores horizontales)"
         },
         {
@@ -4337,7 +4337,7 @@
             189
           ],
           "size": "16x14",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "opciones con su menú abierto"
         }
       ],
@@ -4896,14 +4896,14 @@
     },
     {
       "name": "preferences-desktop-wallpaper",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "Photo",
+      "codepoint": "U+E91B",
       "verificado": false,
       "seen": [
         "Paint: Archivo › Establecer como fondo de escritorio",
         "Configuración: Personalización › Fondo, Temas › Segundo plano"
       ],
-      "nota": "Paint usa aquí un glifo propio que no está en la tabla pública; sustituto: LockscreenDesktop U+EE3F o SetlockScreen U+E7B5",
+      "nota": "Paint usa aquí un glifo propio que no está en la tabla pública; sustituto: LockscreenDesktop U+EE3F o SetlockScreen U+E7B5; código por forma (SegoeIcons.ttf, puntuación 0.934); el código vale para Configuración; el de Paint sigue sin equivalente; U+EB9F Photo2 tiene el mismo contorno",
       "where": [
         {
           "source": "apps/dark-100-42-paint-empty-menu-file.png",
@@ -4912,7 +4912,7 @@
             490
           ],
           "size": "16x14",
-          "forma": "sin comparar",
+          "forma": "distinta",
           "what": "Archivo › Establecer como fondo (imagen sobre bandeja)"
         },
         {
@@ -4922,7 +4922,7 @@
             452
           ],
           "size": "18x18",
-          "forma": "sin comparar",
+          "forma": "parecida",
           "what": "Personalización › Fondo"
         },
         {
@@ -4932,7 +4932,7 @@
             198
           ],
           "size": "22x22",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Temas › Segundo plano (color de énfasis)"
         },
         {
@@ -4942,7 +4942,7 @@
             418
           ],
           "size": "18x18",
-          "forma": "sin comparar",
+          "forma": "parecida",
           "what": "Fondo › Personalizar el fondo"
         }
       ],
@@ -5141,13 +5141,13 @@
     {
       "name": "image-remove-background",
       "glyph": null,
-      "codepoint": null,
+      "codepoint": "U+E425",
       "verificado": false,
       "seen": [
         "Paint: Imagen › Quitar fondo",
         "Paint: Copilot › Quitar fondo"
       ],
-      "nota": "Paint usa aquí un glifo propio que no está en la tabla pública",
+      "nota": "Paint usa aquí un glifo propio que no está en la tabla pública; código por forma (SegoeIcons.ttf, puntuación 0.894); fuera de la tabla pública de Learn",
       "where": [
         {
           "source": "apps/dark-100-42-paint-empty-normal.png",
@@ -5156,7 +5156,7 @@
             242
           ],
           "size": "18x14",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Imagen › Quitar fondo (persona sobre fondo rayado)"
         },
         {
@@ -5166,7 +5166,7 @@
             406
           ],
           "size": "16x12",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Copilot › Quitar fondo"
         }
       ],
@@ -5425,13 +5425,13 @@
     },
     {
       "name": "layer-duplicate",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "ExploreContent",
+      "codepoint": "U+ECCD",
       "verificado": false,
       "seen": [
         "Paint: capas, Duplicar capa"
       ],
-      "nota": "Paint usa aquí un glifo propio que no está en la tabla pública",
+      "nota": "Paint usa aquí un glifo propio que no está en la tabla pública; código por forma (SegoeIcons.ttf, puntuación 0.996)",
       "where": [
         {
           "source": "apps/dark-100-42-paint-layers-menu-layer.png",
@@ -5440,7 +5440,7 @@
             445
           ],
           "size": "15x15",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "menú de capa › Duplicar capa (cuadro con + y sombra)"
         }
       ],
@@ -5620,12 +5620,12 @@
     {
       "name": "selection-size",
       "glyph": null,
-      "codepoint": null,
+      "codepoint": "U+E65C",
       "verificado": false,
       "seen": [
         "Paint: barra de estado, tamaño de la selección"
       ],
-      "nota": "mismo dibujo que selection-rectangle a 12 px; sustituto RectangularClipping U+F407",
+      "nota": "mismo dibujo que selection-rectangle a 12 px; sustituto RectangularClipping U+F407; código por forma (SegoeIcons.ttf, puntuación 0.894); fuera de la tabla pública de Learn",
       "where": [
         {
           "source": "apps/dark-100-42-paint-empty-normal.png",
@@ -5634,7 +5634,7 @@
             944
           ],
           "size": "12x12",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "barra de estado: selección (cuadrado discontinuo)"
         }
       ],
@@ -6353,13 +6353,13 @@
     },
     {
       "name": "system-run",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "DocumentManagement",
+      "codepoint": "U+EFDA",
       "verificado": false,
       "seen": [
         "Administrador de tareas: barra de comandos › Ejecutar nueva tarea (todas las páginas)"
       ],
-      "nota": "dibujo: icono de Procesos (tres paneles) con insignia «+» en círculo abajo a la derecha; no hay equivalente en la tabla (descartados: AddTo U+ECC8, NewWindow U+E78B); sustituto: Tiles + Add",
+      "nota": "dibujo: icono de Procesos (tres paneles) con insignia «+» en círculo abajo a la derecha; no hay equivalente en la tabla (descartados: AddTo U+ECC8, NewWindow U+E78B); sustituto: Tiles + Add; código por forma (SegoeIcons.ttf, puntuación 0.998)",
       "where": [
         {
           "source": "apps/dark-100-43-taskmgr-processes-normal.png",
@@ -6368,7 +6368,7 @@
             207
           ],
           "size": "15x15",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Ejecutar nueva tarea"
         }
       ],
@@ -6454,13 +6454,13 @@
     },
     {
       "name": "service-restart",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "UpdateRestore",
+      "codepoint": "U+E777",
       "verificado": false,
       "seen": [
         "Administrador de tareas › Servicios: Reiniciar"
       ],
-      "nota": "dibujo: círculo casi cerrado con flecha arriba a la izquierda (sentido antihorario); candidatos sin comparar: Rotate U+E7AD, Restart3 U+F305, Refresh U+E72C reflejado",
+      "nota": "dibujo: círculo casi cerrado con flecha arriba a la izquierda (sentido antihorario); candidatos sin comparar: Rotate U+E7AD, Restart3 U+F305, Refresh U+E72C reflejado; código por forma (SegoeIcons.ttf, puntuación 0.994)",
       "where": [
         {
           "source": "apps/dark-100-43-taskmgr-services-normal.png",
@@ -6469,7 +6469,7 @@
             206
           ],
           "size": "16x16",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Servicios: Reiniciar"
         }
       ],
@@ -6786,8 +6786,8 @@
     },
     {
       "name": "view-multitasking",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "TaskView",
+      "codepoint": "U+E7C4",
       "verificado": false,
       "seen": [
         "Configuración: Sistema › Multitarea"
@@ -6800,12 +6800,12 @@
             825
           ],
           "size": "20x18",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Sistema › Multitarea"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "dos ventanas superpuestas; sin coincidencia clara en la tabla"
+      "nota": "dos ventanas superpuestas; sin coincidencia clara en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.950); U+EE40 TaskViewSettings tiene el mismo contorno"
     },
     {
       "name": "applications-development",
@@ -7051,8 +7051,8 @@
     },
     {
       "name": "network-proxy",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "Network",
+      "codepoint": "U+E968",
       "verificado": false,
       "seen": [
         "Configuración: Red e Internet › Proxy"
@@ -7065,12 +7065,12 @@
             473
           ],
           "size": "19x20",
-          "forma": "sin comparar",
+          "forma": "parecida",
           "what": "Red e Internet › Proxy"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "torre de PC sobre línea de red; sin coincidencia clara en la tabla"
+      "nota": "torre de PC sobre línea de red; sin coincidencia clara en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.949)"
     },
     {
       "name": "network-dialup",
@@ -7259,8 +7259,8 @@
     },
     {
       "name": "start-menu-settings",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "GoToStart",
+      "codepoint": "U+E8FC",
       "verificado": false,
       "seen": [
         "Configuración: Personalización › Inicio"
@@ -7273,12 +7273,12 @@
             884
           ],
           "size": "20x16",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Personalización › Inicio"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "marco con cuadrícula 3×2; sin glifo en la tabla"
+      "nota": "marco con cuadrícula 3×2; sin glifo en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.905); U+E1E4 tiene el mismo contorno"
     },
     {
       "name": "apps-advanced",
@@ -7394,8 +7394,8 @@
     },
     {
       "name": "apps-startup",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "SetlockScreen",
+      "codepoint": "U+E7B5",
       "verificado": false,
       "seen": [
         "Configuración: Aplicaciones › Inicio"
@@ -7408,12 +7408,12 @@
             720
           ],
           "size": "20x18",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Aplicaciones › Inicio (aplicaciones de arranque)"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "ventana con insignia de flecha arriba; sin glifo en la tabla"
+      "nota": "ventana con insignia de flecha arriba; sin glifo en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.974); U+E18C tiene el mismo contorno"
     },
     {
       "name": "device-resume",
@@ -7899,8 +7899,8 @@
     },
     {
       "name": "find-my-device",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "MapPin",
+      "codepoint": "U+E707",
       "verificado": false,
       "seen": [
         "Configuración: Encontrar mi dispositivo"
@@ -7913,12 +7913,12 @@
             314
           ],
           "size": "19x20",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Privacidad › Encontrar mi dispositivo"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "marcador sobre trapecio; sin glifo en la tabla"
+      "nota": "marcador sobre trapecio; sin glifo en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.946); U+E1C4 tiene el mismo contorno"
     },
     {
       "name": "clipboard-list",
@@ -8065,8 +8065,8 @@
     },
     {
       "name": "preferences-other",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "Processing",
+      "codepoint": "U+E9F5",
       "verificado": false,
       "seen": [
         "Configuración: Opciones avanzadas, Configuración adicional"
@@ -8079,7 +8079,7 @@
             660
           ],
           "size": "20x20",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Windows Update › Opciones avanzadas"
         },
         {
@@ -8089,12 +8089,12 @@
             960
           ],
           "size": "20x20",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Notificaciones › Configuración adicional"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "dos engranajes; sin glifo en la tabla"
+      "nota": "dos engranajes; sin glifo en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.982)"
     },
     {
       "name": "windows-insider",
@@ -8265,8 +8265,8 @@
     },
     {
       "name": "display-resolution",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "AspectRatio",
+      "codepoint": "U+E799",
       "verificado": false,
       "seen": [
         "Configuración: Pantalla › Resolución"
@@ -8279,12 +8279,12 @@
             635
           ],
           "size": "20x16",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Pantalla › Resolución (deshabilitado)"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "rectángulo con corchetes discontinuos"
+      "nota": "rectángulo con corchetes discontinuos; código por forma (SegoeIcons.ttf, puntuación 0.903)"
     },
     {
       "name": "display-orientation",
@@ -8311,8 +8311,8 @@
     },
     {
       "name": "video-display-multiple",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "Project",
+      "codepoint": "U+EBC6",
       "verificado": false,
       "seen": [
         "Configuración: Pantalla › Varias pantallas"
@@ -8325,17 +8325,17 @@
             779
           ],
           "size": "20x16",
-          "forma": "sin comparar",
+          "forma": "parecida",
           "what": "Pantalla › Varias pantallas"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "dos pantallas superpuestas con base; alt: Project (U+EBC6)"
+      "nota": "dos pantallas superpuestas con base; alt: Project (U+EBC6); código por forma (SegoeIcons.ttf, puntuación 0.832)"
     },
     {
       "name": "graphics-card",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "NetworkPhysical",
+      "codepoint": "U+F211",
       "verificado": false,
       "seen": [
         "Configuración: Pantalla › Gráficos"
@@ -8348,12 +8348,12 @@
             979
           ],
           "size": "20x18",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Pantalla › Gráficos"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "tarjeta gráfica; sin glifo en la tabla"
+      "nota": "tarjeta gráfica; sin glifo en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.953)"
     },
     {
       "name": "audio-speakers",
@@ -8402,8 +8402,8 @@
     },
     {
       "name": "notifications-priority",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "Priority",
+      "codepoint": "U+E8D0",
       "verificado": false,
       "seen": [
         "Configuración: Notificaciones de prioridad"
@@ -8416,12 +8416,12 @@
             428
           ],
           "size": "18x20",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Notificaciones › Establecer notificaciones de prioridad"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "flecha abajo y «!»; alt parcial: Priority (U+E8D0)"
+      "nota": "flecha abajo y «!»; alt parcial: Priority (U+E8D0); código por forma (SegoeIcons.ttf, puntuación 0.990); U+E182 tiene el mismo contorno"
     },
     {
       "name": "theme-mode",
@@ -8581,8 +8581,8 @@
     },
     {
       "name": "input-mouse-pointer",
-      "glyph": null,
-      "codepoint": null,
+      "glyph": "Click",
+      "codepoint": "U+E8B0",
       "verificado": false,
       "seen": [
         "Configuración: Temas › Cursor del mouse"
@@ -8595,12 +8595,12 @@
             252
           ],
           "size": "17x24",
-          "forma": "sin comparar",
+          "forma": "igual",
           "what": "Temas › Cursor del mouse (color de énfasis)"
         }
       ],
       "doc": "https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font",
-      "nota": "flecha de puntero; sin glifo en la tabla"
+      "nota": "flecha de puntero; sin glifo en la tabla; código por forma (SegoeIcons.ttf, puntuación 0.958); U+E3B3 tiene el mismo contorno"
     },
     {
       "name": "desktop-icons-settings",
