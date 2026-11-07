@@ -131,14 +131,14 @@
       },
       "opacity": "1 throughout",
       "close": {
-        "ms": 167,
+        "ms": 160,
         "bezier": [
           0.7,
           0,
           1,
           0.5
         ],
-        "source": "assumption: no close frames; Fluent accelerate-mid at WinUI's ControlFastAnimationDuration, back the same way"
+        "source": "measured (observations_close_2026_11_07): Start 150, Search 170, Quick settings 160 ms"
       }
     },
     "edge": {
@@ -155,14 +155,14 @@
       },
       "opacity": "1 throughout",
       "close": {
-        "ms": 167,
+        "ms": 140,
         "bezier": [
           0.7,
           0,
           1,
           0.5
         ],
-        "source": "assumption, as taskbar"
+        "source": "measured (observations_close_2026_11_07): Notification Center 140 ms"
       }
     },
     "menu": {
@@ -269,6 +269,48 @@
       "open_rms_px_vs_windows_curve": 0.8,
       "close_gone_ms": 177.3,
       "close_rms_px_vs_assumed": 2.2
+    }
+  },
+  "observations_close_2026_11_07": {
+    "_comment": [
+      "QMP screendumps every 7-20 ms (tests/vm/qmp.py through a recorder that sends the key or click between dumps), VM",
+      "~/VMs/win11-ref booted on 2026-11-07: Windows had updated to the 2025 Start (one scrolling page, 832 x 866; Search as tall),",
+      "so the Start/Search travel here is 878 px (panel top 154). Quick settings (top 685, travel 347) and Notification Center",
+      "(left 1572, travel 348) are the 26100 ones. Open with Win / click on the box / Win+A / Win+N, close with Win or Esc.",
+      "Per recording: [ms since the first dump, moving edge (top; left for notifications), null = nothing of the panel in the band];",
+      "repeated frames dropped. Every close slides back the way it came, fully opaque, clipped by the taskbar / screen edge: no fade.",
+      "Fits (bench/fit.py: least squares, start time free, travel fixed): close accel-mid (0.7,0,1,0.5) Start 150 ms (rms 34 px on an",
+      "878 px travel at ~10 px/ms, i.e. the dump jitter), Search 170 ms (29), Quick settings 160 ms (11.5), Notification Center 140 ms",
+      "(11.5); accel (1,0,1,1) is as good, decelerating curves 3x worse. Opening on the same recordings: Quick settings (0,0,0,1)",
+      "250 ms (9.1 px), Notification Center (0.33,0,0.1,1) 180-220 ms (9.8 px): the values in 'used' stand.",
+      "Taskbar buttons (same VM, light theme): the hover plate fades in and out in ~90 ms (dump steps 150/176/203/230 ms after a",
+      "~100 ms input lag); pressing fades it to the pressed fill in ~100 ms and shrinks the icon over ~150 ms."
+    ],
+    "edges": {
+      "start": {
+        "start": "9.5:None 705.6:333 754.6:196 794.3:155 847.1:154 1618.4:166 1660.9:243 1701.1:446 1725.3:None",
+        "start2": "10.6:None 730.3:689 763.9:333 807.8:231 850.0:162 912.9:154 1648.8:166 1679.3:209 1733.4:297 1760.4:595 1786.7:None",
+        "start3": "4.9:None 566.9:415 594.0:333 633.3:228 660.9:161 690.3:155 728.1:154 737.5:154 1575.6:166 1620.1:207 1657.6:361 1681.6:585 1702.9:800 1753.1:None",
+        "start4": "8.0:None 610.0:415 654.3:231 697.3:162 719.1:154 1552.9:166 1601.1:209 1641.7:297 1711.9:595 1741.6:None"
+      },
+      "search": {
+        "search1": "2.8:None 773.5:162 803.5:154 2688.5:154 2777.2:157 2796.2:167 2837.3:247 2881.8:299 2903.7:590 2932.2:811 2984.5:None",
+        "search2": "6.6:None 617.7:683 639.2:412 670.4:331 701.3:230 752.9:162 771.8:154 1317.4:154 2558.2:167 2576.5:184 2594.4:210 2611.8:247 2658.9:368 2681.5:600 2703.0:None",
+        "search3": "4.4:None 614.4:683 651.3:406 673.1:271 692.5:227 710.2:174 739.2:161 766.9:154 1305.8:154 2495.6:157 2512.7:167 2531.3:184 2556.3:210 2593.2:299 2638.3:590 2657.1:None"
+      },
+      "quick": {
+        "quick3": "4.2:None 310.7:860 334.9:822 370.5:792 393.8:735 417.2:723 442.3:704 470.2:698 496.0:689 516.9:685 545.4:685 573.4:685 1523.3:690 1552.5:696 1574.7:720 1597.2:764 1620.4:799 1650.5:926 1677.6:None",
+        "quick4": "5.5:None 442.2:915 465.0:860 487.8:792 511.3:769 536.0:735 555.1:722 572.4:704 589.5:697 606.7:692 624.6:689 658.6:685 694.1:685 1488.6:686 1509.9:696 1533.5:706 1554.8:720 1572.3:764 1594.4:799 1618.2:850 1641.9:None",
+        "quick5": "2.7:None 329.9:860 353.6:822 376.4:770 400.3:751 426.6:723 445.9:713 473.1:698 501.5:693 528.5:687 556.7:685 1509.7:690 1527.1:706 1544.7:719 1568.2:738 1584.1:764 1637.4:926 1661.4:None",
+        "quick6": "4.9:None 444.1:915 462.1:824 479.4:794 496.4:770 512.8:751 529.1:735 556.6:723 573.4:704 590.2:698 607.1:693 625.6:689 642.6:687 675.3:685 708.1:685 1495.5:686 1521.1:690 1547.7:706 1573.2:719 1588.9:764 1612.5:799 1628.3:934 1668.7:None"
+      },
+      "notifications": {
+        "notif2": "5.2:None 759.1:1884 780.0:1748 810.6:1658 828.8:1611 847.2:1596 865.6:1586 892.3:1575 917.6:1572 950.5:1572 1540.0:1576 1567.0:1589 1587.5:1618 1620.8:1640 1640.9:1714 1667.8:1884 1688.3:None",
+        "notif3": "6.2:None 864.6:1884 902.0:1658 924.0:1631 948.4:1611 980.2:1586 1011.2:1575 1039.1:1572 1608.5:1576 1642.3:1582 1675.9:1602 1702.7:1670 1723.4:1714 1742.2:1884 1760.6:None",
+        "notif4": "3.4:None 492.0:1884 518.7:1748 550.3:1658 575.7:1612 603.0:1587 618.6:1580 667.1:1572 1507.3:1576 1536.7:1582 1563.1:1601 1602.4:1640 1628.3:1710 1647.7:1884 1689.8:None",
+        "notif5": "6.5:None 586.3:1884 610.5:1748 634.5:1658 666.0:1631 690.0:1596 713.8:1579 729.9:1574 789.3:1572 1518.2:1576 1542.7:1589 1568.0:1601 1600.6:1640 1633.0:1710 1650.2:1884 1693.1:None",
+        "notif6": "6.1:None 673.9:1884 698.6:1693 719.6:1656 737.6:1610 755.2:1596 778.7:1585 804.3:1574 825.8:1572 862.4:1572 1526.2:1576 1558.5:1602 1598.9:1640 1615.9:1670 1634.0:1714 1651.5:1784 1668.5:1884 1703.3:None"
+      }
     }
   }
 }

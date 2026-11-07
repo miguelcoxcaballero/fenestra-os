@@ -9,6 +9,7 @@ Item {
     property string label
     property string iconName
     property url iconSource
+    property string glyph           // Segoe Fluent Icons code point (FluentGlyph), when the font is there
     property bool checked: false
     property bool hasPage: false
     signal toggled()
@@ -40,16 +41,13 @@ Item {
         width: tile.hasPage ? parent.width - 28 : parent.width
         topRightRadius: tile.hasPage ? 0 : Metrics.controlRadius; bottomRightRadius: topRightRadius
         hovered: bm.containsMouse; down: bm.pressed; on: tile.checked
-        Image {
-            anchors.centerIn: parent; width: 16; height: 16
-            sourceSize: Qt.size(16 * Screen.devicePixelRatio, 16 * Screen.devicePixelRatio)
-            source: {
-                const t = tile.iconSource.toString() !== "" ? tile.iconSource.toString() : tile.iconName
-                const onFill = tile.checked ? Theme.accentOn : Theme.text
-                // Always in the text colour: the theme's symbolic icons are #dedede, the reference's
-                // glyphs pure white (dark-100-14-quick-media).
-                return "image://tint/" + onFill.toString().slice(1, 7) + "/" + encodeURIComponent(t)
-            }
+        FluentGlyph {
+            anchors.centerIn: parent
+            glyph: tile.glyph
+            // Always in the text colour: the theme's symbolic icons are #dedede, the reference's
+            // glyphs pure white (dark-100-14-quick-media).
+            fallback: tile.iconSource.toString() !== "" ? tile.iconSource.toString() : tile.iconName
+            color: tile.checked ? Theme.accentOn : Theme.text
         }
         MouseArea { id: bm; anchors.fill: parent; hoverEnabled: true; onClicked: tile.toggled() }
     }
@@ -60,7 +58,8 @@ Item {
         hovered: cm.containsMouse; down: cm.pressed; on: tile.checked
         Rectangle { width: 1; height: 24; anchors.verticalCenter: parent.verticalCenter
                     color: tile.checked ? Qt.rgba(0, 0, 0, 0.2) : Metrics.col("panel.control.border") }
-        SymbolicIcon { anchors.centerIn: parent; name: "go-next-symbolic"; size: 12; monochrome: true }
+        FluentGlyph { anchors.centerIn: parent; glyph: "\ue974"; fallback: "go-next-symbolic"; size: 12
+                      color: tile.checked ? Theme.accentOn : Theme.text }
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; onClicked: tile.pageRequested() }
     }
     Text {

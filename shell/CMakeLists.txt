@@ -67,7 +67,7 @@ ecm_add_qtwayland_client_protocol(protocol_sources
     BASENAME plasma-window-management)
 target_sources(fenestra-shell PRIVATE ${protocol_sources})
 
-set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml
+set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml qml/components/FluentFont.qml
     PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(fenestra-shell
@@ -80,6 +80,8 @@ qt_add_qml_module(fenestra-shell
         qml/components/Card.qml
         qml/components/ContextMenu.qml
         qml/components/Flyout.qml
+        qml/components/FluentFont.qml
+        qml/components/FluentGlyph.qml
         qml/components/MenuRow.qml
         qml/components/PopupMotion.qml
         qml/components/ShellPopup.qml

@@ -47,3 +47,28 @@ Hover / selection colours are not in any shot either (Explorer ListView colours,
 black, Gaussian σ 1.6 px, offset (+0.5, +1), alpha = 1.7 × blurred coverage, rmse 1.5 levels.
 The same fit on the bench output gives σ 1.8, (+0.5, +1.25), 1.6, rmse 1.7 (the bench font is
 Noto Sans, not Segoe UI, and Windows draws the text with ClearType, so glyph coverage differs).
+
+## Popups at 100 %, 150 % and the user's 160 % (2026-11-07)
+
+The user's panel is 2880×1800 at scale **1.6** (1800×1125 logical, `kscreen-doctor -o`), not 1.5.
+Bench: `SCALE=1.5 WIDTH=1920 HEIGHT=1080` against `solid/dark-150-*` (Windows at 150 % on 1080p, 1280×720
+logical), `SCALE=1.6 WIDTH=2880 HEIGHT=1800` for the user's geometry, plain 1920×1080 against `solid/dark-100-*`;
+`Appearance/Transparency=false`, Segoe fonts of the user's pack mounted. `cmp_popup.py`: mean absolute
+difference (max of RGB) inside Windows' panel box, and the share of pixels off by more than 24 levels.
+
+| Surface | 100 % before → after | 150 % before → after |
+|---|---|---|
+| Start (dark-*-06) | 6.80 / 5.0 % → 6.03 / 4.4 % | 10.70 / 6.8 % → 7.29 / 5.1 % |
+| Search home (dark-*-10) | 8.16 / 5.1 % → 7.08 / 4.8 % | 12.62 / 6.2 % → 8.95 / 5.8 % |
+| Quick settings, whole card (dark-*-12) | 20.29 / 11.2 % → 19.83 / 11.0 % | 20.62 / 11.2 % → 20.18 / 10.9 % |
+| Quick settings, slider + footer only | 3.93 / 3.3 % → 3.37 / 3.1 % | 4.89 / 4.2 % → 4.31 / 3.9 % |
+| Calendar (dark-*-15, lower card) | 6.00 / 4.1 % → 5.13 / 3.6 % | 11.97 / 6.9 % → 11.90 / 6.9 % |
+| Taskbar (dark-*-01) | 11.07 / 7.8 % → 10.96 / 7.7 % | 16.83 / 11.6 % → 16.79 / 11.6 % |
+
+Before = origin/feature/fenestra-shell-kwin 3143301, after = pixel/popups2, same bench and references.
+At 160 % the panels are exactly 1.6 × the 100 % ones (Start 1027 × 1162 device px).
+
+Residuals: app icons the bench has no theme for, demo content (Windows' pinned apps, Edge, notifications),
+the Quick settings tile set (the VM has Live captions, Nearby sharing and Cast, the bench Airplane mode,
+Night light, Accessibility), grey-scale antialiasing against ClearType (Qt draws Segoe UI Variable about
+25 % lighter in ink), and at 150 % the calendar, which Windows cuts to four weeks on a 720 px screen.

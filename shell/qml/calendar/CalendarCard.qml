@@ -29,11 +29,14 @@ Card {
     component ControlButton: Rectangle {
         id: cb
         property string glyph
+        property string fluent          // Segoe Fluent Icons code point (when the font is there)
+        property int fluentSize: 12
         signal clicked()
         height: cal.button; radius: Metrics.controlRadius
         color: m.pressed ? Theme.pressed : m.containsMouse ? Qt.tint(Metrics.col("panel.control"), Theme.hover) : Metrics.col("panel.control")
         border.color: Metrics.col("panel.control.border")
-        SymbolicIcon { visible: cb.glyph !== ""; anchors.centerIn: parent; name: cb.glyph; size: 12 }
+        SymbolicIcon { visible: cb.glyph !== "" && !(FluentFont.available && cb.fluent !== ""); anchors.centerIn: parent; name: cb.glyph; size: 12 }
+        FluentGlyph { visible: FluentFont.available && cb.fluent !== ""; anchors.centerIn: parent; glyph: cb.fluent; size: cb.fluentSize }
         MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; onClicked: cb.clicked() }
     }
 
@@ -48,6 +51,7 @@ Card {
         ControlButton {
             x: 294; y: 13; width: cal.button
             glyph: cal.collapsed ? "go-up-symbolic" : "go-down-symbolic"
+            fluent: cal.collapsed ? "\ue70e" : "\ue70d"
             onClicked: cal.collapsed = !cal.collapsed
         }
     }
@@ -116,7 +120,7 @@ Card {
         Row {
             x: 16; y: 12; spacing: 0
             visible: Notifications.focusRemaining === 0
-            ControlButton { width: cal.button; glyph: "list-remove-symbolic"
+            ControlButton { width: cal.button; glyph: "list-remove-symbolic"; fluent: "\ue738"; fluentSize: 16
                             onClicked: cal.focusMinutes = Math.max(5, Math.min(240, cal.focusMinutes + (cal.focusMinutes > 60 ? -15 : -5))) }
             Item {
                 width: 81; height: cal.button
@@ -125,7 +129,7 @@ Card {
                            anchors.baseline: parent.children[1].baseline }
                     Text { text: Strings.tr("mins"); color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody } }
             }
-            ControlButton { width: cal.button; glyph: "list-add-symbolic"
+            ControlButton { width: cal.button; glyph: "list-add-symbolic"; fluent: "\ue710"; fluentSize: 16
                             onClicked: cal.focusMinutes = Math.max(5, Math.min(240, cal.focusMinutes + (cal.focusMinutes >= 60 ? 15 : 5))) }
         }
         Text {

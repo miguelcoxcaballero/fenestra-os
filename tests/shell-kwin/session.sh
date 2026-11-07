@@ -96,6 +96,13 @@ session() {
     KWIN=$!
     wait_for '[ -S $XDG_RUNTIME_DIR/wayland-fen ]' 60 || { log "CHECK kwin-start FAIL"; return 1; }
     log "CHECK kwin-start PASS"
+    # SCALE=1.5 / 1.6: the output's scale (the user's 2880 x 1800 panel runs at 1.6); WIDTH/HEIGHT stay
+    # in device pixels, so the shell sees WIDTH/SCALE x HEIGHT/SCALE logical pixels.
+    if [ -n "${SCALE:-}" ]; then
+        out=$(kscreen-doctor -o 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | awk '/^Output:/ {print $3; exit}')
+        kscreen-doctor "output.$out.scale.$SCALE" >/dev/null 2>&1
+        check "scale-$SCALE" wait_for "kscreen-doctor -o 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -q 'Scale: $SCALE'" 10
+    fi
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' 'SearchMode=box'
     fenestra-shell > /out/shell.log 2>&1 & SHELL_PID=$!
     check shell-ready wait_for 'grep -q FENESTRA_SHELL_READY /out/shell.log' 40

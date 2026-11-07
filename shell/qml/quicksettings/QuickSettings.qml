@@ -18,12 +18,14 @@ Flyout {
         id: gb
         property string glyph
         property url glyphSource
+        property string fluent          // Segoe Fluent Icons code point, used when the font is there
         property bool active: true
         signal clicked()
         width: 32; height: 32; radius: Metrics.controlRadius
         color: gm.pressed ? Theme.pressed : gm.containsMouse ? Theme.hover : "transparent"
         SymbolicIcon { monochrome: true; anchors.centerIn: parent; name: gb.glyphSource.toString() === "" ? gb.glyph : ""; src: gb.glyphSource
-                       opacity: gb.active ? 1 : 0.4 }
+                       visible: !(FluentFont.available && gb.fluent !== ""); opacity: gb.active ? 1 : 0.4 }
+        FluentGlyph { anchors.centerIn: parent; glyph: gb.fluent; visible: FluentFont.available && gb.fluent !== ""; opacity: gb.active ? 1 : 0.4 }
         MouseArea { id: gm; anchors.fill: parent; hoverEnabled: true; enabled: gb.active; onClicked: gb.clicked() }
     }
 
@@ -101,6 +103,7 @@ Flyout {
                         visible: WifiNetworks.hasWifi
                         label: NetworkStatus.kind === "wifi" ? NetworkStatus.name : Strings.tr("Wi-Fi")
                         iconName: WifiNetworks.enabled ? "network-wireless-signal-excellent-symbolic" : "network-wireless-disabled-symbolic"
+                        glyph: "\ue701"
                         checked: WifiNetworks.enabled; hasPage: true
                         onToggled: WifiNetworks.enabled = !WifiNetworks.enabled
                         onPageRequested: { WifiNetworks.scan(); qs.page = "wifi" }
@@ -108,7 +111,7 @@ Flyout {
                     QuickTile {
                         visible: BluezQt.Manager.adapters.length > 0
                         label: Strings.tr("Bluetooth")
-                        iconName: "bluetooth-active-symbolic"
+                        iconName: "bluetooth-active-symbolic"; glyph: "\ue702"
                         checked: BluezQt.Manager.bluetoothOperational
                         hasPage: true
                         onToggled: {
@@ -119,7 +122,7 @@ Flyout {
                         onPageRequested: qs.page = "bluetooth"
                     }
                     QuickTile {
-                        label: Strings.tr("Airplane mode"); iconName: "airplane-mode-symbolic"
+                        label: Strings.tr("Airplane mode"); iconName: "airplane-mode-symbolic"; glyph: "\ue709"
                         checked: WifiNetworks.airplaneMode
                         onToggled: {
                             const on = !WifiNetworks.airplaneMode
@@ -129,17 +132,17 @@ Flyout {
                     }
                     QuickTile {
                         visible: PowerProfiles.available
-                        label: Strings.tr("Battery saver"); iconName: "battery-level-50-symbolic"
+                        label: Strings.tr("Battery saver"); iconName: "battery-level-50-symbolic"; glyph: "\uec0a"
                         checked: PowerProfiles.active === "power-saver"
                         onToggled: PowerProfiles.active = checked ? "balanced" : "power-saver"
                     }
                     QuickTile {
-                        label: Strings.tr("Night light"); iconName: "night-light-symbolic"
+                        label: Strings.tr("Night light"); iconName: "night-light-symbolic"; glyph: "\uf08c"
                         checked: NightLight.active
                         onToggled: NightLight.active = !NightLight.active
                     }
                     QuickTile {
-                        label: Strings.tr("Accessibility"); iconName: "preferences-desktop-accessibility-symbolic"
+                        label: Strings.tr("Accessibility"); iconName: "preferences-desktop-accessibility-symbolic"; glyph: "\ue776"
                         onToggled: { qs.close(); Apps.runCommand("fenestra-settings --page accessibility") }
                     }
                 }
@@ -155,7 +158,7 @@ Flyout {
                     Item {
                         visible: Brightness.available
                         width: parent.width; height: sliders.rowH
-                        SymbolicIcon { monochrome: true; x: 25; anchors.verticalCenter: parent.verticalCenter; name: "display-brightness-symbolic" }
+                        FluentGlyph { x: 25; anchors.verticalCenter: parent.verticalCenter; glyph: "\ue706"; fallback: "display-brightness-symbolic" }
                         Slider { x: Metrics.n("quick.slider.x", 57) - thumb / 2; width: Metrics.n("quick.slider.width", 244) + thumb
                                  anchors.verticalCenter: parent.verticalCenter
                                  value: Brightness.percent; onMoved: (v) => Brightness.percent = v }
@@ -164,7 +167,9 @@ Flyout {
                     Item {
                         width: parent.width; height: sliders.rowH
                         Item { x: 25; width: 16; height: 16; anchors.verticalCenter: parent.verticalCenter
-                               SymbolicIcon { monochrome: true; name: AudioStatus.available ? AudioStatus.iconName : "audio-volume-muted-symbolic" }
+                               FluentGlyph { fallback: AudioStatus.available ? AudioStatus.iconName : "audio-volume-muted-symbolic"
+                                              glyph: !AudioStatus.available || AudioStatus.muted ? "\ue74f" : AudioStatus.volume <= 0 ? "\ue992"
+                                                     : AudioStatus.volume < 34 ? "\ue993" : AudioStatus.volume < 67 ? "\ue994" : "\ue995" }
                                MouseArea { anchors.fill: parent; enabled: AudioStatus.available; onClicked: AudioStatus.muted = !AudioStatus.muted } }
                         Slider { x: Metrics.n("quick.slider.x", 57) - thumb / 2; width: Metrics.n("quick.slider.width", 244) + thumb
                                  anchors.verticalCenter: parent.verticalCenter; enabled_: AudioStatus.available; dimmed: !AudioStatus.available
@@ -173,8 +178,8 @@ Flyout {
                             x: 307; width: 34; height: 32; radius: Metrics.controlRadius; anchors.verticalCenter: parent.verticalCenter
                             color: om.pressed ? Theme.pressed : om.containsMouse ? Theme.hover : "transparent"
                             Row { anchors.centerIn: parent; spacing: 2
-                                  SymbolicIcon { monochrome: true; name: "audio-card-symbolic"; anchors.verticalCenter: parent.verticalCenter }
-                                  SymbolicIcon { monochrome: true; name: "go-next-symbolic"; size: 10; anchors.verticalCenter: parent.verticalCenter } }
+                                  FluentGlyph { glyph: "\uf4c3"; fallback: "audio-card-symbolic"; anchors.verticalCenter: parent.verticalCenter }
+                                  FluentGlyph { glyph: "\ue974"; fallback: "go-next-symbolic"; size: FluentFont.available ? 12 : 10; anchors.verticalCenter: parent.verticalCenter } }
                             Accessible.name: Strings.tr("Sound output")
                             MouseArea { id: om; anchors.fill: parent; hoverEnabled: true; onClicked: qs.page = "output" }
                         }
@@ -189,7 +194,7 @@ Flyout {
                 width: parent.width
                 Item {
                     width: parent.width; height: 56
-                    GlyphButton { x: 12; anchors.verticalCenter: parent.verticalCenter; glyph: "go-previous-symbolic"; onClicked: qs.page = "" }
+                    GlyphButton { x: 12; anchors.verticalCenter: parent.verticalCenter; glyph: "go-previous-symbolic"; fluent: "\ue72b"; onClicked: qs.page = "" }
                     Text { x: 52; anchors.verticalCenter: parent.verticalCenter
                            text: Strings.tr(qs.page === "wifi" ? "Wi-Fi" : qs.page === "bluetooth" ? "Bluetooth" : "Sound output")
                            color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold }
@@ -215,13 +220,13 @@ Flyout {
                     x: 19; anchors.verticalCenter: parent.verticalCenter; spacing: 8
                     visible: PowerStatus.hasBattery
                     SymbolicIcon { monochrome: true; src: PowerStatus.iconSource; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: PowerStatus.percentage + " %"; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
+                    Text { text: PowerStatus.percentage + (Strings.es ? " %" : "%"); color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
                            anchors.verticalCenter: parent.verticalCenter }
                 }
                 GlyphButton {
                     // the gear's centre is 31 px from the card's right edge (dark-100-12-quick element 26)
                     x: parent.width + 1 - 31 - width / 2; anchors.verticalCenter: parent.verticalCenter
-                    glyph: "emblem-system-symbolic"
+                    glyph: "emblem-system-symbolic"; fluent: "\ue713"
                     Accessible.name: Strings.tr("All settings")
                     onClicked: { qs.close(); Apps.runCommand("fenestra-settings") }
                 }

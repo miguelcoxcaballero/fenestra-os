@@ -32,7 +32,7 @@ POPUPS = {
     'quick': ('ShellState.toggleQuickSettings(null, -1)', 'ShellState.toggleQuickSettings(null, -1)', 'fenestra-flyout', 'y', (0, 0, 0, 1), 250),
     'center': ('ShellState.toggleCalendar(null, -1)', 'ShellState.toggleCalendar(null, -1)', 'fenestra-flyout', 'x', (0.33, 0, 0.1, 1), 220),
 }
-CLOSE = ((0.7, 0, 1, 0.5), 167)
+CLOSE = {'y': ((0.7, 0, 1, 0.5), 160), 'x': ((0.7, 0, 1, 0.5), 140)}  # measured, design/motion.json
 
 bus = Gio.bus_get_sync(Gio.BusType.SESSION)
 
@@ -134,7 +134,7 @@ def analyse(name, d_open, t_open, d_close, t_close):
         'first_visible_ms': first, 'settled_ms': settled, 'moving_frames': len(moving),
         'open_fit_windows': {'curve': curve, 'ms': ms, 'rms_px_t0': fit(obs, travel, curve, ms)},
         'close_gone_ms': gone,
-        'close_fit_assumed': {'curve': CLOSE[0], 'ms': CLOSE[1], 'rms_px_t0': fit(cobs, travel, CLOSE[0], CLOSE[1], True)},
+        'close_fit_windows': {'curve': CLOSE[axis][0], 'ms': CLOSE[axis][1], 'rms_px_t0': fit(cobs, travel, *CLOSE[axis], True)},
     }
 
 

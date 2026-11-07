@@ -9,8 +9,8 @@ import Fenestra.Shell
 //            (travel = height + gap), cubic-bezier(0, 0, 0, 1), 250 ms (start 0.8 px, quick 3.4 px rms).
 //   edge     Notification Center + calendar: in from fully off the right edge (travel = width +
 //            margin), cubic-bezier(0.33, 0, 0.1, 1), 220 ms (4.3 px rms).
-//   close    no frames: back the same way, cubic-bezier(0.7, 0, 1, 0.5), 167 ms (assumption: Fluent
-//            accelerate at WinUI's "fast" duration).
+//   close    back the same way, fully opaque, cubic-bezier(0.7, 0, 1, 0.5): taskbar popups 160 ms,
+//            edge 140 ms (measured on close recordings, design/motion.json observations_close_2026_11_07).
 // Popups without frames use the closest measured pattern (PopupMotion.qml says which).
 QtObject {
     // Settings › Accessibility › Animation effects off, or the Saver power profile.
@@ -23,7 +23,8 @@ QtObject {
 
     readonly property int taskbarOpen: 250
     readonly property int edgeOpen: 220
-    readonly property int close: 167
+    readonly property int closeTaskbar: 160
+    readonly property int closeEdge: 140
     // Menus (WinUI MenuFlyout, assumption): reveal from half their height, fast fade in and out.
     readonly property real menuRatio: 0.5
     readonly property int menuOpen: 250
