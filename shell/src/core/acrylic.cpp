@@ -258,6 +258,9 @@ namespace
 QImage renderCard(const QStringList &p)
 {
     // card/<scheme>/<width>/<height>/<dpr>/<x>/<y>/<w>/<h>/<radius>/<margin>/<source>
+    // cardframe/...: the same without the fill (shadow and border over the card's real acrylic,
+    // core/backdrop.h, drawn under it by TaskPreview.qml).
+    const bool frameOnly = p[0] == QLatin1String("cardframe");
     const bool dark = p[1] != QLatin1String("light");
     const qreal dpr = std::max(0.5, p[4].toDouble());
     const QSize screen(qRound(p[2].toInt() * dpr), qRound(p[3].toInt() * dpr));
@@ -269,9 +272,12 @@ QImage renderCard(const QStringList &p)
     if (w <= 0 || h <= 0 || screen.isEmpty() || y >= screen.height())
         return {};
     // The strip from the card's top edge down: only its columns under the card are kept.
-    const QImage strip = Acrylic::renderStrip(source, screen, screen.height() - y, dpr, Acrylic::flyoutRecipe(dark));
-    QImage fill = strip.copy(x, 0, w, h);
-    fill.setDevicePixelRatio(1);
+    QImage fill;
+    if (!frameOnly) {
+        const QImage strip = Acrylic::renderStrip(source, screen, screen.height() - y, dpr, Acrylic::flyoutRecipe(dark));
+        fill = strip.copy(x, 0, w, h);
+        fill.setDevicePixelRatio(1);
+    }
 
     QImage out(w + 2 * margin, h + margin, QImage::Format_ARGB32_Premultiplied);
     out.fill(Qt::transparent);
@@ -302,7 +308,10 @@ QImage renderCard(const QStringList &p)
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setClipPath(shape);
     painter.setCompositionMode(QPainter::CompositionMode_Source);
-    painter.drawImage(margin, 0, fill);
+    if (frameOnly)
+        painter.fillRect(QRect(margin, 0, w, h), Qt::transparent);   // the shadow stays outside only
+    else
+        painter.drawImage(margin, 0, fill);
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.setClipping(false);
     const qreal bw = std::ceil(dpr);
@@ -329,7 +338,7 @@ QImage AcrylicProvider::requestImage(const QString &id, QSize *size, const QSize
     // dark/1920/1080/48/1/<source>
     const QStringList p = id.split(QLatin1Char('/'));
     QImage img;
-    if (p.size() >= 12 && p[0] == QLatin1String("card")) {
+    if (p.size() >= 12 && (p[0] == QLatin1String("card") || p[0] == QLatin1String("cardframe"))) {
         img = renderCard(p);
     } else if (p.size() >= 6) {
         const QString source = QUrl::fromPercentEncoding(p.mid(5).join(QLatin1Char('/')).toUtf8());

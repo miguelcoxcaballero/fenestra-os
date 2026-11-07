@@ -10,4 +10,5 @@ RUN dnf -y install --setopt=install_weak_deps=False \
       gtksourceview5 adwaita-icon-theme google-noto-sans-fonts systemd accountsservice shadow-utils \
       python3-cairo xdg-desktop-portal xdg-desktop-portal-gtk kf6-kconfig \
       kf6-kservice-devel kf6-kio-devel kf6-networkmanager-qt-devel kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-solid-devel kf6-kwindowsystem-devel kf6-kglobalaccel-devel kf6-kconfig-devel kf6-kcoreaddons-devel kf6-kdbusaddons-devel kf6-kiconthemes-devel kf6-kidletime-devel kf6-kholidays-devel dbusmenu-qt-devel kpipewire-devel libgweather-devel NetworkManager-libnm-devel polkit-qt6-1-devel pipewire-devel \
+      pipewire wireplumber pipewire-utils \
     && dnf clean all

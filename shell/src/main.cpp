@@ -18,6 +18,7 @@
 #include "polkitagent.h"
 #include "shellcontrol.h"
 #include "shortcuts.h"
+#include "screencast.h"
 #include "snip.h"
 #include "testprobe.h"
 #include "theme.h"
@@ -69,6 +70,7 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("acrylic"), new AcrylicProvider);
     engine.addImageProvider(QStringLiteral("popupshadow"), new PopupShadowProvider);
     engine.addImageProvider(QStringLiteral("backdrop"), new BackdropProvider);
+    engine.addImageProvider(QStringLiteral("windowshot"), new WindowSnapshotProvider);
     TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);

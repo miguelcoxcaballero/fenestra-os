@@ -59,6 +59,7 @@ qt_add_executable(fenestra-shell
     src/services/camerawatch.cpp src/services/camerawatch.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
     src/services/snip.cpp src/services/snip.h
+    src/services/screencast.cpp src/services/screencast.h
 )
 
 # org_kde_plasma_window_management: window list and control. KWin only offers it to clients whose
@@ -68,6 +69,11 @@ set(protocol_sources)
 ecm_add_qtwayland_client_protocol(protocol_sources
     PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/plasma-window-management.xml
     BASENAME plasma-window-management)
+# zkde_screencast_unstable_v1: live window pictures for the taskbar previews (services/screencast.h),
+# also listed in X-KDE-Wayland-Interfaces.
+ecm_add_qtwayland_client_protocol(protocol_sources
+    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/zkde-screencast-unstable-v1.xml
+    BASENAME zkde-screencast-unstable-v1)
 target_sources(fenestra-shell PRIVATE ${protocol_sources})
 
 set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml qml/components/FluentFont.qml
@@ -119,6 +125,7 @@ qt_add_qml_module(fenestra-shell
         qml/taskbar/SearchButton.qml
         qml/taskbar/TaskButton.qml
         qml/taskbar/TaskPreview.qml
+        qml/taskbar/LiveThumbnail.qml
         qml/taskbar/Taskbar.qml
         qml/taskbar/WeatherButton.qml
         qml/taskbar/WidgetsBoard.qml
