@@ -39,7 +39,7 @@ entry.store-search:hover { background-color: var(--st-input-hover); }
 entry.store-search:focus-within {
   background-color: var(--st-input-focus); border-bottom: 2px solid var(--st-accent); min-height: 30px;
 }
-entry.store-search > text > placeholder { color: var(--st-fg2); }
+entry.store-search > text > placeholder { color: var(--st-fg2); opacity: 1; filter: none; }
 entry.store-search > image { color: var(--st-fg2); -gtk-icon-size: 12px; margin: 0; }
 entry.store-search selection { background-color: var(--st-accent); color: var(--st-on-accent); }
 
