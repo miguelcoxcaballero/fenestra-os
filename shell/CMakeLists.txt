@@ -191,5 +191,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMA
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)
 # App window open/close/minimize/maximize motion as Windows 11 (KWin scripted effect).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/effects/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/effects)
-# Lock screen for KWin's screen locker (look-and-feel package with only a lockscreen).
+# Look-and-feel package (kdeglobals defaults) and the lock screen: Plasma 6's kscreenlocker takes
+# it from the shell package named in plasmashellrc [Shell] ShellPackage (KWinIntegration sets it).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../lnf/org.fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/look-and-feel)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../shells/org.fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/shells)

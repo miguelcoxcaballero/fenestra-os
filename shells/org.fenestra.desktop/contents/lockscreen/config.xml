@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
+  <kcfgfile name=""/>
+  <!-- kscreenlockerrc [Greeter][LnF][General]; Fenestra Shell writes it (KWinIntegration::applyLockScreen). -->
+  <group name="General">
+    <!-- Today's Windows Spotlight picture (/var/lib/windows-spotlight/current.json) or the desktop's. -->
+    <entry name="Picture" type="String"><default></default></entry>
+    <entry name="Background" type="String"><default>/usr/share/backgrounds/fenestra/fenestra-bloom-dark.jpg</default></entry>
+    <!-- The accent colour (focus underline, switches). -->
+    <entry name="Accent" type="String"><default>#0078D4</default></entry>
+    <!-- Acrylic (blurred) sign-in background, as Windows draws it with a GPU. -->
+    <entry name="SigninBlur" type="Bool"><default>true</default></entry>
+    <!-- Bench: log every presented frame while the screen animates (tests/lockscreen). -->
+    <entry name="Trace" type="Bool"><default>false</default></entry>
+  </group>
+</kcfg>
