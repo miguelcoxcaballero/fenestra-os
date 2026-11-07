@@ -47,6 +47,7 @@ qt_add_executable(fenestra-shell
     src/services/status.cpp src/services/status.h
     src/services/batteryalerts.cpp src/services/batteryalerts.h
     src/services/performancemode.cpp src/services/performancemode.h
+    src/services/kbdbacklight.cpp src/services/kbdbacklight.h
     src/services/trayitems.cpp src/services/trayitems.h
     src/services/startservices.cpp src/services/startservices.h
     src/services/search.cpp src/services/search.h
@@ -59,6 +60,7 @@ qt_add_executable(fenestra-shell
     src/services/camerawatch.cpp src/services/camerawatch.h
     src/services/windowsmodel.cpp src/services/windowsmodel.h
     src/services/snip.cpp src/services/snip.h
+    src/services/screencast.cpp src/services/screencast.h
 )
 
 # org_kde_plasma_window_management: window list and control. KWin only offers it to clients whose
@@ -68,6 +70,11 @@ set(protocol_sources)
 ecm_add_qtwayland_client_protocol(protocol_sources
     PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/plasma-window-management.xml
     BASENAME plasma-window-management)
+# zkde_screencast_unstable_v1: live window pictures for the taskbar previews (services/screencast.h),
+# also listed in X-KDE-Wayland-Interfaces.
+ecm_add_qtwayland_client_protocol(protocol_sources
+    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/zkde-screencast-unstable-v1.xml
+    BASENAME zkde-screencast-unstable-v1)
 target_sources(fenestra-shell PRIVATE ${protocol_sources})
 
 set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml qml/components/FluentFont.qml
@@ -82,6 +89,7 @@ qt_add_qml_module(fenestra-shell
         qml/calendar/CalendarCard.qml
         qml/components/Acrylic.qml
         qml/components/BackdropView.qml
+        qml/components/BackdropHost.qml
         qml/components/AcrylicOutline.qml
         qml/components/Card.qml
         qml/components/OverlayScrollBar.qml
@@ -104,6 +112,7 @@ qt_add_qml_module(fenestra-shell
         qml/notifications/NotificationCenter.qml
         qml/notifications/Toasts.qml
         qml/osd/Osd.qml
+        qml/osd/OemBanner.qml
         qml/quicksettings/QuickSettings.qml
         qml/quicksettings/QuickTile.qml
         qml/search/SearchFlyout.qml
@@ -119,6 +128,7 @@ qt_add_qml_module(fenestra-shell
         qml/taskbar/SearchButton.qml
         qml/taskbar/TaskButton.qml
         qml/taskbar/TaskPreview.qml
+        qml/taskbar/LiveThumbnail.qml
         qml/taskbar/Taskbar.qml
         qml/taskbar/WeatherButton.qml
         qml/taskbar/WidgetsBoard.qml

@@ -43,7 +43,7 @@ QtObject {
         "Paired": "Emparejado", "Add a device": "Agregar un dispositivo",
         "Notifications": "Notificaciones", "Clear all": "Borrar todo", "Do not disturb": "No molestar", "No new notifications": "No hay notificaciones nuevas",
         "Close": "Cerrar", "mins": "mins", "Focus": "Concentración", "End session": "Finalizar sesión",
-        "Microphone on": "Micrófono activado", "Microphone muted": "Micrófono silenciado",
+        "Microphone on": "Micrófono activado", "Microphone muted": "Micrófono silenciado", "Keyboard backlight": "Retroiluminación del teclado",
         "Change a password": "Cambiar una contraseña", "Task Manager": "Administrador de tareas", "Cancel": "Cancelar",
         "Network": "Red", "No internet access": "Sin acceso a Internet", "Not connected": "No conectado", "On": "Activado", "Off": "Desactivado",
         "Accessibility settings": "Configuración de accesibilidad",

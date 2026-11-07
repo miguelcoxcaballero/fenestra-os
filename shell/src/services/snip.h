@@ -49,6 +49,9 @@ public:
     Q_INVOKABLE bool captureFreeform(const QList<qreal> &globalXY);
     // The whole workspace straight away, without the overlay.
     Q_INVOKABLE void captureWorkspaceNow();
+    // Test probe (FENESTRA_SHELL_TEST=1): `count` screen captures back to back into dir/fNNN.png
+    // (with ms timestamps in dir/times.txt), to look at a few frames of a glitch.
+    Q_INVOKABLE void testBurst(const QString &dir, int count);
 
     // The frozen picture of one output (for the image provider).
     QImage frozenFor(const QString &screen) const;

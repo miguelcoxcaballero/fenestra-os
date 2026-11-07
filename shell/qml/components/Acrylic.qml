@@ -59,5 +59,6 @@ Item {
         id: backdropView
         anchors.fill: parent
         topRadius: acrylic.radius; bottomRadius: acrylic.radius
+        noise: Metrics.num("acrylic." + acrylic.backdropRecipe + ".backdrop.noise", Metrics.num("acrylic.backdrop.noise", 0.02))
     }
 }

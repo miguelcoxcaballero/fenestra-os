@@ -18,7 +18,13 @@ Window {
     color: "transparent"
     // Shown only once the screen is set: a layer surface binds to its output when it is created.
     visible: false
-    Component.onCompleted: { ShellUtil.placeOnScreen(bar, targetScreen.name); visible = true }
+    Component.onCompleted: { ShellUtil.placeOnScreen(bar, targetScreen.name); visible = true; ShellUtil.setBlurItems(bar, [blurPin], 0) }
+    // Keeps KWin's blur effect active at all times (a 1 px region nobody sees). Without it, when the
+    // last blurred popup closed KWin moved windows onto hardware overlay planes and that switch dropped
+    // a frame: every window flickered once (i915 "Atomic commit failed: EBUSY", Meteor Lake). The
+    // session also starts KWin with KWIN_USE_OVERLAYS=0 (session/libexec/fenestra-session).
+    Item { id: blurPin; x: 0; y: 0; width: 1; height: 1 }
+    onVisibleChanged: if (visible) ShellUtil.setBlurItems(bar, [blurPin], 0)
     LayerShell.Window.scope: "fenestra-taskbar"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft
@@ -187,6 +193,7 @@ Window {
                 iconName: model.icon
                 label: model.name
                 windowCount: model.windowCount
+                windowList: model.windows
                 focused: model.active
                 attention: model.demandsAttention
                 onClicked: { preview.close(); TaskbarModel.activate(index) }
@@ -217,15 +224,7 @@ Window {
                     appMenu.anchorX = task.mapToItem(null, task.width / 2, 0).x
                     appMenu.open()
                 }
-                onHoveredChanged: {
-                    if (hovered && model.windowCount > 0) {
-                        previewTimer.owner = task
-                        previewTimer.restart()
-                    } else if (!hovered) {
-                        previewTimer.stop()
-                        closeTimer.restart()
-                    }
-                }
+                onHoveredChanged: bar.taskHovered(task, hovered)
             }
         }
     }
@@ -257,13 +256,8 @@ Window {
     function testBarMenu(x) { openBarMenu(x) }
     // B07: opens at the pointer, its bottom-left corner on the taskbar's top edge (no gap).
     function openBarMenu(x) { barMenu.anchorX = -1; barMenu.anchorLeft = x; barMenu.open() }
-    function testPreview(i) {
-        const b = taskRepeater.itemAt(i)
-        preview.windows = b.model.windows
-        preview.icon = b.model.icon
-        preview.anchorX = b.mapToItem(null, b.width / 2, 0).x
-        preview.open()
-    }
+    function testPreview(i) { showPreview(taskRepeater.itemAt(i)) }
+    function testPreviewHot(slot) { preview.testHot = slot }
     function testOverflow() { tray.testOverflow() }
     function testWidgets(byClick) { weather.testOpenBoard(byClick) }
     function testPreviewShown() { return preview.shown }
@@ -272,18 +266,42 @@ Window {
     function testMenuOfTray(row) { tray.testMenu(row) }
     function testCloseFlyouts() { preview.close(); appMenu.close(); barMenu.close(); tray.testCloseFlyouts() }
 
+    // Hover previews (B03), as Windows 11 (recorded on the reference VM at 150 %, design/motion.json
+    // "preview"): resting on a button with windows opens its preview after motion.preview.delay
+    // (400 ms, Windows' mouse hover time); while a preview is up, resting on another button with
+    // windows swaps the panel in place after motion.preview.switch (~240 ms, no motion); leaving the
+    // buttons and the preview hides it at once after motion.preview.hide (~490 ms).
+    function showPreview(b) {
+        if (!b || b.windowCount === 0) return
+        closeTimer.stop()
+        preview.owner = b
+        preview.anchorX = b.mapToItem(null, b.width / 2, 0).x
+        preview.open()
+    }
+    function taskHovered(b, hovered) {
+        if (hovered && b.windowCount > 0 && bar.dragFrom < 0) {
+            previewTimer.owner = b
+            previewTimer.interval = preview.shown ? Tokens.v("motion.preview.switch", 240) : Metrics.previewDelay
+            previewTimer.restart()
+        } else if (!hovered) {
+            if (previewTimer.owner === b) previewTimer.stop()
+            closeTimer.restart()
+        } else if (hovered && preview.shown) {
+            // A button without windows: the open preview goes as if the pointer had left.
+            closeTimer.restart()
+        }
+    }
     Timer {
         id: previewTimer
         property var owner
         interval: Metrics.previewDelay
-        onTriggered: if (owner && owner.hovered) {
-            preview.windows = owner.model.windows
-            preview.icon = owner.model.icon
-            preview.anchorX = owner.mapToItem(null, owner.width / 2, 0).x
-            preview.open()
-        }
+        onTriggered: if (owner && owner.hovered) bar.showPreview(owner)
     }
-    Timer { id: closeTimer; interval: 300; onTriggered: if (!preview.keepOpen && !(previewTimer.owner && previewTimer.owner.hovered)) preview.close() }
+    Timer {
+        id: closeTimer
+        interval: Tokens.v("motion.preview.hide", 490)
+        onTriggered: if (!preview.keepOpen && !(preview.owner && preview.owner.hovered)) preview.close()
+    }
 
     TaskPreview { id: preview; targetScreen: bar.targetScreen; onKeepOpenChanged: if (!keepOpen) closeTimer.restart() }
     // Jump list (B02): 296 px wide like the reference, centred on the button, 12 px above the bar.

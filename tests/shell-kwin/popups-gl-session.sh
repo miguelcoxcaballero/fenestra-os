@@ -92,11 +92,18 @@ exec dbus-run-session -- bash -s <<'INNER'
 set -u
 mkdir -p /run/dbus; rm -f /run/dbus/system_bus_socket; dbus-daemon --system --fork 2>/dev/null
 /usr/libexec/accounts-daemon >/dev/null 2>&1 &
+# PipeWire for KWin's window screencasts (the taskbar's live previews), when the image has it.
+if command -v pipewire >/dev/null; then
+    pipewire > /out/pipewire.log 2>&1 &
+    sleep 0.5; command -v wireplumber >/dev/null && wireplumber > /out/wireplumber.log 2>&1 &
+fi
 kwin_wayland --virtual --socket wl-f --width ${W:-2880} --height ${H:-1800} > /out/kwin.log 2>&1 &
 for i in $(seq 60); do [ -S $XDG_RUNTIME_DIR/wl-f ] && break; sleep 0.25; done
 export WAYLAND_DISPLAY=wl-f
 sleep 2
 kscreen-doctor output.Virtual-0.scale.${SCALE:-1.5} >/dev/null 2>&1; sleep 1
+[ -n "${FENESTRA_FAKE_KBD_BACKLIGHT:-}" ] || unset FENESTRA_FAKE_KBD_BACKLIGHT
+[ -n "${FENESTRA_FAKE_PLATFORM_PROFILE:-}" ] || unset FENESTRA_FAKE_PLATFORM_PROFILE
 LANG=${SHELL_LANG:-en_GB.UTF-8} QT_QPA_PLATFORM=wayland fenestra-shell > /out/shell.log 2>&1 &
 for i in $(seq 60); do grep -q FENESTRA_SHELL_READY /out/shell.log && break; sleep 0.5; done
 env | grep -E '^(DBUS_SESSION_BUS_ADDRESS|WAYLAND_DISPLAY|XDG_RUNTIME_DIR)=' | sed 's/^/export /' > /tmp/env

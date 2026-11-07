@@ -56,6 +56,19 @@ Window {
     readonly property rect backdropArea: Qt.rect(screenX, restY, panelWidth, panelHeight + Metrics.flyoutGap)
     // The whole surface on the screen (for a menu opened over it: Backdrop grabs it).
     readonly property rect screenRect: Qt.rect(screenX - shadowMargin, restY - shadowMargin, width, height)
+    property int pendingId: 0
+    property bool refreshAfterMotion: false
+    Connections {
+        target: motionCtl
+        function onBusyChanged() {
+            if (motionCtl.busy || !popup.shown) return
+            if (popup.pendingId > 0) {
+                const id = popup.pendingId; popup.pendingId = 0
+                if (id === popup.backdropId) { popup.showBackdrop(id); if (popup.shownId !== id) Backdrop.release(popup.shownId); popup.shownId = id }
+            }
+            if (popup.refreshAfterMotion) { popup.refreshAfterMotion = false; popup.requestBackdrop() }
+        }
+    }
     function requestBackdrop() {
         if (backdropId !== shownId) Backdrop.release(backdropId)
         backdropId = 0
@@ -84,6 +97,7 @@ Window {
         target: Backdrop
         function onReady(id, ms) {
             if (id !== popup.backdropId || !popup.shown) return
+            if (motionCtl.busy) { popup.pendingId = id; return }   // swap after the slide
             popup.showBackdrop(id)
             if (popup.shownId !== id) Backdrop.release(popup.shownId)
             popup.shownId = id
@@ -118,7 +132,11 @@ Window {
         if (shown) return
         if (targetScreen) ShellUtil.placeOnScreen(popup, targetScreen.name)
         shown = true
-        requestBackdrop()
+        // The capture (KWin renders the scene once more) and the new texture cost frames at the
+        // start of the slide, where it moves fastest (60 fps for ~80 ms): with an acrylic kept from
+        // the last opening, show it now and capture again when the entrance is over.
+        if (shownId > 0) { showBackdrop(shownId); acrylicOn = true; ShellUtil.clearBlur(popup); refreshAfterMotion = true }
+        else requestBackdrop()
         motionCtl.enter()   // the first frame already has the panel behind the taskbar
         visible = true
         ShellUtil.setInputItems(popup, [inputArea])

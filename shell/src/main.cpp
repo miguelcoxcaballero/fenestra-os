@@ -12,12 +12,14 @@
 #include "backdrop.h"
 #include "batteryalerts.h"
 #include "performancemode.h"
+#include "kbdbacklight.h"
 #include "iconoverrides.h"
 #include "kwinintegration.h"
 #include "notifications.h"
 #include "polkitagent.h"
 #include "shellcontrol.h"
 #include "shortcuts.h"
+#include "screencast.h"
 #include "snip.h"
 #include "testprobe.h"
 #include "theme.h"
@@ -69,6 +71,7 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("acrylic"), new AcrylicProvider);
     engine.addImageProvider(QStringLiteral("popupshadow"), new PopupShadowProvider);
     engine.addImageProvider(QStringLiteral("backdrop"), new BackdropProvider);
+    engine.addImageProvider(QStringLiteral("windowshot"), new WindowSnapshotProvider);
     TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
@@ -79,7 +82,8 @@ int main(int argc, char *argv[])
     Shortcuts::instance()->install();
     KWinIntegration::instance(); // Fenestra decoration and switcher in kwinrc
     BatteryAlerts::instance(); // low-battery notices and Energy saver, as Windows
-    PerformanceMode::instance(); // the OEM performance-mode key's notification
+    PerformanceMode::instance(); // the OEM performance-mode key's banner
+    KbdBacklight::instance();    // keyboard backlight (hotkey banner, Quick settings)
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }

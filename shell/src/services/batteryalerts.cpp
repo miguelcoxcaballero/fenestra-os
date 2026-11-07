@@ -154,7 +154,7 @@ void BatteryAlerts::applyRefresh(bool onBattery)
         return;
     const QSettings conf(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/fenestra/shell.conf"),
                          QSettings::IniFormat);
-    if (!conf.value(QStringLiteral("Display/DynamicRefresh"), true).toBool())
+    if (!conf.value(QStringLiteral("Display/DynamicRefresh"), false).toBool())
         return;
     if (QStandardPaths::findExecutable(QStringLiteral("kscreen-doctor")).isEmpty())
         return;

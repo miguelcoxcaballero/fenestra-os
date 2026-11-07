@@ -7,7 +7,8 @@
 // Plugging in turns off what was turned on automatically and gives the brightness back.
 // Refresh rate (Windows' dynamic refresh rate saves the same way): on battery the built-in panel
 // (eDP / LVDS / DSI) runs at the 60 Hz mode of its current resolution, on AC at its highest rate.
-// Off with Display/DynamicRefresh=false in shell.conf. Uses kscreen-doctor (any KWin system).
+// Opt-in (Display/DynamicRefresh=true in shell.conf): smoothness first, the panel keeps its highest
+// rate by default. Uses kscreen-doctor (any KWin system).
 // Sources: learn.microsoft.com battery-saver and battery-settings pages.
 #pragma once
 

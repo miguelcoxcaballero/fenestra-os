@@ -17,6 +17,8 @@ Item {
     property var shift: null
     property real topRadius: Metrics.flyoutRadius
     property real bottomRadius: Metrics.flyoutRadius
+    // WinUI acrylic's noise (2 %); 0 for materials without it.
+    property real noise: Metrics.num("acrylic.backdrop.noise", 0.02)
     // A new acrylic replaces the shown one without a frame between them (retainWhileLoading);
     // only the first one fades in.
     readonly property bool ready: source !== "" && image.status === Image.Ready
@@ -54,11 +56,11 @@ Item {
         x: Math.floor(view.area.x / tile) * tile + view.dx
         y: Math.floor(view.area.y / tile) * tile + view.dy
         width: view.area.width + tile; height: view.area.height + tile
-        visible: view.source !== ""
+        visible: view.source !== "" && view.noise > 0
         source: visible ? "image://backdrop/noise/" + view.dpr : ""
         fillMode: Image.Tile
         smooth: false
-        opacity: Metrics.num("acrylic.backdrop.noise", 0.02)
+        opacity: view.noise
     }
     Rectangle {
         id: mask

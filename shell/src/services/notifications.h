@@ -23,7 +23,7 @@ class Notifications : public QAbstractListModel, protected QDBusContext
     Q_PROPERTY(int focusRemaining READ focusRemaining NOTIFY focusChanged)  // seconds, 0 = no Focus session
 public:
     enum Roles { IdRole = Qt::UserRole + 1, AppNameRole, AppIconRole, SummaryRole, BodyRole, ActionsRole,
-                 ImageRole, TimeRole, UrgencyRole, DesktopEntryRole };
+                 ImageRole, TimeRole, UrgencyRole, DesktopEntryRole, ValueRole };
     struct Item {
         uint id = 0;
         QString appName, appIcon, summary, body, desktopEntry, image;
@@ -32,6 +32,7 @@ public:
         int urgency = 1;
         bool resident = false, transient = false;
         int timeout = -1;
+        int value = -1;       // "value" hint: progress 0-100 (Windows' toast progress bar), -1 none
     };
 
     static Notifications *instance();

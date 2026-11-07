@@ -4,6 +4,7 @@
 #include "apps.h"
 #include "shellsettings.h"
 
+#include <algorithm>
 #include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -119,6 +120,8 @@ uint Notifications::Notify(const QString &appName, uint replacesId, const QStrin
     item.resident = hints.value(QStringLiteral("resident")).toBool();
     item.transient = hints.value(QStringLiteral("transient")).toBool();
     item.timeout = expireTimeout;
+    if (hints.contains(QStringLiteral("value")))
+        item.value = std::clamp(hints.value(QStringLiteral("value")).toInt(), 0, 100);
     for (const char *key : {"image-data", "image_data", "icon_data"}) {
         if (hints.contains(QLatin1String(key))) {
             const QImage img = readImageData(hints.value(QLatin1String(key)).value<QDBusArgument>());
@@ -318,6 +321,7 @@ QVariant Notifications::data(const QModelIndex &index, int role) const
     case TimeRole: return i.time;
     case UrgencyRole: return i.urgency;
     case DesktopEntryRole: return i.desktopEntry;
+    case ValueRole: return i.value;
     }
     return {};
 }
@@ -326,7 +330,7 @@ QHash<int, QByteArray> Notifications::roleNames() const
 {
     return {{IdRole, "notificationId"}, {AppNameRole, "appName"}, {AppIconRole, "appIcon"}, {SummaryRole, "summary"},
             {BodyRole, "body"}, {ActionsRole, "actions"}, {ImageRole, "image"}, {TimeRole, "time"},
-            {UrgencyRole, "urgency"}, {DesktopEntryRole, "desktopEntry"}};
+            {UrgencyRole, "urgency"}, {DesktopEntryRole, "desktopEntry"}, {ValueRole, "value"}};
 }
 
 QVariantList Notifications::popups() const
@@ -340,7 +344,8 @@ QVariantList Notifications::popups() const
         out.append(QVariantMap{{QStringLiteral("notificationId"), i.id}, {QStringLiteral("appName"), i.appName},
                                {QStringLiteral("appIcon"), i.appIcon}, {QStringLiteral("summary"), i.summary},
                                {QStringLiteral("body"), i.body}, {QStringLiteral("actions"), i.actions},
-                               {QStringLiteral("image"), i.image}, {QStringLiteral("urgency"), i.urgency}});
+                               {QStringLiteral("image"), i.image}, {QStringLiteral("urgency"), i.urgency},
+                               {QStringLiteral("value"), i.value}});
     }
     return out;
 }

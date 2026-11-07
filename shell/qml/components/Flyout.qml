@@ -102,6 +102,19 @@ Window {
         : motion === "menu" ? Qt.rect(Math.round(sheetX), restY, sheetWidth, Math.min(sheetHeight * 1.5, targetScreen.height - Metrics.taskbarHeight - restY))
         : Qt.rect(Math.round(sheetX), restY, sheetWidth, sheetHeight)
     readonly property var acrylics: blurItems.length ? blurItems : (material.fill.visible ? [material] : [])
+    property int pendingId: 0
+    property bool refreshAfterMotion: false
+    Connections {
+        target: motionCtl
+        function onBusyChanged() {
+            if (motionCtl.busy || !flyout.shown) return
+            if (flyout.pendingId > 0) {
+                const id = flyout.pendingId; flyout.pendingId = 0
+                if (id === flyout.backdropId) { flyout.showBackdrop(id); if (flyout.shownId !== id) Backdrop.release(flyout.shownId); flyout.shownId = id }
+            }
+            if (flyout.refreshAfterMotion) { flyout.refreshAfterMotion = false; flyout.requestBackdrop() }
+        }
+    }
     function requestBackdrop() {
         if (backdropId !== shownId) Backdrop.release(backdropId)
         backdropId = 0
@@ -132,6 +145,7 @@ Window {
         target: Backdrop
         function onReady(id, ms) {
             if (id !== flyout.backdropId || !flyout.shown) return
+            if (motionCtl.busy) { flyout.pendingId = id; return }   // swap after the slide
             flyout.showBackdrop(id)
             if (flyout.shownId !== id) Backdrop.release(flyout.shownId)
             flyout.shownId = id
@@ -152,7 +166,11 @@ Window {
         if (targetScreen) ShellUtil.placeOnScreen(flyout, targetScreen.name)
         const already = shown && visible   // re-anchored while open (previews): no new entrance
         shown = true
-        if (!already) requestBackdrop()
+        // The capture (KWin renders the scene once more) and the new texture cost frames at the
+        // start of the slide, where it moves fastest (60 fps for ~80 ms): with an acrylic kept from
+        // the last opening, show it now and capture again when the entrance is over.
+        if (!already && shownId > 0) { showBackdrop(shownId); acrylicOn = true; ShellUtil.clearBlur(flyout); refreshAfterMotion = true }
+        else if (!already) requestBackdrop()
         if (!already) motionCtl.enter()
         visible = true
         ShellUtil.setInputItems(flyout, [inputArea])

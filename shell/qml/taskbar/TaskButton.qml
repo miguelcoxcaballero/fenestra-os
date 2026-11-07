@@ -9,6 +9,8 @@ Item {
     property string iconName
     property string label
     property int windowCount: 0
+    // The group's windows ({uuid, title, row, width, height, ...}: TaskbarModel's "windows").
+    property var windowList: []
     property bool focused: false
     property bool attention: false
     // Start / Search while their flyout is open.

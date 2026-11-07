@@ -32,7 +32,8 @@ Window {
     width: Tokens.v("widgets.width", 1000)
     height: Math.max(1, (targetScreen ? targetScreen.height : 1080) - Metrics.taskbarHeight - 2 * edge)
     visible: false
-    LayerShell.Window.scope: "fenestra-widgets"
+    // "dock": KWin's scale effect animates other names as opening apps (the board has its own slide).
+    LayerShell.Window.scope: "dock"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorLeft
     LayerShell.Window.margins.left: edge
@@ -73,12 +74,16 @@ Window {
 
         // Material: the flyout acrylic (acrylic.cpp, renderCard) over the wallpaper; the light VM
         // capture's board is (248, 244, 241) over its dark wallpaper.
+        // Computed once, off the GUI thread, and kept: it depends only on the wallpaper and the size
+        // (it used to be recomputed on every opening, blocking the shell for ~1 s).
         Image {
             anchors.fill: parent
             visible: ShellSettings.transparency && status === Image.Ready
             smooth: false
+            asynchronous: true
+            cache: true
             readonly property var scr: board.targetScreen
-            source: !board.visible || !scr || !ShellSettings.transparency ? ""
+            source: !scr || !ShellSettings.transparency ? ""
                     : "image://acrylic/card/" + (Theme.dark ? "dark" : "light") + "/" + scr.width + "/" + scr.height + "/"
                       + board.dpr + "/" + board.edge + "/" + board.edge + "/" + board.width + "/" + board.height + "/"
                       + Metrics.flyoutRadius + "/0/"
