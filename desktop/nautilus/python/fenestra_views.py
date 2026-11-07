@@ -611,6 +611,13 @@ class FenestraViews:
 
     def cell(self,cell):
         if not cell or kind(cell)!='NautilusGridCell':return
+        # Icon/list views hide known extensions too, like the Details Name column.
+        name=next((w for w in walk(cell) if isinstance(w,Gtk.Label) and not w.has_css_class('caption')),None)
+        if name is not None:
+            if not getattr(name,'_windows_cell',False):
+                name._windows_cell=True;name._windows_role='name'
+                name.connect('notify::label',lambda l,_p:_reformat(l,'name',cell))
+            _reformat(name,'name',cell)
         mode=self.mode
         if mode in ('extra-large','large','medium'):
             for label in walk(cell):
