@@ -622,6 +622,8 @@ window.win11-explorer:not(.win11-chooser) .fenestra-location-box > button image 
   window.win11-explorer:not(.win11-chooser) .fenestra-infopane-band { background: #f9f9f9; }
   window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share { background: #fbfbfb; box-shadow: inset 0 0 0 1px #e5e5e5; }
   window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share image { -gtk-icon-filter: invert(0.9); opacity: 0.75; }
+  /* context menus: the pale glyph colours drawn for the dark menu read as #555 on the light one */
+  window.win11-explorer:not(.win11-chooser) popover.menu modelbutton image, window.win11-explorer:not(.win11-chooser) popover.menu .fenestra-iconic image { -gtk-icon-filter: grayscale(0.6) brightness(0.5); }
   window.win11-explorer:not(.win11-chooser) popover.menu > contents { background: #f9f9f9; border: 1px solid #eaeaea; }
   window.win11-explorer:not(.win11-chooser) popover.menu modelbutton:hover { background: #f0f0f0; }
   window.win11-explorer:not(.win11-chooser) popover.menu modelbutton label { color: #1b1b1b; }
