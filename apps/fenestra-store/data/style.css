@@ -46,7 +46,7 @@ entry.store-search selection { background-color: var(--st-accent); color: var(--
 .window-controls { margin: 0; padding: 0; }
 button.caption-button {
   min-width: 46px; min-height: 32px; padding: 0; margin: 0; border-radius: 0;
-  background: none; border: none; box-shadow: none; color: var(--st-fg);
+  background: none; border: none; box-shadow: none; color: var(--st-caption-fg);
 }
 button.caption-button:hover { background: var(--st-subtle-hover); }
 button.caption-button:active { background: var(--st-subtle-press); }
