@@ -32,6 +32,9 @@ public:
     Q_INVOKABLE void togglePinned(int row);
     // Drag and drop of pinned buttons: new order of the pinned part.
     Q_INVOKABLE void movePinned(int from, int to);
+    // Drag and drop of any button (Windows: pinned and running buttons can be reordered; the pinned
+    // order is saved, the place of a running unpinned button lasts while it runs).
+    Q_INVOKABLE void move(int from, int to);
 
 private:
     explicit TaskbarModel(QObject *parent = nullptr);
@@ -45,5 +48,6 @@ private:
     };
     void rebuild();
     QList<Entry> m_entries;
+    QStringList m_order;   // button keys in the order the user left them
     int m_cycle = 0;
 };

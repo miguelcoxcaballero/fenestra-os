@@ -126,6 +126,23 @@ Window {
                 required property var model
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined
                 dpr: bar.dpr
+                // Drag sideways to reorder (as Windows): the button follows the pointer and lands on
+                // the slot it is dropped on.
+                z: reorder.active ? 1 : 0
+                transform: Translate { x: reorder.active ? reorder.activeTranslation.x : 0 }
+                DragHandler {
+                    id: reorder
+                    target: null
+                    yAxis.enabled: false
+                    property real dx: 0   // the last translation (activeTranslation may reset on release)
+                    onActiveTranslationChanged: if (active) dx = activeTranslation.x
+                    onActiveChanged: {
+                        if (active) { dx = 0; preview.close(); return }
+                        const to = Math.max(0, Math.min(TaskbarModel.rowCount() - 1,
+                                       task.index + Math.round(dx / task.width)))
+                        if (to !== task.index) TaskbarModel.move(task.index, to)
+                    }
+                }
                 iconName: model.icon
                 label: model.name
                 windowCount: model.windowCount
