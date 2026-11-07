@@ -9,6 +9,16 @@ export DESKTOP_SESSION=fenestra
 export QT_QPA_PLATFORM="wayland;xcb" QT_WAYLAND_DISABLE_WINDOWDECORATION=0
 export MOZ_ENABLE_WAYLAND=1 ELECTRON_OZONE_PLATFORM_HINT=auto
 mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/fenestra"
+# "Sign in to the new desktop" (Settings) chooses Fenestra for one sign-in only: unless the user
+# made it the default (fenestra-migrate set-default, recorded in /var/lib/fenestra/migrate.json),
+# the next sign-in goes back to GNOME. Fenestra's sign-in screen has no session menu, so this
+# keeps a failing first start from trapping the user in a loop.
+if ! python3 -c 'import json,os,sys; sys.exit(0 if os.environ["USER"] in json.load(open("/var/lib/fenestra/migrate.json")).get("default_for", []) else 1)' 2>/dev/null; then
+    for m in SetSession SetXSession; do
+        busctl --system call org.freedesktop.Accounts "/org/freedesktop/Accounts/User$(id -u)" \
+            org.freedesktop.Accounts.User "$m" s gnome >/dev/null 2>&1 || true
+    done
+fi
 # Regional formats (gnome-session exported them in GNOME): AccountsService FormatsLocale, else
 # the org.gnome.system.locale region the setup / Settings wrote.
 fmt=$(busctl --system get-property org.freedesktop.Accounts "/org/freedesktop/Accounts/User$(id -u)" \
