@@ -456,6 +456,7 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
 .win11-explorer .fenestra-statusbar button { min-width: 22px; min-height: 20px; padding: 0; margin: 2px 1px; border-radius: 3px; background: transparent; box-shadow: none; }
 .win11-explorer .fenestra-statusbar button:checked { background: #3a3a3a; }
 .win11-explorer .win11-commandbar separator.win11-cmd-separator { margin: 8px 4px; background: #2c2c2c; }
+window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search label.win11-search-label { color: #cfcfcf; } /* reference «Buscar en …» */
 window.win11-explorer:not(.win11-chooser) .win11-commandbar separator.win11-cmd-separator { margin: 8px 3px; } /* groups at the reference x in folder views (cut 537, Ordenar 825, Ver 935) */
 .win11-explorer .fenestra-crumbs .fenestra-crumb-sep { margin: 0 10px; }
 .win11-explorer .fenestra-crumbs .fenestra-crumb-lead { margin: 0 12px 0 20px; }
@@ -599,6 +600,7 @@ window.win11-explorer:not(.win11-chooser) .fenestra-location-box > button image 
   window.win11-explorer:not(.win11-chooser) .win11-navigation { background: #f8f8f8; border-top: 1px solid #dadada; border-bottom: 1px solid #d6d6d6; }
   window.win11-explorer:not(.win11-chooser) .fenestra-crumbs, window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search, window.win11-explorer:not(.win11-chooser) #NautilusPathBar { background: #fdfdfd; border: 0; }
   window.win11-explorer:not(.win11-chooser) .win11-navigation box.linked.fenestra-crumbs { background: #fdfdfd; }
+  window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search label.win11-search-label { color: #5f5f5f; }
   window.win11-explorer:not(.win11-chooser) .fenestra-crumbs button image { -gtk-icon-filter: invert(0.9); }
   window.win11-explorer:not(.win11-chooser) .win11-navigation box.start > stack > widget > box > button image { color: #1a1a1a; -gtk-icon-filter: none; }
   window.win11-explorer:not(.win11-chooser) .win11-commandbar { border-bottom: 1px solid #d6d6d6; }
