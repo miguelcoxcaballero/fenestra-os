@@ -342,5 +342,114 @@
         "notif6": "6.1:None 673.9:1884 698.6:1693 719.6:1656 737.6:1610 755.2:1596 778.7:1585 804.3:1574 825.8:1572 862.4:1572 1526.2:1576 1558.5:1602 1598.9:1640 1615.9:1670 1634.0:1714 1651.5:1784 1668.5:1884 1703.3:None"
       }
     }
+  },
+  "window": {
+    "_comment": [
+      "App window transitions of Windows 11 24H2 (26100), read from Windows itself on the reference VM's disk",
+      "(tests/window-motion/README.md): uDWM.dll's transition -> storyboard map (the function at 0x18000c1c4 of the",
+      "26100 uDWM.dll: open 1 -> 100, maximize 2 / restore from maximized 4 / 12, 13, 18 -> 104, minimize 3 -> 94,",
+      "restore from minimized 5 -> 95, close 6 -> 101; transition numbers as DWM's WindowAnimationType) and the",
+      "storyboards (target 1) and timing functions of aero.msstyles' animation map (resource AMAP). The VM has no GPU and",
+      "its DWM shows windows without transitions, so these were not filmed there; tests/window-motion/compare.py checks",
+      "the KWin effect (kwin/effects/fenestra-window-motion) against them frame by frame.",
+      "curve: CSS cubic-bezier(x1, y1, x2, y2); scale origin as a fraction of the window; times in ms."
+    ],
+    "open": {
+      "storyboard": 100,
+      "duration": 250,
+      "curve": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "timing_function": 71,
+      "scale_from": 0.8,
+      "scale_to": 1.0,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "opacity_from": 0,
+      "opacity_to": 1,
+      "opacity_delay": 0,
+      "opacity_duration": 83,
+      "opacity_curve": "linear"
+    },
+    "close": {
+      "storyboard": 101,
+      "duration": 175,
+      "curve": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "timing_function": 72,
+      "scale_from": 1.0,
+      "scale_to": 0.95,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "opacity_from": 1,
+      "opacity_to": 0,
+      "opacity_delay": 25,
+      "opacity_duration": 150,
+      "opacity_curve": "linear"
+    },
+    "minimize": {
+      "storyboard": 94,
+      "duration": 167,
+      "curve": [
+        1,
+        0,
+        1,
+        1
+      ],
+      "timing_function": 73,
+      "scale_from": 1.0,
+      "scale_to": 0.0,
+      "origin": [
+        0,
+        0
+      ],
+      "translate": "top-left corner to the taskbar button (user value)",
+      "opacity": "unchanged"
+    },
+    "restore": {
+      "storyboard": 95,
+      "duration": 175,
+      "curve": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "timing_function": 74,
+      "scale_from": 0.0,
+      "scale_to": 1.0,
+      "origin": [
+        0,
+        0
+      ],
+      "translate": "from the taskbar button (user value)",
+      "opacity": "unchanged"
+    },
+    "maximize": {
+      "storyboard": 104,
+      "duration": 300,
+      "curve": [
+        0.8,
+        0,
+        0,
+        1
+      ],
+      "timing_function": 85,
+      "scale": "old frame size -> new (user values)",
+      "translate": "old frame position -> new (user values)",
+      "opacity": "unchanged (no cross-fade)",
+      "also": "restore from maximized, transitions 12, 13 and 18"
+    }
   }
 }

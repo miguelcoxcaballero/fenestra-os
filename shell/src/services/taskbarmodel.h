@@ -4,10 +4,15 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QHash>
+#include <QPointer>
+#include <QRect>
 #include <QQmlEngine>
 #include <QVariantList>
 
 class PlasmaWindow;
+class QQuickItem;
+class QWindow;
 
 class TaskbarModel : public QAbstractListModel
 {
@@ -35,6 +40,9 @@ public:
     // Drag and drop of any button (Windows: pinned and running buttons can be reordered; the pinned
     // order is saved, the place of a running unpinned button lasts while it runs).
     Q_INVOKABLE void move(int from, int to);
+    // Where the button is (org_kde_plasma_window.set_minimized_geometry): KWin minimizes the
+    // button's windows into it and restores them from it (kwin/effects/fenestra-window-motion).
+    Q_INVOKABLE void setButtonGeometry(int row, QQuickItem *button);
 
 private:
     explicit TaskbarModel(QObject *parent = nullptr);
@@ -47,6 +55,13 @@ private:
         QList<PlasmaWindow *> windows;
     };
     void rebuild();
+    void applyButtonGeometry(const Entry &e);
+    struct Button {
+        QPointer<QWindow> window; // the taskbar's surface
+        QRect rect;               // logical, relative to it
+    };
+    QHash<QString, Button> m_buttons;  // entry key -> its button
+    QHash<PlasmaWindow *, Button> m_sent; // what each window was last given
     QList<Entry> m_entries;
     QStringList m_order;   // button keys in the order the user left them
     int m_cycle = 0;

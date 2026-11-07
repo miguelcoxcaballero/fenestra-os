@@ -6,6 +6,11 @@
 #include "shellsettings.h"
 #include "windowsmodel.h"
 
+#include <QGuiApplication>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <qpa/qplatformnativeinterface.h>
+
 namespace
 {
 using WM = QtWayland::org_kde_plasma_window_management;
@@ -67,6 +72,10 @@ void TaskbarModel::rebuild()
     m_order.clear();
     for (const Entry &e : entries)
         m_order << e.key;
+    // Windows that are gone (their PlasmaWindow is deleted): forget what they were sent.
+    const QList<PlasmaWindow *> alive = WindowsModel::instance()->windows();
+    for (auto it = m_sent.begin(); it != m_sent.end();)
+        it = alive.contains(it.key()) ? std::next(it) : m_sent.erase(it);
 
     // Same buttons in the same order: only data changed (no delegate churn, no animation restart).
     bool sameKeys = entries.size() == m_entries.size();
@@ -76,11 +85,43 @@ void TaskbarModel::rebuild()
         m_entries = entries;
         if (!m_entries.isEmpty())
             Q_EMIT dataChanged(index(0), index(m_entries.size() - 1));
+        for (const Entry &e : std::as_const(m_entries))
+            applyButtonGeometry(e); // a new window in an existing group
         return;
     }
     beginResetModel();
     m_entries = entries;
     endResetModel();
+    for (const Entry &e : std::as_const(m_entries))
+        applyButtonGeometry(e);
+}
+
+void TaskbarModel::setButtonGeometry(int row, QQuickItem *button)
+{
+    if (row < 0 || row >= m_entries.size() || !button || !button->window())
+        return;
+    const QPointF p = button->mapToScene(QPointF(0, 0));
+    m_buttons[m_entries.at(row).key] = {button->window(), QRectF(p, QSizeF(button->width(), button->height())).toRect()};
+    applyButtonGeometry(m_entries.at(row));
+}
+
+void TaskbarModel::applyButtonGeometry(const Entry &e)
+{
+    const auto it = m_buttons.constFind(e.key);
+    if (it == m_buttons.constEnd() || !it->window || it->rect.isEmpty())
+        return;
+    auto *native = QGuiApplication::platformNativeInterface();
+    auto *surface = native ? static_cast<struct ::wl_surface *>(native->nativeResourceForWindow("surface", it->window)) : nullptr;
+    if (!surface)
+        return;
+    for (PlasmaWindow *w : e.windows) {
+        const Button &sent = m_sent[w];
+        if (sent.window == it->window && sent.rect == it->rect)
+            continue;
+        w->set_minimized_geometry(surface, uint(std::max(0, it->rect.x())), uint(std::max(0, it->rect.y())),
+                                  uint(it->rect.width()), uint(it->rect.height()));
+        m_sent[w] = *it;
+    }
 }
 
 int TaskbarModel::rowCount(const QModelIndex &parent) const
