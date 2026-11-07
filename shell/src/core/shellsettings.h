@@ -20,6 +20,8 @@ class ShellSettings : public QObject
     // "hidden" | "icon" | "iconLabel" | "box" (B06)
     Q_PROPERTY(QString searchMode READ searchMode WRITE setSearchMode NOTIFY changed)
     Q_PROPERTY(bool showWeather READ showWeather WRITE setShowWeather NOTIFY changed)
+    // Settings › Personalization › Taskbar › Task view (on by default, as in Windows 11).
+    Q_PROPERTY(bool showTaskView READ showTaskView WRITE setShowTaskView NOTIFY changed)
     Q_PROPERTY(QStringList pinnedApps READ pinnedApps WRITE setPinnedApps NOTIFY changed)
     // "dark" | "light"
     Q_PROPERTY(QString colorScheme READ colorScheme WRITE setColorScheme NOTIFY changed)
@@ -39,6 +41,7 @@ public:
     QString taskbarAlignment() const { return m_alignment; }
     QString searchMode() const { return m_searchMode; }
     bool showWeather() const { return m_showWeather; }
+    bool showTaskView() const { return m_showTaskView; }
     QStringList pinnedApps() const { return m_pinned; }
     QString colorScheme() const { return m_scheme; }
     QString accentColor() const { return m_accent; }
@@ -51,6 +54,7 @@ public:
     void setTaskbarAlignment(const QString &v) { write(QStringLiteral("Taskbar/Alignment"), v); }
     void setSearchMode(const QString &v) { write(QStringLiteral("Taskbar/SearchMode"), v); }
     void setShowWeather(bool v) { write(QStringLiteral("Taskbar/Weather"), v); }
+    void setShowTaskView(bool v) { write(QStringLiteral("Taskbar/TaskView"), v); }
     void setPinnedApps(const QStringList &v) { write(QStringLiteral("Taskbar/Pinned"), v); }
     void setColorScheme(const QString &v) { write(QStringLiteral("Appearance/ColorScheme"), v); }
     void setAccentColor(const QString &v) { write(QStringLiteral("Appearance/Accent"), v); }
@@ -79,6 +83,7 @@ private:
     QFileSystemWatcher m_watcher;
     QString m_alignment, m_searchMode, m_scheme, m_accent, m_wallpaper;
     bool m_showWeather = true;
+    bool m_showTaskView = true;
     bool m_reduceMotion = false;
     bool m_transparency = true;
     QString m_startIcon, m_searchIcon;

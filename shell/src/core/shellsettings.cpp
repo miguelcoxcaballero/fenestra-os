@@ -59,6 +59,7 @@ void ShellSettings::load()
     const QString search = pick(s.value(QStringLiteral("Taskbar/SearchMode")).toString(),
                                 {QStringLiteral("box"), QStringLiteral("hidden"), QStringLiteral("icon"), QStringLiteral("iconLabel")});
     const bool weather = s.value(QStringLiteral("Taskbar/Weather"), true).toBool();
+    const bool taskView = s.value(QStringLiteral("Taskbar/TaskView"), true).toBool();
     // Present but empty (QSettings writes @Invalid() for an empty list): no pins, not the defaults.
     const QStringList pinned = s.contains(QStringLiteral("Taskbar/Pinned")) ? s.value(QStringLiteral("Taskbar/Pinned")).toStringList() : kDefaultPinned;
     const QString scheme = pick(s.value(QStringLiteral("Appearance/ColorScheme")).toString(), {QStringLiteral("dark"), QStringLiteral("light")});
@@ -76,13 +77,14 @@ void ShellSettings::load()
     const QString searchIcon = iconUrl(QStringLiteral("Appearance/SearchIcon"));
 
     Q_EMIT fileChanged();
-    if (alignment == m_alignment && search == m_searchMode && weather == m_showWeather && pinned == m_pinned
+    if (alignment == m_alignment && search == m_searchMode && weather == m_showWeather && taskView == m_showTaskView && pinned == m_pinned
         && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper && reduceMotion == m_reduceMotion && transparency == m_transparency
         && startIcon == m_startIcon && searchIcon == m_searchIcon)
         return;
     m_alignment = alignment;
     m_searchMode = search;
     m_showWeather = weather;
+    m_showTaskView = taskView;
     m_pinned = pinned;
     m_scheme = scheme;
     m_accent = accent;

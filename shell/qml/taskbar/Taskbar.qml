@@ -94,6 +94,7 @@ Window {
         // Task view (B04), after search as in Windows 11: KWin's Overview with the virtual desktops.
         TaskButton {
             id: taskViewButton
+            visible: ShellSettings.showTaskView
             anchors.verticalCenter: parent.verticalCenter
             // Windows' two-window picture (dark), traced from dark-100-01-taskbar.png; the glyph in light mode.
             iconSource: Theme.dark ? Metrics.assets + "taskview/task-view-dark.svg" : ""

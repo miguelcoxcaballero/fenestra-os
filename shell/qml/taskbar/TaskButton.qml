@@ -31,7 +31,14 @@ Item {
         readonly property bool lit: button.focused || button.checked || mouse.containsMouse
         // A window asking for attention: red plate without border (dark-100-24-caption-buttons:
         // Explorer flashing), until it is focused.
-        readonly property bool alert: button.attention && !button.focused
+        // As Windows: the button flashes ForegroundFlashCount times (7 by default, at the caret blink
+        // rate, 530 ms) and then stays lit until the window is activated.
+        readonly property bool asking: button.attention && !button.focused
+        property int flashes: 0
+        readonly property bool alert: asking && (flashes >= 14 || flashes % 2 === 0)
+        onAskingChanged: { flashes = 0; if (asking) flashTimer.restart(); else flashTimer.stop() }
+        Timer { id: flashTimer; interval: 530; repeat: true
+                onTriggered: { plate.flashes++; if (plate.flashes >= 14) stop() } }
         // Shown as a whole (opacity) so that it fades in and out without passing through black.
         opacity: lit || alert ? 1 : 0
         color: alert ? Metrics.themed("taskbar.plate.attention")
