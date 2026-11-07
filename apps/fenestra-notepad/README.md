@@ -80,7 +80,7 @@ the running window (or in a new window, see *Settings > Opening files*).
 
 ```sh
 # headless compositor only (never the real desktop)
-~/.local/bin/fenestra-test-run mutter --headless --wayland --no-x11 \
+~/.local/bin/fenestra-test-run dbus-run-session -- mutter --headless --wayland --no-x11 \
     --virtual-monitor 1920x1080 --wayland-display=fenestra-test &
 export WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland
 python3 tools/smoke-test.py          # ~150 checks: encodings, EOLs, save bytes, find/replace,
