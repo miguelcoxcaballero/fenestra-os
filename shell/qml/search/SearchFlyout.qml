@@ -9,7 +9,10 @@ import Fenestra.Shell
 
 ShellPopup {
     id: search
-    width: Metrics.searchWidth; height: Metrics.searchHeight
+    width: Metrics.searchWidth
+    // As Start: 726 px or what fits under a 47 px top margin (dark-150-10-search: 921 / 1.5 px).
+    height: targetScreen ? Math.min(Metrics.searchHeight, targetScreen.height - Metrics.taskbarHeight - Metrics.flyoutGap
+                                                          - Metrics.tok("start.margin.top", 47)) : Metrics.searchHeight
     property int selected: 0
     readonly property var flat: {
         const out = []
@@ -89,14 +92,10 @@ ShellPopup {
         y: search.top; width: parent.width; height: parent.height - y
         readonly property int headY: Metrics.tok("search.header.y", 29)
         readonly property var topApps: Usage.topApps(6)
-        readonly property var suggested: {
-            const out = Usage.recentSearches.slice(0, 11)
-            const seen = topApps.map(a => a.storageId)
-            for (const a of Usage.topApps(17))
-                if (out.length < 11 && seen.indexOf(a.storageId) < 0)
-                    out.push({ kind: "app", value: a.storageId, name: a.name, icon: a.icon })
-            return out
-        }
+        // Apps opened from Search, then Windows' suggestions (apps and Settings pages); typed
+        // queries never show here (Windows lists none, dark-100-10-search).
+        readonly property var suggested: { Usage.recentSearches; return Usage.suggested(11, []) }
+        readonly property bool fluentIcons: FluentFont.available
         Heading { x: search.colX; y: home.headY; text: Strings.tr("Suggested") }
         Column {
             x: search.colX; y: Metrics.tok("search.rows.y", 59)
@@ -109,34 +108,43 @@ ShellPopup {
                     color: hm.containsMouse ? Metrics.themed("start.hover") : "transparent"
                     readonly property int iconSize: Metrics.tok("search.row.icon", 24)
                     Image { x: 10; anchors.verticalCenter: parent.verticalCenter; width: parent.iconSize; height: width
+                            visible: modelData.kind === "app"
                             sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-                            source: modelData.kind === "query" ? Metrics.assets + "search/search.svg" : "image://icon/" + modelData.icon }
+                            source: visible ? "image://icon/" + modelData.icon : "" }
+                    // Settings pages: their 20 px Fluent glyph in the text colour, centred on the icon slot.
+                    readonly property var glyphs: ({ mail: ["\ue715", "mail-unread-symbolic"], sync: ["\ue895", "view-refresh-symbolic"],
+                                                     brush: ["\ue771", "applications-graphics-symbolic"], devices: ["\ue772", "bluetooth-active-symbolic"] })
+                    Text { visible: modelData.kind === "setting" && home.fluentIcons
+                           x: 10 + parent.iconSize / 2 - 10; width: 20; height: 20; anchors.verticalCenter: parent.verticalCenter
+                           text: visible ? parent.glyphs[modelData.glyph][0] : ""; color: Theme.text
+                           font.family: "Segoe Fluent Icons"; font.pixelSize: 20; renderType: Text.QtRendering }
+                    SymbolicIcon { visible: modelData.kind === "setting" && !home.fluentIcons; monochrome: true; size: 20
+                                   x: 12; anchors.verticalCenter: parent.verticalCenter
+                                   name: modelData.kind === "setting" ? parent.glyphs[modelData.glyph][1] : "" }
                     Text { x: Metrics.tok("search.row.text.x", 70) - search.colX; anchors.verticalCenter: parent.verticalCenter
                            width: parent.width - x - 8; elide: Text.ElideRight
                            text: modelData.name; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
                     MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true
-                        onClicked: modelData.kind === "app" ? (Usage.rememberApp(modelData.value), Apps.launch(modelData.value), search.close())
-                                                            : (entry.text = modelData.value) }
+                        onClicked: { if (modelData.kind === "app") { Usage.rememberApp(modelData.value); Apps.launch(modelData.value) }
+                                     else Apps.runCommand("fenestra-settings --page " + modelData.value)
+                                     search.close() } }
                 }
             }
-        }
-        Text {
-            visible: home.suggested.length === 0
-            x: search.colX; y: Metrics.tok("search.rows.y", 59) + 12
-            text: Strings.tr("Your recent searches will appear here.")
-            color: Metrics.themed("start.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
         }
 
         Heading { x: search.rightX; y: home.headY; text: Strings.tr("Quick searches") }
         MoreButton { x: search.rightX + search.rightWidth - 33; y: home.headY - 6 }
         Rectangle {
+            id: quickCard
             x: search.rightX; y: Metrics.tok("search.card.y", 61)
-            width: search.rightWidth; height: Metrics.tok("search.card.height", 150)
+            // Wraps its chips: 150 px with the reference's three rows, 20 px below the last row.
+            width: search.rightWidth; height: quickFlow.y + quickFlow.height - 4 + 20
             radius: Metrics.flyoutRadius
             color: Metrics.themed("search.card.fill")
             border.color: Metrics.themed("search.card.border")
             // Chips from x 12, 13 px label padding, 10 px apart, rows 42 px apart (dark-100-10-search).
             Flow {
+                id: quickFlow
                 x: 12; y: 18; width: parent.width - 16  // slack: Windows never wraps these six
                 spacing: 10
                 Repeater {
@@ -164,9 +172,9 @@ ShellPopup {
             }
         }
 
-        Heading { x: search.rightX + 1; y: Metrics.tok("search.apps.y", 234) - 4; text: Strings.tr("Top apps") }
+        Heading { x: search.rightX + 1; y: quickCard.y + quickCard.height + Metrics.tok("search.apps.y", 234) - 211 - 4; text: Strings.tr("Top apps") }
         Grid {
-            x: search.rightX; y: Metrics.tok("search.card.y", 61) + 200
+            x: search.rightX; y: quickCard.y + quickCard.height + 50
             columns: 3; spacing: Metrics.tok("search.tile.gap", 6)
             Repeater {
                 model: home.topApps

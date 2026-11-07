@@ -95,6 +95,9 @@ public:
     static Usage *instance();
     static Usage *create(QQmlEngine *, QJSEngine *);
     Q_INVOKABLE QVariantList topApps(int count) const; // most used, then Start pins
+    // Search home's left column: apps opened from Search, then Windows' own suggestions (apps and
+    // Settings pages) -- never typed queries. [{kind: app|setting, value, name, icon, glyph}]
+    Q_INVOKABLE QVariantList suggested(int count, const QStringList &exclude) const;
     QVariantList recentSearches() const;
     Q_INVOKABLE void rememberQuery(const QString &query);
     Q_INVOKABLE void rememberApp(const QString &storageId);

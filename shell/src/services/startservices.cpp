@@ -388,6 +388,51 @@ QVariantList Usage::topApps(int count) const
     return out;
 }
 
+QVariantList Usage::suggested(int count, const QStringList &exclude) const
+{
+    const bool es = QLocale().name().startsWith(QLatin1String("es"));
+    QVariantList out;
+    QStringList seen = exclude;
+    auto addApp = [&](const KService::Ptr &s) {
+        if (!s || seen.contains(s->storageId()) || out.size() >= count)
+            return false;
+        seen << s->storageId();
+        out.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("app")}, {QStringLiteral("value"), s->storageId()},
+                               {QStringLiteral("name"), s->name()}, {QStringLiteral("icon"), s->icon()}});
+        return true;
+    };
+    auto firstOf = [&](std::initializer_list<const char *> ids) {
+        for (const char *id : ids)
+            if (addApp(Apps::instance()->service(QLatin1String(id))))
+                return;
+    };
+    auto setting = [&](const char *page, const char *en, const char *esText, const char *glyph) {
+        if (out.size() < count)
+            out.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("setting")}, {QStringLiteral("value"), QLatin1String(page)},
+                                   {QStringLiteral("name"), QString::fromUtf8(es ? esText : en)}, {QStringLiteral("icon"), QString()},
+                                   {QStringLiteral("glyph"), QLatin1String(glyph)}});
+    };
+    // Apps opened from Search, newest first.
+    for (const QVariantMap &e : m_entries)
+        if (e.value(QStringLiteral("kind")) == QLatin1String("app"))
+            addApp(Apps::instance()->service(e.value(QStringLiteral("value")).toString()));
+    // Windows 11 26100's list (dark-100-10-search), with this system's equivalents; Get Started and
+    // OneDrive have none.
+    addApp(KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/https")));
+    setting("fx-online-accounts", "Email & accounts", "Correo electrónico y cuentas", "mail");
+    firstOf({"org.kde.spectacle.desktop", "org.gnome.Screenshot.desktop"});
+    setting("update", "Check for updates", "Buscar actualizaciones", "sync");
+    firstOf({"org.fenestra.Paint.desktop"});
+    setting("themes", "Themes and related settings", "Temas y configuración relacionada", "brush");
+    firstOf({"org.gnome.Calculator.desktop", "org.kde.kcalc.desktop", "gnome-calculator.desktop"});
+    setting("devices", "Bluetooth and other devices settings", "Configuración de Bluetooth y otros dispositivos", "devices");
+    firstOf({"org.gnome.Nautilus.desktop", "org.kde.dolphin.desktop"});
+    // Then the most used apps.
+    for (const QVariant &a : topApps(count + exclude.size() + 8))
+        addApp(Apps::instance()->service(a.toMap().value(QStringLiteral("storageId")).toString()));
+    return out;
+}
+
 QVariantList Usage::recentSearches() const
 {
     QVariantList out;
