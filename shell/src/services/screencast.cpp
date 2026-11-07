@@ -8,6 +8,7 @@
 #include <QDBusUnixFileDescriptor>
 #include <QGuiApplication>
 #include <QThread>
+#include <QUrl>
 
 #include <fcntl.h>
 #include <memory>
@@ -226,7 +227,8 @@ void WindowSnapshot::capture(const QString &uuid)
 QImage WindowSnapshotProvider::requestImage(const QString &id, QSize *size, const QSize &requested)
 {
     // <uuid>/<serial>
-    QImage img = WindowSnapshot::instance()->image(id.section(QLatin1Char('/'), 0, 0));
+    // The uuid is percent-encoded by the caller (its braces would be anyway).
+    QImage img = WindowSnapshot::instance()->image(QUrl::fromPercentEncoding(id.section(QLatin1Char('/'), 0, 0).toUtf8()));
     if (!img.isNull() && requested.isValid() && !requested.isEmpty())
         img = img.scaled(requested, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     if (size)

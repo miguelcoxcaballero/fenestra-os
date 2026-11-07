@@ -184,7 +184,7 @@
       }
     },
     "fade": {
-      "what": "taskbar thumbnail previews, Snap layouts",
+      "what": "Snap layouts",
       "source": "assumption: no frames; WinUI fast fade (167 ms in on the open curve, 83 ms out)",
       "open": {
         "ms": 167,
@@ -234,7 +234,37 @@
       ],
       "fade_ms": 167
     },
-    "task_view": "Task view is KWin's Overview effect, not a shell popup: not changed here"
+    "task_view": "Task view is KWin's Overview effect, not a shell popup: not changed here",
+    "preview": {
+      "what": "taskbar thumbnail previews (B03)",
+      "source": "reference VM 2026-11-07, 150 %, QMP screendumps every 20-45 ms (reference-shots/motion-preview-2026-11-07: open1, m2, s3, lv1, hv, cb); times are from the button's hover-plate onset (the VM shows input ~115-140 ms late)",
+      "open": {
+        "delay_ms": 400,
+        "kind": "taskbar",
+        "ms": 250,
+        "bezier": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "note": "rises from behind the taskbar's top edge, opaque; panel top 233/72/34/19/6/0 px from rest at +12/56/97/139/181/227 ms: cubic-bezier(0,0,0,1) over 250 ms within 5 % of the travel"
+      },
+      "switch": {
+        "delay_ms": 240,
+        "motion": "none",
+        "note": "the new group's panel replaces the old one in place"
+      },
+      "close": {
+        "delay_ms": 490,
+        "ms": 0,
+        "note": "gone between two frames 30 ms apart: no fade, no slide"
+      },
+      "hover": {
+        "slot_ms": 0,
+        "close_button_ms": 83
+      }
+    }
   },
   "fenestra_bench": {
     "how": "MOTION=1 tests/shell-kwin/build.sh (motion.py: GrabScopes frames 14-54 ms apart, software renderer, 2026-11-07)",

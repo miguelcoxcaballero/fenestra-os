@@ -251,6 +251,7 @@ Window {
     // B07: opens at the pointer, its bottom-left corner on the taskbar's top edge (no gap).
     function openBarMenu(x) { barMenu.anchorX = -1; barMenu.anchorLeft = x; barMenu.open() }
     function testPreview(i) { showPreview(taskRepeater.itemAt(i)) }
+    function testPreviewHot(slot) { preview.testHot = slot }
     function testOverflow() { tray.testOverflow() }
     function testWidgets(byClick) { weather.testOpenBoard(byClick) }
     function testPreviewShown() { return preview.shown }
@@ -259,10 +260,11 @@ Window {
     function testMenuOfTray(row) { tray.testMenu(row) }
     function testCloseFlyouts() { preview.close(); appMenu.close(); barMenu.close(); tray.testCloseFlyouts() }
 
-    // Hover previews (B03), as Windows 11 (recorded on the reference VM, design/motion.json "preview"):
-    // resting on a button with windows opens its preview after motion.preview.delay; while a preview
-    // is up, moving to another button with windows switches to its windows at once; leaving the
-    // buttons and the preview closes it after motion.preview.hide.
+    // Hover previews (B03), as Windows 11 (recorded on the reference VM at 150 %, design/motion.json
+    // "preview"): resting on a button with windows opens its preview after motion.preview.delay
+    // (400 ms, Windows' mouse hover time); while a preview is up, resting on another button with
+    // windows swaps the panel in place after motion.preview.switch (~240 ms, no motion); leaving the
+    // buttons and the preview hides it at once after motion.preview.hide (~490 ms).
     function showPreview(b) {
         if (!b || b.windowCount === 0) return
         closeTimer.stop()
@@ -273,8 +275,8 @@ Window {
     function taskHovered(b, hovered) {
         if (hovered && b.windowCount > 0 && bar.dragFrom < 0) {
             previewTimer.owner = b
-            if (preview.shown) showPreview(b)
-            else previewTimer.restart()
+            previewTimer.interval = preview.shown ? Tokens.v("motion.preview.switch", 240) : Metrics.previewDelay
+            previewTimer.restart()
         } else if (!hovered) {
             if (previewTimer.owner === b) previewTimer.stop()
             closeTimer.restart()
@@ -291,7 +293,7 @@ Window {
     }
     Timer {
         id: closeTimer
-        interval: Tokens.v("motion.preview.hide", 300)
+        interval: Tokens.v("motion.preview.hide", 490)
         onTriggered: if (!preview.keepOpen && !(preview.owner && preview.owner.hovered)) preview.close()
     }
 
