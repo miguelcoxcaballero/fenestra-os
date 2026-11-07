@@ -14,7 +14,7 @@ ENGINE=${ENGINE:-podman}
 IMAGE=${IMAGE:-fenestra-kwinlab}
 
 if [ "${1:-}" = --remove ]; then
-    rm -f "$DROPIN"; systemctl --user daemon-reload
+    rm -f "$DROPIN" "$HOME/.local/share/applications/org.fenestra.Shell-user.desktop"; systemctl --user daemon-reload
     echo "removed; restart the shell: systemctl --user restart fenestra-shell"
     exit 0
 fi
@@ -39,6 +39,15 @@ for d in "$REPO"/assets/generated/*/; do
     mkdir -p "$SA.new/$n"; cp -a "$d". "$SA.new/$n/"
 done
 rm -rf "$SA"; mv "$SA.new" "$SA"
+
+# KWin grants window management / screenshots only to the executable named in a .desktop
+# file's Exec (X-KDE-Wayland-Interfaces): give this build its own entry.
+APPS=$HOME/.local/share/applications
+mkdir -p "$APPS"
+sed "s|^Exec=.*|Exec=$PREFIX/bin/fenestra-shell|" "$REPO/shell/data/org.fenestra.Shell.desktop" > "$APPS/org.fenestra.Shell-user.desktop"
+
+# KWin looks the entry up in the KService cache: refresh it (a running KWin picks it up).
+kbuildsycoca6 >/dev/null 2>&1 || true
 
 mkdir -p "$(dirname "$DROPIN")"
 cat > "$DROPIN" <<EOF
