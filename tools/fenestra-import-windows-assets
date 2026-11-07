@@ -737,7 +737,7 @@ GLYPH_TARGETS = {
     'view-pin': ['asset:menu-icons/win11-explorer-pin.svg'],
     'emblem-shared': ['asset:menu-icons/win11-menu-share.svg'],
     # Quick Settings
-    'preferences-system': ['shell:emblem-system-symbolic', 'asset:menu-icons/win11-menu-settings.svg'],
+    'preferences-system': ['shell:emblem-system-symbolic', 'asset:menu-icons/win11-menu-settings.svg', 'asset:menu-icons/shell-settings.svg'],
     'accessibility': ['icon:preferences-desktop-accessibility-symbolic', 'asset:security/accessibility.svg'],
     'airplane-mode': ['icon:airplane-mode-symbolic'],
     'night-light': ['icon:night-light-symbolic'],
