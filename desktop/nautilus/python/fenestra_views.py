@@ -9,7 +9,7 @@ from fenestra_sidebar import FenestraSidebar, GALLERY
 from fenestra_pages import SpecialPages, gallery_folders
 from fenestra_menus import CommandMenus
 
-from fenestra_sidebar import _L, tr
+from fenestra_sidebar import _L, _LANG, tr
 _L.setdefault('es', {}).update({'Extra large icons': 'Iconos muy grandes', 'Large icons': 'Iconos grandes', 'Medium icons': 'Iconos medianos',
     'Small icons': 'Iconos pequeños', 'List': 'Lista', 'Details': 'Detalles', 'Tiles': 'Mosaicos', 'Content': 'Contenido', 'Sort': 'Ordenar', 'Compact view': 'Vista compacta', 'View': 'Ver', '1 item': '1 elemento', '%d items': '%d elementos',
     'Date modified': 'Fecha de modificación', 'This folder is empty.': 'Esta carpeta está vacía.',
@@ -62,12 +62,68 @@ def windows_size(gfile):
     return f'{kb:,}'.replace(',','.')+' KB'
 
 
+# Explorer's Type column for the extensions a clean Windows 11 registers (es-ES / en-US); those
+# extensions are also hidden in the Name column ("Hide extensions for known file types").
+# Anything else reads "Archivo EXT" / "EXT File" and keeps its extension, like «Archivo MD».
+_ES=_LANG=='es'
+WINDOWS_TYPES={
+    'txt':('Documento de texto','Text Document'),'log':('Documento de texto','Text Document'),
+    'ini':('Opciones de configuración','Configuration settings'),
+    'jpg':('Archivo JPG','JPG File'),'jpeg':('Archivo JPEG','JPEG File'),'png':('Archivo PNG','PNG File'),
+    'gif':('Archivo GIF','GIF File'),'bmp':('Archivo BMP','BMP File'),'webp':('Archivo WEBP','WEBP File'),
+    'svg':('Archivo SVG','SVG File'),'ico':('Icono','Icon'),'tif':('Archivo TIF','TIF File'),'tiff':('Archivo TIFF','TIFF File'),
+    'wav':('Archivo WAV','WAV File'),'mp3':('Archivo MP3','MP3 File'),'wma':('Archivo WMA','WMA File'),
+    'flac':('Archivo FLAC','FLAC File'),'m4a':('Archivo M4A','M4A File'),'ogg':('Archivo OGG','OGG File'),
+    'mp4':('Archivo MP4','MP4 File'),'mkv':('Archivo MKV','MKV File'),'avi':('Archivo AVI','AVI File'),
+    'mov':('Archivo MOV','MOV File'),'wmv':('Archivo WMV','WMV File'),'webm':('Archivo WEBM','WEBM File'),
+    'zip':('Carpeta comprimida (en zip)','Compressed (zipped) Folder'),
+    'pdf':('Documento PDF','PDF Document'),'htm':('Documento HTML','HTML Document'),'html':('Documento HTML','HTML Document'),
+    'xml':('Documento XML','XML Document'),'json':('Archivo JSON','JSON File'),'csv':('Archivo CSV','CSV File'),
+    'rtf':('Formato de texto enriquecido','Rich Text Format'),'exe':('Aplicación','Application'),
+    'lnk':('Acceso directo','Shortcut'),'url':('Acceso directo a Internet','Internet Shortcut'),
+    'ttf':('Archivo de fuente TrueType','TrueType font file'),'otf':('Archivo de fuente OpenType','OpenType font file'),
+}
+
+
+def _split_ext(name):
+    stem,dot,ext=name.rpartition('.')
+    return (stem,ext.lower()) if dot and stem and not stem.endswith('.') else (name,'')
+
+
+def windows_type(gfile):
+    """Explorer's Type column: «Carpeta de archivos», the registered type name, else «Archivo EXT»."""
+    try:
+        info=gfile.query_info('standard::type,standard::display-name',Gio.FileQueryInfoFlags.NONE,None)
+    except GLib.Error:
+        return None
+    if info.get_file_type()==Gio.FileType.DIRECTORY:return 'Carpeta de archivos' if _ES else 'File folder'
+    _stem,ext=_split_ext(info.get_display_name())
+    if ext in WINDOWS_TYPES:return WINDOWS_TYPES[ext][0 if _ES else 1]
+    if not ext:return 'Archivo' if _ES else 'File'
+    return f'Archivo {ext.upper()}' if _ES else f'{ext.upper()} File'
+
+
+def windows_name(gfile,text):
+    """The Name column hides the extension of the types above (not of folders or unknown types)."""
+    stem,ext=_split_ext(text)
+    if ext not in WINDOWS_TYPES:return text
+    try:
+        if gfile.query_file_type(Gio.FileQueryInfoFlags.NONE,None)==Gio.FileType.DIRECTORY:return text
+    except GLib.Error:
+        return text
+    return stem
+
+
 def _reformat(label,role,cell):
     if getattr(label,'_windows_busy',False):return
     text=label.get_label() or ''
     if role=='date':
         m=_NAUTILUS_DATE.match(text)
         new=f'{int(m.group(1)):02d}/{int(m.group(2)):02d}/{m.group(3)} {m.group(4)}' if m else text
+    elif role in ('type','name'):
+        gfile=_cell_file(cell)
+        new=(windows_type(gfile) if role=='type' else windows_name(gfile,text)) if gfile else None
+        if new is None:new=text
     else:
         gfile=_cell_file(cell)
         new=windows_size(gfile) if gfile else None
@@ -525,7 +581,7 @@ class FenestraViews:
                         width={'Name':258,'Nombre':258,tr('Date modified'):144,'Type':120,'Tipo':120,'Size':80,'Tamaño':80}.get(title)
                         if width:column.set_fixed_width(width);column.set_expand(False);column.set_resizable(True)
                         column._windows_width_set=True
-                    role={tr('Date modified'):'date','Size':'size','Tamaño':'size'}.get(title)
+                    role={tr('Date modified'):'date','Size':'size','Tamaño':'size','Type':'type','Tipo':'type','Name':'name','Nombre':'name'}.get(title)
                     factory=column.get_factory()
                     if role and factory and not getattr(factory,'_windows_cells',False):
                         factory._windows_cells=True

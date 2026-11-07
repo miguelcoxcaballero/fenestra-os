@@ -79,6 +79,14 @@ class FenestraSidebar:
             parent=row.get_parent()
             if isinstance(parent,Gtk.ListBox) and parent not in self.lists:
                 self.lists.add(parent)
+                # Explorer keeps keyboard focus in the navigation pane after a click (its selection
+                # stays blue); Nautilus moves it to the view once the location loads.
+                def keep_focus(_lb,row):
+                    def again():
+                        if row.get_mapped():row.grab_focus()
+                        return GLib.SOURCE_REMOVE
+                    for ms in (150,600):GLib.timeout_add(ms,again)
+                parent.connect('row-activated',keep_focus)
                 def rank_of(r):
                     uri=r.get_property('uri') if r.find_property('uri') else None
                     return self.entries.get(uri,(60,''))[0]
