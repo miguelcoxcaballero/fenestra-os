@@ -366,11 +366,13 @@ class TaskWindow(Gtk.ApplicationWindow):
             m.add(b.text, lambda b=b: b.emit("clicked"), icon_name=b.icon_name, sensitive=b.get_sensitive())
         if hidden:
             m.add_separator()
-        if self.current is not None:
-            self.current.more_menu(m)
-        m.add(_("Always on top"), lambda: self._toggle_opt("always_on_top"),
-              check=util.opts()["always_on_top"])
-        m.add(_("Settings"), lambda: self.navigate("settings"), icon_name="tm-settings-symbolic")
+        complete = self.current is not None and self.current.more_menu(m)
+        if complete:
+            m.add_css_class("more-menu")
+        else:  # pages whose menu is not the reference's own keep the general items
+            m.add(_("Always on top"), lambda: self._toggle_opt("always_on_top"),
+                  check=util.opts()["always_on_top"])
+            m.add(_("Settings"), lambda: self.navigate("settings"), icon_name="tm-settings-symbolic")
         m.set_position(Gtk.PositionType.BOTTOM)
         m.popup()
 

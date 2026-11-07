@@ -134,6 +134,10 @@ popover.fluent-menu button.menu-item, .menu-shot.fluent-menu button.menu-item {
 .fluent-menu button.menu-item:hover { background-color: var(--hover); }
 .fluent-menu button.menu-item:disabled { color: var(--fg3); }
 .menu-shortcut { color: var(--fg2); font-size: 12px; }
+/* Processes "..." menu (reference: 160 x 42 box, glyph 13 px and text 39 px from its edge,
+   chevron 21 px from the right) */
+.fluent-menu.more-menu button.menu-item { min-width: 132px; padding: 0 12px 0 6px; }
+.fluent-menu button.submenu-row .menu-chevron { color: var(--fg2); }
 .menu-sep { min-height: 1px; background-color: var(--line); margin: 4px 0; }
 
 /* ------------------------------------------------------------- dialogs */
