@@ -157,7 +157,7 @@ class Menu(Gtk.Popover):
         return False
 
     def add(self, text, cb=None, icon_name=None, sensitive=True, check=None, shortcut=None, default=False,
-            selected=None):
+            selected=None, keep_open=False):
         """selected (True/False): combo-box list item, the current one marked with an accent pill."""
         b = Gtk.Button()
         b.add_css_class("menu-item")
@@ -188,11 +188,44 @@ class Menu(Gtk.Popover):
         b.set_sensitive(sensitive)
 
         def clicked(*_):
+            if keep_open:
+                if cb:
+                    cb()
+                return
             self.popdown()
             if cb:
                 GLib.idle_add(lambda: (cb(), False)[1])
         b.connect("clicked", clicked)
         self.box.append(b)
+        return b
+
+    def add_submenu(self, text, fill, icon_name=None):
+        """A row with a chevron that opens a second menu beside it (click or hover);
+        fill(menu) adds its items."""
+        state = {"sub": None}
+
+        def open_sub(*_):
+            if state["sub"] is not None and state["sub"].get_visible():
+                return
+            sub = Menu(b)
+            fill(sub)
+            sub.set_position(Gtk.PositionType.RIGHT)
+            sub.set_halign(Gtk.Align.START)
+            sub.connect("closed", lambda *_: self.popdown() if not b.get_state_flags() & Gtk.StateFlags.PRELIGHT else None)
+            state["sub"] = sub
+            sub.popup()
+        b = self.add(text, open_sub, icon_name=icon_name, keep_open=True)
+        b.add_css_class("submenu-row")
+        b.get_child().set_spacing(8)  # reference: text 12 px after the glyph
+        chev = icon("tm-chevron-right-symbolic", 12)
+        chev.set_hexpand(True)
+        chev.set_halign(Gtk.Align.END)
+        chev.add_css_class("menu-chevron")
+        b.get_child().append(chev)
+        motion = Gtk.EventControllerMotion()
+        motion.connect("enter", lambda *_: GLib.timeout_add(
+            300, lambda: (bool(b.get_state_flags() & Gtk.StateFlags.PRELIGHT) and open_sub(), False)[1]))
+        b.add_controller(motion)
         return b
 
     def add_separator(self):
@@ -218,6 +251,8 @@ class Menu(Gtk.Popover):
         frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         frame.add_css_class("menu-shot")
         frame.add_css_class("classic-menu" if self.has_css_class("classic-menu") else "fluent-menu")
+        if self.has_css_class("more-menu"):
+            frame.add_css_class("more-menu")
         self.set_child(None)
         frame.append(self.box)
         frame.selected_index = getattr(self, "selected_index", None)

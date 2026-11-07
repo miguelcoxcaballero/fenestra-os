@@ -283,6 +283,15 @@ window.win11-explorer, window.win11-explorer label { font-family: "Segoe UI Vari
 .win11-explorer .win11-navigation > button,
 .win11-explorer .win11-navigation .history-controls button { min-width: 40px; min-height: 32px; padding: 0; margin: 0 4px 0 0; border-radius: 4px; }
 .win11-explorer .win11-navigation button image { -gtk-icon-size: 16px; }
+/* Disabled Back / Forward and command-bar glyphs: Explorer draws them at ~36 % of the enabled
+   glyph (dark: #757575 peak on #2c2c2c, light: #a4a4a4 on #f8f8f8), not libadwaita's double dimming. */
+window.win11-explorer:not(.win11-chooser) .win11-navigation button:disabled,
+window.win11-explorer:not(.win11-chooser) .win11-commandbar button:disabled { filter: none; opacity: 1; }
+window.win11-explorer:not(.win11-chooser) .win11-navigation button:disabled image,
+window.win11-explorer:not(.win11-chooser) .win11-commandbar button:disabled image { opacity: 0.42; filter: none; }
+/* Back / Forward are symbolic (recoloured) icons, unlike the white win11-explorer-* glyphs:
+   colour them instead of inverting them in light mode. */
+window.win11-explorer:not(.win11-chooser) .win11-navigation box.start > stack > widget > box > button image { color: #ffffff; -gtk-icon-filter: none; }
 .win11-explorer .win11-navigation .win11-search { min-width: 260px; min-height: 30px; padding: 0 12px; margin-left: 8px; border-radius: 4px; background: #2b2b2b; border: 0; color: #c5c5c5; }
 .win11-explorer .win11-navigation .win11-search label { font-size: 13px; color: #c5c5c5; }
 .win11-explorer .win11-commandbar { min-height: 46px; padding: 0 8px; border-bottom: 1px solid #2b2b2b; }
@@ -317,7 +326,7 @@ window.win11-explorer, window.win11-explorer label { font-family: "Segoe UI Vari
 .win11-explorer .fenestra-page label { font-size: 12px; color: #ffffff; }
 .win11-explorer .fenestra-section-header { margin: 3px 0 0 12px; min-height: 38px; padding: 0 14px 0 16px; border-radius: 4px; border: 2px solid transparent; background: transparent; box-shadow: none; }
 .win11-explorer .fenestra-section-header:hover { background: #2d2d2d; }
-.win11-explorer .fenestra-section-header:focus-visible, .win11-explorer .fenestra-section-header:focus-within { border-color: #ffffff; outline: none; }
+.win11-explorer .fenestra-section-header:focus-visible, .win11-explorer .fenestra-section-header:focus-within:focus-visible { border-color: #ffffff; outline: none; }
 .win11-explorer .fenestra-section-header:checked { background: transparent; }
 .win11-explorer .fenestra-page .fenestra-section-title { font-size: 14px; font-weight: 600; }
 .win11-explorer .fenestra-quick-grid { margin: 2px 0 0 80px; padding: 0; }
@@ -397,6 +406,7 @@ popover.fenestra-winmenu .fenestra-winmenu-label { font-size: 14px; font-weight:
 popover.fenestra-winmenu .fenestra-winmenu-icon { margin: 0 2px 0 11px; }
 popover.fenestra-winmenu .fenestra-winmenu-icon + .fenestra-winmenu-label { margin-left: 9px; }
 popover.fenestra-winmenu .fenestra-winmenu-mark { font-size: 15px; color: #d0d0d0; }
+popover.fenestra-winmenu .fenestra-winmenu-dot { min-width: 6px; min-height: 6px; border-radius: 3px; background-color: currentColor; }
 popover.fenestra-winmenu .fenestra-winmenu-accel { font-size: 12px; color: #c5c5c5; margin-left: 24px; }
 popover.fenestra-winmenu .fenestra-winmenu-chevron { margin-left: 24px; }
 popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; background: #3d3d3d; margin: 0 0 1px 0; }
@@ -446,6 +456,8 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
 .win11-explorer .fenestra-statusbar button { min-width: 22px; min-height: 20px; padding: 0; margin: 2px 1px; border-radius: 3px; background: transparent; box-shadow: none; }
 .win11-explorer .fenestra-statusbar button:checked { background: #3a3a3a; }
 .win11-explorer .win11-commandbar separator.win11-cmd-separator { margin: 8px 4px; background: #2c2c2c; }
+window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search label.win11-search-label { color: #cfcfcf; } /* reference «Buscar en …» */
+window.win11-explorer:not(.win11-chooser) .win11-commandbar separator.win11-cmd-separator { margin: 8px 3px; } /* groups at the reference x in folder views (cut 537, Ordenar 825, Ver 935) */
 .win11-explorer .fenestra-crumbs .fenestra-crumb-sep { margin: 0 10px; }
 .win11-explorer .fenestra-crumbs .fenestra-crumb-lead { margin: 0 12px 0 20px; }
 .win11-explorer .fenestra-crumbs button { padding-left: 12px; }
@@ -473,8 +485,10 @@ popover.fenestra-winmenu separator.fenestra-winmenu-sep { min-height: 1px; backg
    (window 1125 x 634 at 100 %, both themes; tests/explorer-window/ renders the same views).
    Scoped to the Explorer window, not the open / save dialog (window.win11-chooser). ---- */
 /* Caption buttons 46 x 33 at the top; 10 px glyphs centred 14 px down (not in the 38 px band). */
-window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols { margin-bottom: 5px; }
-window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { min-height: 26px; padding: 1px 0 6px 0; }
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols { margin-bottom: 9px; }
+/* Caption buttons as in the reference: 45 x 29, 1 px apart, glyphs 9 px from the top. */
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { min-width: 45px; min-height: 20px; padding: 4px 0 5px 0; }
+window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button:not(:first-child) { margin-left: 1px; }
 window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button image { -gtk-icon-size: 20px; }
 window.win11-explorer:not(.win11-chooser) .win11-titlebar .win11-new-tab { margin-top: 10px; }
 window.win11-explorer:not(.win11-chooser) .win11-tabs .tab-close-button { margin: 0 6px 4px 4px; }
@@ -514,7 +528,11 @@ window.win11-explorer:not(.win11-chooser) columnview row .column-name-labels-box
 /* Navigation pane: rows 154 px wide from x 2, text at 55 px; selection #505050 + focus border. */
 window.win11-explorer:not(.win11-chooser) placessidebar row, window.win11-explorer:not(.win11-chooser) .navigation-sidebar row { margin: 0 1px 0 2px; padding-left: 26px; border-radius: 0; }
 window.win11-explorer:not(.win11-chooser) .navigation-sidebar row label { color: #ffffff; }
-window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:selected, window.win11-explorer:not(.win11-chooser) placessidebar row:selected { background: #505050; box-shadow: inset 0 0 0 1px #c3c3c3; }
+/* Tree chevrons of This PC / Network (fenestra_sidebar.py): x 14-19 in the pane, as in the reference. */
+window.win11-explorer:not(.win11-chooser) placessidebar row.fenestra-tree { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2712%27%20height%3D%2712%27%20viewBox%3D%270%200%2012%2012%27%3E%3Cpath%20fill%3D%27%23ffffff%27%20d%3D%27M4.65%202.15a.5.5%200%200%200%200%20.7L7.79%206%204.65%209.15a.5.5%200%201%200%20.7.7l3.5-3.5a.5.5%200%200%200%200-.7l-3.5-3.5a.5.5%200%200%200-.7%200%27%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-size: 12px 12px; background-position: 10px center; }
+/* Navigation pane selection: grey without focus (Home as opened), focused colours once the pane has focus. */
+window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:selected, window.win11-explorer:not(.win11-chooser) placessidebar row:selected { background: #333333; box-shadow: inset 0 0 0 1px #2a2a2a; }
+window.win11-explorer:not(.win11-chooser) .navigation-sidebar:focus-within row:selected, window.win11-explorer:not(.win11-chooser) placessidebar:focus-within row:selected { background: #505050; box-shadow: inset 0 0 0 1px #c3c3c3; }
 window.win11-explorer:not(.win11-chooser) .navigation-sidebar image.fenestra-pin { margin-right: 3px; }
 /* Status bar: view toggles 24 x 24, the active one bordered. */
 window.win11-explorer:not(.win11-chooser) .fenestra-statusbar { padding-right: 4px; }
@@ -575,8 +593,16 @@ window.win11-explorer:not(.win11-chooser) .fenestra-location-box > button image 
 /* Light (the VM draws the title bar and navigation row solid, without Mica). */
 @media (prefers-color-scheme: light) {
   window.win11-explorer:not(.win11-chooser) .win11-titlebar { background: #e8e8e8; }
+  /* tabs: the active one continues the #f8f8f8 navigation row, a hovered inactive one is #dfdfdf */
+  window.win11-explorer:not(.win11-chooser) .win11-tabs tab:selected, window.win11-explorer:not(.win11-chooser) .win11-tabs tab:checked { background-color: #f8f8f8; }
+  window.win11-explorer:not(.win11-chooser) .win11-tabs tab:hover:not(:selected):not(:checked) { background-color: #dfdfdf; }
+  window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { color: #000000; }
   window.win11-explorer:not(.win11-chooser) .win11-navigation { background: #f8f8f8; border-top: 1px solid #dadada; border-bottom: 1px solid #d6d6d6; }
   window.win11-explorer:not(.win11-chooser) .fenestra-crumbs, window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search, window.win11-explorer:not(.win11-chooser) #NautilusPathBar { background: #fdfdfd; border: 0; }
+  window.win11-explorer:not(.win11-chooser) .win11-navigation box.linked.fenestra-crumbs { background: #fdfdfd; }
+  window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search label.win11-search-label { color: #5f5f5f; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-crumbs button image { -gtk-icon-filter: invert(0.9); }
+  window.win11-explorer:not(.win11-chooser) .win11-navigation box.start > stack > widget > box > button image { color: #1a1a1a; -gtk-icon-filter: none; }
   window.win11-explorer:not(.win11-chooser) .win11-commandbar { border-bottom: 1px solid #d6d6d6; }
   window.win11-explorer:not(.win11-chooser) columnview > header > button { border-right: 1px solid #e5e5e5; color: #4c607a; }
   window.win11-explorer:not(.win11-chooser) columnview > header > button label { color: #4c607a; }
@@ -586,7 +612,8 @@ window.win11-explorer:not(.win11-chooser) .fenestra-location-box > button image 
   window.win11-explorer:not(.win11-chooser) columnview row label, window.win11-explorer:not(.win11-chooser) columnview row label.dim-label { color: #6d6d6d; }
   window.win11-explorer:not(.win11-chooser) columnview row .column-name-labels-box label { color: #000000; }
   window.win11-explorer:not(.win11-chooser) .navigation-sidebar row label { color: #000000; }
-  window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:selected, window.win11-explorer:not(.win11-chooser) placessidebar row:selected { background: #cce8ff; box-shadow: inset 0 0 0 1px #000000; }
+  window.win11-explorer:not(.win11-chooser) .navigation-sidebar row:selected, window.win11-explorer:not(.win11-chooser) placessidebar row:selected { background: #d9d9d9; box-shadow: inset 0 0 0 1px #949494; }
+  window.win11-explorer:not(.win11-chooser) .navigation-sidebar:focus-within row:selected, window.win11-explorer:not(.win11-chooser) placessidebar:focus-within row:selected { background: #cce8ff; box-shadow: inset 0 0 0 1px #000000; }
   window.win11-explorer:not(.win11-chooser) .navigation-sidebar separator.fenestra-sidebar-sep { background: #d6d6d6; }
   window.win11-explorer:not(.win11-chooser) placessidebar, window.win11-explorer:not(.win11-chooser) placessidebar > scrolledwindow, window.win11-explorer:not(.win11-chooser) placessidebar .navigation-sidebar { border-right-color: #ffffff; }
   window.win11-explorer:not(.win11-chooser) label.win11-status, window.win11-explorer:not(.win11-chooser) .fenestra-statusbar { background: #ffffff; }
@@ -598,6 +625,10 @@ window.win11-explorer:not(.win11-chooser) .fenestra-location-box > button image 
   window.win11-explorer:not(.win11-chooser) .fenestra-search-container entry.search { background: #ffffff; box-shadow: inset 0 -2px #0067c0; color: #1b1b1b; }
   window.win11-explorer:not(.win11-chooser) .fenestra-infopane-band { background: #f9f9f9; }
   window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share { background: #fbfbfb; box-shadow: inset 0 0 0 1px #e5e5e5; }
+  window.win11-explorer:not(.win11-chooser) .fenestra-infopane-share image { -gtk-icon-filter: invert(0.9); opacity: 0.75; }
+  window.win11-explorer:not(.win11-chooser) placessidebar row.fenestra-tree { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2712%27%20height%3D%2712%27%20viewBox%3D%270%200%2012%2012%27%3E%3Cpath%20fill%3D%27%231a1a1a%27%20d%3D%27M4.65%202.15a.5.5%200%200%200%200%20.7L7.79%206%204.65%209.15a.5.5%200%201%200%20.7.7l3.5-3.5a.5.5%200%200%200%200-.7l-3.5-3.5a.5.5%200%200%200-.7%200%27%2F%3E%3C%2Fsvg%3E"); }
+  /* context menus: the pale glyph colours drawn for the dark menu read as #555 on the light one */
+  window.win11-explorer:not(.win11-chooser) popover.menu modelbutton image, window.win11-explorer:not(.win11-chooser) popover.menu .fenestra-iconic image { -gtk-icon-filter: grayscale(0.6) brightness(0.5); }
   window.win11-explorer:not(.win11-chooser) popover.menu > contents { background: #f9f9f9; border: 1px solid #eaeaea; }
   window.win11-explorer:not(.win11-chooser) popover.menu modelbutton:hover { background: #f0f0f0; }
   window.win11-explorer:not(.win11-chooser) popover.menu modelbutton label { color: #1b1b1b; }
@@ -895,7 +926,7 @@ window.background.csd headerbar.header-bar.titlebar windowcontrols button.titleb
   .win11-explorer .fenestra-page, .win11-explorer .fenestra-page > viewport { background: #ffffff; }
   .win11-explorer .fenestra-page label { color: #1a1a1a; }
   .win11-explorer .fenestra-section-header:hover { background: #f0f0f0; }
-  .win11-explorer .fenestra-section-header:focus-visible, .win11-explorer .fenestra-section-header:focus-within { border-color: #1a1a1a; }
+  .win11-explorer .fenestra-section-header:focus-visible, .win11-explorer .fenestra-section-header:focus-within:focus-visible { border-color: #1a1a1a; }
   .win11-explorer .fenestra-quick-grid > flowboxchild:hover { background: #f0f0f0; }
   .win11-explorer .fenestra-quick-grid > flowboxchild:selected { background: #e5e5e5; }
   .win11-explorer .fenestra-page .fenestra-tile-sub { color: #5f5f5f; }

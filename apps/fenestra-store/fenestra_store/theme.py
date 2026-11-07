@@ -28,7 +28,7 @@ ACCENTS = {
 DARK = {
     "bg": "#202020", "content": "#272727", "content-border": "#1d1d1d",
     "card": "#323232", "card-hover": "#363636", "card-press": "#2e2e2e", "card-border": "#232323",
-    "fg": "#ffffff", "fg2": "#cfcfcf", "fg3": "#7e7e7e",
+    "fg": "#ffffff", "fg2": "#cfcfcf", "fg3": "#7e7e7e", "caption-fg": "#ffffff",
     "ctl": "#2d2d2d", "ctl-hover": "#323232", "ctl-press": "#272727",
     "ctl-border": "#353535", "ctl-border-bottom": "#303030",
     "input": "#2d2d2d", "input-hover": "#323232", "input-focus": "#1f1f1f", "input-border": "#353535",
@@ -47,7 +47,7 @@ DARK = {
 LIGHT = {
     "bg": "#f3f3f3", "content": "#f9f9f9", "content-border": "#e5e5e5",
     "card": "#fdfdfd", "card-hover": "#ffffff", "card-press": "#f9f9f9", "card-border": "#eaeaea",
-    "fg": "#1a1a1a", "fg2": "#5f5f5f", "fg3": "#a0a0a0",
+    "fg": "#1a1a1a", "fg2": "#5f5f5f", "fg3": "#a0a0a0", "caption-fg": "#000000",
     "ctl": "#fefefe", "ctl-hover": "#f9f9f9", "ctl-press": "#f5f5f5",
     "ctl-border": "#e5e5e5", "ctl-border-bottom": "#d4d4d4",
     "input": "#fbfbfb", "input-hover": "#f6f6f6", "input-focus": "#ffffff", "input-border": "#e5e5e5",

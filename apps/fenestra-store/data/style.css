@@ -39,14 +39,14 @@ entry.store-search:hover { background-color: var(--st-input-hover); }
 entry.store-search:focus-within {
   background-color: var(--st-input-focus); border-bottom: 2px solid var(--st-accent); min-height: 30px;
 }
-entry.store-search > text > placeholder { color: var(--st-fg2); }
+entry.store-search > text > placeholder { color: var(--st-fg2); opacity: 1; filter: none; }
 entry.store-search > image { color: var(--st-fg2); -gtk-icon-size: 12px; margin: 0; }
 entry.store-search selection { background-color: var(--st-accent); color: var(--st-on-accent); }
 
 .window-controls { margin: 0; padding: 0; }
 button.caption-button {
   min-width: 46px; min-height: 32px; padding: 0; margin: 0; border-radius: 0;
-  background: none; border: none; box-shadow: none; color: var(--st-fg);
+  background: none; border: none; box-shadow: none; color: var(--st-caption-fg);
 }
 button.caption-button:hover { background: var(--st-subtle-hover); }
 button.caption-button:active { background: var(--st-subtle-press); }
@@ -212,8 +212,8 @@ togglebutton.filter-chip, button.filter-chip {
   background: none; border: 1px solid var(--st-chip-border); box-shadow: none; color: var(--st-fg);
   font-size: 14px; font-weight: normal;
 }
-togglebutton.filter-chip:hover { background-color: var(--st-subtle-hover); }
-togglebutton.filter-chip:checked { background: none; border-color: var(--st-accent); color: var(--st-accent); }
+button.filter-chip:hover { background-color: var(--st-subtle-hover); }
+button.filter-chip:checked, button.filter-chip:checked:hover { background: none; border-color: var(--st-accent); color: var(--st-accent); }
 .page-body > .chip-scroll { margin: 3px 0 36px 0; }
 
 /* ------------------------------------------------------------------ app page */
