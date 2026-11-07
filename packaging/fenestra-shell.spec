@@ -20,6 +20,8 @@ BuildRequires:  kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-kglobalaccel-deve
 BuildRequires:  polkit-qt6-1-devel libgweather-devel pipewire-devel
 
 Requires:       kwin xorg-x11-server-Xwayland layer-shell-qt qt6-qtsvg kscreenlocker kscreen
+# Lock screen: its PAM services (kde, kde-fingerprint), Wi-Fi list, data engines, keyboard layouts, media.
+Requires:       plasma-workspace plasma-nm plasma5support
 Requires:       xdg-desktop-portal-kde xdg-desktop-portal-gtk kf6-bluez-qt pipewire-libs
 # GNOME stays installed as the fallback session; nothing here replaces GDM.
 Requires:       gdm
@@ -43,6 +45,7 @@ python3 tools/build-aurorae-theme.py
 
 %install
 %cmake_install
+install -Dm755 packaging/lockscreen/fenestra-lock-hello %{buildroot}%{_libexecdir}/fenestra/fenestra-lock-hello
 
 %post
 # On battery, tuned-ppd's "Balanced" becomes fenestra-battery (desktop/power/tuned): any laptop.
@@ -83,8 +86,16 @@ fi
 %{_datadir}/kwin/tabbox/fenestra
 %{_datadir}/kwin/effects/fenestra-window-motion
 %{_datadir}/plasma/look-and-feel/org.fenestra.desktop
+%{_datadir}/plasma/shells/org.fenestra.desktop
+%{_libexecdir}/fenestra/fenestra-lock-hello
 %{_datadir}/xdg-desktop-portal/fenestra-portals.conf
 %{_prefix}/lib/tuned/profiles/fenestra-battery
+
+%post
+# Windows Hello face sign-in on the lock screen when Howdy is installed and enrolled.
+if [ -x /usr/lib64/security/pam_howdy.so ] || [ -f /usr/lib64/security/pam_howdy.so ]; then
+    %{_libexecdir}/fenestra/fenestra-lock-hello enable >/dev/null 2>&1 || :
+fi
 
 %changelog
 * Fri Nov 06 2026 Fenestra <fenestra@users.noreply.github.com> - 0.1.0-1

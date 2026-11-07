@@ -1,0 +1,35 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# fenestra-lock-hello [enable|disable|status] (root): Windows Hello face sign-in on Fenestra's lock
+# screen (KWin's kscreenlocker) with Howdy, as GDM had it.
+#  * /etc/pam.d/kde: "auth sufficient pam_howdy.so" before the password (kscreenlocker's interactive
+#    service: Howdy looks first, then the password box takes over), backed up once to kde.fenestra-orig.
+#  * The PAM worker of the lock screen runs as the user (GDM ran Howdy as root): each enrolled
+#    user's model /etc/howdy/models/<user>.dat becomes readable by that user (root:<user> 0640).
+# Fingerprint needs nothing: plasma-workspace ships kde-fingerprint (fprintd).
+set -eu
+PAM=/etc/pam.d/kde
+case "${1:-enable}" in
+enable)
+    [ -f "$PAM" ] || { echo "no $PAM (plasma-workspace not installed)" >&2; exit 1; }
+    [ -f /usr/lib64/security/pam_howdy.so ] || [ -f /usr/lib/security/pam_howdy.so ] || { echo "Howdy is not installed" >&2; exit 1; }
+    [ -f "$PAM.fenestra-orig" ] || cp -p "$PAM" "$PAM.fenestra-orig"
+    if ! grep -q '^auth[[:space:]].*pam_howdy\.so' "$PAM"; then
+        awk 'BEGIN{d=0} /^auth[[:space:]]/ && !d {print "auth        sufficient    pam_howdy.so"; d=1} {print}' "$PAM" > "$PAM.tmp"
+        chmod 644 "$PAM.tmp"; mv "$PAM.tmp" "$PAM"
+        restorecon "$PAM" 2>/dev/null || true
+    fi
+    for m in /etc/howdy/models/*.dat; do
+        [ -e "$m" ] || continue
+        u=$(basename "$m" .dat)
+        id "$u" >/dev/null 2>&1 && { chown "root:$(id -gn "$u")" "$m"; chmod 0640 "$m"; }
+    done
+    echo "Fenestra lock screen: face sign-in (Howdy) enabled" ;;
+disable)
+    [ -f "$PAM.fenestra-orig" ] && cp -p "$PAM.fenestra-orig" "$PAM" || sed -i '/^auth[[:space:]].*pam_howdy\.so/d' "$PAM"
+    for m in /etc/howdy/models/*.dat; do [ -e "$m" ] && { chown root:root "$m"; chmod 0600 "$m"; }; done
+    echo "Fenestra lock screen: face sign-in disabled" ;;
+status)
+    grep -n 'pam_howdy' "$PAM" || echo "pam_howdy not in $PAM"
+    ls -l /etc/howdy/models/ 2>/dev/null ;;
+esac
