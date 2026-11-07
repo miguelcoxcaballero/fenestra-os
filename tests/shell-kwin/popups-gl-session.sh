@@ -12,6 +12,7 @@ cat > ~/.config/kwinrc <<RC
 Backend=OpenGL
 [Plugins]
 blurEnabled=true
+fadingpopupsEnabled=${FADINGPOPUPS:-true}
 [Xwayland]
 Scale=1
 RC

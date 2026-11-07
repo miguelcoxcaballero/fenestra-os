@@ -160,3 +160,31 @@ blurred panel half risen and sharp wallpaper where it will land (no ghost). The 
 taskbar's top edge (input region = panel only), so the panel is clipped there as on Windows.
 Quick settings, Notification Center and calendar have no capture on real hardware: same material,
 their inner VM greys turned into overlays (`*.acrylic` tokens), layout unchanged.
+
+## The popups' acrylic from a capture of the backdrop (2026-11-07, pixel/popups4)
+
+The overlay material above cannot hold Windows' luminosity: over a light window Start turned light
+grey (~#5a5a5a live). Now (`shell/src/core/backdrop.*`): when a popup opens, `ScreenShot2.CaptureArea`
+of the area behind its final place (`hide-caller-windows`: no shell surface, so the popup itself is
+never in it at any point of its motion; logical resolution), the wallpaper as Desktop.qml draws it
+under what KWin left transparent, the popup it opens over grabbed and composed (menus over Start),
+then WinUI's recipe — Gaussian σ 30 → luminosity blend (0.96) → tint blend → noise 2 % — on a grid
+of 7 px; the popup draws it bilinearly, fixed on the screen while the panel slides, masked by the
+panel's rounded rectangle, with the 256 px noise tile at device pixels. KWin's blur is dropped once
+it is shown. Fits (TintLuminosityOpacity 0.96, user-win11): Start body #292929 / 0.49 (error 0.03),
+bands #202020 / 0.49, menus #2B2B2B / 0.30.
+
+| Bench (GL, 150 %) | result |
+|---|---|
+| Start over the wallpaper, empty body / header / footer vs user-win11 | 1.1 / 0.1 / 0.1 levels |
+| Search home / results, empty areas | 1.1 / 1.0, 1.1 / 1.3 levels |
+| Power menu over Start vs 160110 | 2.9 levels |
+| Start over a light (#f3f3f3) window: body / header | (51, 51, 51) / (41, 41, 41) — the fallback gave ~(94, 94, 94) |
+| Latency request → ready (warm, Start / Search / Quick settings / menu over Start) | 25–37 / 29–35 / 8–14 / ~57 ms; first of a session 65–160 ms |
+
+The last acrylic of each popup is kept while it is closed (its scene graph too) and shown from the
+first frame of the next opening; the new one replaces it without a gap when ready. The very first
+opening shows the fallback material until then and fades the acrylic in (83 ms).
+The popups' layer-shell scope is now "dock": KWin types layer surfaces by scope and its scale effect
+faded and scaled the "fenestra-start" / "fenestra-flyout" (Normal) surfaces in on every opening.
+Not refreshed while open (a recapture only when a flyout changes size).

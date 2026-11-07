@@ -83,15 +83,29 @@ ShellPopup {
     // ---- Header band: search box --------------------------------------------------------------
     // The panel's fill is drawn here in three parts (header, body, footer): the bands are a
     // different acrylic, not an overlay on the body (an overlay cannot keep the chroma).
+    // With the real acrylic (core/backdrop.h) each part shows its recipe's image: body "panel",
+    // bands "base" (user-win11 160039: (34, 50, 46) and (26, 42, 38) over the wallpaper).
     Component.onCompleted: material.fill.color = "transparent"
+    backdropRecipes: ["panel", "base"]
+    materialBackdrop: false
+    onBackdropArrived: (id) => {
+        for (const v of [bodyBackdrop, headerBackdrop, footerBackdrop]) {
+            v.area = Backdrop.area(id)
+            v.origin = Qt.point(start.screenX, start.restY + v.parent.y)
+            v.shift = material.backdrop.shift
+            v.source = id > 0 ? "image://backdrop/" + id + "/" + (v === bodyBackdrop ? "panel" : "base") : ""
+        }
+    }
     Rectangle {
         y: start.headerH; width: start.panelWidth; height: start.footerY - y
         color: Metrics.themed("acrylic.panel" + (ShellSettings.transparency ? "" : ".solid"))
+        BackdropView { id: bodyBackdrop; anchors.fill: parent; topRadius: 0; bottomRadius: 0 }
     }
     Rectangle {
         width: start.panelWidth; height: start.headerH
         topLeftRadius: Metrics.flyoutRadius; topRightRadius: Metrics.flyoutRadius
         color: Metrics.themed("start.header.fill" + (ShellSettings.transparency ? "" : ".solid"))
+        BackdropView { id: headerBackdrop; anchors.fill: parent; bottomRadius: 0 }
         Rectangle { y: parent.height - height; width: parent.width; height: start.bw; color: Metrics.themed("start.divider") }
     }
     Item {
@@ -379,6 +393,7 @@ ShellPopup {
         width: start.panelWidth; height: start.panelHeight - y
         bottomLeftRadius: Metrics.flyoutRadius; bottomRightRadius: Metrics.flyoutRadius
         color: Metrics.themed("start.header.fill" + (ShellSettings.transparency ? "" : ".solid"))
+        BackdropView { id: footerBackdrop; anchors.fill: parent; topRadius: 0 }
         Rectangle { width: parent.width; height: start.bw; color: Metrics.themed("start.divider") }
     }
     Rectangle {
@@ -413,6 +428,7 @@ ShellPopup {
     // the button, centred on it.
     Flyout {
         id: powerTip
+        overWindow: start; overRect: start.screenRect
         targetScreen: start.targetScreen
         takesFocus: false
         motion: "fade"
@@ -446,6 +462,7 @@ ShellPopup {
     }
     ContextMenu {
         id: viewMenu
+        overWindow: start; overRect: start.screenRect
         targetScreen: start.targetScreen
         overPanel: true
         onDismissed: start.requestActivate()
@@ -457,6 +474,7 @@ ShellPopup {
     }
     ContextMenu {
         id: powerMenu
+        overWindow: start; overRect: start.screenRect
         targetScreen: start.targetScreen
         overPanel: true
         gap: start.aboveFooter(Metrics.tok("menu.power.gap", 4))
@@ -472,6 +490,7 @@ ShellPopup {
     // a link to the account settings.
     Flyout {
         id: accountMenu
+        overWindow: start; overRect: start.screenRect
         motion: "menu"
         targetScreen: start.targetScreen
         gap: start.aboveFooter(Metrics.tok("menu.account.gap", 6))
@@ -552,11 +571,12 @@ ShellPopup {
         }
         MouseArea { id: lmouse; anchors.fill: parent; hoverEnabled: true; onClicked: link.clicked() }
     }
-    ContextMenu { id: appMenu; targetScreen: start.targetScreen; overPanel: true }
+    ContextMenu { id: appMenu; targetScreen: start.targetScreen; overPanel: true; overWindow: start; overRect: start.screenRect }
 
     // Test hooks (tests/shell-kwin).
     function testPowerMenu() { openPowerMenu() }
     function testAccountMenu() { openAccountMenu() }
+    function testBackdrop() { const v = bodyBackdrop; return [v.source, v.ready, v.everReady, v.opacity, v.visible, v.area, v.origin].join(" ; ") }
     function testPowerTip() { powerTip.open(); return [powerTip.visible, powerTip.width, powerTip.height, powerTip.gap, powerTip.sheetWidth, powerTip.sheetHeight, powerTip.marginTop, powerTip.marginBottom].join(",") }
     function testCloseMenus() { powerTip.close(); powerMenu.close(); accountMenu.close(); appMenu.close(); viewMenu.close() }
 

@@ -27,10 +27,10 @@ import compose  # noqa: E402
 TASKBAR = 48
 # name: (open expression, close expression, scope, axis, Windows curve, Windows open ms)
 POPUPS = {
-    'start': ('ShellState.toggleStart(null, -1)', 'ShellState.toggleStart(null, -1)', 'fenestra-start', 'y', (0, 0, 0, 1), 250),
-    'search': ('ShellState.toggleSearch(null, -1)', 'ShellState.toggleSearch(null, -1)', 'fenestra-start', 'y', (0, 0, 0, 1), 250),
-    'quick': ('ShellState.toggleQuickSettings(null, -1)', 'ShellState.toggleQuickSettings(null, -1)', 'fenestra-flyout', 'y', (0, 0, 0, 1), 250),
-    'center': ('ShellState.toggleCalendar(null, -1)', 'ShellState.toggleCalendar(null, -1)', 'fenestra-flyout', 'x', (0.33, 0, 0.1, 1), 220),
+    'start': ('ShellState.toggleStart(null, -1)', 'ShellState.toggleStart(null, -1)', 'dock', 'y', (0, 0, 0, 1), 250),
+    'search': ('ShellState.toggleSearch(null, -1)', 'ShellState.toggleSearch(null, -1)', 'dock', 'y', (0, 0, 0, 1), 250),
+    'quick': ('ShellState.toggleQuickSettings(null, -1)', 'ShellState.toggleQuickSettings(null, -1)', 'dock', 'y', (0, 0, 0, 1), 250),
+    'center': ('ShellState.toggleCalendar(null, -1)', 'ShellState.toggleCalendar(null, -1)', 'dock', 'x', (0.33, 0, 0.1, 1), 220),
 }
 CLOSE = {'y': ((0.7, 0, 1, 0.5), 160), 'x': ((0.7, 0, 1, 0.5), 140)}  # measured, design/motion.json
 

@@ -40,6 +40,7 @@ qt_add_executable(fenestra-shell
     src/core/iconoverrides.cpp src/core/iconoverrides.h
     src/core/tokens.cpp src/core/tokens.h
     src/core/acrylic.cpp src/core/acrylic.h
+    src/core/backdrop.cpp src/core/backdrop.h
     src/services/apps.cpp src/services/apps.h
     src/services/taskbarmodel.cpp src/services/taskbarmodel.h
     src/services/weather.cpp src/services/weather.h
@@ -78,6 +79,7 @@ qt_add_qml_module(fenestra-shell
         qml/ShellState.qml
         qml/calendar/CalendarCard.qml
         qml/components/Acrylic.qml
+        qml/components/BackdropView.qml
         qml/components/AcrylicOutline.qml
         qml/components/Card.qml
         qml/components/OverlayScrollBar.qml

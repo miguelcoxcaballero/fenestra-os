@@ -58,13 +58,19 @@ Window {
     signal dismissed()
 
     color: "transparent"
+    // Keep the scene (the acrylic's masked layers) while hidden: the next opening draws the last
+    // acrylic in its first frame instead of building the layers after it.
+    Component.onCompleted: ShellUtil.keepScene(this)
     flags: Qt.FramelessWindowHint
     // Never 0: a layer surface of width 0 must be anchored left and right (protocol error).
     width: marginLeft + sheetWidth + marginRight
     height: marginTop + sheetHeight + marginBottom
     visible: false
 
-    LayerShell.Window.scope: "fenestra-flyout"
+    // "dock": KWin types layer surfaces by scope (LayerShellV1Window: unknown scopes are Normal
+    // windows), and its scale effect fades and scales Normal windows in when they map; Windows'
+    // popups slide in opaque (PopupMotion). A dock is neither scaled nor faded (fadingpopups).
+    LayerShell.Window.scope: "dock"
     // Hover popups (tooltips, previews) never take the focus, and KWin keeps the focused layer
     // surface (Start) above the others of its layer: they go one layer up.
     LayerShell.Window.layer: takesFocus ? LayerShell.Window.LayerTop : LayerShell.Window.LayerOverlay
@@ -77,15 +83,76 @@ Window {
     LayerShell.Window.keyboardInteractivity: takesFocus ? LayerShell.Window.KeyboardInteractivityOnDemand
                                                        : LayerShell.Window.KeyboardInteractivityNone
 
+    // ---- The real acrylic (core/backdrop.h) ----------------------------------------------------
+    // Computed from a capture of what is behind the flyout's final place (plus `overWindow`, the
+    // shell popup it opens over, e.g. Start under its power menu); the fallback material (fill
+    // over KWin's blur) shows until it is ready. Hover previews keep their own look.
+    property bool backdropEnabled: takesFocus || recipe === "tooltip"
+    property var overWindow: null
+    property rect overRect
+    property int backdropId: 0
+    property int shownId: 0          // kept while closed: the next opening starts with it
+    property bool acrylicOn: false
+    readonly property real restY: targetScreen ? targetScreen.height - Metrics.taskbarHeight - gap - sheetHeight : 0
+    // Where the flyout can be while it moves: down to the taskbar, out to the screen's right edge,
+    // or half its height lower (menus).
+    readonly property rect backdropArea: !targetScreen ? Qt.rect(0, 0, 0, 0)
+        : motion === "taskbar" ? Qt.rect(Math.round(sheetX), restY, sheetWidth, sheetHeight + gap)
+        : motion === "edge" ? Qt.rect(Math.round(sheetX), restY, targetScreen.width - Math.round(sheetX), sheetHeight)
+        : motion === "menu" ? Qt.rect(Math.round(sheetX), restY, sheetWidth, Math.min(sheetHeight * 1.5, targetScreen.height - Metrics.taskbarHeight - restY))
+        : Qt.rect(Math.round(sheetX), restY, sheetWidth, sheetHeight)
+    readonly property var acrylics: blurItems.length ? blurItems : (material.fill.visible ? [material] : [])
+    function requestBackdrop() {
+        if (backdropId !== shownId) Backdrop.release(backdropId)
+        backdropId = 0
+        if (!backdropEnabled || !ShellSettings.transparency || !targetScreen || acrylics.length === 0) return
+        const recipes = []
+        for (const a of acrylics) if (recipes.indexOf(a.backdropRecipe) < 0) recipes.push(a.backdropRecipe)
+        backdropId = Backdrop.request(flyout, backdropArea, WallpaperSource.image !== "" ? WallpaperSource.image : WallpaperSource.color,
+                                      recipes, overWindow, overRect)
+        if (shownId > 0) { showBackdrop(shownId); acrylicOn = true; ShellUtil.clearBlur(flyout) }
+    }
+    function showBackdrop(id) {
+        for (const a of acrylics) {
+            const p = a.mapToItem(sheet, 0, 0)
+            a.backdrop.area = Backdrop.area(id)
+            a.backdrop.origin = Qt.point(Math.round(sheetX) + p.x, restY + p.y)
+            a.backdrop.shift = motionCtl.shift
+            a.backdrop.source = "image://backdrop/" + id + "/" + a.backdropRecipe
+        }
+    }
+    function dropBackdrop() {
+        Backdrop.release(backdropId)
+        Backdrop.release(shownId)
+        backdropId = 0; shownId = 0
+        acrylicOn = false
+        for (const a of acrylics) a.backdrop.source = ""
+    }
+    Connections {
+        target: Backdrop
+        function onReady(id, ms) {
+            if (id !== flyout.backdropId || !flyout.shown) return
+            flyout.showBackdrop(id)
+            if (flyout.shownId !== id) Backdrop.release(flyout.shownId)
+            flyout.shownId = id
+            if (!flyout.acrylicOn) acrylicTimer.restart()
+        }
+    }
+    Connections { target: ShellSettings; function onTransparencyChanged() { if (!ShellSettings.transparency) flyout.dropBackdrop() } }
+    Timer { id: acrylicTimer; interval: 100; onTriggered: { flyout.acrylicOn = true; ShellUtil.clearBlur(flyout) } }
+    // Cards that change size while open (calendar, notifications): a new capture for the new area.
+    Timer { id: recapture; interval: 50; onTriggered: if (flyout.shown && flyout.backdropId) flyout.requestBackdrop() }
+
     function updateBlur() {
         if (!visible) return
-        if (!ShellSettings.transparency) { ShellUtil.clearBlur(flyout); return }
+        if (!ShellSettings.transparency || acrylicOn) { ShellUtil.clearBlur(flyout); return }
         ShellUtil.setBlurItems(flyout, blurItems.length ? blurItems : (material.fill.visible ? [material] : []), Metrics.flyoutRadius)
     }
     function open() {
         if (targetScreen) ShellUtil.placeOnScreen(flyout, targetScreen.name)
         const already = shown && visible   // re-anchored while open (previews): no new entrance
         shown = true
+        if (!already) requestBackdrop()
         if (!already) motionCtl.enter()
         visible = true
         ShellUtil.setInputItems(flyout, [inputArea])
@@ -111,7 +178,7 @@ Window {
     Connections { target: motionCtl.shift; function onYChanged() { flyout.updateBlur() } function onXChanged() { flyout.updateBlur() } }
     // Cards that change size (calendar collapsing, notifications arriving) move the blur too.
     Timer { id: settle; interval: 0; onTriggered: flyout.updateBlur() }
-    onSheetHeightChanged: settle.restart()
+    onSheetHeightChanged: { settle.restart(); if (shown && backdropId) recapture.restart() }
 
     Item { id: inputArea; x: flyout.marginLeft; y: flyout.marginTop; width: flyout.sheetWidth; height: flyout.sheetHeight }
     Item {

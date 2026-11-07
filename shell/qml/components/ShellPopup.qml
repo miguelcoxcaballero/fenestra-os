@@ -36,12 +36,74 @@ Window {
     property alias material: material
     signal opened()
     signal closed()
+    // ---- The real acrylic (core/backdrop.h) ----------------------------------------------------
+    // Recipes computed from the capture (Start adds "base" for its bands); the popup shows the
+    // fallback material (fill over KWin's blur) until they are ready, then fades them in and drops
+    // KWin's blur.
+    property var backdropRecipes: [material.backdropRecipe]
+    property int backdropId: 0
+    // The acrylic on screen: the last one computed, kept while the popup is closed so that the
+    // next opening shows it from its first frame (the backdrop rarely changed) until the new
+    // capture replaces it (~40 ms later).
+    property int shownId: 0
+    property bool acrylicOn: false
+    // false: the popup draws its own BackdropViews (Start's three parts).
+    property bool materialBackdrop: true
+    signal backdropArrived(int id)
+    // The panel's place on the screen at rest, and the area it can cover while it moves (down to
+    // the taskbar's top edge), logical px.
+    readonly property real restY: targetScreen ? targetScreen.height - Metrics.taskbarHeight - Metrics.flyoutGap - panelHeight : 0
+    readonly property rect backdropArea: Qt.rect(screenX, restY, panelWidth, panelHeight + Metrics.flyoutGap)
+    // The whole surface on the screen (for a menu opened over it: Backdrop grabs it).
+    readonly property rect screenRect: Qt.rect(screenX - shadowMargin, restY - shadowMargin, width, height)
+    function requestBackdrop() {
+        if (backdropId !== shownId) Backdrop.release(backdropId)
+        backdropId = 0
+        if (!ShellSettings.transparency || !targetScreen) return
+        backdropId = Backdrop.request(popup, backdropArea, WallpaperSource.image !== "" ? WallpaperSource.image : WallpaperSource.color,
+                                      backdropRecipes)
+        if (shownId > 0) { showBackdrop(shownId); acrylicOn = true; ShellUtil.clearBlur(popup) }
+    }
+    function showBackdrop(id) {
+        material.backdrop.area = Backdrop.area(id)
+        material.backdrop.origin = Qt.point(popup.screenX, popup.restY)
+        material.backdrop.shift = motionCtl.shift
+        if (popup.materialBackdrop && popup.backdropRecipes.indexOf(material.backdropRecipe) >= 0)
+            material.backdrop.source = "image://backdrop/" + id + "/" + material.backdropRecipe
+        popup.backdropArrived(id)
+    }
+    function dropBackdrop() {
+        Backdrop.release(backdropId)
+        Backdrop.release(shownId)
+        backdropId = 0; shownId = 0
+        acrylicOn = false
+        material.backdrop.source = ""
+        popup.backdropArrived(0)
+    }
+    Connections {
+        target: Backdrop
+        function onReady(id, ms) {
+            if (id !== popup.backdropId || !popup.shown) return
+            popup.showBackdrop(id)
+            if (popup.shownId !== id) Backdrop.release(popup.shownId)
+            popup.shownId = id
+            if (!popup.acrylicOn) acrylicTimer.restart()
+        }
+    }
+    // After the fade: KWin's blur is under an opaque acrylic, drop it.
+    Timer { id: acrylicTimer; interval: 100; onTriggered: { popup.acrylicOn = true; ShellUtil.clearBlur(popup) } }
 
     color: "transparent"
+    // Keep the scene (the acrylic's masked layers) while hidden: the next opening draws the last
+    // acrylic in its first frame instead of building the layers after it.
+    Component.onCompleted: ShellUtil.keepScene(this)
     visible: false
     width: panelWidth + 2 * shadowMargin
     height: shadowMargin + panelHeight + Metrics.flyoutGap
-    LayerShell.Window.scope: "fenestra-start"
+    // "dock": KWin types layer surfaces by scope (LayerShellV1Window: unknown scopes are Normal
+    // windows), and its scale effect fades and scales Normal windows in when they map; Windows'
+    // popups slide in opaque (PopupMotion). A dock is neither scaled nor faded (fadingpopups).
+    LayerShell.Window.scope: "dock"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | (leftAligned || anchored ? LayerShell.Window.AnchorLeft : 0)
     LayerShell.Window.margins.bottom: 0
@@ -50,12 +112,13 @@ Window {
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
 
     function updateBlur() {
-        if (visible && material.translucent) ShellUtil.setBlurItems(popup, [material], Metrics.flyoutRadius)
+        if (visible && material.translucent && !acrylicOn) ShellUtil.setBlurItems(popup, [material], Metrics.flyoutRadius)
     }
     function open() {
         if (shown) return
         if (targetScreen) ShellUtil.placeOnScreen(popup, targetScreen.name)
         shown = true
+        requestBackdrop()
         motionCtl.enter()   // the first frame already has the panel behind the taskbar
         visible = true
         ShellUtil.setInputItems(popup, [inputArea])
@@ -74,7 +137,7 @@ Window {
     onHeightChanged: if (visible) { ShellUtil.setInputItems(popup, [inputArea]); updateBlur() }
     Connections {
         target: ShellSettings
-        function onTransparencyChanged() { if (!ShellSettings.transparency) ShellUtil.clearBlur(popup); else popup.updateBlur() }
+        function onTransparencyChanged() { if (!ShellSettings.transparency) { ShellUtil.clearBlur(popup); popup.dropBackdrop() } else popup.updateBlur() }
     }
 
     PopupMotion {
