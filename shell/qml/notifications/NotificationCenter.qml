@@ -111,7 +111,7 @@ Flyout {
                             width: groupColumn.width
                             // App row: 16 px icon at x 17, name at x 40.
                             Item {
-                                width: parent.width; height: 43
+                                width: parent.width; height: 42
                                 Image { x: 17; y: 11; width: 16; height: 16; sourceSize: Qt.size(32, 32)
                                         source: { const i = group.modelData.appIcon || "dialog-information"
                                                   return i.startsWith("/") ? "file://" + i : i.includes(":") ? i : "image://icon/" + i } }

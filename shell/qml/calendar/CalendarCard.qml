@@ -136,10 +136,11 @@ Card {
         }
         ControlButton {
             x: parent.width - 16 - width; y: 12
-            width: Math.max(113, focusRow.implicitWidth + 24)
+            // dark-100-15-notifications: 113 × 24, play glyph at +12, label 3 px after its 12 px box.
+            width: Math.max(113, focusRow.implicitWidth + 20)
             Row {
                 id: focusRow
-                anchors.centerIn: parent; spacing: 6
+                anchors.centerIn: parent; spacing: 3
                 SymbolicIcon { anchors.verticalCenter: parent.verticalCenter; size: 12
                                name: Notifications.focusRemaining > 0 ? "media-playback-stop-symbolic" : "media-playback-start-symbolic" }
                 Text { text: Strings.tr(Notifications.focusRemaining > 0 ? "End session" : "Focus")
