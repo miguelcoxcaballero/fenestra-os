@@ -16,6 +16,8 @@ pack.zip
 ├── glyphs/                     Segoe Fluent Icons glyphs as SVG + glyphs.json (see below)
 ├── apps/                       apps.json (app logo index) + light/<n>x<n>/<name>.png
 ├── bitmaps/                    <n>x<n>/<name>.png + bitmaps.json (reference icons and bitmaps)
+├── filetypes/                  <n>x<n>/<key>.png + filetypes.json (file types, folders, drives, places)
+├── weather/                    <Name>.svg + weather.json (taskbar / Widgets weather condition icons)
 └── raw/                        optional untouched source files (e.g. Sysbatt.ttf, imageres groups, appx logos)
 ```
 
@@ -70,8 +72,9 @@ and older importers ignore them.
 
 ```
 glyphs/glyphs.json        index (required when glyphs/ exists)
-glyphs/<name>.svg         one per icons.json glyphs[] entry with a code point (237 of 293 today)
+glyphs/<name>.svg         one per icons.json glyphs[] entry with a code point or an app-font glyph (265 of 293 today)
 glyphs/u/<HEX>.svg        only with --all-glyphs: every code point of the font's cmap
+glyphs/fonts/<stem>/<HEX>.svg  only with --all-glyphs: every code point of the apps' icon fonts (PaintIcons, SnSkFluent, …)
 ```
 
 Each SVG is made from the font by the extractor's TrueType reader (`src/TrueType.cs`: `cmap` formats 4
@@ -156,3 +159,100 @@ comctl32, OneDrive.exe at 32 px) so the unresolved ids can be found on a real PC
   URL interceptor sends `file:///usr/share/fenestra/assets/…` sources to the pack file. Entries whose file
   is gone are ignored; without the file every icon is Fenestra's own.
 * `apps/light/`, `bitmaps/` and the indexes are kept in the pack folder (PNG signature and square size checked).
+
+## File types, folders and places (Fenestra Icon Extractor 1.3)
+
+```
+filetypes/filetypes.json
+filetypes/<n>x<n>/<key>.png      n = 16, 20, 24, 32, 48, 64, 96, 256
+```
+
+What File Explorer shows, read with the API Explorer itself uses: `SHCreateItemFromParsingName` +
+`IShellItemImageFactory::GetImage(SIIGBF_ICONONLY | SIIGBF_SCALEUP)` at each size (32-bit, alpha kept;
+premultiplied pixels are un-premultiplied), on empty sample files `sample.<ext>` in a temporary folder.
+So the icon is the one of the app the type is associated with on that PC (Photos for `.png`, Edge for
+`.pdf`, Notepad for `.txt`), and Windows' blank page for types nothing handles. `.url` samples are valid
+Internet shortcuts. Keys:
+
+* about 230 extensions (`txt`, `png`, `pdf`, `docx`, `mp4`, `zip`, `exe`, `py`, `ttf`, `lnk`…; list in
+  `src/FileTypeIcons.cs`), key = the extension without the dot, plus `unknown` (an extension nobody registers);
+* places, through their shell items: `folder` (an empty folder), `folder-full` (a folder holding a document,
+  without ICONONLY: Explorer's content preview), `user-desktop`, `documents`, `downloads`, `music`, `pictures`,
+  `videos`, `home`, `public`, `templates`, `this-pc`, `network`, `home-quick-access`, `gallery`, `onedrive`,
+  `control-panel`, `drive-system` (the Windows drive);
+* stock icons (`SHGetStockIconInfo` location + `SHDefExtractIcon` at each size): `folder-open`,
+  `recycle-bin-empty`, `recycle-bin-full`, `drive-harddisk`, `drive-removable`, `drive-network`,
+  `drive-network-offline`, `drive-optical`, `drive-ram`, `computer`, `computer-laptop`, `network-workgroup`,
+  `server`, `printer`, `application`, `document`, `shield` (UAC), `shortcut-overlay`, `lock-overlay`, `shared-overlay`.
+
+```json
+{"sizes": [16, 20, 24, 32, 48, 64, 96, 256],
+ "items": {"png": {"kind": "extension", "ext": ".png", "type_name": "Archivo PNG", "content_type": "image/png",
+                   "perceived": "image", "progid": "pngfile", "source": "IShellItemImageFactory SIIGBF_ICONONLY",
+                   "files": {"16": "16x16/png.png", "…": "…"}},
+           "recycle-bin-full": {"kind": "special", "source": "SHGetStockIconInfo SIID_RECYCLERFULL",
+                                "location": "C:\\WINDOWS\\system32\\imageres.dll,-54", "files": {"…": "…"}}}}
+```
+
+Importer: the PNGs go to `~/.local/share/fenestra/packs/<id>/filetypes/` (PNG signature and square size
+checked) and are hard-linked into the pack's icon theme:
+
+* every MIME type of the shared-mime-info database (`$XDG_DATA_HOME/mime` and `$XDG_DATA_DIRS/*/mime`:
+  `types`, `globs2`, `subclasses`, `aliases`, `icons`) gets the icon of the extension its globs name (highest
+  glob weight), else of the `content_type` Windows registers for an extension, else of its nearest parent
+  type, else Windows' `unknown` page, as `<n>x<n>/mimetypes/<icon name>.png` (the `icons` file's name, else
+  the type with `/` → `-`; aliases too). A type nothing handles on the exporting PC keeps Windows' blank
+  page, exactly as Explorer shows it; text types with no Windows extension at all get the `txt` icon.
+* generic names (`text-x-generic`, `image-x-generic`, `x-office-document`, `package-x-generic`, `unknown`…)
+  get the icon of a representative extension;
+* places and devices: `folder`, `inode-directory`, `user-desktop`, `user-home`, `folder-documents`,
+  `folder-download`, `folder-music`, `folder-pictures`, `folder-videos`, `folder-publicshare`,
+  `folder-templates`, `computer`, `network-workgroup`, `user-trash`, `user-trash-full`, `drive-harddisk`,
+  `drive-harddisk-system`, `drive-removable-media`, `drive-optical`, `printer`, `emblem-symbolic-link`…, and the
+  sidebar names Fenestra's patched Nautilus asks for (`hwin`, `dwin`, `dlwin`, `twne`…) (table `PLACE_NAMES`).
+
+`index.theme` gets a `Type=Fixed` directory per size and context; `icon-overrides.json` gets every name
+(all sizes) so Fenestra Shell's desktop, Start › Recommended and Search show the same icons.
+
+## Weather condition icons
+
+Windows installs no weather condition artwork: Widgets (`MicrosoftWindows.Client.WebExperience`) loads
+`https://assets.msn.com/weathermapdata/1/static/weather/Icons/taskbar_v10/Condition_Card/<Name>.svg`
+for the current condition and keeps it in the WebView2 HTTP cache of its package. The extractor reads every
+`…/weather/Icons/…/*.svg` entry of the Chromium blockfile caches of Widgets
+(`%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.WebExperience_cw5n1h2txyewy\LocalState\EBWebView\*\Cache\Cache_Data`)
+and Edge (`…\Microsoft\Edge\User Data\*\Cache\Cache_Data`): `index`-less scan of `data_1` entries, bodies
+from `data_N` blocks or `f_xxxxxx` files, `br`/`gzip`/`deflate` decoded. With `--weather-download` (opt-in,
+the extractor's only network access) it asks that same address for the conditions the cache lacks; the
+names and sky codes are the ones Windows' own Widgets code uses (`src/WeatherIcons.cs`).
+
+```
+weather/<Name>.svg            Condition_Card icons (SunnyDayV3, PartlyCloudyNightV2, ThunderstormsV2, …)
+weather/other/<name>.svg      other cached weather glyphs
+weather/weather.json          {"base": "…/Condition_Card/", "icons": {"SunnyDayV3": {"file": "SunnyDayV3.svg",
+                              "source": "cache"|"download", "url": "…"}}, "skycodes": {"1": "SunnyDayV3", …}}
+```
+
+The importer checks each SVG like a glyph (plus the filter primitives `filter`, `feGaussianBlur`, `feOffset`,
+`feFlood`, `feBlend`, `feColorMatrix`, `feComposite`, `feMerge`, `feMergeNode`, `feMorphology`,
+`feDropShadow`; 256 KB each) and maps them onto the GWeather icon names Fenestra Shell asks for
+(`WEATHER_TARGETS`: `weather-clear` → `SunnyDayV3`, `weather-few-clouds-night` → `PartlyCloudyNightV2`, …),
+the `-symbolic` names included (Windows draws the coloured icon on light and dark taskbars), in
+`icon-overrides.json` and in the theme's `scalable/status`.
+
+## App icon fonts and code point glyphs
+
+Some icons.json glyphs are not in Segoe Fluent Icons but in fonts the apps carry: `PaintIcons.ttf`
+(Microsoft.Paint), `SnSkFluent.ttf` (Microsoft.ScreenSketch), `SettingsIcons.ttf` and `StoreIcons.ttf`
+(SystemApps). `src/AppFontGlyphs.cs` lists the font and code point of each (found by shape on the reference
+screenshots); glyphs.json entries of those carry `"font"`. The fonts themselves go to `raw/fonts/` and, with
+`--all-glyphs`, every code point of each to `glyphs/fonts/<font stem>/<HEX>.svg`. `app_fonts` in glyphs.json
+records path and revision. Still missing (`missing_reasons`): Paint's shape gallery (vector shapes, no
+glyph), Explorer's view menu icons, Notepad's format icons and a few Settings rows.
+
+The importer composes Quick Settings and tray glyphs from `glyphs/u/` (table `CODEPOINT_TARGETS`;
+layers `XXXX@opacity` are drawn like Windows does, e.g. the Wi-Fi bars over the dimmed full fan
+`E701@0.3` + `E873`): Wi-Fi signal levels / off / no internet, wired, VPN, volume muted / 0 / low / medium /
+high, brightness, airplane mode, Bluetooth, night light, accessibility, settings, edit, cast, live captions,
+battery saver, microphone, and battery levels 0–100 % (plain and charging; GTK theme only: Fenestra Shell
+keeps its Sysbatt pictures). Names a verified icons.json glyph already provides are left as they are.
