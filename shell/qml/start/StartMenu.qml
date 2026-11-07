@@ -8,13 +8,19 @@ import Fenestra.Shell
 
 ShellPopup {
     id: start
-    width: Metrics.startWidth; height: Metrics.startHeight
+    width: Metrics.startWidth
+    // 726 px, or what fits under a 47 px top margin on short screens (Windows at 150 % on 1280 × 720
+    // logical: 613 px, dark-150-06-start); Recommended then shows the rows that fit and «More».
+    height: targetScreen ? Math.min(Metrics.startHeight, targetScreen.height - Metrics.taskbarHeight - Metrics.flyoutGap
+                                                         - Metrics.tok("start.margin.top", 47)) : Metrics.startHeight
     signal searchRequested(string text)
     property bool allApps: false
     property string allView: "list"   // list (reference) | category | grid
     property var pins: StartPins.apps
     readonly property int recommendedColumns: Metrics.tok("start.recommended.columns", 2)
-    property var recent: RecentFiles.items.slice(0, 3 * recommendedColumns)
+    readonly property int recommendedRows: Math.max(0, Math.min(3, Math.floor((height - 1 - Metrics.startFooterHeight
+                                               - Metrics.tok("start.recommended.items.y", 461)) / Metrics.tok("start.recommended.row", 56))))
+    property var recent: RecentFiles.items.slice(0, recommendedRows * recommendedColumns)
     readonly property int inset: Metrics.startInset
     readonly property int contentWidth: width - 2 * inset
 
@@ -114,6 +120,9 @@ ShellPopup {
             x: Metrics.startHeaderInset; y: Metrics.tok("start.recommended.y", 424) - header.height
             width: start.width - 2 * Metrics.startHeaderInset - 2
             title: Strings.tr("Recommended")
+            // «More ›» when some recommendations do not fit (dark-150-06-start).
+            action: RecentFiles.items.length > start.recent.length ? Strings.tr("More") : ""
+            onActionClicked: { RecentFiles.open("recent:///"); start.close() }
         }
         Grid {
             x: start.inset; y: Metrics.tok("start.recommended.items.y", 461) - header.height
@@ -132,7 +141,7 @@ ShellPopup {
                         x: Metrics.tok("start.recommended.text.x", 77); anchors.verticalCenter: parent.verticalCenter
                         anchors.verticalCenterOffset: Metrics.tok("start.text.offset", 0)
                         width: parent.width - x - 8
-                        Text { width: parent.width; height: 16; text: modelData.name; elide: Text.ElideMiddle; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                        Text { width: parent.width; height: 16; text: modelData.name.replace(/(.)\.[A-Za-z0-9]{1,5}$/, "$1"); elide: Text.ElideMiddle; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                         Text { width: parent.width; height: 16; text: modelData.age; color: Metrics.themed("start.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                     }
                     MouseArea { id: rm; anchors.fill: parent; hoverEnabled: true; onClicked: { RecentFiles.open(modelData.uri); start.close() } }

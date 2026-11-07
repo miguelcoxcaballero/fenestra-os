@@ -19,7 +19,7 @@ QtObject {
         "Search for apps, settings, and documents": "Buscar aplicaciones, configuraciones y documentos",
         "Pinned": "Anclado", "All": "Todo", "Show less": "Mostrar menos", "Show all": "Mostrar todo",
         "Recommended": "Recomendaciones", "Your recent files will appear here.": "Tus archivos recientes aparecerán aquí.",
-        "Recent": "Recientes", "All apps": "Todos", "Local account": "Cuenta local", "Manage my account": "Administrar mi cuenta",
+        "Recent": "Recientes", "More": "Más", "All apps": "Todos", "Local account": "Cuenta local", "Manage my account": "Administrar mi cuenta",
         "Suggested": "Sugerido", "Quick searches": "Búsquedas rápidas", "Focus settings": "Ajustes de enfoque",
         "Sound settings": "Configuración de sonido", "Bluetooth & devices": "Bluetooth y dispositivos",
         "Color settings": "Configuración de color", "Search settings": "Configuración de búsqueda",

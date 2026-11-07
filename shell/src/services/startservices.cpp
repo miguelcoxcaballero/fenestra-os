@@ -277,15 +277,22 @@ void RecentFiles::reload()
 
 QString RecentFiles::ageText(const QDateTime &when)
 {
+    // Windows 11 26100's Recommended: «Hace 8 m», «Hace 2 h», then «Ayer a las 19:02» and the date
+    // (dark-100-06-start; English: «8m ago», «2h ago», «Yesterday at 7:02 PM»).
     const bool es = QLocale().name().startsWith(QLatin1String("es"));
-    const QDate today = QDate::currentDate();
-    const QString time = QLocale().toString(when.toLocalTime().time(), QStringLiteral("HH:mm"));
-    const qint64 days = when.toLocalTime().date().daysTo(today);
+    const QDateTime local = when.toLocalTime();
+    const qint64 mins = std::max<qint64>(0, local.secsTo(QDateTime::currentDateTime()) / 60);
+    const qint64 days = local.date().daysTo(QDate::currentDate());
+    if (mins < 1)
+        return es ? QStringLiteral("Justo ahora") : QStringLiteral("Just now");
+    if (mins < 60)
+        return (es ? QStringLiteral("Hace %1 m") : QStringLiteral("%1m ago")).arg(mins);
     if (days <= 0)
-        return (es ? QStringLiteral("Hoy a las %1") : QStringLiteral("Today at %1")).arg(time);
+        return (es ? QStringLiteral("Hace %1 h") : QStringLiteral("%1h ago")).arg(mins / 60);
+    const QString time = QLocale().toString(local.time(), QLocale::ShortFormat);
     if (days == 1)
         return (es ? QStringLiteral("Ayer a las %1") : QStringLiteral("Yesterday at %1")).arg(time);
-    return (es ? QStringLiteral("Hace %1 días") : QStringLiteral("%1 days ago")).arg(days);
+    return QLocale().toString(local.date(), es ? QStringLiteral("d 'de' MMMM") : QStringLiteral("MMMM d"));
 }
 
 void RecentFiles::open(const QString &uri) const
