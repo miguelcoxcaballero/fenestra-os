@@ -26,7 +26,8 @@ Flyout {
             const ix = Notifications.index(i, 0)
             const n = { notificationId: Notifications.data(ix, 257), appName: Notifications.data(ix, 258), appIcon: Notifications.data(ix, 259),
                         summary: Notifications.data(ix, 260), body: Notifications.data(ix, 261), actions: Notifications.data(ix, 262) || [],
-                        image: Notifications.data(ix, 263) || "", time: Notifications.data(ix, 264) }
+                        image: Notifications.data(ix, 263) || "", time: Notifications.data(ix, 264),
+                        value: Notifications.data(ix, 267) }
             if (!byApp[n.appName]) { byApp[n.appName] = { appName: n.appName, appIcon: n.appIcon, items: [] }; out.push(byApp[n.appName]) }
             byApp[n.appName].items.push(n)
         }

@@ -42,7 +42,10 @@ Item {
         property ConsentDialog consent: ConsentDialog { }
         property SnapLayouts snap: SnapLayouts { targetScreen: Qt.application.screens[0] }
         property FirstLoginCurtain curtain: FirstLoginCurtain { }
+        // The laptop maker's banner (Samsung Galaxy Book Fn+F11 / Fn+F9), on the first screen.
+        property OemBanner oem: OemBanner { targetScreen: Qt.application.screens[0] }
     }
+    readonly property var oemBanner: sessionSurfaces.oem
     readonly property var toastsWindow: sessionSurfaces.toasts
     readonly property var securityScreen: sessionSurfaces.security
     readonly property var snapLayouts: sessionSurfaces.snap
@@ -81,6 +84,27 @@ Item {
         function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
         function onSearchRequested() { ShellState.toggleSearch(null, -1) }
         function onSnapLayoutsRequested() { root.snapLayouts.open() }
+    }
+    // Firmware hotkeys: the maker's banner on Samsung Galaxy Books (as SamsungSystemSupportOSD),
+    // a Windows-style banner on other laptops.
+    Connections {
+        target: PerformanceMode
+        function onKeyChanged(profile) {
+            const glyph = profile === "performance" ? "\uec4a" : profile === "balanced" ? "\uec49" : "\uec48"
+            if (PerformanceMode.vendor === "samsung-galaxybook")
+                root.oemBanner.show(PerformanceMode.label(profile), PerformanceMode.icon(profile, Theme.dark), glyph)
+            else
+                root.screenObjects(null).osd.showText("performance", PerformanceMode.label(profile), glyph)
+        }
+    }
+    Connections {
+        target: KbdBacklight
+        function onKeyChanged(level) {
+            if (KbdBacklight.vendor === "samsung-galaxybook")
+                root.oemBanner.show(KbdBacklight.samsungLabel(level), KbdBacklight.samsungIcon(Theme.dark), "\ued39")
+            else
+                root.screenObjects(null).osd.show("keyboard", KbdBacklight.percent)
+        }
     }
     Connections {
         target: ShellControl

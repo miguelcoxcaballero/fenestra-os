@@ -47,6 +47,7 @@ qt_add_executable(fenestra-shell
     src/services/status.cpp src/services/status.h
     src/services/batteryalerts.cpp src/services/batteryalerts.h
     src/services/performancemode.cpp src/services/performancemode.h
+    src/services/kbdbacklight.cpp src/services/kbdbacklight.h
     src/services/trayitems.cpp src/services/trayitems.h
     src/services/startservices.cpp src/services/startservices.h
     src/services/search.cpp src/services/search.h
@@ -82,6 +83,7 @@ qt_add_qml_module(fenestra-shell
         qml/calendar/CalendarCard.qml
         qml/components/Acrylic.qml
         qml/components/BackdropView.qml
+        qml/components/BackdropHost.qml
         qml/components/AcrylicOutline.qml
         qml/components/Card.qml
         qml/components/OverlayScrollBar.qml
@@ -104,6 +106,7 @@ qt_add_qml_module(fenestra-shell
         qml/notifications/NotificationCenter.qml
         qml/notifications/Toasts.qml
         qml/osd/Osd.qml
+        qml/osd/OemBanner.qml
         qml/quicksettings/QuickSettings.qml
         qml/quicksettings/QuickTile.qml
         qml/search/SearchFlyout.qml

@@ -201,7 +201,7 @@
     },
     "osd": {
       "what": "volume / brightness / microphone OSD",
-      "source": "assumption: no OSD frames (no media keys in the VM); taskbar pattern: rises from behind the taskbar's top edge",
+      "source": "assumption: the Windows 11 VM (26100, no GPU) never shows the volume banner: QMP volumeup/volumedown change the volume (Quick settings' slider moves) and keybd_event(VK_VOLUME_*) too, yet no frame shows it (reference-shots/motion-osd-2026-11-07/volume-down, 120 frames at ~55 ms); taskbar pattern: rises from behind the taskbar's top edge",
       "open": {
         "ms": 250,
         "bezier": [
