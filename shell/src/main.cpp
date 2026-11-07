@@ -10,6 +10,7 @@
 
 #include "acrylic.h"
 #include "backdrop.h"
+#include "batteryalerts.h"
 #include "iconoverrides.h"
 #include "kwinintegration.h"
 #include "notifications.h"
@@ -76,6 +77,7 @@ int main(int argc, char *argv[])
     PolkitAgent::instance()->registerAgent();
     Shortcuts::instance()->install();
     KWinIntegration::instance(); // Fenestra decoration and switcher in kwinrc
+    BatteryAlerts::instance(); // low-battery notices and Energy saver, as Windows
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }
