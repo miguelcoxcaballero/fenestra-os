@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include <memory>
+#include <atomic>
+#include <poll.h>
+#include <QElapsedTimer>
 #include "snip.h"
 
 #include "apps.h"
@@ -74,37 +78,87 @@ void Snip::grabWorkspace(std::function<void(const QImage &)> done)
         done({});
         return;
     }
+    // One screen: CaptureScreen, which copies what the output shows. CaptureWorkspace re-renders the
+    // scene and drew the taskbar as transparent black (KWin 6.8, layer surface over no wallpaper).
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    const bool single = screens.size() == 1;
     QDBusMessage msg = QDBusMessage::createMethodCall(QStringLiteral("org.kde.KWin.ScreenShot2"), QStringLiteral("/org/kde/KWin/ScreenShot2"),
-                                                      QStringLiteral("org.kde.KWin.ScreenShot2"), QStringLiteral("CaptureWorkspace"));
-    msg << QVariantMap{{QStringLiteral("include-cursor"), false}, {QStringLiteral("native-resolution"), true}}
+                                                      QStringLiteral("org.kde.KWin.ScreenShot2"),
+                                                      single ? QStringLiteral("CaptureScreen") : QStringLiteral("CaptureWorkspace"));
+    if (single)
+        msg << screens.first()->name();
+    // hide-caller-windows: KWin leaves out the caller's own surfaces otherwise, and the caller is the
+    // shell: the taskbar (and the desktop) came out as transparent black.
+    msg << QVariantMap{{QStringLiteral("include-cursor"), false}, {QStringLiteral("native-resolution"), true},
+                       {QStringLiteral("hide-caller-windows"), false}}
         << QVariant::fromValue(QDBusUnixFileDescriptor(fds[1]));
     ::close(fds[1]);
     const int readFd = fds[0];
-    auto *data = new QByteArray;
-    QThread *reader = QThread::create([readFd, data] {
+    // The reader stops once it has the bytes the reply announces (or on EOF / error / 5 s): the pending
+    // call keeps a copy of the pipe's write end, so EOF alone never comes while we wait for it.
+    struct Shared { QByteArray data; std::atomic<qsizetype> expected{-1}; std::atomic<bool> stop{false}; };
+    auto shared = std::make_shared<Shared>();
+    QThread *reader = QThread::create([readFd, shared] {
         char buf[65536];
-        ssize_t n;
-        while ((n = ::read(readFd, buf, sizeof buf)) > 0)
-            data->append(buf, n);
+        QElapsedTimer t; t.start();
+        while (!shared->stop && t.elapsed() < 5000) {
+            const qsizetype want = shared->expected;
+            if (want >= 0 && shared->data.size() >= want)
+                break;
+            pollfd pfd{readFd, POLLIN, 0};
+            if (::poll(&pfd, 1, 50) <= 0)
+                continue;
+            const ssize_t n = ::read(readFd, buf, sizeof buf);
+            if (n <= 0)
+                break;
+            shared->data.append(buf, n);
+        }
         ::close(readFd);
     });
     auto *w = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(msg), this);
-    connect(w, &QDBusPendingCallWatcher::finished, this, [reader, data, done](QDBusPendingCallWatcher *w) {
+    connect(w, &QDBusPendingCallWatcher::finished, this, [reader, shared, done](QDBusPendingCallWatcher *w) {
         w->deleteLater();
         QDBusPendingReply<QVariantMap> r = *w;
         if (!r.isValid())
             qWarning("fenestra-shell: ScreenShot2.CaptureWorkspace failed: %s", qPrintable(r.error().message()));
-        reader->wait();
-        reader->deleteLater();
         const QVariantMap meta = r.isValid() ? r.value() : QVariantMap();
         const int width = meta.value(QStringLiteral("width")).toInt(), height = meta.value(QStringLiteral("height")).toInt();
         const int stride = meta.value(QStringLiteral("stride")).toInt();
         const auto format = QImage::Format(meta.value(QStringLiteral("format")).toInt());
-        QImage img;
-        if (width > 0 && height > 0 && data->size() >= stride * height)
-            img = QImage(reinterpret_cast<const uchar *>(data->constData()), width, height, stride, format).copy();
-        delete data;
-        done(img);
+        if (width > 0 && height > 0 && stride > 0)
+            shared->expected = qsizetype(stride) * height;
+        else
+            shared->stop = true;
+        // Wait off the GUI thread's event processing: the reader ends by itself (size reached, 5 s cap).
+        auto handled = std::make_shared<bool>(false);
+        auto finish = [reader, shared, done, width, height, stride, format, handled] {
+            if (*handled)
+                return;
+            *handled = true;
+            reader->deleteLater();
+            QImage img;
+            if (width > 0 && height > 0 && shared->data.size() >= qsizetype(stride) * height) {
+                // The screen is opaque: the buffer's alpha is whatever the surfaces left in it (0.14 under the
+                // translucent taskbar), so read the same bytes as an opaque format, as Spectacle does.
+                QImage::Format opaque = format;
+                switch (format) {
+                case QImage::Format_ARGB32: case QImage::Format_ARGB32_Premultiplied: opaque = QImage::Format_RGB32; break;
+                case QImage::Format_RGBA8888: case QImage::Format_RGBA8888_Premultiplied: opaque = QImage::Format_RGBX8888; break;
+                case QImage::Format_A2RGB30_Premultiplied: opaque = QImage::Format_RGB30; break;
+                case QImage::Format_A2BGR30_Premultiplied: opaque = QImage::Format_BGR30; break;
+                case QImage::Format_RGBA64: case QImage::Format_RGBA64_Premultiplied: opaque = QImage::Format_RGBX64; break;
+                default: break;
+                }
+                img = QImage(reinterpret_cast<const uchar *>(shared->data.constData()), width, height, stride, opaque).copy();
+            }
+            else if (width > 0)
+                qWarning("fenestra-shell: ScreenShot2 sent %lld of %lld bytes", qlonglong(shared->data.size()), qlonglong(stride) * height);
+            done(img);
+        };
+        // Wait without blocking the GUI thread: the reader ends by itself (size reached, 5 s cap).
+        connect(reader, &QThread::finished, reader, finish);
+        if (reader->isFinished())
+            QTimer::singleShot(0, reader, finish);
     });
     reader->start();
 }
@@ -124,6 +178,14 @@ void Snip::start()
         m_workspace = workspace();
         // Native resolution: the picture can be larger than the logical workspace (scaled outputs).
         m_frozen = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        // A screen is opaque. Qt keeps the RGBX padding byte KWin sends (the surfaces' leftover alpha,
+        // ~0 under the translucent taskbar) as alpha in this conversion, which saved the taskbar as
+        // transparent black: force every pixel opaque.
+        for (int y = 0; y < m_frozen.height(); ++y) {
+            auto *line = reinterpret_cast<QRgb *>(m_frozen.scanLine(y));
+            for (int x = 0; x < m_frozen.width(); ++x)
+                line[x] |= 0xff000000u;
+        }
         m_scale = m_workspace.width() > 0 ? qreal(m_frozen.width()) / m_workspace.width() : 1;
         if (m_workspace.height() > 0 && qAbs(m_frozen.height() / m_scale - m_workspace.height()) > 1) {
             // A test picture of another size: stretched over the workspace.
