@@ -26,6 +26,35 @@ Window {
     LayerShell.Window.exclusionZone: Metrics.taskbarHeight   // maximized windows stop above it
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
 
+    // Taskbar button drag (reorder): the dragged row, the slot under it and its offset from its slot.
+    property int dragFrom: -1
+    property int dragTo: -1
+    property real dragDx: 0
+    property bool animateSlots: true
+    function dropDragged() {
+        if (dragFrom < 0) return
+        const pitch = taskRepeater.count > 0 && taskRepeater.itemAt(0) ? taskRepeater.itemAt(0).width : Metrics.taskPitch
+        dropAnim.from = dragDx
+        dropAnim.to = (dragTo - dragFrom) * pitch
+        dropAnim.restart()
+    }
+    // The dragged button glides into its new slot, then the model moves it there and every offset
+    // drops to 0 in the same frame (no visible jump).
+    SequentialAnimation {
+        id: dropAnim
+        property alias from: glide.from
+        property alias to: glide.to
+        NumberAnimation { id: glide; target: bar; property: "dragDx"; duration: Motion.reduced ? 0 : 250
+                          easing.type: Easing.BezierSpline; easing.bezierCurve: [0, 0, 0, 1, 1, 1] }
+        ScriptAction { script: {
+            const from = bar.dragFrom, to = bar.dragTo
+            bar.animateSlots = false
+            bar.dragFrom = -1; bar.dragTo = -1; bar.dragDx = 0
+            if (to !== from) TaskbarModel.move(from, to)
+            bar.animateSlots = true
+        } }
+    }
+
     readonly property bool leftAligned: ShellSettings.taskbarAlignment === "left"
     // The window's real scale (1.5 at 150 %); Screen.devicePixelRatio is the screen's integer one (2).
     readonly property real dpr: scaleProbe.devicePixelRatio > 0 ? scaleProbe.devicePixelRatio : 1
@@ -126,21 +155,33 @@ Window {
                 required property var model
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined
                 dpr: bar.dpr
-                // Drag sideways to reorder (as Windows): the button follows the pointer and lands on
-                // the slot it is dropped on.
-                z: reorder.active ? 1 : 0
-                transform: Translate { x: reorder.active ? reorder.activeTranslation.x : 0 }
+                // Drag sideways to reorder, as Windows 11 (recorded on the reference VM, 2026-11-07): the
+                // dragged button leaves its slot and follows the pointer; the buttons it passes slide over
+                // to fill the gap (Fluent decelerate (0, 0, 0, 1), ~250 ms: half the way in ~30 ms); on
+                // release it glides into the slot under it.
+                readonly property bool dragged: bar.dragFrom === index
+                // Neighbours: one slot towards the gap while the dragged button is past them.
+                readonly property real shiftX: bar.dragFrom < 0 || dragged ? 0
+                    : (index > bar.dragFrom && index <= bar.dragTo) ? -width
+                    : (index < bar.dragFrom && index >= bar.dragTo) ? width : 0
+                z: dragged ? 2 : 0
+                transform: Translate {
+                    id: slide
+                    x: task.dragged ? bar.dragDx : task.shiftX
+                    Behavior on x { enabled: !task.dragged && bar.animateSlots && !Motion.reduced
+                        NumberAnimation { duration: 250; easing.type: Easing.BezierSpline; easing.bezierCurve: [0, 0, 0, 1, 1, 1] } }
+                }
                 DragHandler {
                     id: reorder
                     target: null
                     yAxis.enabled: false
-                    property real dx: 0   // the last translation (activeTranslation may reset on release)
-                    onActiveTranslationChanged: if (active) dx = activeTranslation.x
                     onActiveChanged: {
-                        if (active) { dx = 0; preview.close(); return }
-                        const to = Math.max(0, Math.min(TaskbarModel.rowCount() - 1,
-                                       task.index + Math.round(dx / task.width)))
-                        if (to !== task.index) TaskbarModel.move(task.index, to)
+                        if (active) { preview.close(); bar.animateSlots = true; bar.dragFrom = task.index; bar.dragTo = task.index; bar.dragDx = 0; return }
+                        bar.dropDragged()
+                    }
+                    onActiveTranslationChanged: if (active) {
+                        bar.dragDx = activeTranslation.x
+                        bar.dragTo = Math.max(0, Math.min(TaskbarModel.rowCount() - 1, task.index + Math.round(activeTranslation.x / task.width)))
                     }
                 }
                 iconName: model.icon
