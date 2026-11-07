@@ -18,7 +18,13 @@ Window {
     color: "transparent"
     // Shown only once the screen is set: a layer surface binds to its output when it is created.
     visible: false
-    Component.onCompleted: { ShellUtil.placeOnScreen(bar, targetScreen.name); visible = true }
+    Component.onCompleted: { ShellUtil.placeOnScreen(bar, targetScreen.name); visible = true; ShellUtil.setBlurItems(bar, [blurPin], 0) }
+    // Keeps KWin's blur effect active at all times (a 1 px region nobody sees). Without it, when the
+    // last blurred popup closed KWin moved windows onto hardware overlay planes and that switch dropped
+    // a frame: every window flickered once (i915 "Atomic commit failed: EBUSY", Meteor Lake). The
+    // session also starts KWin with KWIN_USE_OVERLAYS=0 (session/libexec/fenestra-session).
+    Item { id: blurPin; x: 0; y: 0; width: 1; height: 1 }
+    onVisibleChanged: if (visible) ShellUtil.setBlurItems(bar, [blurPin], 0)
     LayerShell.Window.scope: "fenestra-taskbar"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft
