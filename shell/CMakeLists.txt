@@ -113,6 +113,7 @@ qt_add_qml_module(fenestra-shell
         qml/taskbar/TaskPreview.qml
         qml/taskbar/Taskbar.qml
         qml/taskbar/WeatherButton.qml
+        qml/taskbar/WidgetsBoard.qml
         qml/taskview/SnapLayouts.qml
         qml/tray/Tray.qml
         qml/tray/TrayButton.qml

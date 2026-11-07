@@ -20,6 +20,7 @@ class ShellSettings : public QObject
     // "hidden" | "icon" | "iconLabel" | "box" (B06)
     Q_PROPERTY(QString searchMode READ searchMode WRITE setSearchMode NOTIFY changed)
     Q_PROPERTY(bool showWeather READ showWeather WRITE setShowWeather NOTIFY changed)
+    Q_PROPERTY(bool widgetsOnHover READ widgetsOnHover NOTIFY changed)
     // Settings › Personalization › Taskbar › Task view (on by default, as in Windows 11).
     Q_PROPERTY(bool showTaskView READ showTaskView WRITE setShowTaskView NOTIFY changed)
     Q_PROPERTY(QStringList pinnedApps READ pinnedApps WRITE setPinnedApps NOTIFY changed)
@@ -41,6 +42,7 @@ public:
     QString taskbarAlignment() const { return m_alignment; }
     QString searchMode() const { return m_searchMode; }
     bool showWeather() const { return m_showWeather; }
+    bool widgetsOnHover() const { return m_widgetsOnHover; }
     bool showTaskView() const { return m_showTaskView; }
     QStringList pinnedApps() const { return m_pinned; }
     QString colorScheme() const { return m_scheme; }
@@ -83,6 +85,7 @@ private:
     QFileSystemWatcher m_watcher;
     QString m_alignment, m_searchMode, m_scheme, m_accent, m_wallpaper;
     bool m_showWeather = true;
+    bool m_widgetsOnHover = true;
     bool m_showTaskView = true;
     bool m_reduceMotion = false;
     bool m_transparency = true;

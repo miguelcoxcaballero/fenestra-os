@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// B05: condition icon, temperature and condition; opens the Weather app.
+// B05: condition icon, temperature and condition; opens the Widgets board (WidgetsBoard.qml):
+// on hover after a delay, at once on click, as Windows 11 24H2 does.
 import QtQuick
 import Fenestra.Shell
 
@@ -28,5 +29,42 @@ Item {
             Text { text: Weather.condition; visible: text !== ""; color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: 12 }
         }
     }
-    MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; onClicked: Weather.openApp() }
+    MouseArea {
+        id: mouse
+        anchors.fill: parent
+        hoverEnabled: true
+        onClicked: {
+            openTimer.stop(); closeTimer.stop()
+            if (board.shown && board.pinned) board.close()
+            else board.open(true)
+        }
+        onContainsMouseChanged: {
+            if (containsMouse) {
+                closeTimer.stop()
+                if (!board.shown && ShellSettings.widgetsOnHover) openTimer.restart()
+            } else {
+                openTimer.stop()
+                if (board.shown && !board.pinned) closeTimer.restart()
+            }
+        }
+    }
+    // Windows (VM, QMP-timed): the board starts sliding in ~600 ms after the pointer rests on the
+    // weather; hover-opened, it closes ~850 ms after the pointer leaves the weather without entering
+    // the board, ~270 ms after it leaves the board.
+    Timer { id: openTimer; interval: Tokens.v("widgets.hover.delay", 600); onTriggered: if (mouse.containsMouse) board.open(false) }
+    Timer {
+        id: closeTimer
+        interval: board.entered ? Tokens.v("widgets.leave.board", 270) : Tokens.v("widgets.leave.button", 850)
+        onTriggered: if (!board.pinned && !board.hovered && !mouse.containsMouse) board.close()
+    }
+    Connections {
+        target: board
+        function onHoveredChanged() {
+            if (board.hovered) closeTimer.stop()
+            else if (board.shown && !board.pinned && !mouse.containsMouse) closeTimer.restart()
+        }
+    }
+    WidgetsBoard { id: board; targetScreen: weather.targetScreen }
+    function testOpenBoard(byClick) { board.open(byClick) }
+    function testBoard() { return board }
 }
