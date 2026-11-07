@@ -276,15 +276,19 @@ class ColorsPage(Page):
         wrap.add_css_class("plain")
         wrap.append(label(_("Fenestra colors"), "body-strong"))
         grid = Gtk.FlowBox()
+        grid.add_css_class("accent-grid")
         grid.set_selection_mode(Gtk.SelectionMode.NONE)
-        grid.set_max_children_per_line(8)
-        grid.set_min_children_per_line(8)
-        grid.set_column_spacing(4)
-        grid.set_row_spacing(4)
+        # Reference: 50 x 50 swatches, 3 px apart, nine per row.
+        grid.set_max_children_per_line(9)
+        grid.set_min_children_per_line(9)
+        grid.set_column_spacing(3)
+        grid.set_row_spacing(3)
         grid.set_halign(Gtk.Align.START)
         self.swatches = []
         tm = theme.get()
         current = tm.accent_custom or tm.accent_hex(tm.accent_name, dark=False).upper()
+        if not tm.accent_custom and tm.accent_name == "blue":
+            current = "#0078D4"  # Windows' default accent, whose light-mode shade is #0067C0
         for hexc in theme.WINDOWS_ACCENTS:
             b = Gtk.Button()
             b.add_css_class("color-swatch-btn")
@@ -293,6 +297,18 @@ class ColorsPage(Page):
             prov = Gtk.CssProvider()
             prov.load_from_string(f"box {{ background-color: {hexc}; }}")
             sw.get_style_context().add_provider(prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 5)
+            # Selected swatch: 2 px ring and a check badge in the top-right corner.
+            badge = Gtk.Box()
+            badge.add_css_class("color-swatch-badge")
+            badge.set_halign(Gtk.Align.END)
+            badge.set_valign(Gtk.Align.START)
+            badge.set_hexpand(True)
+            mark = Gtk.Image.new_from_icon_name("fs-checkmark-symbolic")
+            mark.set_pixel_size(12)
+            mark.set_hexpand(True)
+            mark.set_vexpand(True)
+            badge.append(mark)
+            sw.append(badge)
             b.set_child(sw)
             b.set_tooltip_text(hexc)
             if hexc == current:
