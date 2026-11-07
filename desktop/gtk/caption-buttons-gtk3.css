@@ -1,9 +1,12 @@
-/* Fenestra: Windows 11 caption buttons for every GTK 3 window (Firefox, Chromium
-   and Electron in GTK mode, gedit…). Imported by ~/.config/gtk-3.0/gtk.css.
-   Same metrics and colours as the GTK 4 file. */
+/* Fenestra: Windows 11 caption buttons for every GTK 3 window (gedit…, and Chromium /
+   Electron apps, which draw their window buttons with this style: headerbar.titlebar >
+   button.titlebutton.{minimize,maximize,close} and the icon theme's window-*-symbolic at 16 px).
+   Imported by ~/.config/gtk-3.0/gtk.css. Same metrics and colours as the GTK 4 file
+   (Explorer / Notepad: 45 x 29 plates 1 px apart, 10 px glyph in the middle of the 16 px icon,
+   hover 6 %, pressed 4 %, close #c42b1c with a white glyph, inactive glyphs 36 %). */
 headerbar button.titlebutton,
 .titlebar button.titlebutton {
-  min-width: 46px; min-height: 32px; padding: 0; margin: 0;
+  min-width: 45px; min-height: 29px; padding: 0; margin: 0;
   border: none; border-radius: 0; outline: none; box-shadow: none;
   background: none; background-color: transparent; background-image: none;
   color: inherit; -gtk-icon-shadow: none; -gtk-icon-effect: none;
@@ -28,11 +31,30 @@ headerbar button.titlebutton.close:active,
 .titlebar button.titlebutton.close:active { background-color: alpha(#c42b1c, 0.9); color: #ffffff; }
 headerbar button.titlebutton.close:active > image,
 .titlebar button.titlebutton.close:active > image { opacity: 0.7; }
-/* GtkHeaderBar packs its title buttons with its 6px child spacing; Windows has none. */
+/* GtkHeaderBar packs its title buttons with its 6 px child spacing; Windows has 1 px. */
 headerbar button.titlebutton + button.titlebutton,
-.titlebar button.titlebutton + button.titlebutton { margin-left: -6px; }
+.titlebar button.titlebutton + button.titlebutton { margin-left: -5px; }
 window:not(.maximized):not(.tiled):not(.fullscreen) headerbar button.titlebutton.close:last-child,
 window:not(.maximized):not(.tiled):not(.fullscreen) .titlebar button.titlebutton.close:last-child { border-top-right-radius: 8px; }
-/* Flush with the window's top-right corner, full title-bar height. */
+/* Flush with the window's top-right corner: no header padding on the right, and in GTK's own
+   44 px header bars (box.right holds the buttons; Chromium draws them without that box) the
+   29 px plates sit at the top instead of the middle. */
 headerbar.titlebar, .titlebar headerbar { padding-right: 0; }
-headerbar button.titlebutton, .titlebar button.titlebutton { margin-top: -6px; margin-bottom: -6px; min-height: 46px; }
+headerbar:not(.default-decoration) > box.right > button.titlebutton { margin-bottom: 15px; }
+/* GtkBox under-measures its children's negative margins (box.right came out 3 px too narrow and
+   the close plate overflowed the window); any right margin makes it measure them right, and
+   the close button takes that pixel back (tests/window-frames: flush, 1 px gaps). */
+headerbar > box.right { margin-right: 1px; }
+headerbar > box.right > button.titlebutton:last-child { margin-right: -1px; }
+
+/* Window frame (client-side decorations): 8 px corners, opaque 1 px border and the shadow of
+   the GTK 4 file and the KWin frame. */
+window.csd:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-right):not(.tiled-bottom):not(.tiled-left) > decoration {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 16px 18px rgba(0, 0, 0, 0.15), 0 11px 23px rgba(0, 0, 0, 0.13),
+              0 0 0 1px mix(@theme_bg_color, @theme_fg_color, 0.13);
+}
+window.csd:backdrop:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-right):not(.tiled-bottom):not(.tiled-left) > decoration {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.10), 0 3px 4px rgba(0, 0, 0, 0.14), 0 1px 6px rgba(0, 0, 0, 0.12),
+              0 0 0 1px mix(@theme_bg_color, @theme_fg_color, 0.11);
+}

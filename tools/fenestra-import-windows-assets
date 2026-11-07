@@ -718,6 +718,25 @@ _APP_NAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$')
 # Each Windows glyph has its own Fenestra file, so a pack never puts one glyph in two places
 # (the taskbar's "Task Manager" has menu-icons/win11-menu-taskmanager.svg, Display settings
 # win11-menu-tvmonitor.svg).
+# Caption glyphs (ChromeMinimize/Maximize/Restore/Close) fill their em square; as GTK icons they
+# are drawn at 16 px by GTK 3/4 header bars and by Chromium / Electron, where Windows draws them at
+# 10 px. In the icon theme they get Adwaita's layout: a 16 px icon, the 10 px glyph in the middle.
+CAPTION_ICONS = {'window-minimize-symbolic', 'window-maximize-symbolic', 'window-restore-symbolic',
+                 'window-close-symbolic'}
+
+
+def caption_icon(data):
+    """16 x 16 SVG with the glyph SVG `data` scaled into the 10 x 10 box at (3, 3)."""
+    text = data.decode('utf-8')
+    vb = re.search(r'viewBox="([-\d.\s]+)"', text)
+    x, y, w, h = (float(v) for v in vb.group(1).split()) if vb else (0, 0, 16, 16)
+    inner = re.sub(r'^.*?<svg[^>]*>', '', text, count=1, flags=re.S)
+    inner = re.sub(r'</svg>\s*$', '', inner.strip())
+    k = 10 / max(w, h)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">'
+            f'<g transform="translate(3 3) scale({k:.8g}) translate({-x:g} {-y:g})">{inner}</g></svg>\n').encode()
+
+
 GLYPH_TARGETS = {
     'utilities-system-monitor': ['asset:menu-icons/win11-menu-taskmanager.svg'],  # taskbar menu «Administrador de tareas»
     # taskbar, tray, notifications
@@ -957,7 +976,10 @@ def install_glyphs_and_logos(root, pack_id, theme_name):
         sdir = theme_dir / 'scalable' / 'actions'
         sdir.mkdir(parents=True, exist_ok=True)
         for what, orig in gtk_names:
-            shutil.copyfile(orig, sdir / f'{what}.svg')
+            if what in CAPTION_ICONS:
+                (sdir / f'{what}.svg').write_bytes(caption_icon(orig.read_bytes()))
+            else:
+                shutil.copyfile(orig, sdir / f'{what}.svg')
     if entries:
         mapped = sum(1 for n in installed if n in GLYPH_TARGETS)
         log(f'glyphs: {len(installed)} installed ({mapped} replace Fenestra glyphs), {refused} refused, '
