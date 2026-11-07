@@ -11,6 +11,8 @@ Flyout {
     id: qs
     padding: 0
     background.visible: false
+    recipe: "panel"
+    blurItems: [mediaCard.material, card.material]
     property string page: ""            // "" | "wifi" | "bluetooth" | "output"
     onDismissed: page = ""
 
@@ -43,6 +45,7 @@ Flyout {
         spacing: Metrics.flyoutGap
         // ---- Media card (Q02): app line, title / artist, art on the right, transport centred ----
         Card {
+            id: mediaCard
             visible: Media.available
             width: Metrics.quickWidth; height: Metrics.quickMediaHeight
             Image { x: 25; y: 18; width: 16; height: 16; sourceSize: Qt.size(32, 32); source: "image://icon/" + Media.appIcon }
@@ -82,7 +85,7 @@ Flyout {
         Card {
             id: card
             width: Metrics.quickWidth
-            clip: pageMotion.busy
+            clipContent: pageMotion.busy
             readonly property int footerH: Metrics.quickFooterHeight
             height: (qs.page === "" ? main.height : sub.height) + footerH + 2
             Item {

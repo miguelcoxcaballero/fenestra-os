@@ -48,6 +48,20 @@ public:
     QImage requestImage(const QString &id, QSize *size, const QSize &requested) override;
 };
 
+// Popup shadow (Start, Search, flyouts, menus), measured on the user's Windows 11 at 150 %
+// (reference-shots/user-win11 160039, fit in tests/shell-kwin/pixel/fitshadow-popup.py): two black
+// Gaussian layers of the panel's rounded rectangle, offset down, combined as 1 - (1 - a)(1 - b);
+// nothing under the panel itself (the acrylic samples the backdrop without it).
+// image://popupshadow/<width>/<height>/<radius>/<margin>/<dpr>[/<kind>]: logical sizes; the image is
+// (width + 2 margin) x (height + 2 margin) logical px at dpr, the panel at (margin, margin).
+// kind: "popup" (default, popup.shadow.* tokens) or "menu" (menu.shadow.*).
+class PopupShadowProvider : public QQuickImageProvider
+{
+public:
+    PopupShadowProvider() : QQuickImageProvider(QQuickImageProvider::Image) {}
+    QImage requestImage(const QString &id, QSize *size, const QSize &requested) override;
+};
+
 // Desktop icon label: centred, word-wrapped, at most maxLines (ellipsis on the last one), with
 // the blurred drop shadow of Windows' desktop labels. The shadow needs room around the text, so
 // the item is `pad` px larger than the text box on each side.

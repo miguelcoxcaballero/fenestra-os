@@ -62,6 +62,7 @@ QtObject {
         "+ %1 notifications": "+ %1 de notificaciones", "More options": "Más opciones",
         "Snipping area": "Área de recorte", "Rectangle": "Rectángulo", "Window": "Ventana", "Full screen": "Pantalla completa", "Freeform": "Forma libre",
         "Close (Esc)": "Cerrar (Esc)",
+        "Options": "Opciones", "Details": "Detalles", "System": "Sistema", "Best match": "Mejor coincidencia",
         "Rename": "Cambiar nombre", "Delete": "Eliminar", "Copy as path": "Copiar como ruta de acceso", "Properties": "Propiedades",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }

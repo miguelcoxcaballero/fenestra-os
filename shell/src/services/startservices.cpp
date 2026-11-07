@@ -350,7 +350,7 @@ Usage::Usage(QObject *parent)
         for (const QJsonValue &v : o.value(QStringLiteral("entries")).toArray()) {
             const QJsonObject e = v.toObject();
             const QString kind = e.value(QStringLiteral("kind")).toString();
-            if ((kind == QLatin1String("app") || kind == QLatin1String("query")) && e.value(QStringLiteral("value")).isString() && m_entries.size() < 10)
+            if ((kind == QLatin1String("app") || kind == QLatin1String("query")) && e.value(QStringLiteral("value")).isString() && m_entries.size() < 24)
                 m_entries.append(e.toVariantMap());
         }
     }
@@ -491,7 +491,7 @@ void Usage::rememberQuery(const QString &query)
     m_entries.erase(std::remove_if(m_entries.begin(), m_entries.end(), [&q](const QVariantMap &e) {
         return e.value(QStringLiteral("kind")) == QLatin1String("query") && e.value(QStringLiteral("value")) == q; }), m_entries.end());
     m_entries.prepend({{QStringLiteral("kind"), QStringLiteral("query")}, {QStringLiteral("value"), q}, {QStringLiteral("at"), QDateTime::currentMSecsSinceEpoch()}});
-    while (m_entries.size() > 10)
+    while (m_entries.size() > 24)
         m_entries.removeLast();
     saveHistory();
     Q_EMIT changed();
@@ -506,7 +506,7 @@ void Usage::rememberApp(const QString &storageId)
     m_entries.erase(std::remove_if(m_entries.begin(), m_entries.end(), [&storageId](const QVariantMap &e) {
         return e.value(QStringLiteral("kind")) == QLatin1String("app") && e.value(QStringLiteral("value")) == storageId; }), m_entries.end());
     m_entries.prepend({{QStringLiteral("kind"), QStringLiteral("app")}, {QStringLiteral("value"), storageId}, {QStringLiteral("at"), QDateTime::currentMSecsSinceEpoch()}});
-    while (m_entries.size() > 10)
+    while (m_entries.size() > 24)
         m_entries.removeLast();
     saveHistory();
     Q_EMIT changed();

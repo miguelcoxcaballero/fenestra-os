@@ -11,6 +11,8 @@ Flyout {
     id: center
     padding: 0
     background.visible: false
+    recipe: "panel"
+    blurItems: [notifCard.material, calendar.material]
     property alias calendar: calendar
     readonly property int topMargin: 8
     property int availableHeight: targetScreen ? targetScreen.height - Metrics.taskbarHeight - 2 * Metrics.flyoutGap - topMargin : 800
@@ -56,7 +58,8 @@ Flyout {
         Card {
             id: notifCard
             width: Metrics.notificationsWidth
-            color: Metrics.col("panel.fill.alt")
+            // The darker acrylic (fallback #1c1c1c, panel.fill.alt).
+            recipe: "base"
             readonly property int headerH: Metrics.n("notifications.header.height", 50)
             height: Notifications.count === 0 ? Metrics.n("notifications.empty.height", 232)
                                               : Math.max(Metrics.n("notifications.empty.height", 232), center.availableHeight - calendar.height)
