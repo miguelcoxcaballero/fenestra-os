@@ -253,7 +253,10 @@ class PaintWindow(Gtk.ApplicationWindow):
 
     def _draw_caption(self, area, cr, w, h, name):
         c = area.get_color()
-        cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
+        if c.red + c.green + c.blue < 1.5 and c.alpha > 0.9:
+            cr.set_source_rgba(0, 0, 0, 1)  # light title bar: the reference glyphs are pure black
+        else:
+            cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
         cr.set_line_width(1.0)
         cx, cy = int(w / 2), int(h / 2) - 2
         if name == "minimize":
@@ -271,10 +274,11 @@ class PaintWindow(Gtk.ApplicationWindow):
                 cr.rectangle(cx - 4.5, cy - 4.5, 9, 9)
                 cr.stroke()
         else:
-            cr.move_to(cx - 5, cy - 5)
-            cr.line_to(cx + 5, cy + 5)
-            cr.move_to(cx + 5, cy - 5)
-            cr.line_to(cx - 5, cy + 5)
+            # 10 x 10 px through pixel centres, like the reference (was 12 px with antialiasing)
+            cr.move_to(cx - 4.5, cy - 4.5)
+            cr.line_to(cx + 4.5, cy + 4.5)
+            cr.move_to(cx + 4.5, cy - 4.5)
+            cr.line_to(cx - 4.5, cy + 4.5)
             cr.stroke()
 
     def _sync_max(self):
