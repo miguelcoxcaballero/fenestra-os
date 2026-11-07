@@ -103,6 +103,7 @@ Row {
         id: itemMenu
         property int row: -1
         targetScreen: tray.targetScreen
+        motion: "taskbar"
     }
     Connections {
         target: TrayItems

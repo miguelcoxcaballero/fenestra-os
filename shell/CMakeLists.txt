@@ -80,6 +80,7 @@ qt_add_qml_module(fenestra-shell
         qml/components/ContextMenu.qml
         qml/components/Flyout.qml
         qml/components/MenuRow.qml
+        qml/components/PopupMotion.qml
         qml/components/ShellPopup.qml
         qml/components/Slider.qml
         qml/components/SymbolicIcon.qml

@@ -48,13 +48,10 @@ Flyout {
         MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true; onClicked: hb.clicked() }
     }
 
-    // Opening: slides in (Motion.qml, measured on the reference).
-    onVisibleChanged: if (visible && !Motion.reduced) slideIn.restart()
-    NumberAnimation { id: slideIn; target: slide; property: "x"; from: Motion.centerOffset; to: 0; duration: Motion.centerOpen
-                      easing.type: Easing.Bezier; easing.bezierCurve: Motion.decelerate }
+    // Opening and closing: both cards slide in from the right screen edge (design/motion.json).
+    motion: "edge"
 
     Column {
-        transform: Translate { id: slide }
         spacing: Metrics.flyoutGap
         Card {
             id: notifCard

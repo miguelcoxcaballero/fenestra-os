@@ -21,6 +21,9 @@ public Q_SLOTS:
     // Saves every visible shell surface as DIR/NN-scope.png and DIR/surfaces.json
     // (scope, layer, anchors, size, margins, screen geometry). Returns the files written.
     Q_SCRIPTABLE QStringList Grab(const QString &dir);
+    // Grab limited to the surfaces whose layer-shell scope is in `scopes` (comma separated), for
+    // timed frame sequences (tests/shell-kwin/motion.py): skipping the wallpaper keeps it fast.
+    Q_SCRIPTABLE QStringList GrabScopes(const QString &dir, const QString &scopes);
     Q_SCRIPTABLE QString Version();
     // Evaluates a QML expression in the root object's context (open a menu, click a button,
     // read a model) and returns the result as text.
@@ -28,5 +31,6 @@ public Q_SLOTS:
 
 private:
     using QObject::QObject;
+    QStringList grab(const QString &dir, const QStringList &scopes);
     QPointer<QQmlApplicationEngine> m_engine;
 };
