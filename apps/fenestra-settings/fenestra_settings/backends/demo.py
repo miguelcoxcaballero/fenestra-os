@@ -104,17 +104,6 @@ def network_status():
                         Device("eth0", "ethernet", "unavailable", "")]}
 
 
-def wifi_list():
-    from .network import AccessPoint
-    return [AccessPoint(True, "HomeNetwork", 82, "WPA2"),
-            AccessPoint(False, "Office-5G", 64, "WPA2 WPA3"),
-            AccessPoint(False, "Cafe-Guest", 48, "")]
-
-
-def known_networks():
-    return {"HomeNetwork", "Office-5G"}
-
-
 def device_details():
     return {"IP4.ADDRESS": "192.168.1.23/24", "IP4.GATEWAY": "192.168.1.1", "IP4.DNS": "192.168.1.1",
             "GENERAL.HWADDR": "00:11:22:33:44:55", "CAPABILITIES.SPEED": "1000 Mb/s",

@@ -838,3 +838,33 @@ button.theme-summary-item {
 .theme-summary-icon { color: var(--accent-base); margin-top: 0; }
 .theme-summary-title, .theme-summary-value { font-size: 14px; }
 .theme-summary-value { margin-top: 1px; }
+
+/* ---- Wi-Fi: available networks (inline connect as Windows 11), known networks, properties */
+.expander-content > .wifi-net.nested {
+  background-color: var(--card);
+  background-clip: padding-box;
+  border: 1px solid var(--card-border);
+  border-top: none;
+  border-radius: 0;
+  padding: 0;
+}
+.wifi-net > .wifi-net-head { padding: 9px 16px 9px 58px; min-height: 40px; }
+.wifi-net > .wifi-net-head .row-subtitle { margin-bottom: 0; }
+.wifi-net > .wifi-net-head:hover { background-color: var(--card-hover); }
+.wifi-net.selected, .wifi-net.selected > .wifi-net-head:hover { background-color: var(--card-hover); }
+.wifi-net-body { padding: 0 16px 14px 90px; }
+.wifi-glyph { }
+.wifi-glyph-dim { color: var(--fg); opacity: 0.3; }
+.wifi-glyph-on { color: var(--fg); }
+.wifi-glyph-lock { color: var(--fg); margin: 0 -3px -1px 0; }
+button.fluent-button.wifi-btn { min-width: 120px; }
+.wifi-error { color: var(--danger); font-size: 12px; }
+.known-bar { margin: 4px 0 8px 0; }
+.known-bar .caption { margin-top: 1px; }
+.props-card { padding: 14px 16px; }
+.props-key { color: var(--fg2); }
+.props-value { color: var(--fg); }
+.check-row { padding-left: 18px; }
+.key-value { font-size: 16px; }
+button.subtle-icon-button { min-width: 32px; min-height: 30px; padding: 0; background-color: transparent; border-color: transparent; }
+button.subtle-icon-button:hover { background-color: var(--subtle-hover); }

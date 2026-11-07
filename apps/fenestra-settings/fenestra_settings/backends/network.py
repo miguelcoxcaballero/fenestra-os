@@ -1,4 +1,6 @@
-"""NetworkManager via nmcli, airplane mode via gsd-rfkill."""
+"""NetworkManager status/Ethernet via nmcli, airplane mode via gsd-rfkill.
+
+Wi-Fi (list, connect, known networks) lives in backends/wifi.py (libnm)."""
 from __future__ import annotations
 
 import re
@@ -42,15 +44,6 @@ class Device:
         return self.state.startswith("connected")
 
 
-class AccessPoint:
-    def __init__(self, in_use, ssid, signal, security):
-        self.in_use, self.ssid, self.signal, self.security = in_use, ssid, signal, security
-
-    @property
-    def secured(self):
-        return bool(self.security and self.security not in ("--", ""))
-
-
 def status(callback):
     """callback(dict(wifi_enabled, networking, devices=[Device]))"""
     if util.DEMO:
@@ -84,42 +77,6 @@ def status(callback):
     util.run_async(["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"], devs)
 
 
-def wifi_list(callback, rescan=False):
-    if util.DEMO:
-        demo.later(callback, demo.wifi_list())
-        return
-    def done(ok, out, _e):
-        aps = {}
-        if ok:
-            for line in out.strip().splitlines():
-                p = _split(line)
-                if len(p) < 4 or not p[1]:
-                    continue
-                ap = AccessPoint(p[0] == "*", p[1], int(p[2] or 0), p[3])
-                old = aps.get(ap.ssid)
-                if old is None or ap.in_use or (ap.signal > old.signal and not old.in_use):
-                    aps[ap.ssid] = ap
-        lst = sorted(aps.values(), key=lambda a: (not a.in_use, -a.signal))
-        callback(lst)
-    util.run_async(["nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list",
-                    "--rescan", "yes" if rescan else "no"], done)
-
-
-def known_connections(callback):
-    if util.DEMO:
-        demo.later(callback, demo.known_networks())
-        return
-    def done(ok, out, _e):
-        names = set()
-        if ok:
-            for line in out.strip().splitlines():
-                p = _split(line)
-                if len(p) >= 2 and p[1] == "802-11-wireless":
-                    names.add(p[0])
-        callback(names)
-    util.run_async(["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"], done)
-
-
 def device_details(dev, callback):
     if util.DEMO:
         demo.later(callback, demo.device_details())
@@ -139,25 +96,6 @@ def device_details(dev, callback):
 
 def set_wifi(enabled: bool, callback=None):
     util.run_async(["nmcli", "radio", "wifi", "on" if enabled else "off"], callback, mutating=True)
-
-
-def connect(ssid, password=None, callback=None):
-    argv = ["nmcli", "device", "wifi", "connect", ssid]
-    if password:
-        argv += ["password", password]
-    util.run_async(argv, callback, mutating=True)
-
-
-def connect_known(ssid, callback=None):
-    util.run_async(["nmcli", "connection", "up", "id", ssid], callback, mutating=True)
-
-
-def disconnect(dev, callback=None):
-    util.run_async(["nmcli", "device", "disconnect", dev], callback, mutating=True)
-
-
-def forget(ssid, callback=None):
-    util.run_async(["nmcli", "connection", "delete", "id", ssid], callback, mutating=True)
 
 
 # --------------------------------------------------------------------- airplane mode
@@ -183,7 +121,3 @@ def set_airplane_mode(on: bool, callback=None):
         return
     util.dbus_set_prop(Gio.BusType.SESSION, RFKILL[0], RFKILL[1], RFKILL[2], "AirplaneMode",
                        GLib.Variant("b", on), callback)
-
-
-def signal_icon(signal: int) -> str:
-    return "fs-wifi-1-symbolic"
