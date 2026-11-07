@@ -104,7 +104,7 @@ are original drawings.
 Run only on the headless test compositor, never on a real session:
 
 ```sh
-~/.local/bin/fenestra-test-run mutter --headless --wayland --no-x11 \
+~/.local/bin/fenestra-test-run dbus-run-session -- mutter --headless --wayland --no-x11 \
     --virtual-monitor 1920x1080 --wayland-display=fenestra-test &
 env -u DISPLAY WAYLAND_DISPLAY=fenestra-test GDK_BACKEND=wayland GSETTINGS_BACKEND=memory \
     ~/.local/bin/fenestra-test-run python3 tools/smoke-test.py   # ~190 checks

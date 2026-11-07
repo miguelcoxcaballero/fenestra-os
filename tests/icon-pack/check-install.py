@@ -39,7 +39,9 @@ check(sorted(ov['snip']) == sorted(snip_t), f'{len(snip_t)} snipping toolbar gly
 check(all(Path(f).is_file() for v in ov['icons'].values() for f in v) and all(Path(f).is_file() for f in ov['assets'].values()),
       'every override points at an installed file')
 gtk = sorted(p.stem for p in (theme / 'scalable' / 'actions').glob('*.svg'))
-check(gtk == sorted(icon_t), f'{len(gtk)} icon: glyphs in {theme.name}/scalable/actions for GTK')
+unmapped = [f'{n}-symbolic' for n in ov['glyphs'] if n not in mod.GLYPH_TARGETS]
+check(gtk == sorted(set(icon_t) | set(unmapped)),
+      f'{len(gtk)} icon: glyphs in {theme.name}/scalable/actions for GTK ({len(unmapped)} unmapped as <name>-symbolic)')
 check(not any(n in gtk for n in shell_t), 'shell-only names (battery-level-50-symbolic, go-up-symbolic, ...) not given to GTK')
 idx = (theme / 'index.theme').read_text()
 check('scalable/actions' in idx.split('Directories=')[1].splitlines()[0] and '[scalable/actions]' in idx, 'index.theme lists scalable/actions')

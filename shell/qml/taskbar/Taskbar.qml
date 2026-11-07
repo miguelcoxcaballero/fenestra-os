@@ -28,9 +28,26 @@ Window {
 
     readonly property bool leftAligned: ShellSettings.taskbarAlignment === "left"
 
+    // Material: acrylic over the wallpaper (src/core/acrylic.h: Microsoft's recipe, computed from
+    // the wallpaper as the desktop draws it); the flat fallback colour with transparency effects off
+    // and while the acrylic is being computed. Measurements: design/tokens.json "taskbar.acrylic.*".
     Rectangle {
         anchors.fill: parent
         color: Metrics.themed("taskbar.fill")
+        Image {
+            id: acrylic
+            anchors.fill: parent
+            visible: ShellSettings.transparency && status === Image.Ready
+            asynchronous: true
+            cache: false
+            smooth: false
+            readonly property var scr: bar.targetScreen
+            source: !ShellSettings.transparency || !scr ? ""
+                    : "image://acrylic/" + (Theme.dark ? "dark" : "light") + "/" + scr.width + "/" + scr.height + "/"
+                      + Metrics.taskbarHeight + "/" + (scr.devicePixelRatio || 1) + "/"
+                      + encodeURIComponent(WallpaperSource.image !== "" ? decodeURIComponent(WallpaperSource.image.replace(/^file:\/\//, ""))
+                                                                       : WallpaperSource.color)
+        }
         Rectangle { width: parent.width; height: 1; color: Metrics.themed("taskbar.border") }
     }
 
@@ -177,10 +194,11 @@ Window {
 
     TaskPreview { id: preview; targetScreen: bar.targetScreen; onKeepOpenChanged: if (!keepOpen) closeTimer.restart() }
     // Jump list (B02): 296 px wide like the reference, centred on the button, 12 px above the bar.
-    ContextMenu { id: appMenu; targetScreen: bar.targetScreen; minWidth: Metrics.tok("jumplist.width", 296) }
+    ContextMenu { id: appMenu; targetScreen: bar.targetScreen; minWidth: Metrics.tok("jumplist.width", 296); motion: "taskbar" }
     ContextMenu {
         id: barMenu
         targetScreen: bar.targetScreen
+        motion: "taskbar"
         // Rows of 35 px touching the border, a full-width line between them (menu.taskbar.*).
         gap: 0
         padding: 1
@@ -189,7 +207,7 @@ Window {
         items: [
             { text: Strings.tr("Task Manager"), iconSource: Metrics.assets + "menu-icons/win11-menu-taskmanager.svg", action: () => Apps.runCommand("fenestra-taskmgr") },
             "-",
-            { text: Strings.tr("Taskbar settings"), iconSource: Metrics.assets + "menu-icons/win11-menu-settings.svg", action: () => Apps.runCommand("fenestra-settings --page taskbar") },
+            { text: Strings.tr("Taskbar settings"), iconSource: Metrics.assets + "menu-icons/shell-settings.svg", action: () => Apps.runCommand("fenestra-settings --page taskbar") },
         ]
     }
 }

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Inside the bench container, as the user (see run.sh).
 cd
-rm -rf ~/.config/gtk-4.0; cp -r /src/desktop/skel/.config/gtk-4.0 ~/.config/
+rm -rf ~/.config/gtk-4.0; mkdir -p ~/.config; cp -r /src/desktop/skel/.config/gtk-4.0 ~/.config/
 cp /src/desktop/gtk/caption-buttons-gtk4.css ~/.config/gtk-4.0/fenestra-caption-buttons.css
 printf '@define-color fenestra_accent_dark #4cc2ff;\n@define-color fenestra_accent_light #0067c0;\n@define-color fenestra_accent_dark_fg #000000;\n@define-color fenestra_accent_light_fg #ffffff;\n' > ~/.config/gtk-4.0/fenestra-accent.css
 rm -rf Desktop Documents Downloads Music Pictures Public Templates Videos Projects yyy

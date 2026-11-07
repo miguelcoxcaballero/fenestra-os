@@ -36,6 +36,7 @@ STRINGS = {
     "Expand all": "Expandir todo",
     "Collapse all": "Contraer todo",
     "Group by type": "Agrupar por tipo",
+    "View": "Vista",
     "Go to details": "Ir a detalles",
     "Open file location": "Abrir ubicación del archivo",
     "Search online": "Buscar en línea",

@@ -53,10 +53,20 @@ export default class ExplorerQA extends Extension {
             const n = a.map(Number);
             if (cmd === 'win') {
                 Main.overview.hide(); Main.layoutManager.panelBox.hide();
-                const wins = global.get_window_actors().map(x => x.meta_window).filter(w => w.get_window_type() === Meta.WindowType.NORMAL);
-                const w = wins[wins.length - 1];
-                if (w) { if (w.get_maximized && w.get_maximized()) w.unmaximize(Meta.MaximizeFlags.BOTH); w.move_resize_frame(false, n[0], n[1], n[2], n[3]); w.activate(global.get_current_time()); }
-                await sleep(300); const r = w && w.get_frame_rect(); print(`SHOTQA win ${w ? w.get_wm_class() : 'none'} ${r ? [r.x, r.y, r.width, r.height].join(' ') : ''}`);
+                const normal = () => global.get_window_actors().map(x => x.meta_window).filter(w => w.get_window_type() === Meta.WindowType.NORMAL && w.get_frame_rect().width > 0);
+                // Nautilus may map its window well after the job starts (cold caches) and settle its
+                // size later still: wait up to 15 s for it and re-apply the box until it sticks.
+                let w = null, r = null;
+                for (let i = 0; i < 60; i++) {
+                    w = normal().at(-1);
+                    if (w) {
+                        if (w.get_maximized && w.get_maximized()) w.unmaximize(Meta.MaximizeFlags.BOTH);
+                        w.move_resize_frame(false, n[0], n[1], n[2], n[3]); w.activate(global.get_current_time());
+                        await sleep(300); r = w.get_frame_rect();
+                        if (r.x === n[0] && r.y === n[1] && r.width === n[2] && r.height === n[3]) break;
+                    } else await sleep(250);
+                }
+                print(`SHOTQA win ${w ? w.get_wm_class() : 'none'} ${r ? [r.x, r.y, r.width, r.height].join(' ') : ''}`);
             } else if (cmd === 'move') this._ptr.notify_absolute_motion(now(), n[0], n[1]);
             else if (cmd === 'down' || cmd === 'click') {
                 this._ptr.notify_absolute_motion(now(), n[0], n[1]);

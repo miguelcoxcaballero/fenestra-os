@@ -12,6 +12,7 @@ Flyout {
     property string icon      // the group's icon (the windows of one app)
     property bool keepOpen: hoverArea.containsMouse
     takesFocus: false
+    motion: "fade"
     padding: 0
     background.color: Metrics.themed("menu.fill")
     background.border.color: Metrics.themed("preview.border")

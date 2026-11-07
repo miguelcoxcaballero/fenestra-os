@@ -32,6 +32,7 @@ Rectangle {
         size: row.iconSize
         x: Metrics.menuIconX - row.inset - (row.iconSize - 16) / 2; anchors.verticalCenter: parent.verticalCenter
         visible: row.iconSource.toString() !== ""
+        monochrome: true
         src: row.iconSource
     }
     Image {

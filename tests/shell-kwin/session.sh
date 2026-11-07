@@ -101,6 +101,13 @@ session() {
     check shell-ready wait_for 'grep -q FENESTRA_SHELL_READY /out/shell.log' 40
     check window-management wait_for 'grep -q "windowManagement=true\|FENESTRA_SHELL_WM available=true" /out/shell.log' 20
     check "screens-${OUTPUTS:-1}" wait_for "grep -q 'screens=${OUTPUTS:-1}' /out/shell.log" 10
+    # MOTION=1: only record the popups opening and closing (motion.py, design/motion.json).
+    if [ -n "${MOTION:-}" ]; then
+        sleep 2
+        check motion-recorded python3 /src/tests/shell-kwin/motion.py /out/motion $MOTION_POPUPS
+        kill $SHELL_PID $KWIN 2>/dev/null
+        return
+    fi
     check B02-pinned-buttons wait_for 'is "$(probe "TaskbarModel.rowCount()")" 2' 20
     # B02: clicking a pinned button launches the app (KIO); its window joins that button.
     probe "TaskbarModel.activate(0)" >/dev/null

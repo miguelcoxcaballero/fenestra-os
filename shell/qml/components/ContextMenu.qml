@@ -14,6 +14,9 @@ Flyout {
     property int minWidth: 0
     readonly property int rowWidth: Math.max(minWidth - 2 * padding, column.widest)
     padding: 1 + Metrics.menuPadding
+    // Menus at the pointer reveal upwards with a quick fade (PopupMotion "menu"); the taskbar's
+    // menus set "taskbar" (they rise from behind it like Quick settings).
+    motion: "menu"
     background.color: Metrics.themed("menu.fill")
     background.border.color: Metrics.themed("menu.border")
     Column {

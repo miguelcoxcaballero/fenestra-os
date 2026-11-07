@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Start and Search: a fixed-size layer surface 12 px above the taskbar, centred on the screen
-// (or at the left with left-aligned icons). Opens sliding up 96 px in 200 ms (OutQuint) and closes
-// sliding down in 120 ms (InQuad), clipped at the taskbar edge (arc/windowsPopupMotion.js).
+// (or at the left with left-aligned icons). Opens and closes with PopupMotion "taskbar", as Windows 11
+// (design/motion.json): rises from fully hidden behind the taskbar (height + 12 px) in 250 ms on
+// cubic-bezier(0, 0, 0, 1), opaque, and goes back down in 167 ms. The surface ends 12 px above the
+// taskbar (its size is the panel's), so the panel is clipped there instead of at the taskbar's edge.
 import QtQuick
 import org.kde.layershell as LayerShell
 import Fenestra.Shell
@@ -16,9 +18,9 @@ Window {
     // Where it lands on its screen (for menus opened from inside it).
     readonly property real screenX: anchorLeft >= 0 && targetScreen ? Math.max(Metrics.flyoutEdge, Math.min(Math.round(anchorLeft), targetScreen.width - width - Metrics.flyoutEdge))
                                     : leftAligned || !targetScreen ? Metrics.flyoutEdge : Math.round((targetScreen.width - width) / 2)
-    // Opening motion: rise by openOffset in openDuration (decelerate), or fade when openOffset is 0.
-    property int openOffset: Metrics.popupOffset
-    property int openDuration: Metrics.popupOpen
+    // PopupMotion kind (taskbar for Start and Search, as measured).
+    property string motion: "taskbar"
+    readonly property bool moving: motionCtl.busy
     default property alias content: panel.data
     property alias panel: panel
     signal opened()
@@ -41,31 +43,23 @@ Window {
         visible = true
         ShellUtil.enableBlur(popup, Metrics.flyoutRadius)
         requestActivate()
-        panel.y = Motion.reduced ? 0 : openOffset
-        panel.opacity = Motion.reduced || openOffset > 0 ? 1 : 0
-        slideIn.restart()
+        motionCtl.enter()
         opened()
     }
     function close() {
         if (!shown) return
         shown = false
-        if (Motion.reduced) { visible = false; closed(); return }
-        slideOut.restart()
+        motionCtl.leave()
     }
     function toggle() { shown ? close() : open() }
     onActiveChanged: if (!active && shown) close()
 
-    ParallelAnimation {
-        id: slideIn
-        NumberAnimation { target: panel; property: "y"; to: 0; duration: popup.openDuration
-                          easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.decelerate }
-        NumberAnimation { target: panel; property: "opacity"; to: 1; duration: popup.openDuration }
-    }
-    SequentialAnimation {
-        id: slideOut
-        NumberAnimation { target: panel; property: popup.openOffset > 0 ? "y" : "opacity"; to: popup.openOffset > 0 ? popup.openOffset : 0
-                          duration: Metrics.popupClose; easing.type: Easing.InQuad }
-        ScriptAction { script: { popup.visible = false; popup.closed() } }
+    PopupMotion {
+        id: motionCtl
+        kind: popup.motion
+        target: panel
+        travel: popup.height + Metrics.flyoutGap
+        onGone: { popup.visible = false; popup.closed() }
     }
 
     // Clip: the panel slides out of the bottom edge (the taskbar's top), never over the taskbar.
@@ -75,6 +69,7 @@ Window {
         Rectangle {
             id: panel
             width: parent.width; height: parent.height
+            transform: motionCtl.shift
             radius: Metrics.flyoutRadius
             // Flat fill of the reference (acrylic fallback); KWin's blur still runs behind it.
             color: Metrics.themed("start.fill")

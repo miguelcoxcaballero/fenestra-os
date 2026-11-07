@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Volume / brightness / microphone OSD (Q03, osdStyle.js): a 192 × 48 pill centred 24 px above the
-// taskbar, glyph + slider + value; 1.5 s, fade 150 ms with an 8 px rise. Never takes focus.
+// taskbar, glyph + slider + value; 1.5 s. Never takes focus. Motion: no OSD frames in the reference
+// (no media keys in the VM), so it rises from behind the taskbar like Quick settings (PopupMotion
+// "taskbar", design/motion.json): the surface reaches down to the taskbar's top edge.
 import QtQuick
 import org.kde.layershell as LayerShell
 import Fenestra.Shell
@@ -11,12 +13,12 @@ Window {
     property string kind: "volume"
     property int value: 0          // 0–100, -1 = muted
     color: "transparent"
-    width: Metrics.osdWidth + 32; height: Metrics.osdHeight + 32
+    width: Metrics.osdWidth + 32; height: Metrics.osdHeight + 16 + Metrics.osdGap
     visible: false
     LayerShell.Window.scope: "fenestra-osd"
     LayerShell.Window.layer: LayerShell.Window.LayerOverlay
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
-    LayerShell.Window.margins.bottom: Metrics.osdGap - 16
+    LayerShell.Window.margins.bottom: 0
     LayerShell.Window.exclusionZone: 0
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
 
@@ -25,8 +27,9 @@ Window {
         if (!visible) {
             if (targetScreen) ShellUtil.placeOnScreen(osd, targetScreen.name)
             visible = true
-            pill.opacity = 0; pill.y = 24
-            fadeIn.restart()
+            osdMotion.enter()
+        } else if (osdMotion.busy) {
+            osdMotion.enter()   // shown again while going down: back up
         }
         hideTimer.restart()
     }
@@ -37,24 +40,19 @@ Window {
         return value < 34 ? "speaker-1" : value < 67 ? "speaker-2" : "speaker-3"
     }
 
-    Timer { id: hideTimer; interval: Metrics.osdTimeout; onTriggered: fadeOut.restart() }
-    ParallelAnimation {
-        id: fadeIn
-        NumberAnimation { target: pill; property: "opacity"; to: 1; duration: Motion.reduced ? 0 : 150; easing.type: Easing.OutCubic }
-        NumberAnimation { target: pill; property: "y"; to: 16; duration: Motion.reduced ? 0 : 150; easing.type: Easing.OutCubic }
-    }
-    SequentialAnimation {
-        id: fadeOut
-        ParallelAnimation {
-            NumberAnimation { target: pill; property: "opacity"; to: 0; duration: Motion.reduced ? 0 : 150; easing.type: Easing.InQuad }
-            NumberAnimation { target: pill; property: "y"; to: 20; duration: Motion.reduced ? 0 : 150; easing.type: Easing.InQuad }
-        }
-        ScriptAction { script: osd.visible = false }
+    Timer { id: hideTimer; interval: Metrics.osdTimeout; onTriggered: osdMotion.leave() }
+    PopupMotion {
+        id: osdMotion
+        kind: "taskbar"
+        target: pill
+        travel: osd.height - pill.y
+        onGone: osd.visible = false
     }
 
     Rectangle {
         id: pill
         x: 16; y: 16; width: Metrics.osdWidth; height: Metrics.osdHeight; radius: 8
+        transform: osdMotion.shift
         color: Theme.dark ? Qt.rgba(32 / 255, 32 / 255, 32 / 255, 0.85) : Qt.rgba(249 / 255, 249 / 255, 249 / 255, 0.92)
         border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.06)
         Row {

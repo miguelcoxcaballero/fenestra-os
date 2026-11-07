@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // A taskbar flyout: layer-shell surface 12 px above the taskbar (its exclusive zone), at least
 // 13 px from the screen edges, no arrow (B11). Closes when it loses keyboard focus.
+// Opens and closes with PopupMotion (`motion`): taskbar flyouts rise from behind the taskbar.
 import QtQuick
 import org.kde.layershell as LayerShell
 import Fenestra.Shell
@@ -20,6 +21,12 @@ Window {
     property int padding: 4
     // Hover popups (previews, tooltips) must not take the keyboard focus from the active window.
     property bool takesFocus: true
+    // PopupMotion kind: taskbar (default), edge, menu, fade or none.
+    property string motion: "taskbar"
+    // Rising from behind the taskbar, the surface reaches down to the taskbar's top edge (gap below
+    // the panel, transparent) so that the panel shows in the gap while it moves, as on Windows.
+    readonly property int slideInset: motion === "taskbar" ? gap : 0
+    property bool shown: false
 
     signal dismissed()
 
@@ -27,14 +34,14 @@ Window {
     flags: Qt.FramelessWindowHint
     // Never 0: a layer surface of width 0 must be anchored left and right (protocol error).
     width: Math.max(1, body.childrenRect.width + 2 * padding)
-    height: Math.max(1, body.childrenRect.height + 2 * padding)
+    height: Math.max(1, body.childrenRect.height + 2 * padding) + slideInset
     visible: false
 
     LayerShell.Window.scope: "fenestra-flyout"
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
                                | (rightAligned ? LayerShell.Window.AnchorRight : LayerShell.Window.AnchorLeft)
-    LayerShell.Window.margins.bottom: gap
+    LayerShell.Window.margins.bottom: gap - slideInset
     LayerShell.Window.margins.right: Metrics.flyoutEdge
     LayerShell.Window.margins.left: {
         if (rightAligned || !targetScreen) return Metrics.flyoutEdge
@@ -45,25 +52,45 @@ Window {
     LayerShell.Window.keyboardInteractivity: takesFocus ? LayerShell.Window.KeyboardInteractivityOnDemand
                                                        : LayerShell.Window.KeyboardInteractivityNone
 
-    function open() { if (targetScreen) ShellUtil.placeOnScreen(flyout, targetScreen.name); visible = true; if (takesFocus) requestActivate() }
-    function close() { if (visible) { visible = false; dismissed() } }
-    function toggle() { visible ? close() : open() }
+    function open() {
+        if (targetScreen) ShellUtil.placeOnScreen(flyout, targetScreen.name)
+        const already = shown && visible   // re-anchored while open (previews): no new entrance
+        shown = true
+        visible = true
+        if (takesFocus) requestActivate()
+        if (!already) motionCtl.enter()
+    }
+    function close() { if (visible && shown) { shown = false; motionCtl.leave() } }
+    function toggle() { shown ? close() : open() }
 
-    onActiveChanged: if (takesFocus && !active && visible) close()
+    onActiveChanged: if (takesFocus && !active && shown) close()
 
-    Rectangle {
-        id: frame
-        anchors.fill: parent
-        radius: Metrics.flyoutRadius
-        color: Theme.flyout
-        border.color: Theme.flyoutBorder
-        border.width: 1
+    PopupMotion {
+        id: motionCtl
+        kind: flyout.motion
+        target: sheet
+        travel: flyout.motion === "edge" ? flyout.width + (flyout.rightAligned ? Metrics.flyoutEdge : 0)
+                                         : flyout.motion === "taskbar" ? flyout.height : sheet.height
+        onGone: { flyout.visible = false; flyout.dismissed() }
     }
     Item {
-        id: body
-        x: flyout.padding; y: flyout.padding
-        width: childrenRect.width; height: childrenRect.height
-        focus: true
-        Keys.onEscapePressed: flyout.close()
+        id: sheet
+        width: parent.width; height: parent.height - flyout.slideInset
+        transform: motionCtl.shift
+        Rectangle {
+            id: frame
+            anchors.fill: parent
+            radius: Metrics.flyoutRadius
+            color: Theme.flyout
+            border.color: Theme.flyoutBorder
+            border.width: 1
+        }
+        Item {
+            id: body
+            x: flyout.padding; y: flyout.padding
+            width: childrenRect.width; height: childrenRect.height
+            focus: true
+            Keys.onEscapePressed: flyout.close()
+        }
     }
 }

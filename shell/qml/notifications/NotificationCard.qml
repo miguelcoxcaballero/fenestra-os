@@ -55,9 +55,9 @@ Rectangle {
         // Banner: app line (icon 16 at 16,15; name at 40; "…" and close at the right).
         Item {
             visible: card.banner
-            width: parent.width; height: visible ? 51 : 0
+            width: parent.width; height: visible ? 50 : 0
             Image { x: 16; y: 15; width: 16; height: 16; sourceSize: Qt.size(32, 32); source: card.iconUrl(card.n ? card.n.appIcon : "") }
-            Text { x: 40; y: 14; width: parent.width - 120; elide: Text.ElideRight
+            Text { x: 40; y: 13; width: parent.width - 120; elide: Text.ElideRight
                    text: card.n ? card.n.appName : ""; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
             Glyph { x: 285; y: 11; Accessible.name: Strings.tr("More options")
                     Row { x: 6; y: 11; spacing: 3; Repeater { model: 3; Rectangle { width: 2; height: 2; radius: 1; color: Metrics.col("toast.glyph") } } } }
@@ -67,7 +67,7 @@ Rectangle {
         Item {
             visible: !card.banner
             width: parent.width; height: visible ? 37 : 0
-            Text { x: 12; y: 7; text: card.n && card.n.time ? Qt.formatTime(card.n.time, Locale.ShortFormat) : ""
+            Text { x: 12; y: 7; text: card.n && card.n.time ? Qt.formatTime(card.n.time, Qt.locale().timeFormat(Locale.ShortFormat).replace(/:ss/, "")) : ""
                    color: card.secondary; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
             Glyph { x: parent.width - 32; y: 4; visible: hover.containsMouse || hovered; glyph: "window-close-symbolic"
                     Accessible.name: Strings.tr("Close"); onClicked: card.closeRequested() }
@@ -111,9 +111,10 @@ Rectangle {
         // Centre: "+ N notifications" (unfold the group).
         Item {
             visible: !card.banner && card.more > 0
-            width: parent.width; height: visible ? 44 : 0
+            width: parent.width; height: visible ? 46 : 0
             Rectangle {
-                x: 12; y: 20; width: moreLabel.implicitWidth + 24; height: Metrics.n("notifications.button.height", 24); radius: Metrics.controlRadius
+                // dark-100-15-notifications-2: 1589-1718 × 197-220, label 11 px from the left.
+                x: 12; y: 22; width: moreLabel.implicitWidth + 20; height: Metrics.n("notifications.button.height", 24); radius: Metrics.controlRadius
                 color: mm.pressed ? Theme.pressed : mm.containsMouse ? Qt.tint(Metrics.col("panel.control"), Theme.hover) : Metrics.col("panel.control")
                 border.color: Metrics.col("notifications.button.border")
                 Text { id: moreLabel; anchors.centerIn: parent; text: Strings.tr("+ %1 notifications").arg(card.more)
@@ -121,6 +122,6 @@ Rectangle {
                 MouseArea { id: mm; anchors.fill: parent; hoverEnabled: true; onClicked: card.expandRequested() }
             }
         }
-        Item { width: 1; height: card.banner ? 20 : 14 }
+        Item { width: 1; height: card.banner ? 21 : 14 }
     }
 }

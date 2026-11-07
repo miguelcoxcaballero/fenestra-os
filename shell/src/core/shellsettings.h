@@ -26,6 +26,8 @@ class ShellSettings : public QObject
     Q_PROPERTY(QString accentColor READ accentColor WRITE setAccentColor NOTIFY changed)
     Q_PROPERTY(QString wallpaper READ wallpaper WRITE setWallpaper NOTIFY changed)
     Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY changed)
+    // Windows' "Transparency effects": off = the flat fallback colours (taskbar.fill).
+    Q_PROPERTY(bool transparency READ transparency NOTIFY changed)
     // Icons imported by the user (Settings / setup icon import): file URLs, or "" for Fenestra's own.
     Q_PROPERTY(QString startIcon READ startIcon NOTIFY changed)
     Q_PROPERTY(QString searchIcon READ searchIcon NOTIFY changed)
@@ -42,6 +44,7 @@ public:
     QString accentColor() const { return m_accent; }
     QString wallpaper() const { return m_wallpaper; }
     bool reduceMotion() const { return m_reduceMotion; }
+    bool transparency() const { return m_transparency; }
     QString startIcon() const { return m_startIcon; }
     QString searchIcon() const { return m_searchIcon; }
 
@@ -77,6 +80,7 @@ private:
     QString m_alignment, m_searchMode, m_scheme, m_accent, m_wallpaper;
     bool m_showWeather = true;
     bool m_reduceMotion = false;
+    bool m_transparency = true;
     QString m_startIcon, m_searchIcon;
     QStringList m_pinned;
 };

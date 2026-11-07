@@ -48,13 +48,10 @@ Flyout {
         MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true; onClicked: hb.clicked() }
     }
 
-    // Opening: slides in (Motion.qml, measured on the reference).
-    onVisibleChanged: if (visible && !Motion.reduced) slideIn.restart()
-    NumberAnimation { id: slideIn; target: slide; property: "x"; from: Motion.centerOffset; to: 0; duration: Motion.centerOpen
-                      easing.type: Easing.Bezier; easing.bezierCurve: Motion.decelerate }
+    // Opening and closing: both cards slide in from the right screen edge (design/motion.json).
+    motion: "edge"
 
     Column {
-        transform: Translate { id: slide }
         spacing: Metrics.flyoutGap
         Card {
             id: notifCard
@@ -82,8 +79,12 @@ Flyout {
                     on: Notifications.doNotDisturb
                     Accessible.name: Strings.tr("Do not disturb")
                     Accessible.checked: Notifications.doNotDisturb
-                    Image { anchors.centerIn: parent; width: 16; height: 16
-                            source: "image://tint/" + (Notifications.doNotDisturb ? Theme.accentOn : Theme.text).toString().slice(1, 7) + "/notifications-disabled-symbolic" }
+                    // Bell with a «z» (dark-100-15-notifications-2), drawn thin and dimmed like the reference.
+                    Image { anchors.centerIn: parent; width: 13; height: 13
+                            sourceSize: Qt.size(13 * Screen.devicePixelRatio, 13 * Screen.devicePixelRatio)
+                            opacity: Notifications.doNotDisturb ? 1 : 0.75
+                            source: "image://tint/" + (Notifications.doNotDisturb ? Theme.accentOn : Theme.text).toString().slice(1, 7) + "/"
+                                    + encodeURIComponent(Metrics.assets + "status/notifications-dnd.svg") }
                     onClicked: Notifications.doNotDisturb = !Notifications.doNotDisturb
                 }
             }
@@ -111,7 +112,7 @@ Flyout {
                             width: groupColumn.width
                             // App row: 16 px icon at x 17, name at x 40.
                             Item {
-                                width: parent.width; height: 43
+                                width: parent.width; height: 42
                                 Image { x: 17; y: 11; width: 16; height: 16; sourceSize: Qt.size(32, 32)
                                         source: { const i = group.modelData.appIcon || "dialog-information"
                                                   return i.startsWith("/") ? "file://" + i : i.includes(":") ? i : "image://icon/" + i } }

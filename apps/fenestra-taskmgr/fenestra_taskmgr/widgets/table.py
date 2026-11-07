@@ -578,6 +578,9 @@ class Table(Gtk.Widget, Gtk.Scrollable):
             if 0 <= x < w:
                 snap.append_color(th.heat_line if col.heat else c["list-sep"] if self.classic else c["line"],
                                   R(x, hh, 1, h - hh))
+                # Win32 dark list view: the grid line has a #3b3b3b pixel on its left
+                if self.classic and not col.heat and c["list-sep2"].alpha > 0:
+                    snap.append_color(c["list-sep2"], R(x - 1, hh, 1, h - hh))
         snap.pop()
 
         # ---------------- header

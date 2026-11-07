@@ -67,9 +67,17 @@ class WinMenu:
         button.add_css_class('flat')
         button.add_css_class('fenestra-winmenu-row')
         line = Gtk.Box(spacing=0)
-        mark = Gtk.Image.new_from_icon_name('win11-view-check') if check else Gtk.Label(label='•')
-        if isinstance(mark, Gtk.Image):
+        if check:
+            mark = Gtk.Image.new_from_icon_name('win11-view-check')
             mark.set_pixel_size(12)
+        else:
+            # Explorer's radio mark: a 6 px dot right of centre in the 24 px mark column (a text bullet
+            # came out 4 px and centred).
+            mark = Gtk.Box()
+            dot = Gtk.Box(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+            dot.set_margin_start(10)
+            dot.add_css_class('fenestra-winmenu-dot')
+            mark.append(dot)
         mark.add_css_class('fenestra-winmenu-mark')
         mark.set_size_request(24, -1)
         mark.set_visible(self.marks)
@@ -294,9 +302,10 @@ class InfoPane(Gtk.Box):
         gicon = info.get_icon() or Gio.ThemedIcon.new('text-x-generic')
         self.band_icon.set_from_gicon(gicon)
         self.head_icon.set_from_gicon(gicon)
+        from fenestra_views import windows_name, windows_type  # (fenestra_views imports this module)
         name = info.get_display_name()
         if info.get_file_type() == Gio.FileType.REGULAR:
-            name = os.path.splitext(name)[0] or name  # Explorer hides known extensions here
+            name = windows_name(gfile, name)  # Explorer hides known extensions, as in Details
         self.head_title.set_label(name)
         child = self.rows.get_first_child()
         while child:
@@ -304,7 +313,7 @@ class InfoPane(Gtk.Box):
             self.rows.remove(child)
             child = nxt
         ctype = info.get_content_type() or ''
-        rows = [(tr('Type'), Gio.content_type_get_description(ctype) if ctype else '')]
+        rows = [(tr('Type'), windows_type(gfile) or (Gio.content_type_get_description(ctype) if ctype else ''))]
         if info.get_file_type() != Gio.FileType.DIRECTORY:
             size = info.get_size()
             rows.append((tr('Size'), f'{size} bytes' if size < 1024 else GLib.format_size_full(size, GLib.FormatSizeFlags.IEC_UNITS)))
@@ -442,6 +451,8 @@ class CommandMenus:
 
     def build_more_menu(self):
         menu = WinMenu(marks=False)
+        # Explorer opens "See more" leftwards: the menu's right edge under the button's.
+        menu.popover.set_halign(Gtk.Align.END)
         folded = lambda: self.folded
         for text, glyph, action in (('Cut', 'win11-menu-cut', 'view.cut'), ('Copy', 'win11-menu-copy', 'view.copy'),
                                     ('Paste', 'win11-menu-paste', 'view.paste'), ('Rename', 'win11-menu-rename', 'view.rename'),

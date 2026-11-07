@@ -20,10 +20,11 @@ SCHEMES = {
     "Light": {"bar": "#f3f3f3", "bar_inactive": "#f9f9f9", "fg": "#000000", "fg_inactive": "#8a8a8a", "border": "#c8c8c8"},
 }
 GLYPHS = {  # in a 10 × 10 box, centred in the button
-    "minimize": '<path d="M0 5.5H10" />',
-    "maximize": '<rect x="0.5" y="0.5" width="9" height="9" rx="1" />',
+    "minimize": '<path d="M1 5.5H11" />',  # reference: x 18-27 in the 45 px button
+    "maximize": '<rect x="0" y="0.5" width="9" height="9" rx="1" />',  # antialiased corners like the reference
     "restore": '<rect x="0.5" y="2.5" width="7" height="7" rx="1" /><path d="M2.5 2.5V1.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H7.5" />',
-    "close": '<path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" />',
+    # antialiased like Windows' (crisp edges gave a 9 px stair-stepped X): x 17-26, y 9-18
+    "close": '<path d="M-0.25 0.25L9.25 9.75M9.25 0.25L-0.25 9.75" />',
 }
 
 
@@ -62,11 +63,12 @@ def button(s, glyph, close):
     }
     alpha = {"hover": 1 if close else 0.0605, "pressed": 0.9 if close else 0.0419}
     parts = []
+    render = "auto" if glyph in ("close", "maximize") else "crispEdges"
     for state, (bg, fg, opacity) in states.items():
         rect = f'<rect width="{BW}" height="{BH}" fill="{bg}" fill-opacity="{alpha.get(state, 1)}"/>' if bg else \
             f'<rect width="{BW}" height="{BH}" fill="none"/>'
         g = (f'<g transform="translate({(BW - 10) / 2} {(BH - 10) // 2})" fill="none" stroke="{fg}" stroke-width="1" '
-             f'stroke-opacity="{opacity}" shape-rendering="crispEdges">{GLYPHS[glyph]}</g>')
+             f'stroke-opacity="{opacity}" shape-rendering="{render}">{GLYPHS[glyph]}</g>')
         parts.append(f'<g id="{state}-center">{rect}{g}</g>')
     return f'<svg xmlns="http://www.w3.org/2000/svg" width="{BW}" height="{BH}">\n' + "\n".join(parts) + "\n</svg>\n"
 

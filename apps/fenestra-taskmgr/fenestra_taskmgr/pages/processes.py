@@ -301,10 +301,13 @@ class ProcessesPage(Page):
             show_properties(self.win, e)
 
     def more_menu(self, m):
-        m.add(_("Expand all"), self._expand_all)
-        m.add(_("Collapse all"), self._collapse_all)
-        m.add(_("Group by type"), self._toggle_group, check=util.opts()["group_by_type"])
-        m.add_separator()
+        # Windows 11 (26100): "..." holds a single «Vista ›» row with the view options.
+        def fill(sub):
+            sub.add(_("Group by type"), self._toggle_group, check=util.opts()["group_by_type"])
+            sub.add(_("Expand all"), self._expand_all)
+            sub.add(_("Collapse all"), self._collapse_all)
+        m.add_submenu(_("View"), fill, icon_name="tm-view-symbolic")
+        return True
 
     def _expand_all(self):
         self.table.expanded |= {k for k, e in self.entries.items() if e.expandable}

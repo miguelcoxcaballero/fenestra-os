@@ -1,6 +1,6 @@
 #!/bin/sh
 # Regenerate screenshots/ on the headless test compositor (never the real desktop):
-#   ~/.local/bin/fenestra-test-run mutter --headless --wayland --no-x11 \
+#   ~/.local/bin/fenestra-test-run dbus-run-session -- mutter --headless --wayland --no-x11 \
 #       --virtual-monitor 1920x1080 --wayland-display=fenestra-test &
 #   tools/screenshots.sh
 set -u

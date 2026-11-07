@@ -61,7 +61,10 @@ Window {
         placeUnderMaximize()
         visible = true
         requestActivate()
+        snapMotion.enter()
     }
+    // No frames of it in the reference: fades in (PopupMotion "fade", design/motion.json).
+    PopupMotion { id: snapMotion; kind: "fade"; target: snap.contentItem }
     function choose(zone) {
         visible = false
         KWinIntegration.placeActiveWindow(Qt.rect(zone[0], zone[1], zone[2], zone[3]))
