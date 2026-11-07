@@ -33,7 +33,10 @@ Window {
     readonly property real dpr: scaleProbe.devicePixelRatio > 0 ? scaleProbe.devicePixelRatio : 1
     ShadowLabel { id: scaleProbe; visible: false; width: 1; height: 1 }
     readonly property real cellW: Metrics.desktopCellWidth
-    readonly property real cellH: Math.round(Metrics.desktopCellHeight * dpr + Metrics.tok("desktop.cell.height.extra150", 8) * Math.max(0, dpr - 1)) / dpr
+    // Row pitch in device px, measured: 124 at 100 % (VM) and 153 at 150 % (the user's Windows,
+    // 163657: labels at 88 and 241). Windows' grid does not scale with the DPI; it grows by 58 px
+    // per 100 % of extra scale.
+    readonly property real cellH: Math.round(Metrics.desktopCellHeight + Metrics.tok("desktop.cell.height.perscale", 58) * Math.max(0, dpr - 1)) / dpr
     readonly property real iconTop: Metrics.tok("desktop.icon.top", 7) / dpr
     readonly property real labelTop: iconTop + Metrics.desktopIcon + Metrics.tok("desktop.label.gap", 3)
     readonly property int labelFontDevice: Math.round(Metrics.tok("desktop.label", 12) * dpr)
