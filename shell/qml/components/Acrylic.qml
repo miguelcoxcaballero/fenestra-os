@@ -24,6 +24,10 @@ Item {
     property string shadowKind: "popup"
     property bool border: true
     property alias fill: fillRect
+    // The real acrylic (core/backdrop.h), set by the popup when Backdrop has computed it.
+    property alias backdrop: backdropView
+    // Recipe of the computed acrylic: menus and tooltips share one, wherever they open.
+    readonly property string backdropRecipe: recipe === "tooltip" || recipe.startsWith("menu") ? "menu" : recipe
     readonly property bool translucent: ShellSettings.transparency
     readonly property int shadowMargin: Metrics.tok(shadowKind + ".shadow.margin", 28)
     // Device pixels per logical pixel of the window (1.5 at 150 %), for the shadow's pixel grid.
@@ -50,5 +54,10 @@ Item {
         radius: acrylic.radius
         color: Metrics.themed("acrylic." + acrylic.recipe + (acrylic.translucent ? "" : ".solid"))
         border.width: 0
+    }
+    BackdropView {
+        id: backdropView
+        anchors.fill: parent
+        topRadius: acrylic.radius; bottomRadius: acrylic.radius
     }
 }

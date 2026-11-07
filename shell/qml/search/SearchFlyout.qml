@@ -369,7 +369,7 @@ ShellPopup {
         optionsMenu.gap = Metrics.flyoutGap + search.panelHeight - p.y - optionsMenu.sheetHeight - 4
         optionsMenu.open()
     }
-    ContextMenu { id: optionsMenu; targetScreen: search.targetScreen; overPanel: true; onDismissed: search.requestActivate() }
+    ContextMenu { id: optionsMenu; targetScreen: search.targetScreen; overPanel: true; overWindow: search; overRect: search.screenRect; onDismissed: search.requestActivate() }
 
     // Files as Explorer names them with known extensions hidden.
     function extension(item) {

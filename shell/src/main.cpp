@@ -9,6 +9,7 @@
 #include <QQuickWindow>
 
 #include "acrylic.h"
+#include "backdrop.h"
 #include "iconoverrides.h"
 #include "kwinintegration.h"
 #include "notifications.h"
@@ -65,6 +66,7 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("snip"), new SnipImageProvider);
     engine.addImageProvider(QStringLiteral("acrylic"), new AcrylicProvider);
     engine.addImageProvider(QStringLiteral("popupshadow"), new PopupShadowProvider);
+    engine.addImageProvider(QStringLiteral("backdrop"), new BackdropProvider);
     TrayItems::instance(); // own org.kde.StatusNotifierWatcher before apps start
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);

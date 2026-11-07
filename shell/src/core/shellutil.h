@@ -16,6 +16,7 @@
 #include <QHash>
 #include <QPointer>
 #include <QQuickItem>
+#include <QQuickWindow>
 #include <QRegion>
 #include <QVariantList>
 #include <cmath>
@@ -58,6 +59,15 @@ public:
     Q_INVOKABLE bool configFileExists(const QString &name) const
     {
         return QFileInfo::exists(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QLatin1Char('/') + name);
+    }
+    // Keep a popup's scene graph while it is hidden (QQuickWindow::persistentSceneGraph is not
+    // exposed to QML): its acrylic layers are ready in the first frame of the next opening.
+    Q_INVOKABLE void keepScene(QWindow *window) const
+    {
+        if (auto *qw = qobject_cast<QQuickWindow *>(window)) {
+            qw->setPersistentSceneGraph(true);
+            qw->setPersistentGraphics(true);
+        }
     }
     // The window's real (fractional) scale; QML's Screen.devicePixelRatio is the screen's integer one.
     Q_INVOKABLE qreal scaleOf(QWindow *window) const { return window ? window->devicePixelRatio() : 1.0; }

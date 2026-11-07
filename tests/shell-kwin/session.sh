@@ -133,10 +133,10 @@ w=Gtk.Window(title='X11 client'); w.set_default_size(520,320); w.connect('destro
     check B08-keyboard-layouts wait_for 'is "$(probe "KeyboardStatus.count")" 2' 20
     probe "TrayItems.activate(0, 10, 10)" >/dev/null
     check B08-tray-activate wait_for 'grep -q SNI_ACTIVATE /out/sni.log' 10
-    probe "$(bar 'testOverflow()')" >/dev/null; sleep 1; check B08-overflow shot_with fenestra-flyout 01b-overflow
+    probe "$(bar 'testOverflow()')" >/dev/null; sleep 1; check B08-overflow shot_with dock 01b-overflow
     probe "$(bar 'testCloseFlyouts()')" >/dev/null
     probe "screensView.objectAt(0).taskbar.children" >/dev/null
-    probe "$(bar 'testMenuOfTray(0)')" >/dev/null; sleep 1; check B08-item-menu shot_with fenestra-flyout 01c-item-menu
+    probe "$(bar 'testMenuOfTray(0)')" >/dev/null; sleep 1; check B08-item-menu shot_with dock 01c-item-menu
     probe "TrayItems.triggerMenuItem(0, 2)" >/dev/null
     check B08-menu-event wait_for 'grep -q "SNI_MENU_CLICKED 2" /out/sni.log' 10
     probe "$(bar 'testCloseFlyouts()')" >/dev/null
@@ -147,11 +147,11 @@ import json, sys
 s = json.load(open('/out/01-taskbar/surfaces.json'))
 bars = {tuple(x['screen']) for x in s if x['scope'] == 'fenestra-taskbar'}
 sys.exit(len(bars) != ${OUTPUTS:-1})"
-    probe "$(bar 'testPreview(0)')" >/dev/null; sleep 1; check B03-preview shot_with fenestra-flyout 02-preview
+    probe "$(bar 'testPreview(0)')" >/dev/null; sleep 1; check B03-preview shot_with dock 02-preview
     probe "$(bar 'testCloseFlyouts()')" >/dev/null
-    probe "$(bar 'testButton(0).rightClicked()')" >/dev/null; sleep 1; check B02-app-menu shot_with fenestra-flyout 03-app-menu
+    probe "$(bar 'testButton(0).rightClicked()')" >/dev/null; sleep 1; check B02-app-menu shot_with dock 03-app-menu
     probe "$(bar 'testCloseFlyouts()')" >/dev/null
-    probe "$(bar 'testBarMenu(900)')" >/dev/null; sleep 1; check B07-taskbar-menu shot_with fenestra-flyout 04-taskbar-menu
+    probe "$(bar 'testBarMenu(900)')" >/dev/null; sleep 1; check B07-taskbar-menu shot_with dock 04-taskbar-menu
     probe "$(bar 'testCloseFlyouts()')" >/dev/null
     # B01, B06 and light mode, changed live through shell.conf (as Fenestra Settings does).
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' 'Alignment=left' 'SearchMode=icon'
@@ -172,29 +172,29 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     check S01-start-opens-from-dbus wait_for 'is "$(probe "$(st shown)")" true' 10
     check S01-start-pins wait_for '[ "$(probe "StartPins.apps.length")" != "('"'"'[0]'"'"',)" ]' 5
     check S01-recommended wait_for 'is "$(probe "RecentFiles.items.length")" 3' 10
-    sleep 1; check S01-start shot_with fenestra-start 09-start
-    check S01-start-size python3 -c "import json, sys; s = [x for x in json.load(open('/out/09-start/surfaces.json')) if x['scope'] == 'fenestra-start']; sys.exit(not s or (s[0]['width'], s[0]['height']) != (890, 906))"  # 834 x 866 panel + 28 px shadow room, down to the taskbar
-    probe "$(st 'testPowerMenu()')" >/dev/null; sleep 1; check S01-power-menu shot_with fenestra-flyout 09b-power-menu
+    sleep 1; check S01-start shot_with dock 09-start
+    check S01-start-size python3 -c "import json, sys; s = [x for x in json.load(open('/out/09-start/surfaces.json')) if x['scope'] == 'dock']; sys.exit(not s or (s[0]['width'], s[0]['height']) != (890, 906))"  # 834 x 866 panel + 28 px shadow room, down to the taskbar
+    probe "$(st 'testPowerMenu()')" >/dev/null; sleep 1; check S01-power-menu shot_with dock 09b-power-menu
     probe "$(st 'testCloseMenus()')" >/dev/null
-    probe "$(st 'testAccountMenu()')" >/dev/null; sleep 1; check S01-account-menu shot_with fenestra-flyout 09c-account-menu
+    probe "$(st 'testAccountMenu()')" >/dev/null; sleep 1; check S01-account-menu shot_with dock 09c-account-menu
     probe "$(st 'testCloseMenus()')" >/dev/null
-    probe "$(st 'allApps = true')" >/dev/null; sleep 1; check S01-all-category shot_with fenestra-start 10-all-category
-    probe "$(st 'allView = "grid"')" >/dev/null; sleep 1; check S01-all-grid shot_with fenestra-start 11-all-grid
-    probe "$(st 'allView = "list"')" >/dev/null; sleep 1; check S01-all-list shot_with fenestra-start 12-all-list
+    probe "$(st 'allApps = true')" >/dev/null; sleep 1; check S01-all-category shot_with dock 10-all-category
+    probe "$(st 'allView = "grid"')" >/dev/null; sleep 1; check S01-all-grid shot_with dock 11-all-grid
+    probe "$(st 'allView = "list"')" >/dev/null; sleep 1; check S01-all-list shot_with dock 12-all-list
     probe "$(st 'close()')" >/dev/null; sleep 1
     check S02-start-closes wait_for 'is "$(probe "$(st shown)")" false' 5
     # Search: home, then results with the preview, files, photos and Settings pages.
     probe "$(se "openWith('')")" >/dev/null; sleep 1
-    check S04-search-home shot_with fenestra-start 13-search-home
+    check S04-search-home shot_with dock 13-search-home
     # Search lines up with the taskbar's search box (reference: both at x 785).
-    check S04-search-at-box bash -c '[ "$(probe "Math.round(screensView.objectAt(0).taskbar.searchBoxX)" | tr -dc 0-9)" = "$(python3 -c "import json; print([x for x in json.load(open(\"/out/13-search-home/surfaces.json\")) if x[\"scope\"] == \"fenestra-start\"][0][\"margins\"][0] + 28)")" ]'
+    check S04-search-at-box bash -c '[ "$(probe "Math.round(screensView.objectAt(0).taskbar.searchBoxX)" | tr -dc 0-9)" = "$(python3 -c "import json; print([x for x in json.load(open(\"/out/13-search-home/surfaces.json\")) if x[\"scope\"] == \"dock\"][0][\"margins\"][0] + 28)")" ]'
     probe "$(se "openWith('playa')")" >/dev/null
     check S05-finds-photo wait_for 'probe "Search.sections.map(s => s.items.map(i => i.kind).join()).join()" | grep -q photo' 20
-    sleep 1; check S04-results-preview shot_with fenestra-start 14-results
+    sleep 1; check S04-results-preview shot_with dock 14-results
     probe "$(se "openWith('display')")" >/dev/null
     probe "Search.filter = \"settings\"" >/dev/null
     check S05-finds-settings-page wait_for 'probe "Search.sections.map(s => s.items.map(i => i.kind).join()).join()" | grep -q setting' 30
-    sleep 1; check S04-settings-filter shot_with fenestra-start 15-settings
+    sleep 1; check S04-settings-filter shot_with dock 15-settings
     probe "Search.filter = \"all\"" >/dev/null
     probe "$(se "openWith('paint')")" >/dev/null
     check S05-finds-app wait_for 'is "$(probe "Search.best.kind")" \"app\"' 10
@@ -203,7 +203,7 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     check S04-history-saved wait_for 'grep -q paint ~/.local/state/windows-search/history.json' 5
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' '[Appearance]' 'ColorScheme=light' 'Wallpaper=/usr/share/backgrounds/fenestra/fenestra-bloom-light.jpg'
     gdbus call --session -d org.fenestra.Shell -o /org/fenestra/Shell -m org.fenestra.Shell.ToggleStart >/dev/null; sleep 1
-    check S01-start-light shot_with fenestra-start 16-start-light
+    check S01-start-light shot_with dock 16-start-light
     probe "$(st 'close()')" >/dev/null
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
     # ---- H4: notifications, calendar, quick settings, media, OSD, Ctrl+Alt+Del ----
@@ -224,7 +224,7 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
     wait_for 'is "$(probe "Notifications.popups.length")" 0' 10
     probe "ShellState.toggleCalendar(null, -1)" >/dev/null; sleep 1
-    check N01-center-and-calendar shot_with fenestra-flyout 19-center
+    check N01-center-and-calendar shot_with dock 19-center
     check N01-history wait_for 'is "$(probe "Notifications.count")" 2' 5
     probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
     probe "Notifications.doNotDisturb = true" >/dev/null
@@ -243,22 +243,22 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "Notifications.endFocus()" >/dev/null
     probe "Notifications.clearAll()" >/dev/null
     check N01-clear-all wait_for 'is "$(probe "Notifications.count")" 0' 3
-    sleep 0.5; check N01-center-empty shot_with fenestra-flyout 19b-center-empty
+    sleep 0.5; check N01-center-empty shot_with dock 19b-center-empty
     probe "screensView.objectAt(0).center.calendar.collapsed = true" >/dev/null; sleep 0.5
-    check N01-calendar-collapsed shot_with fenestra-flyout 19c-calendar-collapsed
+    check N01-calendar-collapsed shot_with dock 19c-calendar-collapsed
     probe "screensView.objectAt(0).center.calendar.collapsed = false" >/dev/null
     probe "ShellState.toggleCalendar(null, -1)" >/dev/null
     python3 /src/tests/shell-kwin/mpris-player.py > /out/mpris.log 2>&1 & MPRIS=$!
     check Q02-media-player wait_for 'is "$(probe "Media.title")" "\"Canción de prueba\""' 10
     probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null; sleep 1
-    check Q01-quick-settings shot_with fenestra-flyout 20-quick-settings
+    check Q01-quick-settings shot_with dock 20-quick-settings
     probe "Media.playPause()" >/dev/null
     check Q02-play-pause wait_for 'grep -q MPRIS_PLAYPAUSE /out/mpris.log' 5
     probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null
     # The same flyouts in light mode (light-100-12-quick, -14-quick-media, -15-notifications-2, -17-toast).
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop' '[Appearance]' 'ColorScheme=light' 'Wallpaper=/usr/share/backgrounds/fenestra/fenestra-bloom-light.jpg'
     probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null; sleep 1
-    check Q01-quick-settings-light shot_with fenestra-flyout 20b-quick-light
+    check Q01-quick-settings-light shot_with dock 20b-quick-light
     probe "ShellState.toggleQuickSettings(null, -1)" >/dev/null
     notify "Descarga completada (demo)" "playa-verano.jpg se ha guardado en Imágenes" >/dev/null
     sleep 1; check N02-banner-light shot_with fenestra-toasts 17b-banner-light
@@ -266,7 +266,7 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     probe "Notifications.popups.map(p => Notifications.hidePopup(p.notificationId))" >/dev/null
     wait_for 'is "$(probe "Notifications.popups.length")" 0' 10
     probe "ShellState.toggleCalendar(null, -1)" >/dev/null; sleep 1
-    check N01-center-light shot_with fenestra-flyout 19d-center-light
+    check N01-center-light shot_with dock 19d-center-light
     probe "ShellState.toggleCalendar(null, -1)" >/dev/null
     probe "Notifications.clearAll()" >/dev/null
     conf '[Taskbar]' 'Pinned=org.fenestra.Notepad.desktop, org.fenestra.Paint.desktop'
@@ -282,9 +282,9 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     dk() { echo "screensView.objectAt(0).desktop.$1"; }
     check D01-desktop-icons wait_for 'is "$(probe "DesktopModel.rowCount()")" 4' 10   # Recycle Bin + 3 entries
     sleep 1; check D01-desktop shot 23-desktop
-    probe "$(dk 'testBackgroundMenu()')" >/dev/null; sleep 1; check D02-background-menu shot_with fenestra-flyout 24-desktop-menu
+    probe "$(dk 'testBackgroundMenu()')" >/dev/null; sleep 1; check D02-background-menu shot_with dock 24-desktop-menu
     probe "$(dk 'testCloseMenu()')" >/dev/null
-    probe "$(dk 'testItemMenu(2)')" >/dev/null; sleep 1; check D02-item-menu shot_with fenestra-flyout 25-item-menu
+    probe "$(dk 'testItemMenu(2)')" >/dev/null; sleep 1; check D02-item-menu shot_with dock 25-item-menu
     probe "$(dk 'testCloseMenu()')" >/dev/null
     probe "DesktopModel.newFolder()" >/dev/null
     check D01-new-folder wait_for '[ -d ~/Desktop/"New folder" ]' 5
