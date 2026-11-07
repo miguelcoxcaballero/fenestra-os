@@ -176,6 +176,18 @@ Flyout {
                                  anchors.verticalCenter: parent.verticalCenter
                                  value: Brightness.percent; onMoved: (v) => Brightness.percent = v }
                     }
+                    // Keyboard backlight (any laptop with a kbd_backlight LED): not in Windows' own
+                    // Quick settings, which leaves it to the maker's app (Samsung Settings › Keyboard,
+                    // a 4-step level bar); here a row like brightness's, snapping to the device's levels.
+                    Item {
+                        visible: KbdBacklight.available
+                        width: parent.width; height: visible ? sliders.rowH : 0
+                        FluentGlyph { x: 25; anchors.verticalCenter: parent.verticalCenter; glyph: ""; fallback: "keyboard-brightness-symbolic" }
+                        Slider { x: Metrics.n("quick.slider.x", 57) - thumb / 2; width: Metrics.n("quick.slider.width", 244) + thumb
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 Accessible.name: Strings.tr("Keyboard backlight")
+                                 value: KbdBacklight.percent; onMoved: (v) => KbdBacklight.percent = v }
+                    }
                     // Volume: always there; without an output device it shows muted and disabled.
                     Item {
                         width: parent.width; height: sliders.rowH

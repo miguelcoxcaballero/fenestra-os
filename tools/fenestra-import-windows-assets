@@ -12,6 +12,8 @@ tool copies those originals *for your user only*:
   * Explorer empty/full folder icons          -> ~/.local/share/fenestra/assets/folders
   * Start button logo and colour Search icon  -> ~/.local/share/fenestra/assets/{branding,search}
     (the taskbar Start button and Search launcher are switched to them)
+  * Samsung Galaxy Books: Samsung Settings' performance-mode icons and the Samsung System Support
+    OSD's banner pictures and strings (Fn+F11 / Fn+F9)  -> ~/.local/share/fenestra/oem/samsung
   * Settings app icon (ImmersiveControlPanel logo)
       -> ~/.local/share/icons/hicolor/{256x256,48x48,32x32,scalable}/apps/fenestra-settings.*
 
@@ -1665,6 +1667,98 @@ def import_samsung_settings(win, dry):
             break
     log(f'samsung settings: {n} performance-mode icons and the app logo')
 
+def pe_resources(path, rtype):
+    """Raw data of a PE file's resources of one (named or numeric) type: {name_or_id: bytes}."""
+    import struct
+    data = Path(path).read_bytes()
+    pe = struct.unpack_from('<I', data, 0x3c)[0]
+    if data[pe:pe + 4] != b'PE\0\0':
+        return {}
+    nsec, = struct.unpack_from('<H', data, pe + 6)
+    optsize, = struct.unpack_from('<H', data, pe + 20)
+    opt = pe + 24
+    magic, = struct.unpack_from('<H', data, opt)
+    dd = opt + (112 if magic == 0x20b else 96)
+    rva, size = struct.unpack_from('<II', data, dd + 2 * 8)
+    secs = []
+    for i in range(nsec):
+        o = opt + optsize + 40 * i
+        vsize, vaddr, rsize, raddr = struct.unpack_from('<IIII', data, o + 8)
+        secs.append((vaddr, max(vsize, rsize), raddr))
+    def off(r):
+        for va, sz, ra in secs:
+            if va <= r < va + sz:
+                return r - va + ra
+        raise ValueError('rva outside sections')
+    base = off(rva)
+    def name_of(entry_name):
+        if entry_name & 0x80000000:
+            o = base + (entry_name & 0x7fffffff)
+            n, = struct.unpack_from('<H', data, o)
+            return data[o + 2:o + 2 + 2 * n].decode('utf-16-le')
+        return entry_name
+    def entries(o):
+        named, ids = struct.unpack_from('<HH', data, o + 12)
+        for i in range(named + ids):
+            nm, ptr = struct.unpack_from('<II', data, o + 16 + 8 * i)
+            yield name_of(nm), ptr
+    out = {}
+    for t, tptr in entries(base):
+        if t != rtype or not tptr & 0x80000000:
+            continue
+        for n, nptr in entries(base + (tptr & 0x7fffffff)):
+            o = base + (nptr & 0x7fffffff)
+            if nptr & 0x80000000:  # language level: the first one
+                o = base + next(entries(o))[1]
+            drva, dsize = struct.unpack_from('<II', data, o)
+            out[n] = data[off(drva):off(drva) + dsize]
+    return out
+
+
+# SamsungSystemSupportOSD.exe's PNG resources (light theme = dark glyph, dark theme = white glyph)
+# for the banners the shell draws (shell/qml/osd/OemBanner.qml), by OSDHandler's table.
+SAMSUNG_OSD_PICTURES = {'perf-silent': (141, 142), 'perf-quiet': (143, 144), 'perf-optimised': (139, 140),
+                        'perf-high': (135, 136), 'kbd-backlight': (137, 138)}
+
+
+def import_samsung_osd(win, dry):
+    """Samsung System Support Service's OSD (Fn+F11 performance mode, Fn+F9 keyboard backlight on
+    Galaxy Books): its pictures and its LanguageResource.ini strings, from the driver package."""
+    repo = ci(win / 'Windows/System32/DriverStore/FileRepository')
+    exes = sorted(repo.glob('sfourswcomp*.inf_amd64_*/SamsungSystemSupportOSD.exe'), key=lambda p: p.stat().st_mtime) if repo else []
+    if not exes:
+        log('samsung osd: not installed')
+        return
+    exe = exes[-1]
+    if dry:
+        log(f'samsung osd: {exe.parent.name}')
+        return
+    out = DATA / 'fenestra' / 'oem' / 'samsung' / 'osd'
+    pngs = pe_resources(exe, 'PNG')
+    n = 0
+    for name, (light, dark) in SAMSUNG_OSD_PICTURES.items():
+        for theme, rid in (('light', light), ('dark', dark)):
+            if rid in pngs:
+                (out / theme).mkdir(parents=True, exist_ok=True)
+                (out / theme / f'{name}.png').write_bytes(pngs[rid])
+                n += 1
+    strings = {}
+    ini = exe.parent / 'LanguageResource.ini'
+    if ini.is_file():
+        raw = ini.read_bytes()
+        text = raw.decode('utf-16') if raw[:2] in (b'\xff\xfe', b'\xfe\xff') else raw.decode('utf-8', 'replace')
+        section = None
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith('[') and line.endswith(']'):
+                section = strings.setdefault(line[1:-1], {})
+            elif section is not None and ' = ' in line:
+                k, v = line.split(' = ', 1)
+                section[k.strip()] = v
+        out.mkdir(parents=True, exist_ok=True)
+        (out / 'strings.json').write_text(json.dumps(strings, ensure_ascii=False, indent=1), encoding='utf-8')
+    log(f'samsung osd: {n} pictures, strings in {len(strings)} languages')
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--windows', help='path where the Windows partition is mounted')
@@ -1702,6 +1796,7 @@ def main():
     import_folders(win, args.dry_run)
     import_taskbar_icons(win, args.dry_run)
     import_samsung_settings(win, args.dry_run)
+    import_samsung_osd(win, args.dry_run)
     import_settings_icon(win, args.dry_run)
     if not args.dry_run:
         (ASSETS / '.imported').parent.mkdir(parents=True, exist_ok=True)

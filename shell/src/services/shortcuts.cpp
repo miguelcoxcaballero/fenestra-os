@@ -2,6 +2,7 @@
 #include "shortcuts.h"
 
 #include "apps.h"
+#include "kbdbacklight.h"
 #include "kwinintegration.h"
 #include "shellcontrol.h"
 #include "snip.h"
@@ -91,6 +92,14 @@ void Shortcuts::install()
         Brightness::instance()->step(-5);
         Q_EMIT osd(QStringLiteral("brightness"), Brightness::instance()->percent());
     });
+    // Keyboard backlight keys that reach userspace (most hotkeys change it in the firmware, which
+    // KbdBacklight reports by itself): the banner comes from KbdBacklight::keyChanged.
+    connect(add(QStringLiteral("kbd-backlight-up"), QStringLiteral("Keyboard backlight up"), {QKeySequence(Qt::Key_KeyboardBrightnessUp)}),
+            &QAction::triggered, KbdBacklight::instance(), [] { KbdBacklight::instance()->step(+1); });
+    connect(add(QStringLiteral("kbd-backlight-down"), QStringLiteral("Keyboard backlight down"), {QKeySequence(Qt::Key_KeyboardBrightnessDown)}),
+            &QAction::triggered, KbdBacklight::instance(), [] { KbdBacklight::instance()->step(-1); });
+    connect(add(QStringLiteral("kbd-backlight-toggle"), QStringLiteral("Keyboard backlight"), {QKeySequence(Qt::Key_KeyboardLightOnOff)}),
+            &QAction::triggered, KbdBacklight::instance(), [] { KbdBacklight::instance()->toggle(); });
     connect(add(QStringLiteral("security-screen"), QStringLiteral("Security options (Ctrl+Alt+Del)"),
                 {QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_Delete)}),
             &QAction::triggered, this, &Shortcuts::securityScreenRequested);

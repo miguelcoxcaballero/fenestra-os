@@ -100,17 +100,21 @@ const std::vector<quint8> &noiseTile()
     return tile;
 }
 
-struct Recipe { Rgb tint; float tintOpacity, luminosityOpacity, noise; };
+// over: a plain colour composited last (alpha "over"), for materials that are a translucent fill
+// over a blur rather than WinUI's acrylic (Samsung's OSD: #2C2C2C at 60 % over DWM's blur-behind).
+struct Recipe { Rgb tint; float tintOpacity, luminosityOpacity, noise; Rgb over; float overOpacity; };
 Recipe recipe(const QString &name, bool dark)
 {
     auto *t = Tokens::instance();
     const QString k = QStringLiteral("acrylic.") + name + QStringLiteral(".backdrop."), s = dark ? QStringLiteral(".dark") : QStringLiteral(".light");
     // Defaults: Start's body (user-win11 160039), see design/tokens.json.
     const QColor c(t->v(k + QStringLiteral("tint") + s, dark ? "#292929" : "#f3f3f3").toString());
+    const QColor over(t->v(k + QStringLiteral("over") + s, "#00000000").toString());
     return {{float(c.redF()), float(c.greenF()), float(c.blueF())},
             float(t->v(k + QStringLiteral("tint.opacity") + s, dark ? 0.5 : 0.0).toDouble()),
             float(t->v(k + QStringLiteral("luminosity.opacity") + s, dark ? 0.96 : 0.9).toDouble()),
-            float(t->v(QStringLiteral("acrylic.backdrop.noise"), 0.02).toDouble())};
+            float(t->v(QStringLiteral("acrylic.backdrop.noise"), 0.02).toDouble()),
+            {float(over.redF()), float(over.greenF()), float(over.blueF())}, float(over.alphaF())};
 }
 
 // The wallpaper as Desktop.qml draws it (cover-scaled, centred) at the screen's device size.
@@ -311,7 +315,7 @@ int Backdrop::request(QWindow *window, const QRectF &rect, const QString &wallpa
                         const float *v = &small[(size_t(y) * ws + x) * 3];
                         const Rgb b{v[0], v[1], v[2]};
                         const Rgb s1 = mix(b, setLum(b, tintLum), rc.luminosityOpacity);
-                        const Rgb s2 = mix(s1, setLum(rc.tint, lum(s1)), rc.tintOpacity);
+                        const Rgb s2 = mix(mix(s1, setLum(rc.tint, lum(s1)), rc.tintOpacity), rc.over, rc.overOpacity);
                         auto q = [](float u) { return std::clamp(int(std::lround(u * 255.f)), 0, 255); };
                         line[x] = qRgb(q(s2.r), q(s2.g), q(s2.b));
                     }
