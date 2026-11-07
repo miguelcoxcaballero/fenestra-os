@@ -26,7 +26,7 @@ Row {
         visible: TrayItems.count > 0
         accessibleName: Strings.tr("Show hidden icons")
         // 16 x 9 device px at 150 %: the 0.75-wide chevron of a 14 px box.
-        SymbolicIcon { name: "pan-up-symbolic"; size: Metrics.tok("tray.overflow.icon", 14) }
+        SymbolicIcon { src: Metrics.assets + "tray/overflow-chevron.svg"; size: Metrics.tok("tray.overflow.icon", 14) }
         onClicked: { overflow.anchorX = overflowButton.mapToItem(null, overflowButton.width / 2, 0).x; overflow.toggle() }
     }
     // Privacy (B08): microphone and location in use, with the app names as tooltip.
@@ -42,11 +42,14 @@ Row {
         SymbolicIcon { visible: Privacy.locationInUse; src: Metrics.assets + "privacy/location.svg"
             Accessible.name: Strings.tr("Your location is being used") }
     }
-    // Input indicator, shown with more than one keyboard layout: "ENG" over "ES" as Windows draws it
-    // (user-win11 163657: both lines centred, in the clock's font and line positions).
+    // Input indicator: "ENG" over "ES" as Windows draws it (user-win11 163657: both lines centred, in the
+    // clock's font and line positions). Windows shows it with more than one input method, or when the
+    // keyboard is not the display language's own (English display with a Spanish keyboard: ENG / ES).
     TrayButton {
         anchors.verticalCenter: parent.verticalCenter
         visible: KeyboardStatus.count > 1
+                 || (KeyboardStatus.count === 1 && KeyboardStatus.language !== "" && KeyboardStatus.region !== ""
+                     && KeyboardStatus.language.slice(0, 2).toLowerCase() !== KeyboardStatus.region.toLowerCase())
         lpad: Tokens.v("tray.input.lpad", 12)
         rpad: Tokens.v("tray.input.rpad", 13.33)
         accessibleName: KeyboardStatus.longName
