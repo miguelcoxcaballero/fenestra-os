@@ -1,0 +1,5 @@
+# Fenestra: firmware "block recording" (microphone + camera) switchable by the user without a
+# password, like Samsung Settings on Windows; Fenestra Shell warns when it mutes an app
+# (shell/src/services/recordingblock.cpp). Samsung Galaxy Book (samsung-galaxybook driver).
+ACTION=="add|change", SUBSYSTEM=="firmware-attributes", KERNEL=="samsung-galaxybook", \
+  RUN+="/bin/sh -c 'f=/sys%p/attributes/block_recording/current_value; [ -e $f ] && chgrp wheel $f && chmod 0664 $f'"
