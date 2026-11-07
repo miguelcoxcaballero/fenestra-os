@@ -17,11 +17,13 @@ Flyout {
     component GlyphButton: Rectangle {
         id: gb
         property string glyph
+        property url glyphSource
         property bool active: true
         signal clicked()
         width: 32; height: 32; radius: Metrics.controlRadius
         color: gm.pressed ? Theme.pressed : gm.containsMouse ? Theme.hover : "transparent"
-        SymbolicIcon { anchors.centerIn: parent; name: gb.glyph; opacity: gb.active ? 1 : 0.4 }
+        SymbolicIcon { monochrome: true; anchors.centerIn: parent; name: gb.glyphSource.toString() === "" ? gb.glyph : ""; src: gb.glyphSource
+                       opacity: gb.active ? 1 : 0.4 }
         MouseArea { id: gm; anchors.fill: parent; hoverEnabled: true; enabled: gb.active; onClicked: gb.clicked() }
     }
 
@@ -58,15 +60,16 @@ Flyout {
                 Image { anchors.centerIn: parent; width: 32; height: 32; source: "image://icon/" + Media.appIcon; visible: Media.artUrl === "" }
             }
             Repeater {
-                model: [["media-skip-backward-symbolic", "Previous", () => Media.previous(), Media.canGoPrevious],
-                        [Media.playing ? "media-playback-pause-symbolic" : "media-playback-start-symbolic", Media.playing ? "Pause" : "Play", () => Media.playPause(), true],
-                        ["media-skip-forward-symbolic", "Next", () => Media.next(), Media.canGoNext]]
+                // Filled 14 px transport glyphs as on dark-100-14-quick-media (status/media-*.svg).
+                model: [["media-previous", "Previous", () => Media.previous(), Media.canGoPrevious],
+                        [Media.playing ? "media-pause" : "media-play", Media.playing ? "Pause" : "Play", () => Media.playPause(), true],
+                        ["media-next", "Next", () => Media.next(), Media.canGoNext]]
                 delegate: GlyphButton {
                     required property var modelData
                     required property int index
                     x: Metrics.quickWidth / 2 + (index - 1) * Metrics.n("quick.media.controls.pitch", 66) - width / 2
                     y: Metrics.n("quick.media.controls.y", 137) - height / 2
-                    glyph: modelData[0]; active: modelData[3]
+                    glyphSource: Metrics.assets + "status/" + modelData[0] + ".svg"; active: modelData[3]
                     Accessible.name: Strings.tr(modelData[1])
                     onClicked: modelData[2]()
                 }
@@ -152,7 +155,7 @@ Flyout {
                     Item {
                         visible: Brightness.available
                         width: parent.width; height: sliders.rowH
-                        SymbolicIcon { x: 25; anchors.verticalCenter: parent.verticalCenter; name: "display-brightness-symbolic" }
+                        SymbolicIcon { monochrome: true; x: 25; anchors.verticalCenter: parent.verticalCenter; name: "display-brightness-symbolic" }
                         Slider { x: Metrics.n("quick.slider.x", 57) - thumb / 2; width: Metrics.n("quick.slider.width", 244) + thumb
                                  anchors.verticalCenter: parent.verticalCenter
                                  value: Brightness.percent; onMoved: (v) => Brightness.percent = v }
@@ -161,7 +164,7 @@ Flyout {
                     Item {
                         width: parent.width; height: sliders.rowH
                         Item { x: 25; width: 16; height: 16; anchors.verticalCenter: parent.verticalCenter
-                               SymbolicIcon { name: AudioStatus.available ? AudioStatus.iconName : "audio-volume-muted-symbolic" }
+                               SymbolicIcon { monochrome: true; name: AudioStatus.available ? AudioStatus.iconName : "audio-volume-muted-symbolic" }
                                MouseArea { anchors.fill: parent; enabled: AudioStatus.available; onClicked: AudioStatus.muted = !AudioStatus.muted } }
                         Slider { x: Metrics.n("quick.slider.x", 57) - thumb / 2; width: Metrics.n("quick.slider.width", 244) + thumb
                                  anchors.verticalCenter: parent.verticalCenter; enabled_: AudioStatus.available; dimmed: !AudioStatus.available
@@ -170,8 +173,8 @@ Flyout {
                             x: 307; width: 34; height: 32; radius: Metrics.controlRadius; anchors.verticalCenter: parent.verticalCenter
                             color: om.pressed ? Theme.pressed : om.containsMouse ? Theme.hover : "transparent"
                             Row { anchors.centerIn: parent; spacing: 2
-                                  SymbolicIcon { name: "audio-card-symbolic"; anchors.verticalCenter: parent.verticalCenter }
-                                  SymbolicIcon { name: "go-next-symbolic"; size: 10; anchors.verticalCenter: parent.verticalCenter } }
+                                  SymbolicIcon { monochrome: true; name: "audio-card-symbolic"; anchors.verticalCenter: parent.verticalCenter }
+                                  SymbolicIcon { monochrome: true; name: "go-next-symbolic"; size: 10; anchors.verticalCenter: parent.verticalCenter } }
                             Accessible.name: Strings.tr("Sound output")
                             MouseArea { id: om; anchors.fill: parent; hoverEnabled: true; onClicked: qs.page = "output" }
                         }
@@ -211,7 +214,7 @@ Flyout {
                 Row {
                     x: 19; anchors.verticalCenter: parent.verticalCenter; spacing: 8
                     visible: PowerStatus.hasBattery
-                    SymbolicIcon { src: PowerStatus.iconSource; anchors.verticalCenter: parent.verticalCenter }
+                    SymbolicIcon { monochrome: true; src: PowerStatus.iconSource; anchors.verticalCenter: parent.verticalCenter }
                     Text { text: PowerStatus.percentage + " %"; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
                            anchors.verticalCenter: parent.verticalCenter }
                 }
@@ -238,7 +241,7 @@ Flyout {
                     property bool asking: false
                     x: 8; width: Metrics.quickWidth - 16; height: asking ? 96 : 48; radius: 4
                     color: wm.containsMouse || asking ? Theme.hover : "transparent"
-                    SymbolicIcon { x: 12; y: 16; name: "network-wireless-signal-" + ["none", "weak", "ok", "good", "excellent"][Math.min(4, Math.floor(model.signal / 20))] + "-symbolic" }
+                    SymbolicIcon { monochrome: true; x: 12; y: 16; name: "network-wireless-signal-" + ["none", "weak", "ok", "good", "excellent"][Math.min(4, Math.floor(model.signal / 20))] + "-symbolic" }
                     Column { x: 40; y: 8
                         Text { text: model.ssid; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14 }
                         Text { text: Strings.tr(model.active ? "Connected" : model.secured ? "Secured" : "Open"); color: Theme.textSecondary

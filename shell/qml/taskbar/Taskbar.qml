@@ -207,7 +207,7 @@ Window {
         items: [
             { text: Strings.tr("Task Manager"), iconSource: Metrics.assets + "menu-icons/win11-menu-taskmanager.svg", action: () => Apps.runCommand("fenestra-taskmgr") },
             "-",
-            { text: Strings.tr("Taskbar settings"), iconSource: Metrics.assets + "menu-icons/win11-menu-settings.svg", action: () => Apps.runCommand("fenestra-settings --page taskbar") },
+            { text: Strings.tr("Taskbar settings"), iconSource: Metrics.assets + "menu-icons/shell-settings.svg", action: () => Apps.runCommand("fenestra-settings --page taskbar") },
         ]
     }
 }

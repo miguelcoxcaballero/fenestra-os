@@ -135,22 +135,30 @@ ShellPopup {
             radius: Metrics.flyoutRadius
             color: Metrics.themed("search.card.fill")
             border.color: Metrics.themed("search.card.border")
+            // Chips from x 12, 13 px label padding, 10 px apart, rows 42 px apart (dark-100-10-search).
             Flow {
-                x: 14; y: 18; width: parent.width - 28
-                spacing: 14
+                x: 12; y: 18; width: parent.width - 16  // slack: Windows never wraps these six
+                spacing: 10
                 Repeater {
                     // Settings pages (fenestra-settings --page), as the reference's quick searches.
                     model: [["Focus settings", "focus"], ["Sound settings", "sound"], ["Bluetooth & devices", "bt-devices"],
                             ["Display settings", "display"], ["Color settings", "colors"], ["Search settings", "fx-search"]]
-                    delegate: Rectangle {
-                        required property var modelData
-                        width: quickText.implicitWidth + 24; height: 28; radius: 14
+                    delegate: Item {
+                      required property var modelData
+                      width: chip.width; height: 32
+                      Rectangle {
+                        id: chip
+                        width: quickText.implicitWidth + 27; height: 28; radius: 14
                         color: quickMouse.containsMouse ? Metrics.themed("start.hover") : Metrics.themed("search.quick.fill")
                         border.color: Metrics.themed("search.quick.border")
-                        Text { id: quickText; anchors.centerIn: parent; text: Strings.tr(modelData[0]); color: Theme.text
+                        // 1 px above the chip's centre (dark-100-10-search); «Display settings» is
+                        // «Configuración de visualización» here but «de pantalla» in the desktop menu.
+                        Text { id: quickText; anchors.centerIn: parent; anchors.verticalCenterOffset: -1; color: Theme.text
+                               text: modelData[0] === "Display settings" && Strings.es ? "Configuración de visualización" : Strings.tr(modelData[0])
                                font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
                         MouseArea { id: quickMouse; anchors.fill: parent; hoverEnabled: true
                             onClicked: { search.close(); Apps.runCommand("fenestra-settings --page " + modelData[1]) } }
+                      }
                     }
                 }
             }
@@ -252,10 +260,12 @@ ShellPopup {
                                 }
                                 Column {
                                     x: 41; width: parent.width - 49; anchors.verticalCenter: parent.verticalCenter
+                                    // Best match: name, kind and date lines at 15 / 36 / 52 px from the
+                                    // row's top (dark-100-11-search-query).
                                     anchors.verticalCenterOffset: -2
-                                    Text { width: parent.width; height: best ? 21 : 19; text: modelData.title; elide: Text.ElideRight; color: Theme.text
+                                    Text { width: parent.width; height: best ? 22 : 19; text: search.displayTitle(modelData); elide: Text.ElideRight; color: Theme.text
                                            font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: best ? Font.DemiBold : Font.Normal }
-                                    Text { visible: best; width: parent.width; height: 16; text: search.kindName(modelData.kind); elide: Text.ElideRight
+                                    Text { visible: best; width: parent.width; height: 18; text: search.kindName(modelData); elide: Text.ElideRight
                                            color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                                     Text { width: parent.width; height: 16; text: best && modelData.modified ? Strings.tr("Last modified") + ": " + Qt.formatDateTime(modelData.modified, "d/M/yyyy, H:mm") : modelData.subtitle
                                            visible: text !== ""; elide: Text.ElideMiddle
@@ -293,39 +303,39 @@ ShellPopup {
                 source: search.current ? (search.current.iconSource ? search.current.iconSource : "image://icon/" + search.current.icon) : ""
             }
             Text { x: pane.pad; y: 112; width: parent.width - 2 * pane.pad; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
-                   text: search.current ? search.current.title : ""
-                   color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 20; font.weight: Font.DemiBold }
-            Text { x: pane.pad; y: 141; width: parent.width - 2 * pane.pad; horizontalAlignment: Text.AlignHCenter
-                   text: search.current ? search.kindName(search.current.kind) : ""
+                   text: search.current ? search.displayTitle(search.current) : ""
+                   color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 18; font.weight: Font.DemiBold }
+            Text { x: pane.pad; y: 140; width: parent.width - 2 * pane.pad; horizontalAlignment: Text.AlignHCenter
+                   text: search.current ? search.kindName(search.current) : ""
                    color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
             Rectangle { x: pane.pad + 2; y: 185; width: parent.width - 2 * x; height: 2; color: Metrics.themed("search.preview.separator") }
             Column {
                 id: details
                 x: pane.pad; y: 208; width: parent.width - 2 * pane.pad
                 visible: search.current && search.current.path !== undefined
-                spacing: 14
+                spacing: 16
                 Row {
-                    Text { width: 108; text: Strings.tr("Location"); color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                    Text { width: 108; rightPadding: 12; text: Strings.tr("Location"); color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                     Text { width: details.width - 108; elide: Text.ElideMiddle; text: search.current && search.current.subtitle ? search.current.subtitle : ""
                            color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption } }
                 Row {
-                    Text { width: 108; text: Strings.tr("Last modified"); wrapMode: Text.Wrap; color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                    Text { width: 108; rightPadding: 12; text: Strings.tr("Last modified"); wrapMode: Text.WrapAnywhere; color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                     Text { text: search.current && search.current.modified ? Qt.formatDateTime(search.current.modified, "d/M/yyyy, H:mm") : ""
                            color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption } }
             }
             Rectangle { visible: details.visible; x: pane.pad + 2; y: 293; width: parent.width - 2 * x; height: 2; color: Metrics.themed("search.preview.separator") }
             Column {
-                x: 12; y: details.visible ? 306 : 198; width: parent.width - 24
+                x: 12; y: details.visible ? 307 : 198; width: parent.width - 24
                 Repeater {
                     model: search.current ? search.actionsFor(search.current) : []
                     delegate: Rectangle {
                         required property var modelData
                         width: parent.width; height: 32; radius: Metrics.controlRadius
                         color: am.containsMouse ? Metrics.themed("start.hover") : "transparent"
-                        SymbolicIcon { x: 16; anchors.verticalCenter: parent.verticalCenter; size: 16
+                        SymbolicIcon { x: 16; anchors.verticalCenter: parent.verticalCenter; size: 16; monochrome: true
                                        src: modelData.iconSource || ""; name: modelData.iconSource ? "" : (modelData.icon || "") }
                         Text { x: 43; anchors.verticalCenter: parent.verticalCenter; text: modelData.text
-                               color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                               color: Metrics.themed("search.action.text"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                         MouseArea { id: am; anchors.fill: parent; hoverEnabled: true; onClicked: modelData.action() }
                     }
                 }
@@ -333,7 +343,20 @@ ShellPopup {
         }
     }
 
-    function kindName(kind) {
+    // Files as Explorer names them with known extensions hidden: "playa-verano", "Archivo JPG".
+    function extension(item) {
+        const m = (item.kind === "file" || item.kind === "photo") && item.title ? item.title.match(/\.([^.\/]+)$/) : null
+        return m ? m[1] : ""
+    }
+    function displayTitle(item) {
+        const ext = extension(item)
+        return ext ? item.title.slice(0, -ext.length - 1) : item.title
+    }
+    function kindName(item) {
+        const ext = extension(item).toLowerCase()
+        if (ext === "txt") return Strings.tr("Text Document")
+        if (ext) return Strings.tr("%1 File").arg(ext.toUpperCase())
+        const kind = item.kind
         return Strings.tr({ app: "App", setting: "System settings", file: "Document", folder: "File folder", photo: "Photo", web: "Web" }[kind] || "")
     }
     function actionsFor(item) {

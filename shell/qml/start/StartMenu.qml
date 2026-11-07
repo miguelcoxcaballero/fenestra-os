@@ -44,25 +44,41 @@ ShellPopup {
             x: start.inset; y: Metrics.tok("start.search.y", 33)
             width: start.contentWidth; height: Metrics.tok("start.search.height", 32)
             radius: height / 2
-            color: Metrics.themed("start.search.fill")
-            border.color: Metrics.themed("start.search.border")
+            // Home: the box has the keyboard focus (dark fill, colour icon, caret); All apps: it
+            // does not (lighter fill, monochrome glyph, brighter placeholder), as on the reference.
+            readonly property string state_: start.allApps ? "start.search.idle" : "start.search"
+            color: Metrics.themed(state_ + ".fill")
+            border.color: Metrics.themed(state_ + ".border")
             Image { x: Metrics.tok("start.search.icon.x", 15); anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18
+                    visible: !start.allApps
                     source: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
                     sourceSize: Qt.size(18 * Screen.devicePixelRatio, 18 * Screen.devicePixelRatio) }
+            SymbolicIcon { x: Metrics.tok("start.search.icon.x", 15); anchors.verticalCenter: parent.verticalCenter; size: 18
+                           visible: start.allApps; monochrome: true; src: Metrics.assets + "search/search-glyph.svg" }
             Text {
                 x: Metrics.tok("start.search.text.x", 44); anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: Metrics.tok("start.text.offset", 0)
                 text: Strings.tr("Search for apps, settings, and documents")
-                color: Metrics.themed("start.search.text"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
+                color: Metrics.themed(parent.state_ + ".text"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
+            }
+            Rectangle {
+                id: caret
+                x: Metrics.tok("start.search.text.x", 44); y: 6; width: 1; height: 19
+                color: Metrics.themed("start.search.caret")
+                visible: !start.allApps && start.shown && blink.on
+                Timer { id: blink; property bool on: true; interval: 530; repeat: true
+                        running: !start.allApps && start.shown && !Motion.reduced
+                        onRunningChanged: on = true; onTriggered: on = !on }
             }
             MouseArea { anchors.fill: parent; onClicked: start.searchRequested("") }
         }
         SectionHeader {
             x: Metrics.startHeaderInset; y: Metrics.tok("start.header.y", 105)
-            width: start.width - 2 * Metrics.startHeaderInset - 1
+            width: start.width - 2 * Metrics.startHeaderInset - 2
             title: Strings.tr(start.allApps ? "All apps" : "Pinned")
             action: Strings.tr(start.allApps ? "Back" : "All apps")
             chevron: start.allApps ? "left" : "right"
+            titleOffset: Metrics.tok("start.header.title.offset", -1)
             onActionClicked: start.allApps = !start.allApps
         }
     }
@@ -96,7 +112,7 @@ ShellPopup {
         }
         SectionHeader {
             x: Metrics.startHeaderInset; y: Metrics.tok("start.recommended.y", 424) - header.height
-            width: start.width - 2 * Metrics.startHeaderInset - 1
+            width: start.width - 2 * Metrics.startHeaderInset - 2
             title: Strings.tr("Recommended")
         }
         Grid {
@@ -156,7 +172,7 @@ ShellPopup {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: Metrics.tok("start.text.offset", 0)
                     text: section; color: Theme.text
-                    font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold
+                    font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
                 }
             }
             delegate: Item {
@@ -276,7 +292,7 @@ ShellPopup {
             width: 40; height: 40; radius: Metrics.controlRadius
             color: pm.containsMouse ? Metrics.themed("start.hover") : "transparent"
             Accessible.name: Strings.tr("Power")
-            SymbolicIcon { anchors.centerIn: parent; size: 21; src: Metrics.assets + "power/3.svg" }
+            SymbolicIcon { anchors.centerIn: parent; size: 19; src: Metrics.assets + "power/3.svg" }
             MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; onClicked: start.openPowerMenu() }
         }
     }
@@ -298,10 +314,10 @@ ShellPopup {
         gap: start.aboveFooter(Metrics.tok("menu.power.gap", 4))
         onDismissed: start.requestActivate()
         items: [
-            { text: Strings.tr("Lock"), iconSource: Metrics.assets + "power/1.svg", iconSize: 21, action: () => { start.close(); Session.lock() } },
-        ].concat(Session.canSuspend ? [{ text: Strings.tr("Sleep"), iconSource: Metrics.assets + "power/4.svg", iconSize: 21, action: () => { start.close(); Session.suspend() } }] : [], [
-            { text: Strings.tr("Shut down"), iconSource: Metrics.assets + "power/3.svg", iconSize: 21, action: () => { start.close(); Session.powerOff() } },
-            { text: Strings.tr("Restart"), iconSource: Metrics.assets + "power/2.svg", iconSize: 21, action: () => { start.close(); Session.reboot() } },
+            { text: Strings.tr("Lock"), iconSource: Metrics.assets + "power/1.svg", iconSize: 19, action: () => { start.close(); Session.lock() } },
+        ].concat(Session.canSuspend ? [{ text: Strings.tr("Sleep"), iconSource: Metrics.assets + "power/4.svg", iconSize: 19, action: () => { start.close(); Session.suspend() } }] : [], [
+            { text: Strings.tr("Shut down"), iconSource: Metrics.assets + "power/3.svg", iconSize: 19, action: () => { start.close(); Session.powerOff() } },
+            { text: Strings.tr("Restart"), iconSource: Metrics.assets + "power/2.svg", iconSize: 19, action: () => { start.close(); Session.reboot() } },
         ])
     }
     // Account card (362 × 128): switch user and sign out on top, picture, name, account kind and
@@ -324,14 +340,16 @@ ShellPopup {
                 onClicked: { accountMenu.close(); start.close(); Session.switchUser() }
             }
             MenuLink {
-                anchors.right: parent.right; anchors.rightMargin: 17; y: 12
-                text: Strings.tr("Sign out")
+                // 14 px like the reference (dark-100-09-account-menu: 913-992 × 854-863).
+                anchors.right: parent.right; anchors.rightMargin: 16; y: 12
+                text: Strings.tr("Sign out"); fontSize: Metrics.fontBody
                 onClicked: { accountMenu.close(); start.close(); Session.logout() }
             }
             Avatar { x: 17; y: 55; size: Metrics.tok("menu.account.avatar", 58) }
             Column {
                 x: 87; y: 55
-                Text { height: 24; text: UserInfo.fullName || UserInfo.name; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 20; font.weight: Font.DemiBold }
+                Item { width: nameText.implicitWidth; height: 24
+                       Text { id: nameText; y: -3; text: UserInfo.fullName || UserInfo.name; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 20; font.weight: Font.DemiBold } }
                 Text { height: 17; text: Strings.tr("Local account"); color: Metrics.themed("menu.header"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                 Text {
                     height: 17; text: Strings.tr("Manage my account"); color: Theme.accentText
@@ -373,6 +391,7 @@ ShellPopup {
         property string text
         property url iconSource
         property bool secondary: false
+        property int fontSize: Metrics.fontCaption
         signal clicked()
         width: linkRow.implicitWidth + 12; height: 28
         radius: Metrics.controlRadius
@@ -383,7 +402,7 @@ ShellPopup {
             SymbolicIcon { visible: link.iconSource.toString() !== ""; size: 18; src: link.iconSource; anchors.verticalCenter: parent.verticalCenter }
             Text { text: link.text; anchors.verticalCenter: parent.verticalCenter
                    color: link.secondary ? Metrics.themed("menu.header") : Theme.text
-                   font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                   font.family: Metrics.fontFamily; font.pixelSize: link.fontSize }
         }
         MouseArea { id: lmouse; anchors.fill: parent; hoverEnabled: true; onClicked: link.clicked() }
     }
