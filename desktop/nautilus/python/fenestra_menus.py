@@ -302,9 +302,10 @@ class InfoPane(Gtk.Box):
         gicon = info.get_icon() or Gio.ThemedIcon.new('text-x-generic')
         self.band_icon.set_from_gicon(gicon)
         self.head_icon.set_from_gicon(gicon)
+        from fenestra_views import windows_name, windows_type  # (fenestra_views imports this module)
         name = info.get_display_name()
         if info.get_file_type() == Gio.FileType.REGULAR:
-            name = os.path.splitext(name)[0] or name  # Explorer hides known extensions here
+            name = windows_name(gfile, name)  # Explorer hides known extensions, as in Details
         self.head_title.set_label(name)
         child = self.rows.get_first_child()
         while child:
@@ -312,7 +313,7 @@ class InfoPane(Gtk.Box):
             self.rows.remove(child)
             child = nxt
         ctype = info.get_content_type() or ''
-        rows = [(tr('Type'), Gio.content_type_get_description(ctype) if ctype else '')]
+        rows = [(tr('Type'), windows_type(gfile) or (Gio.content_type_get_description(ctype) if ctype else ''))]
         if info.get_file_type() != Gio.FileType.DIRECTORY:
             size = info.get_size()
             rows.append((tr('Size'), f'{size} bytes' if size < 1024 else GLib.format_size_full(size, GLib.FormatSizeFlags.IEC_UNITS)))
