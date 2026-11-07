@@ -19,7 +19,7 @@ class DetailsPage(Page):
     def __init__(self, win):
         super().__init__(win)
         self.table = Table([
-            Column("name", _("Name"), 146),
+            Column("name", _("Name"), 145),
             Column("pid", _("PID"), 50, desc_first=False),
             Column("status", _("Status"), 160, stretch=True),
             Column("user", _("User name"), 80),
