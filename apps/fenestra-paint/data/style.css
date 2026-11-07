@@ -84,7 +84,7 @@ button.drop-button:active, button.drop-pair:active, button.size-button:active, b
 button.tool-button:disabled, button.drop-pair:disabled, button.size-button:disabled { color: var(--fg3); }
 window.paint button:disabled image, window.paint button:disabled label, window.paint button:disabled .glyph { opacity: 1; filter: none; }
 button.tool-button:disabled .tint, button.drop-pair:disabled .tint { opacity: 0.35; }
-button.tool-button.selected, button.shape-button.selected, togglebutton.text-toggle:checked {
+button.tool-button.selected, button.shape-button.selected, button.text-toggle:checked {
   border-color: var(--accent); background-color: var(--accent-soft);
 }
 button.tool-button.half-left { min-width: 26px; margin: 0 0 0 7px; }
@@ -151,8 +151,8 @@ button.collapse-button { min-width: 22px; min-height: 22px; margin: 0 6px 7px 0;
   background-color: var(--card); border: 1px solid var(--card-line); border-radius: 8px;
   box-shadow: 0 2px 8px var(--card-shadow); padding: 4px 6px; margin-top: 10px;
 }
-togglebutton.text-toggle { min-width: 32px; min-height: 30px; margin: 0; border: 1px solid transparent; border-radius: 4px; background: none; box-shadow: none; }
-togglebutton.text-toggle:hover { background-color: var(--hover); }
+button.text-toggle { min-width: 32px; min-height: 30px; margin: 0; border: 1px solid transparent; border-radius: 4px; background: none; box-shadow: none; }
+button.text-toggle:hover { background-color: var(--hover); }
 .thumbnail-card {
   background-color: var(--card); border: 1px solid var(--card-line); border-radius: 8px;
   box-shadow: 0 2px 8px var(--card-shadow); padding: 6px 8px 8px 10px; margin: 12px 16px 0 0;
