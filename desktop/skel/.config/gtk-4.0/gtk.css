@@ -589,6 +589,9 @@ window.win11-explorer:not(.win11-chooser) .fenestra-location-box > button image 
 /* Light (the VM draws the title bar and navigation row solid, without Mica). */
 @media (prefers-color-scheme: light) {
   window.win11-explorer:not(.win11-chooser) .win11-titlebar { background: #e8e8e8; }
+  /* tabs: the active one continues the #f8f8f8 navigation row, a hovered inactive one is #dfdfdf */
+  window.win11-explorer:not(.win11-chooser) .win11-tabs tab:selected, window.win11-explorer:not(.win11-chooser) .win11-tabs tab:checked { background-color: #f8f8f8; }
+  window.win11-explorer:not(.win11-chooser) .win11-tabs tab:hover:not(:selected):not(:checked) { background-color: #dfdfdf; }
   window.win11-explorer:not(.win11-chooser) .win11-titlebar windowcontrols > button { color: #000000; }
   window.win11-explorer:not(.win11-chooser) .win11-navigation { background: #f8f8f8; border-top: 1px solid #dadada; border-bottom: 1px solid #d6d6d6; }
   window.win11-explorer:not(.win11-chooser) .fenestra-crumbs, window.win11-explorer:not(.win11-chooser) .win11-navigation .win11-search, window.win11-explorer:not(.win11-chooser) #NautilusPathBar { background: #fdfdfd; border: 0; }
