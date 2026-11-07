@@ -64,3 +64,22 @@ def set_default(callback):
 
 def rollback(callback):
     _run(["rollback", "--remove-packages"], callback)
+
+
+def use_next_signin(callback):
+    """Choose the Fenestra session for this user's next sign-in (AccountsService SetSession, allowed
+    for one's own account): callback(ok, message)."""
+    def call():
+        from gi.repository import Gio, GLib
+        bus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
+        path = bus.call_sync("org.freedesktop.Accounts", "/org/freedesktop/Accounts", "org.freedesktop.Accounts",
+                             "FindUserById", GLib.Variant("(x)", (os.getuid(),)), GLib.VariantType("(o)"),
+                             Gio.DBusCallFlags.NONE, -1).unpack()[0]
+        for method in ("SetSession", "SetXSession"):
+            bus.call_sync("org.freedesktop.Accounts", path, "org.freedesktop.Accounts.User", method,
+                          GLib.Variant("(s)", ("fenestra",)), None, Gio.DBusCallFlags.NONE, -1)
+    try:
+        call()
+        callback(True, "")
+    except Exception as e:  # noqa: BLE001 — shown to the user
+        callback(False, str(e))

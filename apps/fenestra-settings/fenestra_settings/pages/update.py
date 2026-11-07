@@ -236,9 +236,9 @@ class UpdatePage(Page):
                                      "fs-checkmark-symbolic", control=button(_("Make default"), self._migrate_default, accent=True)))
             else:
                 g.add(SettingRow(_("The new desktop is installed"),
-                                 _("Sign out, choose «Fenestra» with the gear button on the sign-in screen and sign in. "
-                                   "This desktop stays available."), "fs-checkmark-symbolic",
-                                 control=button(_("Sign out"), self._migrate_signout, accent=True)))
+                                 _("Sign out and sign in again: your next sign-in opens the new desktop. The sign-in after "
+                                   "that comes back here unless you make the new desktop the default."), "fs-checkmark-symbolic",
+                                 control=button(_("Sign in to the new desktop"), self._migrate_signout, accent=True)))
             g.add(SettingRow(_("Go back to the previous desktop"), _("Removes the new desktop and uses this one again"),
                              "fs-arrow-undo-symbolic", control=button(_("Go back"), self._migrate_rollback)))
         else:
@@ -296,9 +296,13 @@ class UpdatePage(Page):
                   "available. Keep the device plugged in."), _("Start"), go)
 
     def _migrate_signout(self):
-        confirm(self.box, _("Sign out now?"), _("Save your work first. On the sign-in screen, choose «Fenestra» with the "
-                                                "gear button."), _("Sign out"),
-                lambda: util.run_async(["gnome-session-quit", "--logout", "--no-prompt"]))
+        def go():
+            # The next sign-in opens the Fenestra session (this user's AccountsService session, the
+            # setting GDM's session menu writes); the session sets GNOME back for the one after.
+            migrate.use_next_signin(lambda ok, msg: util.run_async(["gnome-session-quit", "--logout", "--no-prompt"])
+                                    if ok else toast(self.box, msg))
+        confirm(self.box, _("Sign out now?"), _("Save your work first. When you sign in again, the new desktop opens."),
+                _("Sign out"), go)
 
     def _migrate_default(self):
         migrate.set_default(lambda ok, msg: (toast(self.box, _("The new desktop is now the default") if ok else msg), self._render_migrate()))
