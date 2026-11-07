@@ -136,16 +136,20 @@ ShellPopup {
             radius: Metrics.flyoutRadius
             color: Metrics.themed("search.card.fill")
             border.color: Metrics.themed("search.card.border")
+            // Chips from x 12, 13 px label padding, 10 px apart, rows 42 px apart (dark-100-10-search).
             Flow {
-                x: 14; y: 18; width: parent.width - 28
-                spacing: 14
+                x: 12; y: 18; width: parent.width - 16  // slack: Windows never wraps these six
+                spacing: 10
                 Repeater {
                     // Settings pages (fenestra-settings --page), as the reference's quick searches.
                     model: [["Focus settings", "focus"], ["Sound settings", "sound"], ["Bluetooth & devices", "bt-devices"],
                             ["Display settings", "display"], ["Color settings", "colors"], ["Search settings", "fx-search"]]
-                    delegate: Rectangle {
-                        required property var modelData
-                        width: quickText.implicitWidth + 24; height: 28; radius: 14
+                    delegate: Item {
+                      required property var modelData
+                      width: chip.width; height: 32
+                      Rectangle {
+                        id: chip
+                        width: quickText.implicitWidth + 27; height: 28; radius: 14
                         color: quickMouse.containsMouse ? Metrics.themed("start.hover") : Metrics.themed("search.quick.fill")
                         border.color: Metrics.themed("search.quick.border")
                         // 1 px above the chip's centre (dark-100-10-search); «Display settings» is
@@ -155,6 +159,7 @@ ShellPopup {
                                font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
                         MouseArea { id: quickMouse; anchors.fill: parent; hoverEnabled: true
                             onClicked: { search.close(); Apps.runCommand("fenestra-settings --page " + modelData[1]) } }
+                      }
                     }
                 }
             }
@@ -315,7 +320,7 @@ ShellPopup {
                     Text { width: details.width - 108; elide: Text.ElideMiddle; text: search.current && search.current.subtitle ? search.current.subtitle : ""
                            color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption } }
                 Row {
-                    Text { width: 108; rightPadding: 12; text: Strings.tr("Last modified"); wrapMode: Text.WrapAtWordBoundaryOrAnywhere; color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                    Text { width: 108; rightPadding: 12; text: Strings.tr("Last modified"); wrapMode: Text.WrapAnywhere; color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                     Text { text: search.current && search.current.modified ? Qt.formatDateTime(search.current.modified, "d/M/yyyy, H:mm") : ""
                            color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption } }
             }
@@ -331,7 +336,7 @@ ShellPopup {
                         SymbolicIcon { x: 16; anchors.verticalCenter: parent.verticalCenter; size: 16; monochrome: true
                                        src: modelData.iconSource || ""; name: modelData.iconSource ? "" : (modelData.icon || "") }
                         Text { x: 43; anchors.verticalCenter: parent.verticalCenter; text: modelData.text
-                               color: Metrics.themed("search.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                               color: Metrics.themed("search.action.text"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                         MouseArea { id: am; anchors.fill: parent; hoverEnabled: true; onClicked: modelData.action() }
                     }
                 }
