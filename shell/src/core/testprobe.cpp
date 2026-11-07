@@ -45,6 +45,16 @@ QString TestProbe::Eval(const QString &expression)
 
 QStringList TestProbe::Grab(const QString &dir)
 {
+    return grab(dir, {});
+}
+
+QStringList TestProbe::GrabScopes(const QString &dir, const QString &scopes)
+{
+    return grab(dir, scopes.split(QLatin1Char(','), Qt::SkipEmptyParts));
+}
+
+QStringList TestProbe::grab(const QString &dir, const QStringList &scopes)
+{
     QDir().mkpath(dir);
     QStringList files;
     QJsonArray surfaces;
@@ -55,6 +65,8 @@ QStringList TestProbe::Grab(const QString &dir)
             continue;
         auto *layer = LayerShellQt::Window::get(window);
         const QString scope = layer ? layer->scope() : QStringLiteral("window");
+        if (!scopes.isEmpty() && !scopes.contains(scope))
+            continue;
         const QString file = QStringLiteral("%1/%2-%3.png").arg(dir).arg(n++, 2, 10, QLatin1Char('0')).arg(scope);
         quick->grabWindow().save(file);
         files << file;
