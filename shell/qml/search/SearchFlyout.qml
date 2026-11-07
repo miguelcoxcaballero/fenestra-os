@@ -148,7 +148,10 @@ ShellPopup {
                         width: quickText.implicitWidth + 24; height: 28; radius: 14
                         color: quickMouse.containsMouse ? Metrics.themed("start.hover") : Metrics.themed("search.quick.fill")
                         border.color: Metrics.themed("search.quick.border")
-                        Text { id: quickText; anchors.centerIn: parent; text: Strings.tr(modelData[0]); color: Theme.text
+                        // 1 px above the chip's centre (dark-100-10-search); «Display settings» is
+                        // «Configuración de visualización» here but «de pantalla» in the desktop menu.
+                        Text { id: quickText; anchors.centerIn: parent; anchors.verticalCenterOffset: -1; color: Theme.text
+                               text: modelData[0] === "Display settings" && Strings.es ? "Configuración de visualización" : Strings.tr(modelData[0])
                                font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
                         MouseArea { id: quickMouse; anchors.fill: parent; hoverEnabled: true
                             onClicked: { search.close(); Apps.runCommand("fenestra-settings --page " + modelData[1]) } }
