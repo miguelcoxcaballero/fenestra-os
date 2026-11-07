@@ -5,6 +5,9 @@
 //    7 %  "Your battery is very low" (reserve battery level)
 //    5 %  critical level: the critical notice again, and the brightness drops further
 // Plugging in turns off what was turned on automatically and gives the brightness back.
+// Refresh rate (Windows' dynamic refresh rate saves the same way): on battery the built-in panel
+// (eDP / LVDS / DSI) runs at the 60 Hz mode of its current resolution, on AC at its highest rate.
+// Off with Display/DynamicRefresh=false in shell.conf. Uses kscreen-doctor (any KWin system).
 // Sources: learn.microsoft.com battery-saver and battery-settings pages.
 #pragma once
 
@@ -29,6 +32,8 @@ private:
     void update(int percent, bool hasBattery, bool pluggedIn);
     void dimBy(double factor);
     void restore();
+    void applyRefresh(bool onBattery);
+    int m_refreshState = -1;      // last applied: 1 battery, 0 AC, -1 none
     bool m_testing = false;
     int m_last = -1;              // last level seen on battery, -1 = plugged in / unknown
     bool m_saverAuto = false;     // Energy saver turned on by us

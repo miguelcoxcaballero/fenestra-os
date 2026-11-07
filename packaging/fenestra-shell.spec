@@ -23,6 +23,8 @@ Requires:       kwin xorg-x11-server-Xwayland layer-shell-qt qt6-qtsvg kscreenlo
 Requires:       xdg-desktop-portal-kde xdg-desktop-portal-gtk kf6-bluez-qt pipewire-libs
 # GNOME stays installed as the fallback session; nothing here replaces GDM.
 Requires:       gdm
+# Power profiles: tuned-ppd provides power-profiles-daemon's D-Bus API (Quick settings, Energy saver).
+Recommends:     tuned-ppd
 
 %description
 Fenestra Shell draws the Fenestra desktop (taskbar, Start, Search, quick settings,
@@ -41,6 +43,26 @@ python3 tools/build-aurorae-theme.py
 
 %install
 %cmake_install
+
+%post
+# On battery, tuned-ppd's "Balanced" becomes fenestra-battery (desktop/power/tuned): any laptop.
+ppd=%{_sysconfdir}/tuned/ppd.conf
+if [ -f "$ppd" ] && ! grep -q '^balanced=fenestra-battery' "$ppd"; then
+    if grep -q '^\[battery\]' "$ppd"; then
+        sed -i -E '/^\[battery\]/,/^\[/{s/^balanced=.*/balanced=fenestra-battery/}' "$ppd"
+        grep -q '^balanced=fenestra-battery' "$ppd" || sed -i '/^\[battery\]/a balanced=fenestra-battery' "$ppd"
+    else
+        printf '\n[battery]\nbalanced=fenestra-battery\n' >> "$ppd"
+    fi
+    systemctl try-restart tuned-ppd.service >/dev/null 2>&1 || :
+fi
+
+%postun
+# Removed (not upgraded): give "Balanced" on battery back to tuned's own profile.
+if [ "$1" -eq 0 ] && [ -f %{_sysconfdir}/tuned/ppd.conf ]; then
+    sed -i 's/^balanced=fenestra-battery$/balanced=balanced-battery/' %{_sysconfdir}/tuned/ppd.conf
+    systemctl try-restart tuned-ppd.service >/dev/null 2>&1 || :
+fi
 
 %files
 %license LICENSE
@@ -61,6 +83,7 @@ python3 tools/build-aurorae-theme.py
 %{_datadir}/kwin/tabbox/fenestra
 %{_datadir}/plasma/look-and-feel/org.fenestra.desktop
 %{_datadir}/xdg-desktop-portal/fenestra-portals.conf
+%{_prefix}/lib/tuned/profiles/fenestra-battery
 
 %changelog
 * Fri Nov 06 2026 Fenestra <fenestra@users.noreply.github.com> - 0.1.0-1

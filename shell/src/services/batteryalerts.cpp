@@ -5,7 +5,13 @@
 #include "status.h"
 #include "system.h"
 
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLocale>
+#include <QProcess>
+#include <QSettings>
+#include <QStandardPaths>
 
 namespace
 {
@@ -31,7 +37,15 @@ BatteryAlerts::BatteryAlerts(QObject *parent)
     : QObject(parent)
 {
     auto *p = PowerStatus::instance();
-    connect(p, &PowerStatus::changed, this, [this, p] { if (!m_testing) update(p->percentage(), p->hasBattery(), p->pluggedIn()); });
+    connect(p, &PowerStatus::changed, this, [this, p] {
+        if (m_testing)
+            return;
+        update(p->percentage(), p->hasBattery(), p->pluggedIn());
+        if (p->hasBattery())
+            applyRefresh(!p->pluggedIn());
+    });
+    if (p->hasBattery())
+        applyRefresh(!p->pluggedIn());
     update(p->percentage(), p->hasBattery(), p->pluggedIn());
 }
 
@@ -116,10 +130,13 @@ void BatteryAlerts::testLevel(int percent, bool pluggedIn)
         m_testing = false;
         auto *p = PowerStatus::instance();
         update(p->percentage(), p->hasBattery(), p->pluggedIn());
+        if (p->hasBattery())
+            applyRefresh(!p->pluggedIn());
         return;
     }
     m_testing = true;
     update(percent, true, pluggedIn);
+    applyRefresh(!pluggedIn);
 }
 
 QString BatteryAlerts::testState() const
@@ -128,4 +145,58 @@ QString BatteryAlerts::testState() const
         .arg(m_last).arg(m_saverAuto).arg(m_brightnessBefore).arg(m_brightnessSet)
         .arg(m_notifiedLow).arg(m_notifiedReserve).arg(m_notifiedCritical)
         .arg(Brightness::instance()->percent()).arg(PowerProfiles::instance()->active());
+}
+
+void BatteryAlerts::applyRefresh(bool onBattery)
+{
+    const int want = onBattery ? 1 : 0;
+    if (want == m_refreshState)
+        return;
+    const QSettings conf(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/fenestra/shell.conf"),
+                         QSettings::IniFormat);
+    if (!conf.value(QStringLiteral("Display/DynamicRefresh"), true).toBool())
+        return;
+    if (QStandardPaths::findExecutable(QStringLiteral("kscreen-doctor")).isEmpty())
+        return;
+    m_refreshState = want;
+    auto *proc = new QProcess(this);
+    connect(proc, &QProcess::finished, this, [this, proc, onBattery] {
+        proc->deleteLater();
+        const QJsonArray outputs = QJsonDocument::fromJson(proc->readAllStandardOutput()).object().value(QStringLiteral("outputs")).toArray();
+        QStringList args;
+        for (const QJsonValue &v : outputs) {
+            const QJsonObject o = v.toObject();
+            const QString name = o.value(QStringLiteral("name")).toString();
+            const bool internal = name.startsWith(QLatin1String("eDP")) || name.startsWith(QLatin1String("LVDS")) || name.startsWith(QLatin1String("DSI"));
+            if (!internal || !o.value(QStringLiteral("connected")).toBool() || !o.value(QStringLiteral("enabled")).toBool())
+                continue;
+            const QString currentId = o.value(QStringLiteral("currentModeId")).toString();
+            const QJsonArray modes = o.value(QStringLiteral("modes")).toArray();
+            QJsonObject current;
+            for (const QJsonValue &m : modes)
+                if (m.toObject().value(QStringLiteral("id")).toString() == currentId)
+                    current = m.toObject();
+            if (current.isEmpty())
+                continue;
+            const QJsonObject size = current.value(QStringLiteral("size")).toObject();
+            // Same resolution: on battery the rate closest to 60 Hz (not below 59), on AC the highest.
+            QString best;
+            double bestRate = onBattery ? 1e9 : 0;
+            for (const QJsonValue &m : modes) {
+                const QJsonObject mo = m.toObject();
+                if (mo.value(QStringLiteral("size")).toObject() != size)
+                    continue;
+                const double r = mo.value(QStringLiteral("refreshRate")).toDouble();
+                if (onBattery ? (r >= 59.0 && r < bestRate) : (r > bestRate)) {
+                    bestRate = r;
+                    best = mo.value(QStringLiteral("id")).toString();
+                }
+            }
+            if (!best.isEmpty() && best != currentId)
+                args << QStringLiteral("output.%1.mode.%2").arg(name, best);
+        }
+        if (!args.isEmpty())
+            QProcess::startDetached(QStringLiteral("kscreen-doctor"), args);
+    });
+    proc->start(QStringLiteral("kscreen-doctor"), {QStringLiteral("-j")});
 }
