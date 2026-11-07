@@ -37,17 +37,18 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         x: search.mode === "icon" ? (parent.width - 20) / 2
            : search.boxX + (search.mode === "box" ? Metrics.tok("search.box.icon.x", 10) : 10)
-        spacing: search.mode === "box" ? Metrics.tok("search.box.text.x", 37) - Metrics.tok("search.box.icon.x", 10) - 16 : 10
+        spacing: search.mode === "box" ? Metrics.tok("search.box.text.x", 37) - Metrics.tok("search.box.icon.x", 10) - 14 : 10
         Image {
-            width: 16 + (search.mode === "box" ? 0 : 4); height: width
+            // In the box Windows' lens measures 14 x 14 (dark-100-01-taskbar.png 797..810 x 1049..1062).
+            width: search.mode === "box" ? 14 : 20; height: width
             anchors.verticalCenter: parent.verticalCenter
             sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-            // Windows' lens: in the box it is drawn in the text colour (its translucent inside a
+            // Windows' lens: in the box it is drawn in grey (ring #cbcdce..#d2d7da in dark-100-01-taskbar.png) (its translucent inside a
             // lighter grey, dark-100-12-quick) and in colour while Search is open (dark-100-10-search);
             // the icon modes always draw it in colour.
             readonly property string lens: ShellSettings.searchIcon !== "" ? ShellSettings.searchIcon : Metrics.assets + "search/search.svg"
             source: search.mode === "box" && !search.checked
-                    ? "image://tint/" + Theme.text.toString().slice(1, 7) + "/" + encodeURIComponent(lens)
+                    ? "image://tint/" + (Theme.dark ? "d2d6d8" : "5f5f5f") + "/" + encodeURIComponent(lens)
                     : lens
             // In the box Windows draws the lens 1 px right of our 10 px inset, and its closed-state glyph
             // 1 px further right and down (dark-100-12-quick: 797..810 × 1049; open, dark-100-10-search: 796 × 1048).

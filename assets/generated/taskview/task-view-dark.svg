@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Windows 11 taskbar Task view icon, dark theme, traced from dark-100-01-taskbar.png (1017,1044):
+       a white window behind, a translucent grey one in front. -->
+  <defs>
+    <linearGradient id="back" x1="6" y1="1" x2="24" y2="17" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e5e5e5"/>
+    </linearGradient>
+    <linearGradient id="front" x1="0" y1="7" x2="18" y2="22.6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ababab"/><stop offset="1" stop-color="#7a7a7a"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="1" width="18" height="15.8" rx="1.2" fill="url(#back)"/>
+  <rect x="0" y="7" width="18" height="15.6" rx="1.2" fill="url(#front)" fill-opacity="0.6"/>
+</svg>

@@ -76,7 +76,9 @@ Window {
         TaskButton {
             id: startButton
             anchors.verticalCenter: parent.verticalCenter
-            iconSource: ShellSettings.startIcon !== "" ? ShellSettings.startIcon : Metrics.assets + "branding/start-button.svg"
+            // Windows draws its own Start logo (lighter than WindowsLogo.svg): traced from the captures.
+            iconSource: ShellSettings.startIcon !== "" ? ShellSettings.startIcon
+                        : Metrics.assets + "branding/start-button-" + (Theme.dark ? "dark" : "light") + ".svg"
             label: Strings.tr("Start")
             checked: bar.startOpen
             // No context menu on Start (B07).
@@ -93,6 +95,8 @@ Window {
         TaskButton {
             id: taskViewButton
             anchors.verticalCenter: parent.verticalCenter
+            // Windows' two-window picture (dark), traced from dark-100-01-taskbar.png; the glyph in light mode.
+            iconSource: Theme.dark ? Metrics.assets + "taskview/task-view-dark.svg" : ""
             iconName: "task-view-symbolic"
             label: Strings.tr("Task view")
             onClicked: KWinIntegration.toggleOverview()

@@ -44,6 +44,7 @@ Row {
         id: quick
         anchors.verticalCenter: parent.verticalCenter
         hpad: 3 + 4
+        spacing: 8   // network, volume, battery 24 px apart (dark-100/150-01-taskbar.png)
         accessibleName: [NetworkStatus.name, AudioStatus.volume + " %", PowerStatus.hasBattery ? PowerStatus.percentage + " %" : ""].join(" ")
         SymbolicIcon { name: NetworkStatus.iconName }
         SymbolicIcon { name: AudioStatus.iconName }

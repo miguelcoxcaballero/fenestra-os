@@ -385,7 +385,9 @@ def import_taskbar_icons(win, dry):
         dest = ASSETS / 'branding' / 'start-button.svg'
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(logo, dest)
-        apply_start_logo(dest)
+        # WindowsLogo.svg is not what the taskbar draws (Windows' taskbar logo is lighter): Fenestra
+        # Shell keeps its traced start-button-dark/light.svg; only ArcMenu (GNOME) takes this file.
+        gsettings_set('org.gnome.shell.extensions.arcmenu', 'menu-button-icon', str(dest))
     if search:
         dest = ASSETS / 'search' / 'search.png'
         dest.parent.mkdir(parents=True, exist_ok=True)

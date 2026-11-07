@@ -7,6 +7,7 @@ Item {
     id: cell
     default property alias content: row.data
     property int hpad: 7
+    property int spacing: 4
     property string accessibleName
     signal clicked()
     signal rightClicked()
@@ -17,7 +18,7 @@ Item {
     Accessible.name: accessibleName
     Rectangle { anchors.fill: parent; radius: Metrics.controlRadius
         color: mouse.pressed ? Theme.pressed : mouse.containsMouse ? Theme.hover : "transparent" }
-    Row { id: row; anchors.centerIn: parent; spacing: 4 }
+    Row { id: row; anchors.centerIn: parent; spacing: cell.spacing }
     MouseArea {
         id: mouse
         anchors.fill: parent
