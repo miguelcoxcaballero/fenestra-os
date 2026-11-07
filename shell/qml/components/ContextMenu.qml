@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Menu flyout: model is a list of {text, icon | iconSource, action} (action: a JS function),
+// Menu flyout (Acrylic "menu" material, "menu.panel" with overPanel over Start / Search): model is a list of {text, icon | iconSource, action} (action: a JS function),
 // "-" for a separator and {header: "text"} for a section title. Metrics of the reference menus
 // (menu.* in design/tokens.json): 1 px border, 2 px padding, 32 px rows, icon at 16, text at 44.
 import QtQuick
@@ -17,8 +17,6 @@ Flyout {
     // Menus at the pointer reveal upwards with a quick fade (PopupMotion "menu"); the taskbar's
     // menus set "taskbar" (they rise from behind it like Quick settings).
     motion: "menu"
-    background.color: Metrics.themed("menu.fill")
-    background.border.color: Metrics.themed("menu.border")
     Column {
         id: column
         spacing: 0

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<!-- Windows 11 taskbar Start logo, light theme: traced from light-100-01-taskbar.png (749,1045) -->
+<defs><linearGradient id="tl" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="7.77" y2="12.94"><stop offset="0" stop-color="#4dd0fd"/><stop offset="1" stop-color="#25a3e9"/></linearGradient><linearGradient id="tr" gradientUnits="userSpaceOnUse" x1="12" y1="0" x2="19.77" y2="12.94"><stop offset="0" stop-color="#2babeb"/><stop offset="1" stop-color="#0d86db"/></linearGradient><linearGradient id="bl" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="7.77" y2="24.939999999999998"><stop offset="0" stop-color="#25a3e8"/><stop offset="1" stop-color="#0078d3"/></linearGradient><linearGradient id="br" gradientUnits="userSpaceOnUse" x1="12" y1="12" x2="19.77" y2="24.939999999999998"><stop offset="0" stop-color="#0e88dd"/><stop offset="1" stop-color="#0179d3"/></linearGradient></defs>
+<path d="M0 1a1 1 0 0 1 1-1h10v11h-11z" fill="url(#tl)"/>
+<path d="M12 0h10a1 1 0 0 1 1 1v10h-11z" fill="url(#tr)"/>
+<path d="M0 12h11v11h-10a1 1 0 0 1-1-1z" fill="url(#bl)"/>
+<path d="M12 12h11v10a1 1 0 0 1-1 1h-10z" fill="url(#br)"/>
+</svg>

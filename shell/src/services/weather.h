@@ -21,6 +21,11 @@ class Weather : public QObject
     Q_PROPERTY(QString condition READ condition NOTIFY changed)      // "Partly cloudy"
     Q_PROPERTY(QString iconName READ iconName NOTIFY changed)
     Q_PROPERTY(QString symbolicIconName READ symbolicIconName NOTIFY changed)
+    // The Widgets board's weather card.
+    Q_PROPERTY(QString location READ location NOTIFY changed)       // "Madrid"
+    Q_PROPERTY(QString feelsLike READ feelsLike NOTIFY changed)     // "16°C"
+    Q_PROPERTY(QString humidity READ humidity NOTIFY changed)       // "60%"
+    Q_PROPERTY(QString wind READ wind NOTIFY changed)               // "12 km/h"
 public:
     static Weather *instance();
     static Weather *create(QQmlEngine *, QJSEngine *);
@@ -31,6 +36,10 @@ public:
     QString condition() const { return m_cond; }
     QString iconName() const { return m_icon; }
     QString symbolicIconName() const { return m_symbolic; }
+    QString location() const { return m_location; }
+    QString feelsLike() const { return m_feels; }
+    QString humidity() const { return m_humidity; }
+    QString wind() const { return m_wind; }
 
     Q_INVOKABLE void openApp();
 
@@ -48,5 +57,5 @@ private:
     GWeatherInfo *m_info = nullptr;
     QTimer m_refresh;
     bool m_available = false;
-    QString m_temp, m_cond, m_icon, m_symbolic;
+    QString m_temp, m_cond, m_icon, m_symbolic, m_location, m_feels, m_humidity, m_wind;
 };

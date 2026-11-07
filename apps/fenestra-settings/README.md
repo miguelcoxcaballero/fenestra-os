@@ -125,8 +125,15 @@ or async D-Bus; missing backends show a "Not available" row instead of failing):
   `/etc/os-release`, Copy, Rename via hostnamed).
 - **Bluetooth & devices** – BlueZ over D-Bus (power, connect/disconnect, remove, scan
   & pair via `bluetoothctl`), Mouse, Touchpad, Cameras, AutoPlay.
-- **Network & internet** – status hero, Wi‑Fi on/off, network list with connect
-  (password dialog), disconnect, forget, airplane mode (gsd-rfkill), Ethernet details.
+- **Network & internet** – status hero, airplane mode (gsd-rfkill), Ethernet details, and
+  Wi‑Fi as Windows 11 through libnm (`NetworkManager-libnm`): live list of available
+  networks with inline connect (security key, user name/password, hidden networks,
+  "Connect automatically", connecting / wrong key / can't connect states, cancel,
+  disconnect), Manage known networks (search, sort, forget, Add a new network), per-network
+  properties (connect automatically, metered, random hardware address, view security key,
+  IP/DNS summary, properties with Copy) and Hardware properties.
+  Tests: `tests/test_wifi_backend.py` and `tests/wifi_ui_flows.py` run against
+  `tests/mock_networkmanager.py` on a private bus (never the real NetworkManager).
 - **Personalization** – Background (gallery of `/usr/share/backgrounds`, Browse photos,
   fit), Colors (light/dark, accent grid writing `accent-color`), Themes (GTK/icon/cursor
   themes), Lock screen, Start (ArcMenu prefs), Taskbar (Dash to Panel prefs, clock

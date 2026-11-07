@@ -59,6 +59,7 @@ void ShellSettings::load()
     const QString search = pick(s.value(QStringLiteral("Taskbar/SearchMode")).toString(),
                                 {QStringLiteral("box"), QStringLiteral("hidden"), QStringLiteral("icon"), QStringLiteral("iconLabel")});
     const bool weather = s.value(QStringLiteral("Taskbar/Weather"), true).toBool();
+    const bool taskView = s.value(QStringLiteral("Taskbar/TaskView"), true).toBool();
     // Present but empty (QSettings writes @Invalid() for an empty list): no pins, not the defaults.
     const QStringList pinned = s.contains(QStringLiteral("Taskbar/Pinned")) ? s.value(QStringLiteral("Taskbar/Pinned")).toStringList() : kDefaultPinned;
     const QString scheme = pick(s.value(QStringLiteral("Appearance/ColorScheme")).toString(), {QStringLiteral("dark"), QStringLiteral("light")});
@@ -66,6 +67,8 @@ void ShellSettings::load()
     if (!QColor::isValidColorName(accent))
         accent = kDefaultAccent;
     const QString wallpaper = s.value(QStringLiteral("Appearance/Wallpaper"), kDefaultWallpaper).toString();
+    // Windows 11: "Open Widgets board on hover" (Widgets settings), on unless turned off.
+    const bool widgetsOnHover = s.value(QStringLiteral("Taskbar/WidgetsOnHover"), true).toBool();
     const bool reduceMotion = s.value(QStringLiteral("Appearance/ReduceMotion"), false).toBool();
     const bool transparency = s.value(QStringLiteral("Appearance/Transparency"), true).toBool();
     auto iconUrl = [&s](const QString &key) {
@@ -76,13 +79,15 @@ void ShellSettings::load()
     const QString searchIcon = iconUrl(QStringLiteral("Appearance/SearchIcon"));
 
     Q_EMIT fileChanged();
-    if (alignment == m_alignment && search == m_searchMode && weather == m_showWeather && pinned == m_pinned
+    if (alignment == m_alignment && search == m_searchMode && weather == m_showWeather && taskView == m_showTaskView && pinned == m_pinned
         && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper && reduceMotion == m_reduceMotion && transparency == m_transparency
-        && startIcon == m_startIcon && searchIcon == m_searchIcon)
+        && startIcon == m_startIcon && searchIcon == m_searchIcon && widgetsOnHover == m_widgetsOnHover)
         return;
+    m_widgetsOnHover = widgetsOnHover;
     m_alignment = alignment;
     m_searchMode = search;
     m_showWeather = weather;
+    m_showTaskView = taskView;
     m_pinned = pinned;
     m_scheme = scheme;
     m_accent = accent;

@@ -28,7 +28,8 @@ if [ -n "$fmt" ]; then
     export LC_NUMERIC=$fmt LC_TIME=$fmt LC_MONETARY=$fmt LC_PAPER=$fmt LC_MEASUREMENT=$fmt
 fi
 # KWin defaults for the Fenestra session, only where the user has not chosen something else:
-# Super alone opens Start (org.fenestra.Shell), Super+S opens Search.
+# Super alone opens Start: older KWin reads [ModifierOnlyShortcuts]; KWin 6.8 handles it as the
+# shell's "start" global shortcut (Meta), which fenestra-shell registers itself. Super+S opens Search.
 kread() { kreadconfig6 --file kwinrc --group "$1" --key "$2" 2>/dev/null; }
 kwrite() { [ -n "$(kread "$1" "$2")" ] || kwriteconfig6 --file kwinrc --group "$1" --key "$2" "$3"; }
 kwrite ModifierOnlyShortcuts Meta "org.fenestra.Shell,/org/fenestra/Shell,org.fenestra.Shell,ToggleStart"

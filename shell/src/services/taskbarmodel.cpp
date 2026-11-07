@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include <limits>
 #include "taskbarmodel.h"
 
 #include "apps.h"
@@ -56,6 +57,17 @@ void TaskbarModel::rebuild()
         it->windows.append(w);
     }
 
+    // The order the user dragged the buttons into; new buttons keep their natural place at the end.
+    if (!m_order.isEmpty()) {
+        std::stable_sort(entries.begin(), entries.end(), [this](const Entry &x, const Entry &y) {
+            const qsizetype a = m_order.indexOf(x.key), b = m_order.indexOf(y.key);
+            return (a < 0 ? std::numeric_limits<qsizetype>::max() : a) < (b < 0 ? std::numeric_limits<qsizetype>::max() : b);
+        });
+    }
+    m_order.clear();
+    for (const Entry &e : entries)
+        m_order << e.key;
+
     // Same buttons in the same order: only data changed (no delegate churn, no animation restart).
     bool sameKeys = entries.size() == m_entries.size();
     for (int i = 0; sameKeys && i < entries.size(); ++i)
@@ -104,7 +116,9 @@ QVariant TaskbarModel::data(const QModelIndex &index, int role) const
             list.append(QVariantMap{{QStringLiteral("row"), WindowsModel::instance()->rowOf(w)},
                                     {QStringLiteral("title"), w->title},
                                     {QStringLiteral("active"), bool(w->state & WM::state_active)},
-                                    {QStringLiteral("minimized"), bool(w->state & WM::state_minimized)}});
+                                    {QStringLiteral("minimized"), bool(w->state & WM::state_minimized)},
+                                    {QStringLiteral("width"), w->geometry.width()},
+                                    {QStringLiteral("height"), w->geometry.height()}});
         return list;
     }
     }
@@ -173,4 +187,22 @@ void TaskbarModel::movePinned(int from, int to)
         return;
     pinned.move(from, to);
     ShellSettings::instance()->setPinnedApps(pinned);
+}
+
+void TaskbarModel::move(int from, int to)
+{
+    if (from < 0 || to < 0 || from >= m_entries.size() || to >= m_entries.size() || from == to)
+        return;
+    beginMoveRows({}, from, from, {}, to > from ? to + 1 : to);
+    m_entries.move(from, to);
+    endMoveRows();
+    m_order.clear();
+    QStringList pinned;
+    for (const Entry &e : m_entries) {
+        m_order << e.key;
+        if (e.pinned)
+            pinned << e.storageId;
+    }
+    if (pinned != ShellSettings::instance()->pinnedApps())
+        ShellSettings::instance()->setPinnedApps(pinned);
 }

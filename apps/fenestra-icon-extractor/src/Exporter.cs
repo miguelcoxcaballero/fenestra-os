@@ -26,6 +26,12 @@ public sealed class ExportOptions
     public bool ReferenceBitmaps { get; set; } = true;
     /// <summary>Dump every icon group of the candidate modules at 32 px (raw/probe/), to identify ids.</summary>
     public bool ProbeModules { get; set; }
+    /// <summary>File type, folder, drive and place icons as Explorer shows them (filetypes/).</summary>
+    public bool FileTypes { get; set; } = true;
+    /// <summary>Weather condition icons of the taskbar / Widgets found in this user's Widgets cache (weather/).</summary>
+    public bool Weather { get; set; } = true;
+    /// <summary>Also fetch the condition icons the cache lacks from the address Widgets uses (network).</summary>
+    public bool WeatherDownload { get; set; }
     public string Destination { get; set; } = DefaultDestination;
 
     public static string DefaultDestination =>
@@ -42,7 +48,7 @@ public sealed record ExportResult(int Files, long Bytes, int Missing, string Pat
 /// </summary>
 public sealed partial class Exporter
 {
-    public const string Version = "1.2.0";
+    public const string Version = "1.3.0";
     public const string IconTheme = "Fenestra-Windows";
     public const string CursorTheme = "Fenestra-Windows-Cursors";
     static readonly int[] Sizes = { 256, 48, 32, 16 };
@@ -145,7 +151,8 @@ public sealed partial class Exporter
         var steps = new List<(string Title, Action Run)>();
         if (_o.Fonts) steps.Add(("Fonts", ExportFonts));
         if (_o.Cursors) steps.Add(("Cursors", ExportCursors));
-        if (_o.SystemIcons) steps.Add(("File type icons", ExportFileTypeIcons));
+        if (_o.FileTypes) steps.Add(("File type, folder and drive icons", ExportFileTypeIcons));
+        if (_o.Weather) steps.Add(("Weather condition icons", ExportWeatherIcons));
         if (_o.SystemIcons) steps.Add(("System icons", ExportSystemIcons));
         if (_o.FolderIcons) steps.Add(("Explorer folder icons", ExportFolderIcons));
         if (_o.Taskbar) steps.Add(("Start button and Search icon", ExportTaskbar));
@@ -332,23 +339,152 @@ public sealed partial class Exporter
         }
     }
 
-    // Before ExportSystemIcons: the per-type icons win over its generic mimetype ones.
+    // filetypes/: what Explorer shows for each file type, folder, drive and place (docs/ICON-PACK-FORMAT.md).
+    // The importer maps extensions onto freedesktop MIME icon names with the shared-mime-info database.
     void ExportFileTypeIcons()
     {
-        foreach (var (ext, names) in FileTypeIcons.Map)
+        var tmp = Path.Combine(Path.GetTempPath(), "fenestra-filetypes-" + Environment.ProcessId);
+        var items = new JsonObject();
+        int done = 0, failed = 0;
+        try
         {
-            foreach (var size in Sizes)
+            FileTypeIcons.PrepareSamples(tmp);
+            JsonObject Files(string key, Func<int, Bitmap?> render)
             {
-                byte[]? png;
-                try { png = FileTypeIcons.Png(ext, size); }
-                catch (Exception e) { Log($"  {ext}: {e.Message}"); png = null; }
-                if (png == null) { Missing($"{ext} icon ({size} px)"); continue; }
-                var dir = $"{size}x{size}/mimetypes";
-                _themeDirs.Add(dir);
-                foreach (var name in names)
-                    AddBytes($"icons/{IconTheme}/{dir}/{name}.png", png);
+                var files = new JsonObject();
+                foreach (var size in FileTypeIcons.Sizes)
+                {
+                    Bitmap? bmp = null;
+                    try { bmp = render(size); }
+                    catch (Exception e) { Log($"  {key} {size}: {e.Message}"); }
+                    if (bmp == null) continue;
+                    using (bmp)
+                    {
+                        var entry = $"filetypes/{size}x{size}/{key}.png";
+                        AddBytes(entry, FileTypeIcons.ToPng(bmp));
+                        files[size.ToString()] = $"{size}x{size}/{key}.png";
+                    }
+                }
+                if (files.Count == 0) { failed++; Missing($"file type icon {key}"); }
+                else done++;
+                return files;
+            }
+            foreach (var ext in FileTypeIcons.Extensions.Append(FileTypeIcons.UnknownExtension))
+            {
+                var key = ext == FileTypeIcons.UnknownExtension ? "unknown" : ext;
+                var sample = FileTypeIcons.SamplePath(tmp, ext);
+                var files = Files(key, size => FileTypeIcons.ShellItem(sample, size));
+                var (typeName, ct, perceived, progid) = FileTypeIcons.Describe(ext);
+                var o = new JsonObject { ["kind"] = "extension", ["ext"] = "." + ext, ["source"] = "IShellItemImageFactory SIIGBF_ICONONLY", ["files"] = files };
+                if (typeName != null) o["type_name"] = typeName;
+                if (ct != null) o["content_type"] = ct;
+                if (perceived != null) o["perceived"] = perceived;
+                if (progid != null) o["progid"] = progid;
+                items[key] = o;
+                if (done % 40 == 0) Log($"  {done} file types");
+            }
+            foreach (var sp in FileTypeIcons.Specials())
+            {
+                string? location = null;
+                string source;
+                Func<int, Bitmap?> render;
+                switch (sp.Kind)
+                {
+                    case FileTypeIcons.SpecialKind.EmptyFolder:
+                        render = size => FileTypeIcons.ShellItem(Path.Combine(tmp, "empty-folder"), size);
+                        source = "IShellItemImageFactory (empty folder)"; break;
+                    case FileTypeIcons.SpecialKind.FullFolder:
+                        // Explorer draws a folder with content as a preview of what is inside; the
+                        // image factory without ICONONLY gives that picture.
+                        render = size => FileTypeIcons.ShellItem(Path.Combine(tmp, "full-folder"), size, allowThumbnail: true);
+                        source = "IShellItemImageFactory (folder with a document)"; break;
+                    case FileTypeIcons.SpecialKind.Stock:
+                        render = size => FileTypeIcons.Stock(sp.Stock, size, out location);
+                        source = $"SHGetStockIconInfo {sp.Note}"; break;
+                    default:
+                        if (string.IsNullOrEmpty(sp.Arg)) { Missing($"place {sp.Key}"); continue; }
+                        render = size => FileTypeIcons.ShellItem(sp.Arg!, size);
+                        source = $"IShellItemImageFactory {sp.Arg}"; break;
+                }
+                var files = Files(sp.Key, render);
+                var o = new JsonObject { ["kind"] = "special", ["source"] = source, ["files"] = files };
+                if (location != null) o["location"] = location;
+                if (sp.Note != null) o["note"] = sp.Note;
+                items[sp.Key] = o;
             }
         }
+        finally
+        {
+            try { Directory.Delete(tmp, true); } catch (Exception) { }
+        }
+        AddJson("filetypes/filetypes.json", new JsonObject
+        {
+            ["sizes"] = new JsonArray(FileTypeIcons.Sizes.Select(s => (JsonNode)JsonValue.Create(s)!).ToArray()),
+            ["items"] = items,
+        });
+        Log($"  {done} file type and place icons, {failed} without any size");
+    }
+
+    void ExportWeatherIcons()
+    {
+        var icons = new JsonObject();
+        var cached = new JsonArray();
+        var pending = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        foreach (var dir in WeatherIcons.CacheDirs())
+        {
+            int n = 0;
+            foreach (var (key, body) in WeatherIcons.ReadCache(dir, k => k.Contains("/weather/Icons/", StringComparison.OrdinalIgnoreCase)
+                                                                         && k.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)))
+            {
+                var url = key[(key.LastIndexOf(" http", StringComparison.Ordinal) + 1)..];
+                var name = Path.GetFileNameWithoutExtension(url.Split('?')[0].Split('/')[^1]);
+                if (!WeatherIcons.ValidName(name) || !WeatherIcons.LooksLikeSvg(body)) continue;
+                bool condition = url.Contains("/Condition", StringComparison.OrdinalIgnoreCase);
+                var entry = condition ? $"weather/{name}.svg" : $"weather/other/{name}.svg";
+                // taskbar_v10/Condition_Card is what the taskbar shows; keep it over other sets of the same name.
+                if (condition && icons[name] is JsonObject prev && prev["url"]?.ToString().Contains("Condition_Card") == true) continue;
+                pending[entry] = body;
+                if (condition) icons[name] = new JsonObject { ["file"] = $"{name}.svg", ["source"] = "cache", ["url"] = url };
+                else cached.Add(url);
+                n++;
+            }
+            Log($"  {dir}: {n} icons");
+        }
+        int fetched = 0, failed = 0;
+        if (_o.WeatherDownload)
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+            foreach (var name in WeatherIcons.AllNames())
+            {
+                if (icons[name] is JsonObject o && o["url"]?.ToString().StartsWith(WeatherIcons.Base, StringComparison.Ordinal) == true) continue;
+                var url = WeatherIcons.Base + name + ".svg";
+                try
+                {
+                    var body = http.GetByteArrayAsync(url).GetAwaiter().GetResult();
+                    if (!WeatherIcons.LooksLikeSvg(body) || body.Length > 256 * 1024) { failed++; continue; }
+                    pending[$"weather/{name}.svg"] = body;
+                    icons[name] = new JsonObject { ["file"] = $"{name}.svg", ["source"] = "download", ["url"] = url };
+                    fetched++;
+                }
+                catch (Exception e) when (e is System.Net.Http.HttpRequestException or TaskCanceledException)
+                {
+                    failed++;
+                    Log($"  {name}: {e.Message}");
+                }
+            }
+        }
+        foreach (var (entry, body) in pending) AddBytes(entry, body);
+        if (icons.Count == 0 && !_o.WeatherDownload) Missing("weather icons (none in the Widgets cache; --weather-download fetches them)");
+        var sky = new JsonObject();
+        foreach (var (code, name) in WeatherIcons.SkyCodes) sky[code.ToString()] = name;
+        AddJson("weather/weather.json", new JsonObject
+        {
+            ["base"] = WeatherIcons.Base,
+            ["icons"] = icons,
+            ["skycodes"] = sky,
+            ["other_cached"] = cached,
+        });
+        Log($"  {icons.Count} condition icons ({fetched} downloaded, {failed} failed)");
     }
 
     void ExportFolderIcons()
@@ -553,7 +689,7 @@ public sealed partial class Exporter
 
     void WriteManifest()
     {
-        var tops = new[] { "fonts", "cursors", "assets", "icons", "glyphs", "apps", "bitmaps", "raw" }
+        var tops = new[] { "fonts", "cursors", "assets", "icons", "glyphs", "apps", "bitmaps", "filetypes", "weather", "raw" }
             .Where(t => _written.Any(w => w.StartsWith(t + "/", StringComparison.Ordinal))).ToList();
         var os = WindowsInfo.OsName;
         var source = new JsonObject { ["os"] = os, ["build"] = WindowsInfo.Build, ["locale"] = WindowsInfo.Locale };

@@ -1,40 +1,95 @@
 /* Fenestra: Windows 11 caption buttons (minimize, maximize/restore, close) for
    every GTK 4 / libadwaita window and for mutter's X11 window frames
    (mutter-x11-frames is a GTK 4 client). Imported by ~/.config/gtk-4.0/gtk.css.
-   Glyphs come from the Fenestra icon theme (window-*-symbolic, 10 px).
-   Colours are relative to the text colour, so light and dark both work:
-   hover 6 %, pressed 4 % (glyph 79 %), inactive window glyph 36 %,
-   close hover #c42b1c with a white glyph, close pressed 90 % (glyph 70 %).
+
+   Measured on Explorer and Notepad (reference-shots apps/dark-100-40-explorer-home-hover-*,
+   solid/dark-100-24-caption-*): 45 x 29 plates 1 px apart in the window's top-right corner
+   (close flush with the right edge), a 10 px glyph 18 px from the plate's left and 9 px from its
+   top, whatever the height of the title bar below. Hover 6 % and pressed 4 % of the text colour
+   (#2d2d2d on #202020), glyph 79 % while pressed, 36 % in an inactive window; close hover
+   #c42b1c with a white glyph, pressed 90 % (glyph 70 %).
+
+   The glyphs are window-*-symbolic of the icon theme (16 px icons, 10 px glyph in the middle,
+   like Adwaita's; recoloured by GTK, drawn at the output scale). They are the button's
+   background, positioned from its top-left corner, so they stay at the reference's place in
+   tall header bars; the button's own image is kept for its size and hidden.
    The selectors are deliberately more specific than any theme rule
-   ("headerbar windowcontrols > button:not(...):not(...)"), so they always win. */
-window windowcontrols:not(.fenestra-keep) { border-spacing: 0; padding: 0; }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) {
-  min-width: 46px; min-height: 32px; padding: 0; margin: 0;
+   ("window windowcontrols:not(.window-controls) > button:not(...):not(...)"), so they always win. */
+window windowcontrols:not(.fenestra-keep):not(.window-controls) { border-spacing: 1px; padding: 0; }
+window windowcontrols:not(.window-controls) > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) {
+  min-width: 45px; min-height: 29px; padding: 0; margin: 0;
   border: none; border-radius: 0; outline: none; box-shadow: none;
-  background: none; background-color: transparent; background-image: none;
   -gtk-icon-shadow: none; -gtk-icon-filter: none;
   color: @window_fg_color; /* header bars often dim their text; the glyphs are full colour */
-  transition: background-color 83ms linear, color 83ms linear;
+  background-color: transparent;
+  background-image: -gtk-icontheme("window-minimize-symbolic"), none;
+  background-repeat: no-repeat;
+  background-size: 16px 16px, 45px 29px;
+  background-position: 15px 6px, 0 0;
+  transition: background-image 83ms linear, color 83ms linear;
 }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) > image {
+window windowcontrols:not(.window-controls) > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) > image {
   -gtk-icon-size: 16px; min-width: 16px; min-height: 16px; padding: 0; margin: 0;
-  background: none; background-color: transparent; border: none; border-radius: 0; box-shadow: none; opacity: 1;
+  background: none; border: none; box-shadow: none; opacity: 0;
 }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):hover { background-color: alpha(currentColor, 0.0605); }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):active { background-color: alpha(currentColor, 0.0419); }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):active > image { opacity: 0.786; }
-window:backdrop windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):not(:hover) > image { opacity: 0.3628; }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep).close:hover { background-color: #c42b1c; color: #ffffff; }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep).close:active { background-color: alpha(#c42b1c, 0.9); color: #ffffff; }
-window windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep).close:active > image { opacity: 0.7; }
-/* The close button follows the window's rounded top-right corner. */
-window:not(.maximized):not(.tiled):not(.tiled-top):not(.tiled-right):not(.fullscreen) windowcontrols.end > button.close:last-child:not(.suggested-action):not(.destructive-action) { border-top-right-radius: 8px; }
+window windowcontrols:not(.window-controls) > button.maximize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) {
+  background-image: -gtk-icontheme("window-maximize-symbolic"), none; }
+window.maximized windowcontrols:not(.window-controls) > button.maximize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) {
+  background-image: -gtk-icontheme("window-restore-symbolic"), none; }
+window windowcontrols:not(.window-controls) > button.close:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) {
+  background-image: -gtk-icontheme("window-close-symbolic"), none; }
+
+/* Hover / pressed plates: the second background layer (45 x 29 at the top); nothing else of
+   the theme's button states (their background colour covers the whole title-bar height). */
+window windowcontrols:not(.window-controls) > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):hover,
+window windowcontrols:not(.window-controls) > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):active,
+window windowcontrols:not(.window-controls) > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):checked,
+window windowcontrols:not(.window-controls) > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):focus {
+  background-color: transparent; box-shadow: none; outline: none; }
+window windowcontrols:not(.window-controls) > button.minimize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):hover {
+  background-image: -gtk-icontheme("window-minimize-symbolic"), linear-gradient(alpha(@window_fg_color, 0.0605), alpha(@window_fg_color, 0.0605)); }
+window windowcontrols:not(.window-controls) > button.maximize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):hover {
+  background-image: -gtk-icontheme("window-maximize-symbolic"), linear-gradient(alpha(@window_fg_color, 0.0605), alpha(@window_fg_color, 0.0605)); }
+window.maximized windowcontrols:not(.window-controls) > button.maximize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):hover {
+  background-image: -gtk-icontheme("window-restore-symbolic"), linear-gradient(alpha(@window_fg_color, 0.0605), alpha(@window_fg_color, 0.0605)); }
+window windowcontrols:not(.window-controls) > button.minimize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):active {
+  color: alpha(@window_fg_color, 0.786);
+  background-image: -gtk-icontheme("window-minimize-symbolic"), linear-gradient(alpha(@window_fg_color, 0.0419), alpha(@window_fg_color, 0.0419)); }
+window windowcontrols:not(.window-controls) > button.maximize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):active {
+  color: alpha(@window_fg_color, 0.786);
+  background-image: -gtk-icontheme("window-maximize-symbolic"), linear-gradient(alpha(@window_fg_color, 0.0419), alpha(@window_fg_color, 0.0419)); }
+window.maximized windowcontrols:not(.window-controls) > button.maximize:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):active {
+  color: alpha(@window_fg_color, 0.786);
+  background-image: -gtk-icontheme("window-restore-symbolic"), linear-gradient(alpha(@window_fg_color, 0.0419), alpha(@window_fg_color, 0.0419)); }
+window windowcontrols:not(.window-controls) > button.close:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):hover {
+  color: #ffffff; background-image: -gtk-icontheme("window-close-symbolic"), linear-gradient(#c42b1c, #c42b1c); }
+window windowcontrols:not(.window-controls) > button.close:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):active {
+  color: alpha(#ffffff, 0.7); background-image: -gtk-icontheme("window-close-symbolic"), linear-gradient(alpha(#c42b1c, 0.9), alpha(#c42b1c, 0.9)); }
+/* Inactive window: dimmed glyphs, full again under the pointer. */
+window:backdrop windowcontrols:not(.window-controls) > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep):not(:hover) { color: alpha(@window_fg_color, 0.3628); }
+/* The close plate follows the window's rounded top-right corner (8 px). */
+window:not(.maximized):not(.tiled):not(.tiled-top):not(.tiled-right):not(.fullscreen) windowcontrols.end:not(.window-controls) > button.close:last-child:not(.suggested-action):not(.destructive-action) { border-top-right-radius: 8px; }
 /* mutter's X11 frames (headerbar.default-decoration): Windows caption text. */
 window headerbar.default-decoration .title { font-weight: 400; font-size: 12px; }
-/* Like Windows 11 apps with a tall title bar: in a header bar the caption
-   buttons fill its full height and sit flush with the top-right corner
-   (cancelling the header bar's 6 px padding). */
-window headerbar windowcontrols.end:not(.fenestra-keep) { margin-top: -6px; margin-bottom: -6px; margin-right: -6px; }
-window headerbar windowcontrols.start:not(.fenestra-keep) { margin-top: -6px; margin-bottom: -6px; margin-left: -6px; }
-window headerbar windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) { min-height: 47px; }
-window headerbar.default-decoration windowcontrols > button:not(.suggested-action):not(.destructive-action):not(.fenestra-keep) { min-height: 32px; }
+/* The buttons sit flush with the window's top-right corner (cancelling the header bar's 6 px
+   padding) and take the header bar's full height, so the plates and glyphs above are measured
+   from the window's top edge. */
+window headerbar windowcontrols.end:not(.fenestra-keep):not(.window-controls) { margin-top: -6px; margin-bottom: -6px; margin-right: -6px; }
+window headerbar windowcontrols.start:not(.fenestra-keep):not(.window-controls) { margin-top: -6px; margin-bottom: -6px; margin-left: -6px; }
+/* GtkHeaderBar (headerbar > windowhandle > box > box.end) pads its sides by 6 px but not its top
+   and bottom; AdwHeaderBar (one more wrapper widget) pads all four. */
+window headerbar > windowhandle > box > box.end > windowcontrols.end:not(.fenestra-keep):not(.window-controls),
+window headerbar > windowhandle > box > box.start > windowcontrols.start:not(.fenestra-keep):not(.window-controls) { margin-top: 0; margin-bottom: 0; }
+
+/* Window frame (client-side decorations): Windows 11's 8 px corners, its opaque 1 px border
+   (#3e3e3e dark, the reference frames measure 61-63; light #d4d4d4) and the theme's shadow,
+   the same as the KWin frame (kwin/aurorae, tools/build-aurorae-theme.py). */
+window.csd:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-right):not(.tiled-bottom):not(.tiled-left) {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 16px 18px rgba(0, 0, 0, 0.15), 0 11px 23px rgba(0, 0, 0, 0.13),
+              0 0 0 1px mix(@window_bg_color, @window_fg_color, 0.13), 0 0 0 50px transparent;
+}
+window.csd:backdrop:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-right):not(.tiled-bottom):not(.tiled-left) {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.10), 0 3px 4px rgba(0, 0, 0, 0.14), 0 1px 6px rgba(0, 0, 0, 0.12),
+              0 0 0 1px mix(@window_bg_color, @window_fg_color, 0.11), 0 0 0 50px transparent;
+}

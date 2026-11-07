@@ -40,6 +40,7 @@ qt_add_executable(fenestra-shell
     src/core/iconoverrides.cpp src/core/iconoverrides.h
     src/core/tokens.cpp src/core/tokens.h
     src/core/acrylic.cpp src/core/acrylic.h
+    src/core/backdrop.cpp src/core/backdrop.h
     src/services/apps.cpp src/services/apps.h
     src/services/taskbarmodel.cpp src/services/taskbarmodel.h
     src/services/weather.cpp src/services/weather.h
@@ -67,7 +68,7 @@ ecm_add_qtwayland_client_protocol(protocol_sources
     BASENAME plasma-window-management)
 target_sources(fenestra-shell PRIVATE ${protocol_sources})
 
-set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml
+set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml qml/components/FluentFont.qml
     PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(fenestra-shell
@@ -77,9 +78,16 @@ qt_add_qml_module(fenestra-shell
         qml/Main.qml
         qml/ShellState.qml
         qml/calendar/CalendarCard.qml
+        qml/components/Acrylic.qml
+        qml/components/BackdropView.qml
+        qml/components/AcrylicOutline.qml
         qml/components/Card.qml
+        qml/components/OverlayScrollBar.qml
+        qml/components/SearchBox.qml
         qml/components/ContextMenu.qml
         qml/components/Flyout.qml
+        qml/components/FluentFont.qml
+        qml/components/FluentGlyph.qml
         qml/components/MenuRow.qml
         qml/components/PopupMotion.qml
         qml/components/ShellPopup.qml
@@ -111,6 +119,7 @@ qt_add_qml_module(fenestra-shell
         qml/taskbar/TaskPreview.qml
         qml/taskbar/Taskbar.qml
         qml/taskbar/WeatherButton.qml
+        qml/taskbar/WidgetsBoard.qml
         qml/taskview/SnapLayouts.qml
         qml/tray/Tray.qml
         qml/tray/TrayButton.qml

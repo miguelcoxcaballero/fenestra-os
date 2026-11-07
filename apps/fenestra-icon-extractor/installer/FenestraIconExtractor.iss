@@ -3,7 +3,7 @@
 ; Pass /DSourceExe=<path to FenestraIconExtractor.exe> /DOutputDir=<dir>.
 
 #define AppName "Fenestra Icon Extractor"
-#define AppVersion "1.2.0"
+#define AppVersion "1.3.0"
 #ifndef SourceExe
   #define SourceExe "..\out\portable\FenestraIconExtractor.exe"
 #endif

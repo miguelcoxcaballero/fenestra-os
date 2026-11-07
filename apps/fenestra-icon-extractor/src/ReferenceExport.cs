@@ -90,12 +90,64 @@ public sealed partial class Exporter
         var glyphs = new JsonObject();
         var missing = new List<string>();
         var reasons = new JsonObject();
+        // Icon fonts of the apps themselves (Paint, Snipping Tool, Settings, Store, Weather).
+        var appFonts = new Dictionary<string, TrueTypeFont?>(StringComparer.OrdinalIgnoreCase) { ["SegoeIcons.ttf"] = font };
+        var appFontInfo = new JsonObject();
+        TrueTypeFont? AppFont(string file)
+        {
+            if (appFonts.TryGetValue(file, out var f)) return f;
+            var def = AppFontGlyphs.Fonts.FirstOrDefault(x => x.File.Equals(file, StringComparison.OrdinalIgnoreCase));
+            var at = def == null ? null : AppFontGlyphs.Locate(def, _win);
+            f = null;
+            if (at != null)
+            {
+                try
+                {
+                    byte[] data;
+                    using (var fs = new FileStream(at, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                    {
+                        data = new byte[fs.Length];
+                        fs.ReadExactly(data);
+                    }
+                    AddBytes($"raw/fonts/{file}", data);
+                    f = new TrueTypeFont(data);
+                    appFontInfo[file] = new JsonObject { ["path"] = at, ["revision"] = f.Revision, ["code_points"] = f.CodePoints().Count };
+                }
+                catch (Exception e) when (e is InvalidDataException or NotSupportedException or IOException or UnauthorizedAccessException)
+                {
+                    Log($"  {file}: {e.Message}");
+                    f = null;
+                }
+            }
+            else Missing($"app icon font {file}");
+            appFonts[file] = f;
+            return f;
+        }
+        foreach (var def in AppFontGlyphs.Fonts) AppFont(def.File);
         foreach (var g in ReferenceIcons.Glyphs)
         {
+            if (g.CodePoint is null && AppFontGlyphs.Glyphs.TryGetValue(g.Name, out var alt))
+            {
+                var af = AppFont(alt.Font);
+                string? asvg = null;
+                try { asvg = af?.Svg(alt.CodePoint); } catch (InvalidDataException) { asvg = null; }
+                if (asvg != null)
+                {
+                    AddBytes($"glyphs/{g.Name}.svg", Encoding.UTF8.GetBytes(asvg));
+                    glyphs[g.Name] = new JsonObject
+                    {
+                        ["codepoint"] = $"U+{alt.CodePoint:X4}", ["font"] = alt.Font, ["file"] = $"{g.Name}.svg", ["verified"] = alt.Verified,
+                    };
+                    continue;
+                }
+                missing.Add(g.Name);
+                reasons[g.Name] = $"{alt.Font} U+{alt.CodePoint:X4} not found on this PC";
+                continue;
+            }
             if (g.CodePoint is not int cp)
             {
                 missing.Add(g.Name);
-                reasons[g.Name] = "no public code point (Windows draws something that is not in Microsoft's glyph table)";
+                reasons[g.Name] = AppFontGlyphs.Unresolved(g.Name);
                 continue;
             }
             string? svg;
@@ -126,6 +178,22 @@ public sealed partial class Exporter
                 all++;
             }
             Log($"  --all-glyphs: {all} code points");
+            foreach (var (file, af) in appFonts)
+            {
+                if (af == null || file.Equals("SegoeIcons.ttf", StringComparison.OrdinalIgnoreCase)) continue;
+                var stem = Path.GetFileNameWithoutExtension(file);
+                int n = 0;
+                foreach (var cp in af.CodePoints())
+                {
+                    if (cp < 0xE000) continue;
+                    string? svg;
+                    try { svg = af.Svg(cp); } catch (InvalidDataException) { svg = null; }
+                    if (svg == null) continue;
+                    AddBytes($"glyphs/fonts/{stem}/{cp:X4}.svg", Encoding.UTF8.GetBytes(svg));
+                    n++;
+                }
+                Log($"  --all-glyphs: {file} {n} code points");
+            }
         }
         var index = new JsonObject
         {
@@ -139,6 +207,7 @@ public sealed partial class Exporter
             ["missing_reasons"] = reasons,
         };
         if (_o.AllGlyphs) index["all_glyphs"] = all;
+        index["app_fonts"] = appFontInfo;
         AddJson("glyphs/glyphs.json", index);
         Log($"  {glyphs.Count} of {ReferenceIcons.Glyphs.Length} named glyphs, {missing.Count} missing");
     }

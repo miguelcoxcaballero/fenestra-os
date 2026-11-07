@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// org.fenestra.Shell on the session bus: what KWin's Meta key (kwinrc [ModifierOnlyShortcuts])
-// and global shortcuts call to open Start and Search.
+// org.fenestra.Shell on the session bus: what global shortcuts and scripts call to open Start and
+// Search (Super alone is the "start" global shortcut, services/shortcuts.cpp).
 #pragma once
 
 #include <QDBusConnection>

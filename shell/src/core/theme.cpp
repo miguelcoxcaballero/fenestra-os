@@ -51,6 +51,47 @@ QColor lighter(const QColor &c, double target = 0.72)
     c.toHsl().getHslF(&h, &s, &l);
     return l >= target ? c : hsl(h, std::min(1.0, s * 1.5), target);
 }
+// Windows' dark-mode accent fill (SystemAccentColorLight2) of any accent: the base colour with its
+// CIELAB lightness raised to L* 75, hue and chroma kept (chroma capped at 66), clipped into sRGB by
+// lowering the chroma. Fitted on the named swatches below: slate #68768a gives #a8bccf exactly,
+// green #107c10 #6ccb5f; the user's #647c64 gives #a6c0a5.
+struct Lab { double L, a, b; };
+Lab toLab(const QColor &c)
+{
+    const double r = channel(c.red()), g = channel(c.green()), bl = channel(c.blue());
+    auto f = [](double t) { return t > 0.008856 ? std::cbrt(t) : 7.787 * t + 16.0 / 116.0; };
+    const double X = (0.4124 * r + 0.3576 * g + 0.1805 * bl) / 0.95047, Y = 0.2126 * r + 0.7152 * g + 0.0722 * bl,
+                 Z = (0.0193 * r + 0.1192 * g + 0.9505 * bl) / 1.08883;
+    return {116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))};
+}
+bool fromLab(const Lab &lab, QColor *out)
+{
+    const double fy = (lab.L + 16) / 116, fx = fy + lab.a / 500, fz = fy - lab.b / 200;
+    auto inv = [](double t) { return t * t * t > 0.008856 ? t * t * t : (t - 16.0 / 116.0) / 7.787; };
+    const double X = inv(fx) * 0.95047, Y = inv(fy), Z = inv(fz) * 1.08883;
+    const double lin[3] = {3.2406 * X - 1.5372 * Y - 0.4986 * Z, -0.9689 * X + 1.8758 * Y + 0.0415 * Z, 0.0557 * X - 0.2040 * Y + 1.0570 * Z};
+    int v[3];
+    bool inGamut = true;
+    for (int i = 0; i < 3; ++i) {
+        if (lin[i] < -0.001 || lin[i] > 1.001)
+            inGamut = false;
+        const double c = std::clamp(lin[i], 0.0, 1.0);
+        v[i] = int(std::lround(255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * std::pow(c, 1 / 2.4) - 0.055)));
+    }
+    *out = QColor(v[0], v[1], v[2]);
+    return inGamut;
+}
+QColor windowsLight2(const QColor &base)
+{
+    const Lab lab = toLab(base);
+    const double chroma = std::hypot(lab.a, lab.b), hue = std::atan2(lab.b, lab.a);
+    const double L = std::max(75.0, lab.L);
+    QColor out;
+    for (double c = std::min(chroma, 66.0); c >= 0; c -= 1)
+        if (fromLab({L, c * std::cos(hue), c * std::sin(hue)}, &out))
+            break;
+    return out;
+}
 // GNOME accent names -> [base, fill on dark, fill on light] (appearance.js ENUM).
 const QHash<QString, std::array<const char *, 3>> kNamed{
     {QStringLiteral("blue"), {"#0078d4", "#4cc2ff", "#0067c0"}},   {QStringLiteral("teal"), {"#038387", "#4fd6cb", "#00777b"}},
@@ -73,9 +114,8 @@ Theme::Palette Theme::palette(const QString &accent, bool dark)
         darkFill = QColor(QLatin1String((*it)[1]));
         lightFill = QColor(QLatin1String((*it)[2]));
     } else {
-        base = darkFill = QColor(accent);
-        for (int i = 0; i < 20 && contrast(darkFill, QColor(0x20, 0x20, 0x20)) < 3; ++i)
-            darkFill = mix(darkFill, Qt::white, 0.1);
+        base = QColor(accent);
+        darkFill = windowsLight2(base);
         lightFill = darker(base);
     }
     const QColor fill = dark ? darkFill : lightFill;

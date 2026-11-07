@@ -1,13 +1,12 @@
-"""Network & internet (NetworkManager via nmcli)."""
+"""Network & internet (NetworkManager via nmcli). Wi-Fi pages: pages/wifi.py (libnm)."""
 from __future__ import annotations
 
 from gi.repository import GLib, Gtk
 
 from .. import util
-from ..backends import network, session
+from ..backends import network
 from ..i18n import _
-from ..widgets import (ContentDialog, ExpanderRow, SettingRow, ToggleSwitch, button, icon, label,
-                       not_available_row, show_dialog, spinner, toast)
+from ..widgets import SettingRow, ToggleSwitch, icon, label, not_available_row, toast
 from .base import Page, register
 
 
@@ -121,118 +120,6 @@ class NetworkPage(Page):
             self.hero_sub.set_label(_("You aren't connected to any networks"))
             self.hero_btn.sub.set_label("")
             self.hero_icon.set_from_icon_name("fs-globe-symbolic")
-
-
-@register
-class WifiPage(Page):
-    id = "wifi"
-    parent = "network"
-    title = "Wi-Fi"
-    keywords = "wireless networks connect password ssid hidden known"
-    index = [
-        ("wifi", "Wi-Fi", "on off"),
-        ("available", "Show available networks", "scan list connect"),
-        ("known", "Manage known networks", "forget saved"),
-    ]
-
-    def build(self, box):
-        g = self.group()
-        self.toggle_row = SettingRow(_("Wi-Fi"), None, "fs-wifi-1-symbolic", key="wifi")
-        self.remember("wifi", self.toggle_row)
-        g.add(self.toggle_row)
-        self.avail = ExpanderRow(_("Show available networks"), None, "fs-wifi-1-symbolic", key="available",
-                                 expanded=True,
-                                 control=button(_("Refresh"), lambda: self.load(rescan=True), css="small"))
-        self.remember("available", self.avail)
-        g.add(self.avail)
-        self.props_row = SettingRow(_("Hardware properties"), _("View and edit details for this adapter"),
-                                    "fs-options-symbolic", chevron=True,
-                                    on_click=lambda: session.open_panel("wifi", self.window), key="hw-props")
-        g.add(self.props_row)
-        if not session.panel_available("wifi"):
-            self._session_hide(self.props_row)
-        self.known = ExpanderRow(_("Manage known networks"), _("Add, remove, edit networks"),
-                                 "fs-history-symbolic", key="known")
-        self.remember("known", self.known)
-        g.add(self.known)
-        self.wifi_dev = None
-        self.load()
-
-    def on_show(self):
-        self.load()
-
-    def load(self, rescan=False):
-        network.status(lambda res: self._status(res, rescan))
-
-    def _status(self, res, rescan):
-        wifi_on = res["wifi_enabled"]
-        devs = [d for d in res["devices"] if d.type == "wifi"]
-        self.wifi_dev = devs[0] if devs else None
-        if wifi_on is None or not devs:
-            self.toggle_row.set_control(label(_("Not available"), "row-value"))
-            self.toggle_row.set_subtitle(_("No Wi-Fi adapter found"))
-            self.avail.clear()
-            return
-        self.toggle_row.set_control(ToggleSwitch(wifi_on, lambda v: network.set_wifi(
-            v, lambda *_: GLib.timeout_add(1500, lambda: (self.load(), False)[1]))))
-        self.avail.clear()
-        if not wifi_on:
-            self.avail.add(SettingRow(_("Turn on Wi-Fi to see available networks"), None, None))
-            return
-        self.avail.add(SettingRow(_("Searching…"), None, None, control=spinner()))
-        network.known_connections(lambda known: network.wifi_list(lambda aps: self._list(aps, known),
-                                                                  rescan=rescan))
-
-    def _list(self, aps, known):
-        self.avail.clear()
-        if not aps:
-            self.avail.add(SettingRow(_("No networks found"), None, None))
-        for ap in aps[:25]:
-            sub = _("Connected, secured") if ap.in_use and ap.secured else \
-                _("Connected") if ap.in_use else _("Secured") if ap.secured else _("Open")
-            if ap.in_use and self.wifi_dev:
-                ctrl = button(_("Disconnect"), lambda: network.disconnect(
-                    self.wifi_dev.name, lambda *_: self.load()), css="small")
-            else:
-                ctrl = button(_("Connect"), lambda a=ap, k=known: self._connect(a, k), css="small")
-            r = SettingRow(ap.ssid, f"{sub} · {ap.signal}%", "fs-wifi-1-symbolic"
-                           if not ap.secured else "fs-lock-closed-symbolic", control=ctrl)
-            self.avail.add(r)
-        self.known.clear()
-        for name in sorted(known):
-            self.known.add(SettingRow(name, None, None, control=button(
-                _("Forget"), lambda n=name: network.forget(n, lambda *_: self.load()), css="small")))
-        if not known:
-            self.known.add(SettingRow(_("No known networks"), None, None))
-
-    def _connect(self, ap, known):
-        def done(ok, out, err):
-            if ok:
-                toast(self.box, _("Connected to {0}").format(ap.ssid))
-            else:
-                toast(self.box, _("This action is disabled in read-only mode") if util.READ_ONLY
-                      else _("Couldn't connect to this network"))
-            self.load()
-        if ap.ssid in known or not ap.secured:
-            if ap.ssid in known:
-                network.connect_known(ap.ssid, done)
-            else:
-                network.connect(ap.ssid, None, done)
-            return
-        entry = Gtk.PasswordEntry()
-        entry.set_show_peek_icon(True)
-        entry.add_css_class("fluent-entry")
-        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        extra.append(label(_("Enter the network security key"), "caption"))
-        extra.append(entry)
-
-        def resp(r):
-            if r == "primary":
-                network.connect(ap.ssid, entry.get_text(), done)
-        dlg = ContentDialog(ap.ssid, None, primary=_("Next"), close=_("Cancel"), on_response=resp, extra=extra)
-        entry.connect("activate", lambda *_: dlg.respond("primary"))
-        show_dialog(self.box, dlg)
-        entry.grab_focus()
 
 
 @register

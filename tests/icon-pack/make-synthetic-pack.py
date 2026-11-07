@@ -86,9 +86,30 @@ def main():
                                      + ''.join(f'\n[{d}]\nSize={d.split("x")[0]}\nContext=Applications\nType=Fixed\n' for d in dirs)).encode()
     files['bitmaps/16x16/dialog-help.png'] = png(16, (0, 100, 220))
     files['bitmaps/bitmaps.json'] = json.dumps({'modules': {}, 'bitmaps': {'dialog-help': {'status': 'candidate'}}}).encode()
+    # filetypes/: a few extensions and places (made-up squares), weather/: two conditions and one unsafe SVG
+    ft_sizes = (16, 20, 24, 32, 48, 64, 96, 256)
+    items = {}
+    for key, kind, rgb in (('txt', 'extension', (240, 240, 240)), ('png', 'extension', (0, 120, 212)),
+                           ('pdf', 'extension', (200, 30, 30)), ('unknown', 'extension', (250, 250, 250)),
+                           ('folder', 'special', (255, 200, 60)), ('folder-full', 'special', (255, 210, 90)),
+                           ('recycle-bin-empty', 'special', (180, 200, 220)), ('documents', 'special', (120, 140, 160))):
+        for s in ft_sizes:
+            files[f'filetypes/{s}x{s}/{key}.png'] = png(s, rgb)
+        items[key] = {'kind': kind, 'files': {str(s): f'{s}x{s}/{key}.png' for s in ft_sizes}}
+        if kind == 'extension' and key != 'unknown':
+            items[key]['ext'] = '.' + key
+    items['../evil'] = {'kind': 'extension', 'files': {'16': '../evil.png'}}
+    files['filetypes/filetypes.json'] = json.dumps({'sizes': list(ft_sizes), 'items': items}).encode()
+    sun = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><defs><linearGradient id="g"><stop offset="0" '
+           'stop-color="#fc0"/><stop offset="1" stop-color="#f80"/></linearGradient></defs><circle cx="36" cy="36" r="20" fill="url(#g)"/></svg>')
+    files['weather/SunnyDayV3.svg'] = sun.encode()
+    files['weather/CloudyV3.svg'] = sun.replace('#fc0', '#ccc').encode()
+    files['weather/Evil.svg'] = b'<svg xmlns="http://www.w3.org/2000/svg"><image href="http://example.com/x.png"/></svg>'
+    files['weather/weather.json'] = json.dumps({'icons': {n: {'file': f'{n}.svg', 'source': 'cache'}
+                                                          for n in ('SunnyDayV3', 'CloudyV3', 'Evil')}}).encode()
     manifest = {'format': 'fenestra-icon-pack', 'version': 1, 'id': 'synthetic-test-pack', 'name': 'Synthetic test pack',
                 'generator': 'tests/icon-pack/make-synthetic-pack.py', 'source': {'os': 'none'}, 'created': '2026-11-06T00:00:00Z',
-                'contents': ['icons', 'glyphs', 'apps', 'bitmaps'], 'icon_theme': 'Fenestra-Windows',
+                'contents': ['icons', 'glyphs', 'apps', 'bitmaps', 'filetypes', 'weather'], 'icon_theme': 'Fenestra-Windows',
                 'licence_note': 'Synthetic test data.'}
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('fenestra-pack.json', json.dumps(manifest, indent=1))

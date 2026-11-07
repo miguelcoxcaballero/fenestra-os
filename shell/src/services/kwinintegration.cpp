@@ -48,11 +48,29 @@ void KWinIntegration::applyTheme()
     KConfigGroup deco = cfg->group(QStringLiteral("org.kde.kdecoration2"));
     const QString theme = QStringLiteral("__aurorae__svg__Fenestra-") + scheme;
     bool changed = false;
-    if (deco.readEntry("theme") != theme || deco.readEntry("library") != QLatin1String("org.kde.kwin.aurorae")) {
+    // KWin 6.8 migrates "org.kde.kwin.aurorae" to the C++ renderer "org.kde.kwin.aurorae.v2".
+    const QString library = deco.readEntry("library");
+    if (deco.readEntry("theme") != theme || !library.startsWith(QLatin1String("org.kde.kwin.aurorae"))) {
         deco.writeEntry("library", QStringLiteral("org.kde.kwin.aurorae"));
         deco.writeEntry("theme", theme);
         deco.writeEntry("ButtonsOnLeft", QString());
         deco.writeEntry("ButtonsOnRight", QStringLiteral("IAX")); // minimize, maximize, close
+        changed = true;
+    }
+    // Windows' 1 px frame: with the default (automatic / "Normal") border size Aurorae widens the
+    // theme's 1 px sides and bottom to ~4 px of title-bar colour around the client; "Tiny" keeps
+    // the theme's own borders (tests/window-frames).
+    if (deco.readEntry("BorderSize") != QLatin1String("Tiny") || deco.readEntry("BorderSizeAuto", true)) {
+        deco.writeEntry("BorderSize", QStringLiteral("Tiny"));
+        deco.writeEntry("BorderSizeAuto", false);
+        changed = true;
+    }
+    // Title text: Windows' caption font (NONCLIENTMETRICS lfCaptionFont), Segoe UI 9 pt.
+    KConfigGroup wm = KSharedConfig::openConfig(QStringLiteral("kdeglobals"))->group(QStringLiteral("WM"));
+    const QString captionFont = QStringLiteral("Segoe UI,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1");
+    if (wm.readEntry("activeFont") != captionFont) {
+        wm.writeEntry("activeFont", captionFont);
+        wm.sync();
         changed = true;
     }
     KConfigGroup tabbox = cfg->group(QStringLiteral("TabBox"));

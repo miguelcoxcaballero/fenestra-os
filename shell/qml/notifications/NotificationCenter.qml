@@ -11,6 +11,8 @@ Flyout {
     id: center
     padding: 0
     background.visible: false
+    recipe: "panel"
+    blurItems: [notifCard.material, calendar.material]
     property alias calendar: calendar
     readonly property int topMargin: 8
     property int availableHeight: targetScreen ? targetScreen.height - Metrics.taskbarHeight - 2 * Metrics.flyoutGap - topMargin : 800
@@ -41,9 +43,9 @@ Flyout {
         id: hb
         property bool on: false
         height: Metrics.n("notifications.button.height", 24); radius: Metrics.controlRadius
-        color: on ? Theme.accentFill : hm.pressed ? Theme.pressed : hm.containsMouse ? Qt.tint(Metrics.col("notifications.button"), Theme.hover)
-                                                                : Metrics.col("notifications.button")
-        border.color: on ? "transparent" : Metrics.col("notifications.button.border")
+        color: on ? Theme.accentFill : hm.pressed ? Theme.pressed : hm.containsMouse ? Qt.tint(Metrics.pcol("notifications.button"), Theme.hover)
+                                                                : Metrics.pcol("notifications.button")
+        border.color: on ? "transparent" : Metrics.pcol("notifications.button.border")
         signal clicked()
         MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true; onClicked: hb.clicked() }
     }
@@ -56,7 +58,8 @@ Flyout {
         Card {
             id: notifCard
             width: Metrics.notificationsWidth
-            color: Metrics.col("panel.fill.alt")
+            // The darker acrylic (fallback #1c1c1c, panel.fill.alt).
+            recipe: "base"
             readonly property int headerH: Metrics.n("notifications.header.height", 50)
             height: Notifications.count === 0 ? Metrics.n("notifications.empty.height", 232)
                                               : Math.max(Metrics.n("notifications.empty.height", 232), center.availableHeight - calendar.height)

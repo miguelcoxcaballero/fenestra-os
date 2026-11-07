@@ -19,7 +19,7 @@ QtObject {
         "Search for apps, settings, and documents": "Buscar aplicaciones, configuraciones y documentos",
         "Pinned": "Anclado", "All": "Todo", "Show less": "Mostrar menos", "Show all": "Mostrar todo",
         "Recommended": "Recomendaciones", "Your recent files will appear here.": "Tus archivos recientes aparecerán aquí.",
-        "Recent": "Recientes", "All apps": "Todos", "Local account": "Cuenta local", "Manage my account": "Administrar mi cuenta",
+        "Recent": "Recientes", "More": "Más", "All apps": "Todos", "Local account": "Cuenta local", "Manage my account": "Administrar mi cuenta",
         "Suggested": "Sugerido", "Quick searches": "Búsquedas rápidas", "Focus settings": "Ajustes de enfoque",
         "Sound settings": "Configuración de sonido", "Bluetooth & devices": "Bluetooth y dispositivos",
         "Color settings": "Configuración de color", "Search settings": "Configuración de búsqueda",
@@ -62,6 +62,9 @@ QtObject {
         "+ %1 notifications": "+ %1 de notificaciones", "More options": "Más opciones",
         "Snipping area": "Área de recorte", "Rectangle": "Rectángulo", "Window": "Ventana", "Full screen": "Pantalla completa", "Freeform": "Forma libre",
         "Close (Esc)": "Cerrar (Esc)",
+        "Good morning": "Buenos días", "Good afternoon": "Buenas tardes", "Good evening": "Buenas noches",
+        "See full forecast": "Ver previsión completa", "Feels like": "Sensación térmica", "Humidity": "Humedad",
+        "Options": "Opciones", "More Wi-Fi settings": "Más configuraciones de Wi-Fi", "More Bluetooth settings": "Más configuraciones de Bluetooth", "Details": "Detalles", "System": "Sistema", "Best match": "Mejor coincidencia",
         "Rename": "Cambiar nombre", "Delete": "Eliminar", "Copy as path": "Copiar como ruta de acceso", "Properties": "Propiedades",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }

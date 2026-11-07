@@ -3,11 +3,14 @@
 
 #include "apps.h"
 #include "kwinintegration.h"
+#include "shellcontrol.h"
 #include "snip.h"
 #include "status.h"
 #include "system.h"
 
+#include <utility>
 #include <KGlobalAccel>
+#include <KGlobalShortcutInfo>
 #include <PulseAudioQt/Context>
 #include <PulseAudioQt/Server>
 #include <PulseAudioQt/Source>
@@ -59,6 +62,18 @@ void Shortcuts::volume(int delta)
 
 void Shortcuts::install()
 {
+    // Super alone opens Start. KWin 6.8 no longer reads kwinrc [ModifierOnlyShortcuts]: modifier-only
+    // shortcuts are handled by the kglobalaccel built into KWin (GlobalShortcutsRegistry::keyEvent: a
+    // released Meta with nothing pressed in between looks up the shortcut "Meta"). Plasma registers
+    // "Meta" for plasmashell's "activate application launcher", and that entry in kglobalshortcutsrc
+    // keeps the key even with plasmashell not running, so Super did nothing. Take the key from whatever
+    // other component holds it, as Windows' Start does.
+    const QKeySequence super(Qt::Key_Meta);
+    for (const KGlobalShortcutInfo &info : KGlobalAccel::globalShortcutsByKey(super)) {
+        if (info.componentUniqueName() != QLatin1String("fenestra-shell"))
+            KGlobalAccel::stealShortcutSystemwide(super);
+    }
+    connect(add(QStringLiteral("start"), QStringLiteral("Start"), {super}), &QAction::triggered, ShellControl::instance(), &ShellControl::ToggleStart);
     connect(add(QStringLiteral("volume-up"), QStringLiteral("Volume up"), {QKeySequence(Qt::Key_VolumeUp)}), &QAction::triggered, this, [this] { volume(+2); });
     connect(add(QStringLiteral("volume-down"), QStringLiteral("Volume down"), {QKeySequence(Qt::Key_VolumeDown)}), &QAction::triggered, this, [this] { volume(-2); });
     connect(add(QStringLiteral("volume-mute"), QStringLiteral("Mute"), {QKeySequence(Qt::Key_VolumeMute)}), &QAction::triggered, this, [this] { volume(0); });
@@ -93,10 +108,25 @@ void Shortcuts::install()
             &QAction::triggered, this, [] { KWinIntegration::instance()->toggleOverview(); });
     // Print and Super+Shift+S open the snipping overlay (Q04), as on the reference. "screenshot" keeps
     // its id (and so any saved key) from when Print saved the whole workspace straight away.
-    connect(add(QStringLiteral("screenshot"), QStringLiteral("Snip a screenshot (Print)"), {QKeySequence(Qt::Key_Print)}),
-            &QAction::triggered, Snip::instance(), &Snip::start);
-    connect(add(QStringLiteral("snip"), QStringLiteral("Snip a screenshot"), {QKeySequence(Qt::META | Qt::SHIFT | Qt::Key_S)}),
-            &QAction::triggered, Snip::instance(), &Snip::start);
+    // Windows' snipping keys belong to the snipping tool. Spectacle's .desktop file claims Meta+Shift+S
+    // ("Launch Spectacle") and Print, and kglobalaccel gave the keys to Spectacle, so pressing them did
+    // nothing here: take them from any other component and set ours without autoloading (a saved
+    // "none" from such a conflict would otherwise stick).
+    const QKeySequence printKey(Qt::Key_Print), snipKey(Qt::META | Qt::SHIFT | Qt::Key_S);
+    QAction *printAction = add(QStringLiteral("screenshot"), QStringLiteral("Snip a screenshot (Print)"), {printKey});
+    QAction *snipAction = add(QStringLiteral("snip"), QStringLiteral("Snip a screenshot"), {snipKey});
+    for (const auto &[action, key] : {std::pair{printAction, printKey}, std::pair{snipAction, snipKey}}) {
+        const QList<KGlobalShortcutInfo> owners = KGlobalAccel::globalShortcutsByKey(key);
+        bool othersOwn = false;
+        for (const KGlobalShortcutInfo &o : owners)
+            othersOwn |= o.componentUniqueName() != QLatin1String("fenestra-shell");
+        if (othersOwn)
+            KGlobalAccel::stealShortcutSystemwide(key);
+        if (othersOwn || KGlobalAccel::self()->shortcut(action) != QList<QKeySequence>{key})
+            KGlobalAccel::self()->setShortcut(action, {key}, KGlobalAccel::NoAutoloading);
+    }
+    connect(printAction, &QAction::triggered, Snip::instance(), &Snip::start);
+    connect(snipAction, &QAction::triggered, Snip::instance(), &Snip::start);
     connect(Snip::instance(), &Snip::saved, this, &Shortcuts::screenshotSaved);
 }
 

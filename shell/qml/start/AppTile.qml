@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Pinned tile and Grid view cell: a 96 × 84 cell (start.pinned.tile.*), 32 px icon 12 px from the
-// top, 12 px label below it on up to two lines (design/tokens.json).
+// Pinned tile and Grid view cell (user-win11 160039 at 150 %): a 96 x 84 cell, 32 px icon 12 px
+// from the top, 12 px label centred under it on up to two lines of 16 px, first baseline 60.67 px
+// from the tile's top (start.pinned.* tokens).
 import QtQuick
 import Fenestra.Shell
 
@@ -20,20 +21,21 @@ Item {
         anchors.fill: parent
         anchors.margins: 2
         radius: Metrics.controlRadius
-        color: m.pressed ? Theme.pressed : m.containsMouse ? Metrics.themed("start.hover") : "transparent"
+        color: m.pressed ? Metrics.themed("popup.pressed") : m.containsMouse ? Metrics.themed("popup.hover") : "transparent"
     }
     Image {
         id: img
         readonly property int size: Metrics.tok("start.pinned.icon", 32)
         x: Math.round((tile.width - size) / 2); y: Metrics.tok("start.pinned.icon.top", 12)
         width: size; height: size
-        sourceSize: Qt.size(size * Screen.devicePixelRatio, size * Screen.devicePixelRatio)
+        sourceSize: Qt.size(size * 2, size * 2)
         source: "image://icon/" + tile.icon
         scale: m.pressed ? 0.9 : 1
         Behavior on scale { NumberAnimation { duration: 110 } }
     }
     Text {
-        x: 4; y: Metrics.tok("start.pinned.label.top", 48); width: tile.width - 8
+        x: 2; width: tile.width - 4
+        y: Metrics.num("start.pinned.label.baseline", 60.67) - baselineOffset
         horizontalAlignment: Text.AlignHCenter
         text: tile.name
         wrapMode: Text.Wrap
@@ -42,7 +44,7 @@ Item {
         lineHeightMode: Text.FixedHeight
         lineHeight: 16
         color: Theme.text
-        font.family: Metrics.fontFamily
+        font.family: Metrics.fontFamily; font.variableAxes: Metrics.textAxes
         font.pixelSize: Metrics.fontCaption
     }
     MouseArea {

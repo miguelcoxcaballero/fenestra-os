@@ -21,7 +21,7 @@ Windows is only read. The only file written is the `.zip` you choose. No network
 
 Headless use (scripts):
 `FenestraIconExtractor.exe --export D:\pack.zip [--wallpapers] [--no-fonts] [--no-cursors] [--no-icons] [--no-folders] [--no-taskbar] [--no-apps] [--no-battery] [--log FILE]`
-`  [--no-glyphs] [--all-glyphs] [--no-package-logos] [--no-bitmaps] [--probe-modules]`
+`  [--no-glyphs] [--all-glyphs] [--no-package-logos] [--no-bitmaps] [--probe-modules] [--no-filetypes] [--no-weather] [--weather-download]`
 
 ## What goes into the pack
 
@@ -36,7 +36,9 @@ Headless use (scripts):
 | `assets/branding/start-button.svg` | `SystemApps\MicrosoftWindows.Client.Core_cw5n1h2txyewy\Icons\WindowsLogo.svg` |
 | `assets/search/search.png` | `SystemApps\Shared\SearchIconOnDark.scale-400\*\*.png` |
 | `assets/wallpapers/windows-desktop.*`, `windows-lockscreen.*` | optional (off by default): current wallpaper and lock screen picture |
-| `glyphs/<name>.svg`, `glyphs/glyphs.json` | every Segoe Fluent Icons glyph named in `design/reference/icons.json` (237 of 293; the 56 without a public code point are listed as missing), drawn from `Fonts\SegoeIcons.ttf` (`segmdl2.ttf` on Windows 10) by the built-in TrueType reader (`src/TrueType.cs`): outline → SVG path, `fill="currentColor"`, viewBox = the em square. `--all-glyphs` adds `glyphs/u/<HEX>.svg` for every code point of the font |
+| `filetypes/<n>x<n>/<key>.png`, `filetypes/filetypes.json` | what Explorer shows for ~230 extensions, `unknown`, folders (empty / with content), drives, Recycle Bin empty/full and special folders, at 16, 20, 24, 32, 48, 64, 96 and 256 px (IShellItemImageFactory / SHGetStockIconInfo) |
+| `weather/<Name>.svg`, `weather/weather.json` | the taskbar / Widgets weather condition icons from the Widgets and Edge WebView caches; `--weather-download` fetches the rest from the address Widgets uses |
+| `glyphs/<name>.svg`, `glyphs/glyphs.json` | every Segoe Fluent Icons glyph named in `design/reference/icons.json` (265 of 293: 237 from Segoe Fluent Icons, 28 from the apps' own icon fonts PaintIcons, SnSkFluent, SettingsIcons and StoreIcons; the other 28 are listed as missing with the reason), drawn from `Fonts\SegoeIcons.ttf` (`segmdl2.ttf` on Windows 10) by the built-in TrueType reader (`src/TrueType.cs`): outline → SVG path, `fill="currentColor"`, viewBox = the em square. `--all-glyphs` adds `glyphs/u/<HEX>.svg` for every code point of the font |
 | `icons/Fenestra-Windows/{256,48,32,24,16}/apps/<name>.png`, `apps/light/…`, `apps/apps.json` | the 44 apps of `icons.json`: Store/system packages by package family (`GetPackagesByPackageFamily` + `GetPackagePathByFullName`, `%WINDIR%\SystemApps` as fallback) → `AppxManifest.xml` → `Square44x44Logo` → the `targetsize-N_altform-unplated` file (light-theme `altform-lightunplated` files go to `apps/light/`); Edge, OneDrive, PowerShell, cmd and Explorer from the executable's first icon group. `raw/appx/<family>/` keeps the files used |
 | `bitmaps/<n>x<n>/<name>.png`, `bitmaps/bitmaps.json` | `icons.json` `modules[]` (imageres ids, the default account picture) and the `bitmaps[]` a documented API can draw (`SHGetStockIconInfo`: help, find, delete, rename; `DrawThemeBackground`: header sort arrow, size grip) at 16/20/24/32/48 px. The rest are recorded as `unresolved`, `substitute` (which glyph stands in) or `skipped` (the Microsoft account logo) |
 | `raw/probe/<module>/<id>.png` | only with `--probe-modules`: every icon group of explorerframe, shell32, imageres, compstui, comctl32 and OneDrive.exe at 32 px, to identify the ids of the unresolved bitmaps on a real PC |

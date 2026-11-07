@@ -23,7 +23,7 @@ THEME_ICONS = ['places/folder', 'places/folder-documents', 'places/user-desktop'
                'mimetypes/text-x-generic', 'mimetypes/image-x-generic', 'mimetypes/application-pdf']
 
 
-TOPS = ('fonts', 'cursors', 'assets', 'icons', 'glyphs', 'apps', 'bitmaps', 'raw')
+TOPS = ('fonts', 'cursors', 'assets', 'icons', 'glyphs', 'apps', 'bitmaps', 'filetypes', 'weather', 'raw')
 NAME_RE = re.compile(r'^[a-z0-9][a-z0-9.+-]*$')
 SVG_NS = '{http://www.w3.org/2000/svg}'
 SVG_ELEMENTS = {'svg', 'g', 'path', 'title', 'desc', 'defs', 'use', 'rect', 'circle', 'ellipse', 'line', 'polyline',
@@ -105,9 +105,23 @@ def main():
                 errors.append(f'glyphs.json: {gname} -> missing {f}')
             if not re.match(r'^U\+[0-9A-F]{4,6}$', str(g.get('codepoint', ''))):
                 errors.append(f'glyphs.json: {gname} has a bad codepoint')
+        # filetypes/: every listed size file is a square PNG of that size
+        if 'filetypes/filetypes.json' in names:
+            ft = json.loads(z.read('filetypes/filetypes.json'))
+            for key, meta in ft.get('items', {}).items():
+                if not re.match(r'^[a-z0-9][a-z0-9.+_-]{0,63}$', key):
+                    errors.append(f'filetypes.json: bad key {key}')
+                for size, rel in meta.get('files', {}).items():
+                    if rel != f'{size}x{size}/{key}.png' or 'filetypes/' + rel not in names:
+                        errors.append(f'filetypes.json: {key} {size} -> {rel}')
+        if 'weather/weather.json' in names:
+            wj = json.loads(z.read('weather/weather.json'))
+            for wname, meta in wj.get('icons', {}).items():
+                if 'weather/' + str(meta.get('file')) not in names:
+                    errors.append(f'weather.json: {wname} -> missing {meta.get("file")}')
         for n in names:
             if n.startswith('glyphs/') and n.endswith('.svg'):
-                if n not in listed and not n.startswith('glyphs/u/'):
+                if n not in listed and not n.startswith(('glyphs/u/', 'glyphs/fonts/')):
                     errors.append(f'{n}: not listed in glyphs.json')
                 why = svg_problem(z.read(n))
                 if why:

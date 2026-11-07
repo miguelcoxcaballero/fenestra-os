@@ -6,18 +6,22 @@ import Fenestra.Shell
 Item {
     id: cell
     default property alias content: row.data
-    property int hpad: 7
+    property real hpad: 7
+    // Padding left and right of the content (Windows' cells are not symmetric: Tray.qml).
+    property real lpad: hpad
+    property real rpad: hpad
+    property int spacing: 4
     property string accessibleName
     signal clicked()
     signal rightClicked()
     signal wheel(int delta)
-    width: row.implicitWidth + 2 * hpad
+    width: row.implicitWidth + lpad + rpad
     height: 40
     Accessible.role: Accessible.Button
     Accessible.name: accessibleName
     Rectangle { anchors.fill: parent; radius: Metrics.controlRadius
         color: mouse.pressed ? Theme.pressed : mouse.containsMouse ? Theme.hover : "transparent" }
-    Row { id: row; anchors.centerIn: parent; spacing: 4 }
+    Row { id: row; x: cell.lpad; anchors.verticalCenter: parent.verticalCenter; spacing: cell.spacing }
     MouseArea {
         id: mouse
         anchors.fill: parent

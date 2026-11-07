@@ -66,7 +66,7 @@ Item {
         id: leaveAnim
         ParallelAnimation {
             NumberAnimation { target: m.shift; property: m.horizontal ? "x" : "y"; to: m.leavesMoving ? m.from : 0
-                              duration: m.leavesMoving ? Motion.close : 0
+                              duration: !m.leavesMoving ? 0 : m.kind === "edge" ? Motion.closeEdge : Motion.closeTaskbar
                               easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.accelerate }
             NumberAnimation { target: m.target; property: "opacity"; to: m.leaveFade > 0 ? 0 : 1; duration: m.leaveFade }
         }

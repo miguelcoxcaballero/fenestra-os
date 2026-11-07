@@ -10,7 +10,9 @@
 #include <QHash>
 #include <QObject>
 #include <QQmlEngine>
+#include <QSet>
 #include <QStringList>
+#include <QTimer>
 #include <QVariantMap>
 
 // The player shown in the media card: the first one playing, else the last one that played.
@@ -108,7 +110,11 @@ private:
     QStringList m_profiles;
 };
 
-// Wi-Fi networks for the quick settings subpage, strongest first, one row per SSID.
+// Wi-Fi networks for the quick settings subpage, connected first then strongest, one row per SSID.
+// Rows are updated in place (never a model reset), so a delegate that shows the inline password
+// field keeps it while scans add, remove or re-sort access points. The connect attempt is
+// tracked here: rows report "Connecting" / "Verifying and connecting", and a rejected key brings
+// the password field back (keyRejected) with Windows' message in the row's status.
 class WifiNetworks : public QAbstractListModel
 {
     Q_OBJECT
@@ -117,8 +123,10 @@ class WifiNetworks : public QAbstractListModel
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
     Q_PROPERTY(bool airplaneMode READ airplaneMode WRITE setAirplaneMode NOTIFY enabledChanged)
     Q_PROPERTY(bool hasWifi READ hasWifi NOTIFY enabledChanged)
+    Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 public:
-    enum Roles { SsidRole = Qt::UserRole + 1, SignalRole, SecuredRole, ActiveRole, KnownRole };
+    enum Roles { SsidRole = Qt::UserRole + 1, SignalRole, SecuredRole, ActiveRole, KnownRole, ConnectingRole,
+                 StatusRole, ErrorRole, EnterpriseRole };
     static WifiNetworks *instance();
     static WifiNetworks *create(QQmlEngine *, QJSEngine *);
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -130,17 +138,32 @@ public:
     void setAirplaneMode(bool on);
     bool hasWifi() const;
     Q_INVOKABLE void scan();
-    // Known network or open one: activates it. Secured unknown one: needs the password.
+    // Known network or open one: activates it. Secured unknown one (or a saved one whose key was
+    // just rejected): needs the password. Enterprise networks open Settings › Wi-Fi instead.
     Q_INVOKABLE bool needsPassword(int row) const;
     Q_INVOKABLE void connectTo(int row, const QString &password = QString());
     Q_INVOKABLE void disconnectFrom(int row);
+    Q_INVOKABLE void cancel(int row);
 Q_SIGNALS:
     void enabledChanged();
+    void countChanged();
+    void keyRejected(const QString &ssid);
 private:
     explicit WifiNetworks(QObject *parent = nullptr);
+    void watchDevice(const QString &uni);
+    void scheduleRebuild();
     void rebuild();
-    struct Net { QString ssid, apPath, devicePath, connectionPath; int signal = 0; bool secured = false, active = false; };
+    void onDeviceState(const QString &devicePath, int newState, int reason);
+    void finishAttempt(bool ok, int reason);
+    struct Net { QString ssid, apPath, devicePath, connectionPath; int signal = 0; bool secured = false, active = false,
+                 connecting = false, enterprise = false; QString keyMgmt; };
+    struct Attempt { QString ssid, uuid, devicePath; bool created = false, withKey = false, started = false; };
+    QString statusOf(const Net &n) const;
     QList<Net> m_nets;
+    Attempt m_attempt;
+    QHash<QString, QString> m_errors;   // ssid -> message shown in the row until the next attempt
+    QSet<QString> m_rejected;           // ssid whose saved key was rejected: ask again
+    QTimer *m_rebuildTimer = nullptr;
 };
 
 // Microphone and location in use (B08 privacy glyphs).

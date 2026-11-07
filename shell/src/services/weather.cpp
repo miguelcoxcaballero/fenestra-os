@@ -125,6 +125,13 @@ void Weather::onUpdated(GWeatherInfo *info, gpointer self)
     w->m_cond = cond;
     w->m_icon = QString::fromUtf8(gweather_info_get_icon_name(info));
     w->m_symbolic = QString::fromUtf8(gweather_info_get_symbolic_icon_name(info));
+    w->m_location = valid ? take(gweather_info_get_location_name(info)) : QString();
+    w->m_feels = valid ? take(gweather_info_get_apparent(info)).remove(QLatin1Char(' ')) : QString();
+    w->m_humidity = valid ? take(gweather_info_get_humidity(info)).remove(QLatin1Char(' ')) : QString();
+    w->m_wind = valid ? take(gweather_info_get_wind(info)) : QString();
+    for (QString *v : {&w->m_feels, &w->m_humidity, &w->m_wind})
+        if (*v == QLatin1String("-") || v->startsWith(QLatin1String("Unknown")))
+            v->clear();
     Q_EMIT w->changed();
 }
 
