@@ -43,9 +43,9 @@ Flyout {
         id: hb
         property bool on: false
         height: Metrics.n("notifications.button.height", 24); radius: Metrics.controlRadius
-        color: on ? Theme.accentFill : hm.pressed ? Theme.pressed : hm.containsMouse ? Qt.tint(Metrics.col("notifications.button"), Theme.hover)
-                                                                : Metrics.col("notifications.button")
-        border.color: on ? "transparent" : Metrics.col("notifications.button.border")
+        color: on ? Theme.accentFill : hm.pressed ? Theme.pressed : hm.containsMouse ? Qt.tint(Metrics.pcol("notifications.button"), Theme.hover)
+                                                                : Metrics.pcol("notifications.button")
+        border.color: on ? "transparent" : Metrics.pcol("notifications.button.border")
         signal clicked()
         MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true; onClicked: hb.clicked() }
     }

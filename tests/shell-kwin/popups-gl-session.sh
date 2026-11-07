@@ -15,6 +15,7 @@ blurEnabled=true
 [Xwayland]
 Scale=1
 RC
+printf '[Daemon]\nAutolock=false\nLockOnResume=false\nTimeout=0\n' > ~/.config/kscreenlockerrc
 PY=$(readlink -f /usr/bin/python3)
 cat > /usr/share/applications/fenestra-frame-shot.desktop <<DE
 [Desktop Entry]

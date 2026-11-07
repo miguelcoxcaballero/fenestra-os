@@ -33,8 +33,8 @@ Card {
         property int fluentSize: 12
         signal clicked()
         height: cal.button; radius: Metrics.controlRadius
-        color: m.pressed ? Theme.pressed : m.containsMouse ? Qt.tint(Metrics.col("panel.control"), Theme.hover) : Metrics.col("panel.control")
-        border.color: Metrics.col("panel.control.border")
+        color: m.pressed ? Theme.pressed : m.containsMouse ? Qt.tint(Metrics.pcol("panel.control"), Theme.hover) : Metrics.pcol("panel.control")
+        border.color: Metrics.pcol("panel.control.border")
         SymbolicIcon { visible: cb.glyph !== "" && !(FluentFont.available && cb.fluent !== ""); anchors.centerIn: parent; name: cb.glyph; size: 12 }
         FluentGlyph { visible: FluentFont.available && cb.fluent !== ""; anchors.centerIn: parent; glyph: cb.fluent; size: cb.fluentSize }
         MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; onClicked: cb.clicked() }
@@ -44,7 +44,7 @@ Card {
     Rectangle {
         x: 1; y: 1; width: parent.width - 2; height: cal.headerH
         topLeftRadius: Metrics.flyoutRadius - 1; topRightRadius: Metrics.flyoutRadius - 1
-        color: cal.collapsed ? Metrics.col("panel.fill") : Metrics.col("panel.fill.alt")
+        color: cal.collapsed ? Metrics.pcol("panel.fill") : Metrics.pcol("panel.fill.alt")
         Text { x: 16; y: 15
                text: cal.today.toLocaleDateString(Qt.locale(), Strings.es ? "dddd, d 'de' MMMM" : "dddd, MMMM d")
                color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
@@ -55,7 +55,7 @@ Card {
             onClicked: cal.collapsed = !cal.collapsed
         }
     }
-    Rectangle { x: 1; y: 1 + cal.headerH; width: parent.width - 2; height: 1; color: Metrics.col("panel.divider") }
+    Rectangle { x: 1; y: 1 + cal.headerH; width: parent.width - 2; height: 1; color: Metrics.pcol("panel.divider") }
     // ---- Month ----
     Item {
         id: month
@@ -106,13 +106,13 @@ Card {
                                 color: parent.isToday ? (dm.containsMouse ? Theme.accentHover : Theme.accentFill) : dm.containsMouse ? Theme.hover : "transparent" }
                     Text { anchors.centerIn: parent; anchors.verticalCenterOffset: -1; text: parent.day.getDate(); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody
                            font.features: { "tnum": 1 }
-                           color: parent.isToday ? Theme.accentOn : parent.other ? Metrics.col("calendar.other") : Theme.text }
+                           color: parent.isToday ? Theme.accentOn : parent.other ? Metrics.pcol("calendar.other") : Theme.text }
                     MouseArea { id: dm; anchors.fill: parent; hoverEnabled: true }
                 }
             }
         }
     }
-    Rectangle { visible: !cal.collapsed; x: 1; y: month.y + cal.bodyH; width: parent.width - 2; height: 1; color: Metrics.col("panel.divider") }
+    Rectangle { visible: !cal.collapsed; x: 1; y: month.y + cal.bodyH; width: parent.width - 2; height: 1; color: Metrics.pcol("panel.divider") }
     // ---- Focus footer ----
     Item {
         id: focus

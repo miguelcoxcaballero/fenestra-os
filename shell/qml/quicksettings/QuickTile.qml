@@ -28,12 +28,12 @@ Item {
         height: Metrics.quickTileHeight
         radius: Metrics.controlRadius
         color: part.on ? (down ? Theme.accentPress : hovered ? Theme.accentHover : Theme.accentFill)
-                            : (down ? Theme.pressed : hovered ? Qt.tint(Metrics.col("panel.control"), Theme.hover) : Metrics.col("panel.control"))
+                            : (down ? Theme.pressed : hovered ? Qt.tint(Metrics.pcol("panel.control"), Theme.hover) : Metrics.pcol("panel.control"))
         border.width: part.on ? 0 : 1
-        border.color: Metrics.col("panel.control.border")
+        border.color: Metrics.pcol("panel.control.border")
         // Elevation: the bottom edge is a shade darker than the others.
         Rectangle { visible: !part.on; x: part.radius; width: parent.width - 2 * part.radius; y: parent.height - 1; height: 1
-                    color: Metrics.col("panel.control.border.bottom") }
+                    color: Metrics.pcol("panel.control.border.bottom") }
     }
 
     Part {
@@ -57,7 +57,7 @@ Item {
         topLeftRadius: 0; bottomLeftRadius: 0
         hovered: cm.containsMouse; down: cm.pressed; on: tile.checked
         Rectangle { width: 1; height: 24; anchors.verticalCenter: parent.verticalCenter
-                    color: tile.checked ? Qt.rgba(0, 0, 0, 0.2) : Metrics.col("panel.control.border") }
+                    color: tile.checked ? Qt.rgba(0, 0, 0, 0.2) : Metrics.pcol("panel.control.border") }
         FluentGlyph { anchors.centerIn: parent; glyph: "\ue974"; fallback: "go-next-symbolic"; size: 12
                       color: tile.checked ? Theme.accentOn : Theme.text }
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; onClicked: tile.pageRequested() }

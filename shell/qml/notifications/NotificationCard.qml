@@ -11,17 +11,19 @@ Rectangle {
     property var n            // {notificationId, appName, appIcon, summary, body, actions, image, time}
     property bool banner: false
     property int more: 0      // centre: other notifications of the same app, folded under this one
+    // Inside the Notification Center's acrylic card: overlays on it; banners are opaque surfaces.
+    function c(key) { return banner ? Metrics.col(key) : Metrics.pcol(key) }
     signal closeRequested()
     signal expandRequested()
     width: parent ? parent.width : Metrics.toastWidth
     height: column.height
     radius: banner ? Metrics.n("toast.radius", 7) : Metrics.controlRadius
-    color: banner ? Metrics.col("panel.fill.alt")
-                  : hover.containsMouse ? Qt.tint(Metrics.col("notifications.card"), Theme.hover) : Metrics.col("notifications.card")
-    border.color: banner ? Metrics.col("panel.border") : Metrics.col("notifications.card.border")
+    color: banner ? card.c("panel.fill.alt")
+                  : hover.containsMouse ? Qt.tint(card.c("notifications.card"), Theme.dark ? "#0affffff" : "#06000000") : card.c("notifications.card")
+    border.color: banner ? card.c("panel.border") : card.c("notifications.card.border")
     border.width: 1
     readonly property bool isImage: n && n.image && n.image !== "" && !n.image.startsWith("image://icon")
-    readonly property color secondary: Metrics.col("panel.text.secondary")
+    readonly property color secondary: card.c("panel.text.secondary")
     function iconUrl(icon) {
         if (!icon) return "image://icon/dialog-information"
         if (icon.startsWith("/")) return "file://" + icon
@@ -100,8 +102,8 @@ Rectangle {
                     height: 32; radius: Metrics.controlRadius
                     // First action on screenshots is the accent button.
                     color: accent ? (am.containsMouse ? Theme.accentHover : Theme.accentFill)
-                                  : (am.pressed ? Theme.pressed : am.containsMouse ? Qt.tint(Metrics.col("notifications.button"), Theme.hover) : Metrics.col("notifications.button"))
-                    border.color: accent ? "transparent" : Metrics.col("notifications.button.border")
+                                  : (am.pressed ? Theme.pressed : am.containsMouse ? Qt.tint(card.c("notifications.button"), Theme.hover) : card.c("notifications.button"))
+                    border.color: accent ? "transparent" : card.c("notifications.button.border")
                     Text { anchors.centerIn: parent; text: modelData.label
                            color: parent.accent ? Theme.accentOn : Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
                     MouseArea { id: am; anchors.fill: parent; hoverEnabled: true; onClicked: Notifications.invoke(card.n.notificationId, modelData.key) }
@@ -115,8 +117,8 @@ Rectangle {
             Rectangle {
                 // dark-100-15-notifications-2: 1589-1718 × 197-220, label 11 px from the left.
                 x: 12; y: 22; width: moreLabel.implicitWidth + 20; height: Metrics.n("notifications.button.height", 24); radius: Metrics.controlRadius
-                color: mm.pressed ? Theme.pressed : mm.containsMouse ? Qt.tint(Metrics.col("panel.control"), Theme.hover) : Metrics.col("panel.control")
-                border.color: Metrics.col("notifications.button.border")
+                color: mm.pressed ? Theme.pressed : mm.containsMouse ? Qt.tint(card.c("panel.control"), Theme.hover) : card.c("panel.control")
+                border.color: card.c("notifications.button.border")
                 Text { id: moreLabel; anchors.centerIn: parent; text: Strings.tr("+ %1 notifications").arg(card.more)
                        color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
                 MouseArea { id: mm; anchors.fill: parent; hoverEnabled: true; onClicked: card.expandRequested() }

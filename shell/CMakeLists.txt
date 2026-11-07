@@ -79,6 +79,7 @@ qt_add_qml_module(fenestra-shell
         qml/calendar/CalendarCard.qml
         qml/components/Acrylic.qml
         qml/components/Card.qml
+        qml/components/OverlayScrollBar.qml
         qml/components/SearchBox.qml
         qml/components/ContextMenu.qml
         qml/components/Flyout.qml

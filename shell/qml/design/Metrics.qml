@@ -66,6 +66,9 @@ QtObject {
 
     // Measured colours of the shell's own surfaces: "<key>.dark" / "<key>.light" in tokens.json.
     function col(key) { return Tokens.v(key + (Theme.dark ? ".dark" : ".light"), "#ff00ff") }
+    // Colours inside the acrylic cards (Quick settings, Notification Center, calendar): overlays on
+    // the translucent card ("<key>.acrylic.dark"), the measured opaque greys without transparency.
+    function pcol(key) { return ShellSettings.transparency ? col(key + ".acrylic") : col(key) }
     function n(key, fallback) { return Tokens.px(key, fallback) }
     readonly property int quickHeight: Tokens.px("quick.height", 335)
     readonly property int quickMediaHeight: Tokens.px("quick.media.height", 178)

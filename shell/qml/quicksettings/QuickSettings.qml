@@ -15,6 +15,16 @@ Flyout {
     blurItems: [mediaCard.material, card.material]
     property string page: ""            // "" | "wifi" | "bluetooth" | "output"
     onDismissed: page = ""
+    // Test hooks (tests/shell-kwin): fake Wi-Fi networks and Bluetooth devices.
+    property ListModel testWifi: ListModel {}
+    property ListModel testDevices: ListModel {}
+    function testFill(networks, devices) {
+        testWifi.clear(); testDevices.clear()
+        for (let i = 0; i < networks; ++i)
+            testWifi.append({ ssid: "Network " + (i + 1), signal: 100 - (i * 7) % 90, active: i === 0, secured: i % 3 !== 2 })
+        for (let i = 0; i < devices; ++i)
+            testDevices.append({ Name: "Device " + (i + 1), Paired: true, Connected: i === 0, Icon: "audio-headphones" })
+    }
 
     component GlyphButton: Rectangle {
         id: gb
@@ -55,12 +65,12 @@ Flyout {
                 Text { width: parent.width; elide: Text.ElideRight; text: Media.title || Strings.tr("Playing")
                        color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold }
                 Text { width: parent.width; elide: Text.ElideRight; text: Media.artist; visible: text !== ""
-                       color: Metrics.col("panel.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
+                       color: Metrics.pcol("panel.text.secondary"); font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
             }
             Rectangle {
                 readonly property int art: Metrics.n("quick.media.art", 58)
                 x: parent.width - 25 - art; y: 46; width: art; height: art; radius: 4; clip: true
-                color: Metrics.col("panel.control")
+                color: Metrics.pcol("panel.control")
                 Image { anchors.fill: parent; source: Media.artUrl; fillMode: Image.PreserveAspectCrop; visible: Media.artUrl !== ""; asynchronous: true }
                 Image { anchors.centerIn: parent; width: 32; height: 32; source: "image://icon/" + Media.appIcon; visible: Media.artUrl === "" }
             }
@@ -149,7 +159,7 @@ Flyout {
                         onToggled: { qs.close(); Apps.runCommand("fenestra-settings --page accessibility") }
                     }
                 }
-                Rectangle { x: 1; y: main.dividerY; width: parent.width - 2; height: 1; color: Metrics.col("quick.separator") }
+                Rectangle { x: 1; y: main.dividerY; width: parent.width - 2; height: 1; color: Metrics.pcol("quick.separator") }
                 // Sliders: brightness then volume, 48 px rows; one row is centred at quick.slider.y.
                 Column {
                     id: sliders
@@ -190,35 +200,72 @@ Flyout {
                 }
             }
             // ---- Subpages ----
-            Column {
+            // As Windows' L2 pages (Windows.UI.ShellCommon.pri, ControlCenterView: the L2 frame's
+            // MinHeight is the main page's height; the page is a ScrollingPageTemplate): the page
+            // keeps the main page's height, its header ("‹ Wi-Fi") and footer link stay put and
+            // the list scrolls under an overlay scroll bar (OverlayScrollBar).
+            Item {
                 id: sub
                 visible: qs.page !== ""
                 transform: pageMotion.target === sub ? pageMotion.shift : []
                 width: parent.width
+                readonly property int headerH: Metrics.n("quick.page.header", 56)
+                readonly property int footerH: qs.page === "output" ? 12 : Metrics.n("quick.page.footer", 52)
+                height: Math.max(main.height, qs.page === "output" ? headerH + listView.contentHeight + footerH : 0)
                 Item {
-                    width: parent.width; height: 56
+                    width: parent.width; height: sub.headerH
                     GlyphButton { x: 12; anchors.verticalCenter: parent.verticalCenter; glyph: "go-previous-symbolic"; fluent: "\ue72b"; onClicked: qs.page = "" }
                     Text { x: 52; anchors.verticalCenter: parent.verticalCenter
                            text: Strings.tr(qs.page === "wifi" ? "Wi-Fi" : qs.page === "bluetooth" ? "Bluetooth" : "Sound output")
                            color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold }
                 }
-                Loader {
-                    width: parent.width
-                    sourceComponent: qs.page === "wifi" ? wifiPage : qs.page === "bluetooth" ? btPage : qs.page === "output" ? outputPage : null
+                Flickable {
+                    id: listView
+                    y: sub.headerH; width: parent.width; height: sub.height - sub.headerH - sub.footerH
+                    contentHeight: pageLoader.height
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    flickableDirection: Flickable.VerticalFlick
+                    HoverHandler { id: listHover }
+                    Loader {
+                        id: pageLoader
+                        width: parent.width
+                        sourceComponent: qs.page === "wifi" ? wifiPage : qs.page === "bluetooth" ? btPage : qs.page === "output" ? outputPage : null
+                    }
+                    WheelHandler {
+                        // Windows scrolls 3 rows (48 px each) per notch; Qt's default is slower.
+                        onWheel: (e) => { listView.contentY = Math.max(0, Math.min(listView.contentHeight - listView.height,
+                                                                                    listView.contentY - e.angleDelta.y / 120 * 3 * 48)) }
+                    }
                 }
-                Item { width: 1; height: 12 }
+                OverlayScrollBar {
+                    flickable: listView; areaHovered: listHover.hovered
+                    x: parent.width - width - 1; y: listView.y + 2; height: listView.height - 4
+                }
+                Rectangle {
+                    // Footer link ("More Wi-Fi settings"), 1 px rule above it.
+                    visible: qs.page === "wifi" || qs.page === "bluetooth"
+                    x: 8; y: sub.height - sub.footerH + 8; width: footLink.implicitWidth + 24; height: 32
+                    radius: Metrics.controlRadius
+                    color: flm.pressed ? Theme.pressed : flm.containsMouse ? Theme.hover : "transparent"
+                    Text { id: footLink; x: 12; anchors.verticalCenter: parent.verticalCenter
+                           text: Strings.tr(qs.page === "wifi" ? "More Wi-Fi settings" : "More Bluetooth settings")
+                           color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
+                    MouseArea { id: flm; anchors.fill: parent; hoverEnabled: true
+                                onClicked: { qs.close(); Apps.runCommand("fenestra-settings --page " + (qs.page === "wifi" ? "wifi" : "bluetooth")) } }
+                }
             }
             // ---- Footer: divider, 47 px band, battery left, All settings right ----
             Rectangle {
                 x: 1; y: parent.height - 1 - card.footerH - 1; width: parent.width - 2; height: 1
-                color: Metrics.col("panel.divider")
+                color: Metrics.pcol("panel.divider")
             }
             Rectangle {
                 id: footer
                 x: 1; y: parent.height - 1 - card.footerH
                 width: parent.width - 2; height: card.footerH
                 bottomLeftRadius: Metrics.flyoutRadius - 1; bottomRightRadius: Metrics.flyoutRadius - 1
-                color: Metrics.col("panel.fill.alt")
+                color: Metrics.pcol("panel.fill.alt")
                 Row {
                     x: 19; anchors.verticalCenter: parent.verticalCenter; spacing: 8
                     visible: PowerStatus.hasBattery
@@ -242,7 +289,7 @@ Flyout {
         Column {
             width: Metrics.quickWidth
             Repeater {
-                model: WifiNetworks
+                model: qs.testWifi.count > 0 ? qs.testWifi : WifiNetworks
                 delegate: Rectangle {
                     required property int index
                     required property var model
@@ -268,16 +315,17 @@ Flyout {
                     }
                 }
             }
-            Text { visible: WifiNetworks.rowCount() === 0; x: 20; text: Strings.tr("No networks found"); color: Theme.textSecondary
+            Text { visible: qs.testWifi.count === 0 && WifiNetworks.rowCount() === 0; x: 20; text: Strings.tr("No networks found"); color: Theme.textSecondary
                    font.family: Metrics.fontFamily; font.pixelSize: 12 }
         }
     }
+    BluezQt.DevicesModel { id: btModel }
     Component {
         id: btPage
         Column {
             width: Metrics.quickWidth
             Repeater {
-                model: BluezQt.DevicesModel { }
+                model: qs.testDevices.count > 0 ? qs.testDevices : btModel
                 delegate: Rectangle {
                     required property var model
                     visible: model.Paired || model.Connected
@@ -288,7 +336,7 @@ Flyout {
                         Text { text: model.Name; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14 }
                         Text { text: Strings.tr(model.Connected ? "Connected" : "Paired"); color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: 12 } }
                     MouseArea { id: bm2; anchors.fill: parent; hoverEnabled: true
-                        onClicked: model.Connected ? model.Device.disconnectFromDevice() : model.Device.connectToDevice() }
+                        onClicked: if (model.Device) model.Connected ? model.Device.disconnectFromDevice() : model.Device.connectToDevice() }
                 }
             }
             Rectangle {
