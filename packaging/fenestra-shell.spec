@@ -81,6 +81,7 @@ fi
 %{_datadir}/aurorae/themes/Fenestra-Dark
 %{_datadir}/aurorae/themes/Fenestra-Light
 %{_datadir}/kwin/tabbox/fenestra
+%{_datadir}/kwin/effects/fenestra-window-motion
 %{_datadir}/plasma/look-and-feel/org.fenestra.desktop
 %{_datadir}/xdg-desktop-portal/fenestra-portals.conf
 %{_prefix}/lib/tuned/profiles/fenestra-battery

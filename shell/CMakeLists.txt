@@ -184,10 +184,12 @@ if(FENESTRA_INSTALL_MIGRATOR)
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../migrator/org.fenestra.migrate.policy DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/actions)
 endif()
 
-# KWin parts: Fenestra decoration (Aurorae SVG themes) and Alt+Tab switcher (../kwin).
+# KWin parts: Fenestra decoration (Aurorae SVG themes), Alt+Tab switcher and window motion (../kwin).
 # Power on battery (any laptop): tuned profile that tuned-ppd uses for "Balanced" unplugged.
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/power/tuned/fenestra-battery DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tuned/profiles)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMAKE_INSTALL_DATADIR}/aurorae/themes)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)
+# App window open/close/minimize/maximize motion as Windows 11 (KWin scripted effect).
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/effects/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/effects)
 # Lock screen for KWin's screen locker (look-and-feel package with only a lockscreen).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../lnf/org.fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/look-and-feel)
