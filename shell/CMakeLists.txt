@@ -45,6 +45,7 @@ qt_add_executable(fenestra-shell
     src/services/taskbarmodel.cpp src/services/taskbarmodel.h
     src/services/weather.cpp src/services/weather.h
     src/services/status.cpp src/services/status.h
+    src/services/batteryalerts.cpp src/services/batteryalerts.h
     src/services/trayitems.cpp src/services/trayitems.h
     src/services/startservices.cpp src/services/startservices.h
     src/services/search.cpp src/services/search.h
