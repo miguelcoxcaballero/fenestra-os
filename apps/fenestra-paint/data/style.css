@@ -330,9 +330,9 @@ button.link-toggle:checked:hover { background-color: var(--accent-hover); }
 }
 .canvas-scroller scrollbar.vertical { min-width: 12px; }
 .canvas-scroller scrollbar.horizontal { min-height: 12px; }
-.canvas-scroller scrollbar trough { margin: 0; border: none; background: none; }
-.canvas-scroller scrollbar.vertical trough { margin: 13px 0; }
-.canvas-scroller scrollbar.horizontal trough { margin: 0 13px; }
+.canvas-scroller scrollbar trough { margin: 0; padding: 0; border: none; background: none; }
+.canvas-scroller scrollbar.vertical trough { margin: 15px 0; }
+.canvas-scroller scrollbar.horizontal trough { margin: 0 15px; }
 .canvas-scroller scrollbar slider,
 .canvas-scroller scrollbar.overlay-indicator:not(.dragging):not(.hovering) slider {
   background-color: var(--track); border: none; border-radius: 3px; margin: 0;
