@@ -4,6 +4,7 @@
 #include "desktop.h"
 #include "shellsettings.h"
 #include "status.h"
+#include "theme.h"
 
 #include <QUrl>
 
@@ -15,6 +16,10 @@
 #include <QDBusReply>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 KWinIntegration *KWinIntegration::instance()
@@ -34,8 +39,8 @@ KWinIntegration::KWinIntegration(QObject *parent)
 {
     connect(ShellSettings::instance(), &ShellSettings::changed, this, &KWinIntegration::applyTheme);
     connect(WallpaperSource::instance(), &WallpaperSource::changed, this, &KWinIntegration::applyLockScreen);
-    connect(NetworkStatus::instance(), &NetworkStatus::changed, this, &KWinIntegration::applyLockScreen);
-    connect(PowerStatus::instance(), &PowerStatus::changed, this, &KWinIntegration::applyLockScreen);
+    connect(Theme::instance(), &Theme::changed, this, &KWinIntegration::applyLockScreen);
+    connect(&m_spotlightWatcher, &QFileSystemWatcher::directoryChanged, this, &KWinIntegration::applyLockScreen);
     applyTheme();
     applyLockScreen();
 }
@@ -72,6 +77,23 @@ void KWinIntegration::applyTheme()
         wm.writeEntry("activeFont", captionFont);
         wm.sync();
         changed = true;
+    }
+    // App window motion as Windows 11 (kwin/effects/fenestra-window-motion): open, close,
+    // minimize to the taskbar button, restore and maximize. KWin's own effects for the same
+    // transitions are switched off, or both would animate. Fenestra's popups are layer-shell
+    // "dock" surfaces, which neither animates.
+    KConfigGroup plugins = cfg->group(QStringLiteral("Plugins"));
+    const QList<QPair<QString, bool>> effects = {
+        {QStringLiteral("fenestra-window-motionEnabled"), true},
+        {QStringLiteral("scaleEnabled"), false}, {QStringLiteral("glideEnabled"), false},
+        {QStringLiteral("fadeEnabled"), false}, {QStringLiteral("squashEnabled"), false},
+        {QStringLiteral("magiclampEnabled"), false}, {QStringLiteral("maximizeEnabled"), false},
+    };
+    for (const auto &[key, enabled] : effects) {
+        if (!plugins.hasKey(key) || plugins.readEntry(key, !enabled) != enabled) {
+            plugins.writeEntry(key, enabled);
+            changed = true;
+        }
     }
     KConfigGroup tabbox = cfg->group(QStringLiteral("TabBox"));
     if (tabbox.readEntry("LayoutName") != QLatin1String("fenestra")) {
@@ -132,28 +154,52 @@ void KWinIntegration::toggleOverview()
                                             << QStringLiteral("Overview"));
 }
 
+// Today's Windows Spotlight picture, as the GNOME layer showed it: the original photos copied from
+// the user's Windows by windows-spotlight-sync (/var/lib/windows-spotlight), else Fenestra's own
+// Spotlight state. Only the services' own image directories are accepted.
+static QString spotlightPicture()
+{
+    static const QRegularExpression ok(QStringLiteral(
+        "^/(var/lib/windows-spotlight/images/[a-f0-9]{64}|var/lib/fenestra-spotlight/images/[a-f0-9]{64}|usr/share/backgrounds/fenestra/[A-Za-z0-9._-]+)\\.jpg$"));
+    for (const QString &state : {QStringLiteral("/var/lib/windows-spotlight/current.json"), QStringLiteral("/var/lib/fenestra-spotlight/current.json")}) {
+        QFile f(state);
+        if (!f.open(QIODevice::ReadOnly))
+            continue;
+        const QString path = QJsonDocument::fromJson(f.readAll()).object().value(QStringLiteral("image")).toString();
+        if (ok.match(path).hasMatch() && QFileInfo::exists(path))
+            return path;
+    }
+    return {};
+}
+
 void KWinIntegration::applyLockScreen()
 {
-    // KWin's screen locker (kscreenlocker) draws lnf/org.fenestra.desktop's LockScreen.qml; its
-    // [Greeter][LnF][General] values are the picture and the status shown on it (L01).
-    auto globals = KSharedConfig::openConfig(QStringLiteral("kdeglobals"));
-    KConfigGroup kde = globals->group(QStringLiteral("KDE"));
-    if (kde.readEntry("LookAndFeelPackage") != QLatin1String("org.fenestra.desktop")) {
-        kde.writeEntry("LookAndFeelPackage", QStringLiteral("org.fenestra.desktop"));
-        globals->sync();
+    // KWin's screen locker (kscreenlocker) draws shells/org.fenestra.desktop's lockscreen (Plasma 6
+    // takes the lock screen from the shell package named in plasmashellrc [Shell] ShellPackage).
+    // Its [Greeter][LnF][General] values: the picture (Spotlight as on Windows, else the desktop's)
+    // and the accent. Network and battery the lock screen reads itself.
+    auto shellrc = KSharedConfig::openConfig(QStringLiteral("plasmashellrc"));
+    KConfigGroup shell = shellrc->group(QStringLiteral("Shell"));
+    if (shell.readEntry("ShellPackage") != QLatin1String("org.fenestra.desktop")) {
+        shell.writeEntry("ShellPackage", QStringLiteral("org.fenestra.desktop"));
+        shellrc->sync();
+    }
+    for (const QString &dir : {QStringLiteral("/var/lib/windows-spotlight"), QStringLiteral("/var/lib/fenestra-spotlight")}) {
+        if (QFileInfo(dir).isDir() && !m_spotlightWatcher.directories().contains(dir))
+            m_spotlightWatcher.addPath(dir);
     }
     auto locker = KSharedConfig::openConfig(QStringLiteral("kscreenlockerrc"));
     KConfigGroup general = locker->group(QStringLiteral("Greeter")).group(QStringLiteral("LnF")).group(QStringLiteral("General"));
-    const QString image = QUrl(WallpaperSource::instance()->image()).toLocalFile();
-    auto *net = NetworkStatus::instance();
-    auto *power = PowerStatus::instance();
-    // Battery in steps of 5 %: the file is not rewritten on every percent.
-    const int battery = power->hasBattery() ? (power->percentage() / 5) * 5 : -1;
-    const QString network = net->connected() ? net->name() : QString();
-    if (general.readEntry("Background") == image && general.readEntry("Network") == network && general.readEntry("Battery", -2) == battery)
+    QString picture = spotlightPicture();
+    if (picture.isEmpty())
+        picture = QUrl(WallpaperSource::instance()->image()).toLocalFile();
+    const QString accent = Theme::instance()->accent().name(QColor::HexRgb);
+    if (general.readEntry("Picture") == picture && general.readEntry("Background") == picture && general.readEntry("Accent") == accent)
         return;
-    general.writeEntry("Background", image);
-    general.writeEntry("Network", network);
-    general.writeEntry("Battery", battery);
+    general.writeEntry("Picture", picture);
+    general.writeEntry("Background", picture);
+    general.writeEntry("Accent", accent);
+    general.deleteEntry("Network");
+    general.deleteEntry("Battery");
     locker->sync();
 }

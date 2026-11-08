@@ -1,0 +1,3 @@
+module org.kde.plasma.private.mpris
+MultiplexerModel 1.0 MultiplexerModel.qml
+PlaybackStatus 1.0 PlaybackStatus.qml

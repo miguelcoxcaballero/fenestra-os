@@ -1,0 +1,18 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# fenestra-hello-enroll add|remove <id>|clear|list  (run through pkexec, org.fenestra.hello.enroll)
+# Windows Hello face set-up for the calling user only (PKEXEC_UID): Howdy needs root, and the
+# lock screen's PAM worker runs as the user, so the model is left readable by that user.
+set -eu
+uid=${PKEXEC_UID:?run through pkexec}
+user=$(id -nu "$uid"); group=$(id -gn "$uid")
+case "${1:-}" in
+add)    howdy -U "$user" -y add "${2:-Fenestra}" ;;
+remove) howdy -U "$user" -y remove "${2:?id}" ;;
+clear)  howdy -U "$user" -y clear ;;
+list)   howdy -U "$user" list; exit 0 ;;
+*) echo "usage: $0 add|remove <id>|clear|list" >&2; exit 2 ;;
+esac
+m=/etc/howdy/models/$user.dat
+[ -e "$m" ] && { chown "root:$group" "$m"; chmod 0640 "$m"; }
+exit 0

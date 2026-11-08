@@ -316,9 +316,9 @@ sys.exit(len(bars) != ${OUTPUTS:-1})"
     # Left half of the output the window is on (1920 px outputs): x is 0 or 1920, width 960.
     check W03-snap-left-half wait_for '[[ "$(probe "(() => { const g = WindowsModel.data(WindowsModel.index('$X11ROW', 0), 266); return (g.x % 1920) + \",\" + g.width + \",\" + g.height })()")" == *\"0,960,1032\"* ]]' 10
     log "snapped geometry: $(probe "JSON.stringify(WindowsModel.data(WindowsModel.index($X11ROW, 0), 266))")"
-    # L01: the lock screen gets the Fenestra look-and-feel and the current picture.
-    check L01-lock-lnf bash -c 'grep -q "LookAndFeelPackage=org.fenestra.desktop" ~/.config/kdeglobals'
-    check L01-lock-background bash -c 'grep -q "Background=/" ~/.config/kscreenlockerrc'
+    # L01: kscreenlocker takes the lock screen from the Fenestra shell package, with today's picture.
+    check L01-lock-package bash -c 'grep -q "ShellPackage=org.fenestra.desktop" ~/.config/plasmashellrc'
+    check L01-lock-background bash -c 'grep -q "Picture=/" ~/.config/kscreenlockerrc'
     # W05: first login curtain (fresh state, no setup window): black first, then gone.
     rm -f ~/.config/gnome-initial-setup-done
     probe "root.sessionSurfaces.curtain.active = true; root.sessionSurfaces.curtain.visible = true" >/dev/null; sleep 1

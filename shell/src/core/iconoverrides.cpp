@@ -171,7 +171,11 @@ QPixmap IconProvider::requestPixmap(const QString &id, QSize *size, const QSize 
         icon = QIcon::fromTheme(id.toLower());
     if (icon.isNull())
         icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));
-    const QPixmap pixmap = icon.pixmap(want);
+    // `want` is already in device pixels (QML asks with sourceSize = size * devicePixelRatio):
+    // ratio 1, or QIcon scales it again (a 72 px request picked the 108 px drawing, so every icon
+    // used a larger, finer drawing than Windows shows at that size).
+    QPixmap pixmap = icon.pixmap(want, 1.0);
+    pixmap.setDevicePixelRatio(1.0);
     if (size)
         *size = pixmap.size();
     return pixmap;
@@ -184,15 +188,15 @@ QImage TintProvider::requestImage(const QString &id, QSize *size, const QSize &r
     const QSize want = requested.isValid() ? requested : QSize(16, 16);
     QImage img;
     if (const QString packFile = IconOverrides::instance()->redirect(what); !packFile.isEmpty())
-        img = QIcon(packFile).pixmap(want).toImage();
+        img = QIcon(packFile).pixmap(want, 1.0).toImage();
     else if (what.startsWith(QLatin1String("file:")))
-        img = QIcon(QUrl(what).toLocalFile()).pixmap(want).toImage();
+        img = QIcon(QUrl(what).toLocalFile()).pixmap(want, 1.0).toImage();
     else if (what.startsWith(QLatin1String("qrc:"))) // glyphs built into the shell (qml/snip/icons)
-        img = QIcon(QLatin1Char(':') + QUrl(what).path()).pixmap(want).toImage();
+        img = QIcon(QLatin1Char(':') + QUrl(what).path()).pixmap(want, 1.0).toImage();
     else if (QIcon pack = IconOverrides::instance()->icon(what); !pack.isNull())
-        img = pack.pixmap(want).toImage();
+        img = pack.pixmap(want, 1.0).toImage();
     else
-        img = QIcon::fromTheme(what).pixmap(want).toImage();
+        img = QIcon::fromTheme(what).pixmap(want, 1.0).toImage();
     img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     QPainter p(&img);
     p.setCompositionMode(QPainter::CompositionMode_SourceIn);

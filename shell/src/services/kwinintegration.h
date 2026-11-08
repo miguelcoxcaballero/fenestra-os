@@ -4,6 +4,7 @@
 // through KWin's scripting D-Bus API.
 #pragma once
 
+#include <QFileSystemWatcher>
 #include <QObject>
 #include <QQmlEngine>
 #include <QRectF>
@@ -24,4 +25,5 @@ private:
     void applyTheme();
     void applyLockScreen();
     void runScript(const QString &name, const QString &code);
+    QFileSystemWatcher m_spotlightWatcher;
 };

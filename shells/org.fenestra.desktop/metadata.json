@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "Plasma/Shell",
+    "KPlugin": {
+        "Id": "org.fenestra.desktop",
+        "Name": "Fenestra",
+        "Description": "Fenestra lock screen (Windows 11's) for KWin's screen locker",
+        "Description[es]": "Pantalla de bloqueo de Fenestra (la de Windows 11) para el bloqueo de pantalla de KWin",
+        "License": "GPL-3.0-or-later",
+        "Version": "2.0"
+    },
+    "X-Plasma-APIVersion": "2"
+}

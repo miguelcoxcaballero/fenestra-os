@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "KWin/Effect",
+    "KPlugin": {
+        "Authors": [{ "Name": "Fenestra OS" }],
+        "Category": "Appearance",
+        "Description": "Windows 11 window motion: open, close, minimize to the taskbar button, restore and maximize, with the curves measured on Windows",
+        "EnabledByDefault": false,
+        "Id": "fenestra-window-motion",
+        "License": "GPL",
+        "Name": "Fenestra window motion"
+    },
+    "X-KDE-Ordering": 60,
+    "X-KWin-Exclusive-Category": "toplevel-open-close-animation",
+    "X-Plasma-API": "javascript"
+}
