@@ -1,35 +1,68 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# fenestra-lock-hello [enable|disable|status] (root): Windows Hello face sign-in on Fenestra's lock
-# screen (KWin's kscreenlocker) with Howdy, as GDM had it.
-#  * /etc/pam.d/kde: "auth sufficient pam_howdy.so" before the password (kscreenlocker's interactive
-#    service: Howdy looks first, then the password box takes over), backed up once to kde.fenestra-orig.
-#  * The PAM worker of the lock screen runs as the user (GDM ran Howdy as root): each enrolled
-#    user's model /etc/howdy/models/<user>.dat becomes readable by that user (root:<user> 0640).
-# Fingerprint needs nothing: plasma-workspace ships kde-fingerprint (fprintd).
+# fenestra-lock-hello [enable|disable|status] (root): Windows Hello (face + fingerprint) on Fenestra's
+# lock screen, WITHOUT ever touching the password.
+#
+# kscreenlocker runs each PAM service in its own worker process: "kde" (the password, interactive)
+# and "kde-fingerprint" (non-interactive, in parallel). Face and fingerprint go only into
+# kde-fingerprint, through pam_fenestra_hello.so, which runs Howdy and fprintd-verify as children
+# with hard deadlines. A camera that never delivers frames or an fprintd that hangs can only time
+# out that worker; the password worker stays stock and answers at once.
+# (Version 1 of this script put pam_howdy.so first in /etc/pam.d/kde: a dead camera blocked the
+# password and locked the user out. "enable" undoes that.)
+#
+#  * /etc/pam.d/kde            back to the distribution's file (pam_howdy removed), nothing added
+#  * /etc/pam.d/kde-fingerprint  pam_fenestra_hello.so (face + fingerprint); backup *.fenestra-orig
+#  * /usr/lib64/security/pam_fenestra_hello.so  built from pam_fenestra_hello.c if not packaged
+#  * each enrolled user's Howdy model readable by that user (the worker runs as the user)
+# Escape hatch: fenestra-lock-hello disable   (restores both PAM files exactly).
 set -eu
-PAM=/etc/pam.d/kde
+HERE=$(cd "$(dirname "$0")" && pwd)
+PAMD=/etc/pam.d
+MOD=/usr/lib64/security/pam_fenestra_hello.so
+
+restore_kde() {
+    if [ -f $PAMD/kde.fenestra-orig ]; then cp -p $PAMD/kde.fenestra-orig $PAMD/kde
+    else sed -i '/^auth[[:space:]].*pam_howdy\.so/d' $PAMD/kde; fi
+}
+
 case "${1:-enable}" in
 enable)
-    [ -f "$PAM" ] || { echo "no $PAM (plasma-workspace not installed)" >&2; exit 1; }
-    [ -f /usr/lib64/security/pam_howdy.so ] || [ -f /usr/lib/security/pam_howdy.so ] || { echo "Howdy is not installed" >&2; exit 1; }
-    [ -f "$PAM.fenestra-orig" ] || cp -p "$PAM" "$PAM.fenestra-orig"
-    if ! grep -q '^auth[[:space:]].*pam_howdy\.so' "$PAM"; then
-        awk 'BEGIN{d=0} /^auth[[:space:]]/ && !d {print "auth        sufficient    pam_howdy.so"; d=1} {print}' "$PAM" > "$PAM.tmp"
-        chmod 644 "$PAM.tmp"; mv "$PAM.tmp" "$PAM"
-        restorecon "$PAM" 2>/dev/null || true
+    [ -f $PAMD/kde ] && [ -f $PAMD/kde-fingerprint ] || { echo "kscreenlocker's PAM services are missing (plasma-workspace)" >&2; exit 1; }
+    # 1. The password service: the distribution's, never Howdy.
+    [ -f $PAMD/kde.fenestra-orig ] || { grep -q pam_howdy $PAMD/kde && sed '/pam_howdy/d' $PAMD/kde > $PAMD/kde.fenestra-orig || cp -p $PAMD/kde $PAMD/kde.fenestra-orig; }
+    cp -p $PAMD/kde.fenestra-orig $PAMD/kde
+    : # (no keyring line: no keyring daemon runs in the Fenestra session)
+    # 2. The module.
+    if [ ! -f $MOD ] || [ "$HERE/pam_fenestra_hello.c" -nt $MOD ]; then
+        [ -f "$HERE/pam_fenestra_hello.c" ] || { echo "pam_fenestra_hello.so is not installed" >&2; exit 1; }
+        gcc -O2 -shared -fPIC -o $MOD.new "$HERE/pam_fenestra_hello.c" /usr/lib64/libpam.so.0
+        chmod 755 $MOD.new; mv $MOD.new $MOD
     fi
+    # 3. Face + fingerprint in the parallel, non-interactive worker.
+    [ -f $PAMD/kde-fingerprint.fenestra-orig ] || cp -p $PAMD/kde-fingerprint $PAMD/kde-fingerprint.fenestra-orig
+    {
+        echo "# Fenestra (fenestra-lock-hello): face (Howdy) and fingerprint (fprintd) in parallel, with deadlines."
+        echo "auth        [success=done default=die]  pam_fenestra_hello.so face_timeout=7 finger_timeout=25 face_tries=2"
+        grep -v '^auth' $PAMD/kde-fingerprint.fenestra-orig
+    } > $PAMD/kde-fingerprint.tmp
+    chmod 644 $PAMD/kde-fingerprint.tmp; mv $PAMD/kde-fingerprint.tmp $PAMD/kde-fingerprint
+    restorecon $PAMD/kde $PAMD/kde-fingerprint $MOD 2>/dev/null || true
+    # 4. Howdy models readable by their user (pam_howdy ran as root in GDM; the lock screen runs as the user).
     for m in /etc/howdy/models/*.dat; do
         [ -e "$m" ] || continue
         u=$(basename "$m" .dat)
         id "$u" >/dev/null 2>&1 && { chown "root:$(id -gn "$u")" "$m"; chmod 0640 "$m"; }
     done
-    echo "Fenestra lock screen: face sign-in (Howdy) enabled" ;;
+    echo "Fenestra lock screen: face and fingerprint in the parallel worker; password service stock" ;;
 disable)
-    [ -f "$PAM.fenestra-orig" ] && cp -p "$PAM.fenestra-orig" "$PAM" || sed -i '/^auth[[:space:]].*pam_howdy\.so/d' "$PAM"
+    restore_kde
+    [ -f $PAMD/kde-fingerprint.fenestra-orig ] && cp -p $PAMD/kde-fingerprint.fenestra-orig $PAMD/kde-fingerprint
     for m in /etc/howdy/models/*.dat; do [ -e "$m" ] && { chown root:root "$m"; chmod 0600 "$m"; }; done
-    echo "Fenestra lock screen: face sign-in disabled" ;;
+    echo "Fenestra lock screen: stock PAM services restored" ;;
 status)
-    grep -n 'pam_howdy' "$PAM" || echo "pam_howdy not in $PAM"
-    ls -l /etc/howdy/models/ 2>/dev/null ;;
+    echo "== $PAMD/kde"; grep -v '^#' $PAMD/kde | sed '/^$/d'
+    echo "== $PAMD/kde-fingerprint"; grep -v '^#' $PAMD/kde-fingerprint | sed '/^$/d'
+    ls -l $MOD /etc/howdy/models/ 2>/dev/null || true ;;
+*) echo "usage: $0 enable|disable|status" >&2; exit 2 ;;
 esac

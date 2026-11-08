@@ -19,30 +19,39 @@ printf '[Shell]\nShellPackage=org.fenestra.desktop\n' > ~/.config/plasmashellrc
 BG=/out/bg.jpg; [ -f $BG ] || BG=/src/assets/generated/wallpapers/fenestra-bloom-dark.jpg
 printf '[Greeter][LnF][General]\nBackground=%s\nAccent=#0078D4\nSigninBlur=%s\n' "$BG" "${BLUR:-true}" >> ~/.config/kscreenlockerrc
 fc-cache -f >/dev/null 2>&1
-# Real PAM for the password (pam_unix, root's shadow entry); face and fingerprint stand-ins that
-# talk like Howdy and fprintd (pam_exec stdout = PAM_TEXT_INFO). /tmp/face, /tmp/finger: what
-# they answer next (success | fail | wait); /tmp/face-delay: seconds Howdy looks.
+# PAM as packaging/lockscreen/fenestra-lock-hello sets it up: "kde" stock (pam_unix: root's
+# "Fenestra1"), "kde-fingerprint" = pam_fenestra_hello.so with stand-ins for Howdy's compare.py and
+# fprintd-verify. /tmp/face and /tmp/finger say what they do next: success | fail | wait | hang
+# (hang = a camera that never delivers a frame / an fprintd that never answers); /tmp/face-delay:
+# seconds the face takes.
 echo 'root:Fenestra1' | chpasswd 2>/dev/null
-# The "kde" service as packaging/pam/kde-howdy makes it: Howdy first (here a stand-in), then the
-# password (pam_unix: root's "Fenestra1").
-printf 'auth sufficient pam_fakehowdy.so\nauth substack password-auth\naccount include password-auth\npassword include password-auth\nsession include password-auth\n' > /etc/pam.d/kde
 usermod -c "Usuario Demo" root
-gcc -O2 -shared -fPIC -o /usr/lib64/security/pam_fakehowdy.so /src/tests/lockscreen/pam_fakehowdy.c /usr/lib64/libpam.so.0
-cat > /usr/local/bin/fake-fprint <<'SH'
+printf 'auth substack password-auth\naccount include password-auth\npassword include password-auth\nsession include password-auth\n' > /etc/pam.d/kde
+gcc -O2 -shared -fPIC -o /usr/lib64/security/pam_fenestra_hello.so /src/packaging/lockscreen/pam_fenestra_hello.c /usr/lib64/libpam.so.0
+cat > /usr/local/bin/fake-compare <<'SH'
 #!/bin/sh
-echo "Place your finger on the fingerprint reader"
+m=$(cat /tmp/face 2>/dev/null); echo "face start $m $(date +%s.%N)" >> /out/pam.log
+[ "$m" = hang ] && exec sleep infinity
+d=$(cat /tmp/face-delay 2>/dev/null || echo 2)
+for i in $(seq 1 $((d * 10))); do [ "$(cat /tmp/face)" = success ] && break; sleep 0.1; done
+m=$(cat /tmp/face 2>/dev/null); echo "face end $m" >> /out/pam.log
+[ "$m" = success ] && exit 0 || exit 11
+SH
+cat > /usr/local/bin/fake-fprintd-verify <<'SH'
+#!/bin/sh
+echo "finger start $(cat /tmp/finger) $(date +%s.%N)" >> /out/pam.log
+[ "$(cat /tmp/finger 2>/dev/null)" = hang ] && exec sleep infinity
 for i in $(seq 1 600); do
     s=$(cat /tmp/finger 2>/dev/null)
-    [ "$s" = success ] && { echo finger success >> /out/pam.log; rm -f /tmp/finger; exit 0; }
-    [ "$s" = fail ] && { echo finger fail >> /out/pam.log; rm -f /tmp/finger; exit 1; }
+    [ "$s" = success ] && { echo finger success >> /out/pam.log; echo wait > /tmp/finger; exit 0; }
+    [ "$s" = fail ] && { echo finger fail >> /out/pam.log; echo wait > /tmp/finger; exit 1; }
+    [ "$s" = hang ] && exec sleep infinity
     sleep 0.1
 done
 exit 1
 SH
-chmod +x /usr/local/bin/fake-fprint
-for k in fingerprint:fake-fprint; do
-    printf 'auth required pam_exec.so stdout quiet /usr/local/bin/%s\naccount required pam_permit.so\n' "${k#*:}" > /etc/pam.d/kde-${k%%:*}
-done
+chmod +x /usr/local/bin/fake-compare /usr/local/bin/fake-fprintd-verify
+printf 'auth [success=done default=die] pam_fenestra_hello.so face_timeout=7 finger_timeout=25 face_tries=2 howdy=/usr/local/bin/fake-compare fprintd=/usr/local/bin/fake-fprintd-verify\naccount required pam_permit.so\n' > /etc/pam.d/kde-fingerprint
 echo wait > /tmp/face; echo wait > /tmp/finger
 # Input tool and the screenshot permission.
 gcc -O2 -o /usr/local/bin/fakeinput /src/tests/lockscreen/fakeinput.c -I/tmp/fi $(mkdir -p /tmp/fi; \
@@ -54,7 +63,10 @@ printf '[Desktop Entry]\nType=Application\nName=Bench input\nExec=/usr/local/bin
 exec dbus-run-session -- bash -s <<'INNER'
 set -u
 mkdir -p /run/dbus; rm -f /run/dbus/system_bus_socket; dbus-daemon --system --fork 2>/dev/null
-kwin_wayland --virtual --socket wl-f --width ${W:-2880} --height ${H:-1800} > /out/kwin.log 2>&1 &
+# LOCKED=1: KWin starts the session locked, as fenestra-session does after GDM's autologin
+# (packaging/lockscreen/fenestra-sign-in): KWin's own screen locker runs the greeter (no --testing).
+export QML_IMPORT_PATH=/src/tests/lockscreen/mock-qml QT_FORCE_STDERR_LOGGING=1
+kwin_wayland --virtual --socket wl-f --width ${W:-2880} --height ${H:-1800} ${LOCKED:+--lockscreen} > /out/kwin.log 2>&1 &
 for i in $(seq 60); do [ -S $XDG_RUNTIME_DIR/wl-f ] && break; sleep 0.25; done
 export WAYLAND_DISPLAY=wl-f
 sleep 2

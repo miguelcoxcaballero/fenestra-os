@@ -12,7 +12,7 @@ Item {
     property real size: 16
     property color color: "white"
     // The fallback is drawn in currentColor (black for Qt SVG): lift it to white.
-    property bool whiten: fallback.indexOf("/packs/") >= 0
+    property bool whiten: fallback.indexOf("/packs/") >= 0 && fallback.indexOf("/white/") < 0
     readonly property bool fluent: Fluent.available && glyph !== ""
     width: size; height: size
     Text {

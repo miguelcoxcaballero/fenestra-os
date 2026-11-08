@@ -10,6 +10,15 @@
     <entry name="Accent" type="String"><default>#0078D4</default></entry>
     <!-- Acrylic (blurred) sign-in background, as Windows draws it with a GPU. -->
     <entry name="SigninBlur" type="Bool"><default>true</default></entry>
+    <!-- Windows Spotlight: the photo's place, copyright and hotspots as JSON (Fenestra Shell). -->
+    <entry name="Spotlight" type="String"><default></default></entry>
+    <!-- Weather widget of the clock view (Fenestra Shell's taskbar weather). -->
+    <entry name="WeatherLocation" type="String"><default></default></entry>
+    <entry name="WeatherTemperature" type="String"><default></default></entry>
+    <entry name="WeatherUnit" type="String"><default>°C</default></entry>
+    <entry name="WeatherCondition" type="String"><default></default></entry>
+    <entry name="WeatherFeelsLike" type="String"><default></default></entry>
+    <entry name="WeatherIcon" type="String"><default></default></entry>
     <!-- Bench: log every presented frame while the screen animates (tests/lockscreen). -->
     <entry name="Trace" type="Bool"><default>false</default></entry>
   </group>
