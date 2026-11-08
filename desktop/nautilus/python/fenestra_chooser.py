@@ -110,6 +110,9 @@ class Chooser:
         # Nautilus applies its own remembered size after the template: apply ours again before mapping.
         GLib.idle_add(lambda: (self.window.set_default_size(*size), GLib.SOURCE_REMOVE)[1], priority=GLib.PRIORITY_HIGH)
         self.window.connect('realize', lambda w: w.set_default_size(*size))
+        # The dialog is often mapped before this layer attaches; Nautilus then restores its own size
+        # (initial-size-file-chooser) while it settles: keep ours for the first 1.5 s (tick()).
+        self.want_size = size
         self.window.connect('close-request', self.save_size)
         self.window.connect('unrealize', self.save_size)
 
@@ -316,7 +319,7 @@ class Chooser:
             # Help (?) at the right end of the command bar, as in Windows ("Get help": Files' help).
             parent = controls.get_parent()
             if isinstance(parent, Gtk.Box) and not getattr(self, 'help_button', None):
-                self.help_button = Gtk.Button(icon_name='help-browser', action_name='app.help')
+                self.help_button = Gtk.Button(icon_name='win11-dialog-help', action_name='app.help')
                 self.help_button.set_tooltip_text(tr('Get help'))
                 self.help_button.add_css_class('fenestra-dlg-help')
                 self.help_button.set_valign(Gtk.Align.CENTER)
@@ -383,6 +386,8 @@ class Chooser:
             filename.connect('notify::visible', lambda *_: self.sync_mode())
         if accept:
             accept.connect('notify::label', lambda *_: self.sync_accept())
+            # The accept button is the dialog's default button (Windows' blue-bordered Save / Open).
+            self.window.set_default_widget(accept)
         if new_folder:
             # The reference Open dialog has New folder too (view.new-folder works in both modes).
             new_folder.connect('notify::visible', lambda w, _p: w.set_visible(True) if not w.get_visible() else None)
@@ -479,6 +484,12 @@ class Chooser:
         if self.window.get_root() is None:
             return GLib.SOURCE_REMOVE
         self.ticks += 1
+        want = getattr(self, 'want_size', None)
+        if want and self.ticks <= 15 and not self.window.is_maximized() and \
+                (self.window.get_width(), self.window.get_height()) != want:
+            hidden = by_id(self.window, 'fenestra_hide_folders')
+            if hidden is None or not hidden.get_active():
+                self.window.set_default_size(*want)
         container = by_id(self.window, 'slot_container')
         slot = container.get_child() if container else None
         if slot is not None and slot is not self.slot and slot.find_property('location'):
@@ -559,6 +570,18 @@ class Chooser:
                     column.set_resizable(True)
         for cell in (w for w in walk(slot) if kind(w) in ('NautilusLabelCell', 'NautilusNameCell')):
             self.cell(cell)
+        for page in (w for w in walk(slot) if kind(w) == 'AdwStatusPage'):
+            # An empty folder: Windows writes one line under the column headers, no picture.
+            if page.get_icon_name():
+                page.set_icon_name(None)
+            want = tr('No items match your search.')
+            if page.get_title() != want:
+                page.set_title(want)
+                page.set_description(None)
+            page.add_css_class('fenestra-dlg-empty')
+            box = find(page, lambda w: isinstance(w, Gtk.Box))
+            if box is not None and box.get_valign() != Gtk.Align.START:
+                box.set_valign(Gtk.Align.START)
         return GLib.SOURCE_REMOVE
 
     @staticmethod

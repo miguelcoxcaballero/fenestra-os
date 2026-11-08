@@ -680,6 +680,9 @@ window.win11-chooser.win11-explorer .win11-navigation button image { -gtk-icon-s
 window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-refresh image { -gtk-icon-size: 14px; }
 window.win11-chooser.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search image { -gtk-icon-size: 16px; margin-right: -1px; }
 window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up:hover { background: #434343; box-shadow: inset 0 0 0 1px #ffffff; }
+/* Disabled Back / Forward / Recent locations: #a3a3a3 in both themes (the theme's own disabled
+   opacity on the button would make them fainter, so it is undone here). */
+window.win11-chooser.win11-explorer .win11-navigation button:disabled { opacity: 1; filter: none; }
 window.win11-chooser.win11-explorer .win11-navigation button:disabled image { opacity: 0.6; }
 window.win11-chooser.win11-explorer .win11-navigation .fenestra-dlg-address { min-height: 32px; padding: 0; margin: 0 0 0 4px; border: 1px solid #535353; border-radius: 0; background: #191919; box-shadow: none; }
 window.win11-chooser.win11-explorer .fenestra-dlg-address > scrolledwindow, window.win11-chooser.win11-explorer .fenestra-dlg-address viewport { background: transparent; }
@@ -807,7 +810,8 @@ window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { m
   window.win11-chooser.win11-explorer .win11-dialog-titlebar .win11-dialog-title { color: #000000; }
   window.win11-chooser.win11-explorer .win11-navigation { background: #ffffff; }
   window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up:hover { background: #cce8ff; box-shadow: none; }
-  window.win11-chooser.win11-explorer .win11-navigation button:disabled image { opacity: 0.35; }
+  window.win11-chooser.win11-explorer .win11-navigation button:disabled image { opacity: 0.40; }
+  window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up:not(:disabled) image { opacity: 0.65; }
   window.win11-chooser.win11-explorer .win11-navigation .fenestra-dlg-address { border-color: #d9d9d9; background: #ffffff; }
   window.win11-chooser.win11-explorer .fenestra-dlg-address label.fenestra-dlg-crumb-sep,
   window.win11-chooser.win11-explorer .fenestra-dlg-address button.nautilus-path-button label { color: #000000; }
@@ -867,6 +871,8 @@ window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { m
   window.win11-chooser.win11-explorer .fenestra-dlg-address .fenestra-dlg-lead > image { -gtk-icon-filter: none; }
   window.win11-chooser.win11-explorer .win11-commandbar menubutton image.win11-cmd-chevron { -gtk-icon-filter: none; color: #1e395b; }
   window.win11-chooser.win11-explorer .win11-navigation menubutton.fenestra-dlg-recent > button:hover { background: #cce8ff; box-shadow: none; }
+  window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help image { -gtk-icon-filter: none; }
+  window.win11-chooser.win11-explorer statuspage.fenestra-dlg-empty .title { color: #6d6d6d; }
   window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help:hover { background: #dcebf4; box-shadow: inset 0 0 0 1px #0078d4; }
 }
 /* Organize's ▾ is Windows' small filled triangle (7 x 4 physical px at 150 %), in the label colour. */
@@ -875,6 +881,11 @@ window.win11-chooser.win11-explorer .win11-commandbar image.fenestra-dlg-dropdow
 window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help { min-width: 27px; min-height: 26px; padding: 0; margin: 2px 13px 2px 14px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help image { -gtk-icon-size: 16px; -gtk-icon-style: regular; }
 window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help:hover { background: #4d4d4d; }
+/* Empty folder: "No items match your search." centred in the list, 43 px under its top, 12 px (#dedede / #6d6d6d). */
+window.win11-chooser.win11-explorer statuspage.fenestra-dlg-empty > scrolledwindow > viewport > box { margin: 0; padding: 0; }
+window.win11-chooser.win11-explorer statuspage.fenestra-dlg-empty { background: transparent; }
+window.win11-chooser.win11-explorer statuspage.fenestra-dlg-empty > scrolledwindow > viewport > box > clamp > box { margin-top: 43px; padding: 0; }
+window.win11-chooser.win11-explorer statuspage.fenestra-dlg-empty .title { font-size: 12px; font-weight: normal; color: #dedede; margin: 0; }
 /* Motion, measured on Windows 11 (reference-shots/filedialog, QMP frames every ~17 ms, light and dark
    at 150 %): the Explorer parts (navigation and address buttons, command bar, navigation pane rows,
    list rows, column headers) change state at once; the Win32 push buttons, combo boxes and Hide
