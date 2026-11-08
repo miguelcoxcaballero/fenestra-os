@@ -27,6 +27,8 @@ Item {
         }
     }
     Component.onCompleted: Qt.callLater(grab.place)
+    // Items shown later or moved (the lock screen's banners): blur what is behind them now.
+    onVisibleChanged: if (visible) Qt.callLater(grab.place)
     Item {
         id: blurred
         anchors.fill: parent

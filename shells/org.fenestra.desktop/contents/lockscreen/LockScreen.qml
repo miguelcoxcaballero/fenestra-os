@@ -65,7 +65,13 @@ Item {
             phase = "signin"
             hideAnim.stop(); revealAnim.duration = Math.max(1, 620 - t); revealAnim.start()
             if (prompt === "message") prompt = defaultPrompt()
-            authenticator.startAuthenticating()
+            quietSince = Date.now()
+            // A face or fingerprint that matched while the clock came back (after 30 s idle): it
+            // unlocks now that the user dismissed the clock, not before.
+            if (deferredUnlock !== "") { const k = deferredUnlock; deferredUnlock = ""; unlock(k); return }
+            // The heartbeat starts face, fingerprint and the password as soon as the reveal is over
+            // (starting the PAM conversations during it cost a 36 ms frame); a password typed and
+            // sent before then waits in pendingPassword.
         }
         // Windows: the key that raises the sign-in screen is not typed into the box.
         if (prompt === "password") password.forceActiveFocus()
@@ -81,11 +87,13 @@ Item {
 
     // Windows returns to the clock after a while without input on the sign-in screen.
     Timer { id: idle; interval: 30000; running: root.phase === "signin" && root.menu === "" && password.text === ""; onTriggered: root.showClock() }
-    // Plasma's heartbeat: (re)starts the PAM conversations. Always, not only on the sign-in screen:
-    // the workers are not ready when the lock screen loads, and face and fingerprint must listen
-    // from the clock view on, as Windows Hello does.
-    Timer { interval: 1000; repeat: true; triggeredOnStart: true; running: !root.unlocking && root.phase !== "welcome" && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
+    // Plasma's heartbeat: (re)starts the PAM conversations, only once the clock is dismissed: nothing
+    // (face, fingerprint, password) is checked while the clock shows (the user's choice: no unlock
+    // before the sign-in screen is up). The workers are not ready when the lock screen loads, so it
+    // keeps trying every second while the sign-in screen is up (from the end of its reveal).
+    Timer { interval: 1000; repeat: true; triggeredOnStart: true; running: !root.unlocking && root.phase === "signin" && !revealAnim.running && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
     property bool unlocking: false
+    property string deferredUnlock: ""   // "face" | "other": matched while the clock was showing
 
     // Never locked out. kscreenlocker kills a PAM worker for good when it is cancelled or stopped
     // (PamAuthenticator::cancel(): no restart; "DBus worker not initialized" from then on), and a
@@ -108,7 +116,8 @@ Item {
     }
     Timer {
         interval: 1000; repeat: true
-        running: !root.unlocking && !authenticator.unlocked
+        // Only while the sign-in screen is up (on the clock nothing is asked for, by design).
+        running: !root.unlocking && !authenticator.unlocked && root.phase === "signin"
         onTriggered: {
             if (authenticator.promptForSecret !== "" || authenticator.busy || root.passwordInFlight) root.quietSince = Date.now()
             else if (Date.now() - root.quietSince > 5000) root.revive()
@@ -177,6 +186,7 @@ Item {
         target: authenticator
         function onSucceeded() {
             root.log("FENESTRA_LOCK succeeded", root.faceState, root.faceMatched)
+            if (root.phase === "clock") { root.deferredUnlock = root.faceMatched ? "face" : "other"; return }
             root.unlock(root.faceMatched ? "face" : "other")
         }
         function onFailed(kind, auth) {
@@ -244,7 +254,8 @@ Item {
     }
     Component.onCompleted: {
         syncTypes()
-        authenticator.startAuthenticating()   // face and fingerprint start with the lock, as on Windows
+        // Nothing is checked until the clock is dismissed (showSignin starts face, fingerprint and
+        // the password together).
         root.forceActiveFocus()
     }
 
@@ -326,8 +337,8 @@ Item {
                       rightMargin: 48 - (item && item.hasBattery ? 8.75 : 7); bottomMargin: 28 - (item ? item.height / 2 : 7) }
             source: "StatusIcons.qml"
         }
-        // Spotlight's "Learn more about this picture" and hotspots.
-        Loader { anchors.fill: parent; source: "Spotlight.qml"; onLoaded: item.open.connect(root.openAfterUnlock) }
+        // Spotlight's "Learn more about this picture" (magnifier) and hotspots: left out at the
+        // user's request (the picture alone, no info button). Spotlight.qml stays for opting back in.
         // Widgets (24H2): the weather card, bottom centre, 50 px over the bottom; media above it.
         WeatherCard {
             id: weatherCard
@@ -665,6 +676,10 @@ Item {
         }
     }
 
+    // Volume, brightness, keyboard light and performance mode banners (Fenestra Shell sends them
+    // while locked; kscreenlocker_greet finds the item by its objectName "onScreenDisplay").
+    LockOsd { z: 4; accent: root.accent }
+
     // Frame trace for the bench (config Trace=true): one line per presented frame while something
     // moves, so dropped frames and the curves can be read from the greeter's log.
     readonly property bool trace: cfg("Trace", false) === true || cfg("Trace", false) === "true"
@@ -682,6 +697,12 @@ Item {
     // ------------------------------------------------------------------ input ------
     focus: true
     Keys.onPressed: (e) => {
+        // Volume, brightness, keyboard light and media keys act on the lock screen (kscreenlocker
+        // runs their shortcuts) without raising the sign-in screen, as on Windows.
+        if ([Qt.Key_VolumeUp, Qt.Key_VolumeDown, Qt.Key_VolumeMute, Qt.Key_MicMute, Qt.Key_MonBrightnessUp, Qt.Key_MonBrightnessDown,
+             Qt.Key_KeyboardBrightnessUp, Qt.Key_KeyboardBrightnessDown, Qt.Key_KeyboardLightOnOff, Qt.Key_MediaPlay, Qt.Key_MediaPause,
+             Qt.Key_MediaTogglePlayPause, Qt.Key_MediaNext, Qt.Key_MediaPrevious, Qt.Key_MediaStop, Qt.Key_Launch0, Qt.Key_Launch1,
+             Qt.Key_Launch2, Qt.Key_LaunchMedia, Qt.Key_Tools].indexOf(e.key) >= 0) { e.accepted = true; return }
         if (root.phase === "clock") {
             const ch = e.text.length === 1 && e.text.charCodeAt(0) >= 32 ? e.text : ""
             if (e.key === Qt.Key_Escape) { e.accepted = true; return }

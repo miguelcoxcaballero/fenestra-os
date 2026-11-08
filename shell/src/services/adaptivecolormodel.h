@@ -35,9 +35,10 @@ struct Xy {
 
 inline constexpr Xy kD65{0.31271, 0.32902};
 inline constexpr Xy kD50{0.34567, 0.35850};
-inline constexpr double kStrength = 0.5;     // Windows 11's fixed 50 %
+inline constexpr double kStrength = 0.7;     // Windows 11 uses a fixed 50 %: too subtle on OLED panels (no visible
+                                             // change at 4500 K / 40 lx), so Fenestra adapts by 70 %
 inline constexpr double kLowLightLux = 50.0;
-inline constexpr int kMinTemperature = 5000; // warmest Adaptive color goes (Night light goes further)
+inline constexpr int kMinTemperature = 4500; // warmest Adaptive color goes (Night light goes further)
 inline constexpr int kMaxTemperature = 6500; // the panel's own white (KWin's maximum)
 
 inline double mired(double kelvin) { return 1e6 / kelvin; }
@@ -72,12 +73,10 @@ inline Xy xyFromCct(double t)
 
 // SL: Windows' LuxBasedStrengthAdaptationLut (0:0.5, 50:0.5, 60:0.6 ... 100:1.0, 600:1.0,
 // 650:0.9958 ...) and its sample table, where 1200 lx ambient leaves the display at D65.
+// Fenestra keeps the full strength in dim rooms too (Windows halves it below 50 lx, which left a
+// warm, dim room's screen almost at D65); it still fades out towards bright daylight.
 inline double luxStrength(double lux)
 {
-    if (lux <= 50)
-        return 0.5;
-    if (lux <= 100)
-        return 0.5 + (lux - 50) / 100.0;
     if (lux <= 600)
         return 1.0;
     const double t = (lux - 600) / 600.0;

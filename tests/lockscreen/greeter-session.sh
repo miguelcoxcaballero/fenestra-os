@@ -66,6 +66,9 @@ mkdir -p /run/dbus; rm -f /run/dbus/system_bus_socket; dbus-daemon --system --fo
 # LOCKED=1: KWin starts the session locked, as fenestra-session does after GDM's autologin
 # (packaging/lockscreen/fenestra-sign-in): KWin's own screen locker runs the greeter (no --testing).
 export QML_IMPORT_PATH=/src/tests/lockscreen/mock-qml QT_FORCE_STDERR_LOGGING=1
+# Fenestra's KWin effects from the work tree (the unlock fade; UNLOCK_MS slows it down for captures).
+mkdir -p /usr/share/kwin/effects; cp -r /src/kwin/effects/fenestra-unlock /usr/share/kwin/effects/
+[ -n "${UNLOCK_MS:-}" ] && sed -i "s/^const DURATION = .*/const DURATION = $UNLOCK_MS;/" /usr/share/kwin/effects/fenestra-unlock/contents/code/main.js
 kwin_wayland --virtual --socket wl-f --width ${W:-2880} --height ${H:-1800} ${LOCKED:+--lockscreen} > /out/kwin.log 2>&1 &
 for i in $(seq 60); do [ -S $XDG_RUNTIME_DIR/wl-f ] && break; sleep 0.25; done
 export WAYLAND_DISPLAY=wl-f

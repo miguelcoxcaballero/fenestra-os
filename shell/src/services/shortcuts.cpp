@@ -11,6 +11,9 @@
 
 #include <utility>
 #include <KGlobalAccel>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCall>
 #include <KGlobalShortcutInfo>
 #include <PulseAudioQt/Context>
 #include <PulseAudioQt/Server>
@@ -45,6 +48,22 @@ QAction *Shortcuts::add(const QString &id, const QString &text, const QList<QKey
     return a;
 }
 
+QAction *Shortcuts::addLockable(const QString &component, const QString &id, const QString &text, const QKeySequence &key)
+{
+    auto *a = new QAction(text, this);
+    a->setObjectName(id);
+    a->setProperty("componentName", component);
+    a->setProperty("componentDisplayName", QStringLiteral("Fenestra Shell"));
+    bool othersOwn = false;
+    for (const KGlobalShortcutInfo &o : KGlobalAccel::globalShortcutsByKey(key))
+        othersOwn |= o.componentUniqueName() != component || o.uniqueName() != id;
+    if (othersOwn)
+        KGlobalAccel::stealShortcutSystemwide(key);
+    KGlobalAccel::self()->setDefaultShortcut(a, {key});
+    KGlobalAccel::self()->setShortcut(a, {key}, KGlobalAccel::NoAutoloading);
+    return a;
+}
+
 void Shortcuts::volume(int delta)
 {
     auto *audio = AudioStatus::instance();
@@ -74,31 +93,39 @@ void Shortcuts::install()
         if (info.componentUniqueName() != QLatin1String("fenestra-shell"))
             KGlobalAccel::stealShortcutSystemwide(super);
     }
+    // Volume, brightness and keyboard light moved to lock-screen components (addLockable): drop
+    // the entries they had under fenestra-shell, which would otherwise keep the keys.
+    for (const char *old : {"volume-up", "volume-down", "volume-mute", "brightness-up", "brightness-down",
+                            "kbd-backlight-up", "kbd-backlight-down", "kbd-backlight-toggle"}) {
+        QDBusConnection::sessionBus().asyncCall(QDBusMessage::createMethodCall(
+            QStringLiteral("org.kde.kglobalaccel"), QStringLiteral("/kglobalaccel"), QStringLiteral("org.kde.KGlobalAccel"), QStringLiteral("unregister"))
+            << QStringLiteral("fenestra-shell") << QString::fromLatin1(old));
+    }
     connect(add(QStringLiteral("start"), QStringLiteral("Start"), {super}), &QAction::triggered, ShellControl::instance(), &ShellControl::ToggleStart);
-    connect(add(QStringLiteral("volume-up"), QStringLiteral("Volume up"), {QKeySequence(Qt::Key_VolumeUp)}), &QAction::triggered, this, [this] { volume(+2); });
-    connect(add(QStringLiteral("volume-down"), QStringLiteral("Volume down"), {QKeySequence(Qt::Key_VolumeDown)}), &QAction::triggered, this, [this] { volume(-2); });
-    connect(add(QStringLiteral("volume-mute"), QStringLiteral("Mute"), {QKeySequence(Qt::Key_VolumeMute)}), &QAction::triggered, this, [this] { volume(0); });
+    connect(addLockable(QStringLiteral("kmix"), QStringLiteral("increase_volume"), QStringLiteral("Volume up"), QKeySequence(Qt::Key_VolumeUp)), &QAction::triggered, this, [this] { volume(+2); });
+    connect(addLockable(QStringLiteral("kmix"), QStringLiteral("decrease_volume"), QStringLiteral("Volume down"), QKeySequence(Qt::Key_VolumeDown)), &QAction::triggered, this, [this] { volume(-2); });
+    connect(addLockable(QStringLiteral("kmix"), QStringLiteral("mute"), QStringLiteral("Mute"), QKeySequence(Qt::Key_VolumeMute)), &QAction::triggered, this, [this] { volume(0); });
     connect(add(QStringLiteral("mic-mute"), QStringLiteral("Mute microphone"), {QKeySequence(Qt::Key_MicMute)}), &QAction::triggered, this, [this] {
         if (auto *src = PulseAudioQt::Context::instance()->server()->defaultSource()) {
             src->setMuted(!src->isMuted());
             Q_EMIT osd(QStringLiteral("microphone"), src->isMuted() ? 100 : -1); // value: the new state before the async update
         }
     });
-    connect(add(QStringLiteral("brightness-up"), QStringLiteral("Brightness up"), {QKeySequence(Qt::Key_MonBrightnessUp)}), &QAction::triggered, this, [this] {
+    connect(addLockable(QStringLiteral("org_kde_powerdevil"), QStringLiteral("Increase Screen Brightness"), QStringLiteral("Brightness up"), QKeySequence(Qt::Key_MonBrightnessUp)), &QAction::triggered, this, [this] {
         Brightness::instance()->step(+5);
         Q_EMIT osd(QStringLiteral("brightness"), Brightness::instance()->percent());
     });
-    connect(add(QStringLiteral("brightness-down"), QStringLiteral("Brightness down"), {QKeySequence(Qt::Key_MonBrightnessDown)}), &QAction::triggered, this, [this] {
+    connect(addLockable(QStringLiteral("org_kde_powerdevil"), QStringLiteral("Decrease Screen Brightness"), QStringLiteral("Brightness down"), QKeySequence(Qt::Key_MonBrightnessDown)), &QAction::triggered, this, [this] {
         Brightness::instance()->step(-5);
         Q_EMIT osd(QStringLiteral("brightness"), Brightness::instance()->percent());
     });
     // Keyboard backlight keys that reach userspace (most hotkeys change it in the firmware, which
     // KbdBacklight reports by itself): the banner comes from KbdBacklight::keyChanged.
-    connect(add(QStringLiteral("kbd-backlight-up"), QStringLiteral("Keyboard backlight up"), {QKeySequence(Qt::Key_KeyboardBrightnessUp)}),
+    connect(addLockable(QStringLiteral("org_kde_powerdevil"), QStringLiteral("Increase Keyboard Brightness"), QStringLiteral("Keyboard backlight up"), QKeySequence(Qt::Key_KeyboardBrightnessUp)),
             &QAction::triggered, KbdBacklight::instance(), [] { KbdBacklight::instance()->step(+1); });
-    connect(add(QStringLiteral("kbd-backlight-down"), QStringLiteral("Keyboard backlight down"), {QKeySequence(Qt::Key_KeyboardBrightnessDown)}),
+    connect(addLockable(QStringLiteral("org_kde_powerdevil"), QStringLiteral("Decrease Keyboard Brightness"), QStringLiteral("Keyboard backlight down"), QKeySequence(Qt::Key_KeyboardBrightnessDown)),
             &QAction::triggered, KbdBacklight::instance(), [] { KbdBacklight::instance()->step(-1); });
-    connect(add(QStringLiteral("kbd-backlight-toggle"), QStringLiteral("Keyboard backlight"), {QKeySequence(Qt::Key_KeyboardLightOnOff)}),
+    connect(addLockable(QStringLiteral("org_kde_powerdevil"), QStringLiteral("Toggle Keyboard Backlight"), QStringLiteral("Keyboard backlight"), QKeySequence(Qt::Key_KeyboardLightOnOff)),
             &QAction::triggered, KbdBacklight::instance(), [] { KbdBacklight::instance()->toggle(); });
     connect(add(QStringLiteral("security-screen"), QStringLiteral("Security options (Ctrl+Alt+Del)"),
                 {QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_Delete)}),
