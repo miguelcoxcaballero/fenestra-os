@@ -23,7 +23,7 @@ c worker-kde-started 'Starting PAM worker for service "kde"'
 c worker-fingerprint-started 'Starting PAM worker for service "kde-fingerprint"'
 [ "$(grep -c 'Ping received' "$LOG")" -ge 2 ] && { echo "CHECK workers-answer PASS"; ok=$((ok+1)); } || { echo "CHECK workers-answer FAIL"; fail=$((fail+1)); }
 c password-asked 'Echo-off prompt'
-n no-qml-errors '\.qml:[0-9]*:.*\(Error\|TypeError\|is not\)'
+n no-qml-errors '\.qml:[0-9]*:.*\(Error\|TypeError\|is not\|Cannot open\|Binding loop\|undefined\)'
 n no-dead-worker 'worker not initialized\|Worker did not terminate'
 echo "log: $LOG"
 [ $fail = 0 ] && echo "HOST_CHECK PASS" || { echo "HOST_CHECK FAIL"; exit 1; }

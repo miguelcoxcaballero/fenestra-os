@@ -84,7 +84,32 @@ Item {
     // Plasma's heartbeat: (re)starts the PAM conversations. Always, not only on the sign-in screen:
     // the workers are not ready when the lock screen loads, and face and fingerprint must listen
     // from the clock view on, as Windows Hello does.
-    Timer { interval: 1000; repeat: true; triggeredOnStart: true; running: root.phase !== "welcome" && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
+    Timer { interval: 1000; repeat: true; triggeredOnStart: true; running: !root.unlocking && root.phase !== "welcome" && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
+    property bool unlocking: false
+
+    // Never locked out. kscreenlocker kills a PAM worker for good when it is cancelled or stopped
+    // (PamAuthenticator::cancel(): no restart; "DBus worker not initialized" from then on), and a
+    // PAM module can hang. If the password worker has not asked for the password for 5 s while
+    // nothing is being checked, both workers are made again: switching the authenticator type
+    // (Fingerprint, then Regular) makes kscreenlocker build new ones and start them.
+    property real quietSince: Date.now()
+    property int revivals: 0
+    function revive() {
+        revivals++
+        root.log("FENESTRA_LOCK revive", revivals)
+        const A = ScreenLocker.Authenticators.Authenticator
+        authenticator.authenticator = A ? A.Fingerprint : 1
+        authenticator.authenticator = A ? A.Regular : 0
+        quietSince = Date.now()
+    }
+    Timer {
+        interval: 1000; repeat: true
+        running: !root.unlocking && !authenticator.unlocked
+        onTriggered: {
+            if (authenticator.promptForSecret !== "" || authenticator.busy || root.passwordInFlight) root.quietSince = Date.now()
+            else if (Date.now() - root.quietSince > 5000) root.revive()
+        }
+    }
 
     // Commands of the buttons (power, accessibility) run from here: the flyouts close right away.
     Loader { id: execLoader; source: "Exec.qml" }
@@ -106,10 +131,11 @@ Item {
         if (password.text === "") return
         idle.restart()
         passwordSent = true
-        if (promptPending) { promptPending = false; authenticator.respond(password.text) }
+        if (promptPending) { promptPending = false; passwordInFlight = true; authenticator.respond(password.text) }
         else { pendingPassword = password.text; authenticator.startAuthenticating() }
     }
     function unlock(kind) {
+        unlocking = true
         // The smile starts on this very frame; the PAM workers are stopped once it is drawn (stopping
         // them here cost one 26 ms frame).
         if (kind === "face") { faceState = "success"; prompt = "face"; hello.play("authentication"); return }  // quits after the smile
@@ -128,6 +154,7 @@ Item {
     }
     // A new PAM conversation: Howdy looks again (Windows: "Try again" / the face option).
     property bool faceMatched: false
+    property bool passwordInFlight: false
     property bool passwordSent: false
     // "Try again": pam_fenestra_hello tries the face twice per lock screen, then waits for this
     // (a file named after the greeter's pid, which is the worker's parent).
@@ -152,6 +179,7 @@ Item {
             if (kind === root.fingerType) { root.fingerState = "failed"; root.faceFailed(); return }
             if (kind !== 0) return
             root.promptPending = false
+            root.passwordInFlight = false
             password.text = ""
             root.message = root.tr("The password is incorrect. Try again.", "La contraseña no es correcta. Inténtalo de nuevo.")
             root.prompt = "message"
@@ -193,8 +221,10 @@ Item {
         }
         function onPromptForSecretChanged() {
             root.promptPending = true
+            root.passwordInFlight = false
             if (root.pendingPassword !== "") {
                 root.promptPending = false
+                root.passwordInFlight = true
                 authenticator.respond(root.pendingPassword); root.pendingPassword = ""
             }
         }

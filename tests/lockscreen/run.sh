@@ -36,10 +36,20 @@ check L-no-lockout-dead-camera-hung-fprintd test $(( (t1 - t0) / 1000000 )) -lt 
 check L-stand-ins-killed test "$($C sh 'pgrep -x sleep | wc -l')" = 1
 $C finger wait
 
+# 0b. A dead password worker (kscreenlocker never restarts a cancelled/killed one: "DBus worker not
+#     initialized" forever, the lock-out of 2026-11-08): the lock screen rebuilds the workers.
+start
+$C sh "pkill -f 'kscreenlocker_worker kde root\$'"; sleep 7
+$C key 57; sleep 2; $C type Fenestra1; $C key 28
+check L-dead-worker-revived exited
+check L-revive-logged has "FENESTRA_LOCK revive"
+
 # 1. Password: a wrong one shows Windows' message and OK; the right one unlocks.
 $C face fail; $C sh "echo 1 > /tmp/face-delay"
 start
 $C shot 01-clock
+# No QML warning of the lock screen's own files (stand-ins aside).
+check L-no-qml-warnings bash -c "! grep 'org.fenestra.desktop/contents/lockscreen/.*qml:[0-9]' '$OUT/greet.log' | grep -q ."
 $C key 57; sleep 2; $C shot 02-signin
 check L-reveal-smooth python3 - "$OUT/greet.log" <<'PY'
 import sys
