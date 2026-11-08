@@ -202,7 +202,15 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/effects/ DESTINATION ${CMA
 # is only loaded by the exact KWin version it was built against).
 option(FENESTRA_BUILD_KWIN_PLUGINS "Build the KWin effect plugins in ../kwin/plugins (needs kwin-devel)" ON)
 if(FENESTRA_BUILD_KWIN_PLUGINS)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../kwin/plugins/fenestra-corners ${CMAKE_CURRENT_BINARY_DIR}/fenestra-corners)
+    # Without kwin-devel (and the libepoxy/libdrm headers its CMake config looks up) the shell
+    # still builds; the RPM lists the plugin, so a package build without it fails.
+    find_package(Qt6 QUIET COMPONENTS Widgets)
+    find_package(KWin QUIET)
+    if(KWin_FOUND AND TARGET Qt6::Widgets)
+        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../kwin/plugins/fenestra-corners ${CMAKE_CURRENT_BINARY_DIR}/fenestra-corners)
+    else()
+        message(WARNING "kwin-devel (with libepoxy-devel, libdrm-devel) not found: fenestra-corners is not built")
+    endif()
 endif()
 # Look-and-feel package (kdeglobals defaults) and the lock screen: Plasma 6's kscreenlocker takes
 # it from the shell package named in plasmashellrc [Shell] ShellPackage (KWinIntegration sets it).
