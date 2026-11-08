@@ -93,6 +93,7 @@ fi
 %{_udevrulesdir}/70-fenestra-recording-block.rules
 %{_libexecdir}/fenestra/fenestra-hello-enroll
 %{_datadir}/polkit-1/actions/org.fenestra.hello.policy
+%{_datadir}/polkit-1/rules.d/50-fenestra-enroll.rules
 
 %post
 # Windows Hello face sign-in on the lock screen when Howdy is installed and enrolled.
