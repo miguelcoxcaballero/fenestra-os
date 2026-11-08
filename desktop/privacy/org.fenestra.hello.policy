@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Face (Windows Hello) set-up for one's own account: the user's own password, remembered for a
+     few minutes (like fprintd's enroll and Windows asking for the PIN once), not an administrator's. -->
+<policyconfig>
+  <action id="org.fenestra.hello.enroll">
+    <description>Set up face recognition for your account</description>
+    <description xml:lang="es">Configurar el reconocimiento facial de tu cuenta</description>
+    <message>Confirm it's you to set up face recognition</message>
+    <message xml:lang="es">Confirma que eres tú para configurar el reconocimiento facial</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_self_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/fenestra/fenestra-hello-enroll</annotate>
+  </action>
+</policyconfig>

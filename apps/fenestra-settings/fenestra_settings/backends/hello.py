@@ -122,7 +122,7 @@ def howdy_auto_dismiss() -> bool:
 
 
 def _pkexec_howdy(args, callback):
-    """Howdy needs root: run it through pkexec (polkit asks for the admin password)."""
+    """Howdy needs root: run it through pkexec."""
     if not util.have("pkexec"):
         GLib.idle_add(lambda: (callback(False, "pkexec is not installed"), False)[1])
         return
@@ -135,6 +135,12 @@ def _pkexec_howdy(args, callback):
             if "not authorized" in low or "dismissed" in low or "authentication" in low or not text:
                 text = "auth"
         callback(ok, text)
+    # Fenestra's helper (org.fenestra.hello.enroll): the user's own password, remembered for a few
+    # minutes, and the model left readable by the lock screen. Plain Howdy (admin password) otherwise.
+    helper = "/usr/libexec/fenestra/fenestra-hello-enroll"
+    if os.access(helper, os.X_OK) and args and args[0] in ("add", "remove", "clear", "list"):
+        util.run_async(["pkexec", helper] + args, done, mutating=True)
+        return
     util.run_async(["pkexec", howdy, "-U", _user(), "-y"] + args, done, mutating=True)
 
 

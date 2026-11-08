@@ -9,9 +9,11 @@
 #include <QQuickWindow>
 
 #include "acrylic.h"
+#include "adaptivecolor.h"
 #include "backdrop.h"
 #include "batteryalerts.h"
 #include "performancemode.h"
+#include "recordingblock.h"
 #include "kbdbacklight.h"
 #include "iconoverrides.h"
 #include "kwinintegration.h"
@@ -83,7 +85,9 @@ int main(int argc, char *argv[])
     KWinIntegration::instance(); // Fenestra decoration and switcher in kwinrc
     BatteryAlerts::instance(); // low-battery notices and Energy saver, as Windows
     PerformanceMode::instance(); // the OEM performance-mode key's banner
+    RecordingBlock::instance(); // firmware microphone/camera block: never silent
     KbdBacklight::instance();    // keyboard backlight (hotkey banner, Quick settings)
+    AdaptiveColor::instance();   // white point follows the ambient light (colour light sensor)
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }

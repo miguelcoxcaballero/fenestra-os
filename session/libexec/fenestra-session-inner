@@ -4,7 +4,7 @@
 # session end: that happens when fenestra-session.target stops (log out).
 dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP \
     XDG_SESSION_DESKTOP XDG_SESSION_TYPE DESKTOP_SESSION QT_QPA_PLATFORM MOZ_ENABLE_WAYLAND \
-    ELECTRON_OZONE_PLATFORM_HINT LC_NUMERIC LC_TIME LC_MONETARY LC_PAPER LC_MEASUREMENT
+    ELECTRON_OZONE_PLATFORM_HINT LC_NUMERIC LC_TIME LC_MONETARY LC_PAPER LC_MEASUREMENT PATH GTK_USE_PORTAL
 # GTK apps read the mode, accent and theme from gsettings: bring them in line with shell.conf.
 command -v fenestra-settings >/dev/null && fenestra-settings --sync-appearance >/dev/null 2>&1 &
 systemctl --user start fenestra-session.target

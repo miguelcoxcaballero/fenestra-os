@@ -13,7 +13,14 @@ Window {
     readonly property bool primary: targetScreen && Qt.application.screens.length && targetScreen.name === Qt.application.screens[0].name
     color: WallpaperSource.color
     visible: false
-    Component.onCompleted: { ShellUtil.placeOnScreen(desk, targetScreen.name); visible = true }
+    // Shown only once the wallpaper picture is decoded: mapping at once showed the fallback colour
+    // (grey) for a moment at every start. A missing / broken picture, or 2 s, shows it anyway.
+    readonly property bool wallpaperReady: WallpaperSource.image === "" || wallpaper.status === Image.Ready
+                                           || wallpaper.status === Image.Error
+    function reveal() { if (!visible) { ShellUtil.placeOnScreen(desk, targetScreen.name); visible = true } }
+    onWallpaperReadyChanged: if (wallpaperReady) reveal()
+    Component.onCompleted: { if (wallpaperReady) reveal(); else revealTimer.start() }
+    Timer { id: revealTimer; interval: 2000; onTriggered: desk.reveal() }
     LayerShell.Window.scope: "fenestra-wallpaper"
     LayerShell.Window.layer: LayerShell.Window.LayerBackground
     LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
@@ -32,8 +39,13 @@ Window {
     // The window's fractional scale (Screen.devicePixelRatio is the screen's, rounded up).
     readonly property real dpr: scaleProbe.devicePixelRatio > 0 ? scaleProbe.devicePixelRatio : 1
     ShadowLabel { id: scaleProbe; visible: false; width: 1; height: 1 }
-    readonly property real cellW: Metrics.desktopCellWidth
-    readonly property real cellH: Math.round(Metrics.desktopCellHeight * dpr + Metrics.tok("desktop.cell.height.extra150", 8) * Math.max(0, dpr - 1)) / dpr
+    // Column width in device px: 96 at 100 % (VM), 113 at 150 % (the user's Windows, 163657: bin
+    // centred at x 56.5); like the rows, Windows' grid grows by a fixed amount per 100 % of scale.
+    readonly property real cellW: Math.round(Metrics.desktopCellWidth + Metrics.tok("desktop.cell.width.perscale", 34) * Math.max(0, dpr - 1)) / dpr
+    // Row pitch in device px, measured: 124 at 100 % (VM) and 153 at 150 % (the user's Windows,
+    // 163657: labels at 88 and 241). Windows' grid does not scale with the DPI; it grows by 58 px
+    // per 100 % of extra scale.
+    readonly property real cellH: Math.round(Metrics.desktopCellHeight + Metrics.tok("desktop.cell.height.perscale", 58) * Math.max(0, dpr - 1)) / dpr
     readonly property real iconTop: Metrics.tok("desktop.icon.top", 7) / dpr
     readonly property real labelTop: iconTop + Metrics.desktopIcon + Metrics.tok("desktop.label.gap", 3)
     readonly property int labelFontDevice: Math.round(Metrics.tok("desktop.label", 12) * dpr)
@@ -49,12 +61,14 @@ Window {
     function selected(row) { return selection.indexOf(row) >= 0 }
 
     Image {
+        id: wallpaper
         anchors.fill: parent
         source: WallpaperSource.image
         visible: source.toString() !== ""
         fillMode: Image.PreserveAspectCrop   // background-size: cover
         asynchronous: true
-        sourceSize: Qt.size(desk.width * Screen.devicePixelRatio, desk.height * Screen.devicePixelRatio)
+        sourceSize: Qt.size((desk.targetScreen ? desk.targetScreen.width : desk.width) * Screen.devicePixelRatio,
+                            (desk.targetScreen ? desk.targetScreen.height : desk.height) * Screen.devicePixelRatio)
     }
 
     Item {
@@ -137,7 +151,15 @@ Window {
                 Image {
                     x: (parent.width - Metrics.desktopIcon) / 2; y: desk.iconTop
                     width: Metrics.desktopIcon; height: Metrics.desktopIcon
-                    sourceSize: Qt.size(Metrics.desktopIcon * Screen.devicePixelRatio, Metrics.desktopIcon * Screen.devicePixelRatio)
+                    // File-type icons: Windows' 48 px drawing (fewer, darker lines and a border, as Files
+                    // shows it), scaled to the screen; the 64 px+ drawings are much fainter. Folders, the
+                    // bin and app icons keep their large drawings (they match the user's capture).
+                    readonly property bool fileType: !icon.model.isDir && !icon.model.isTrash && icon.model.iconSource === ""
+                                                     && !String(icon.model.path).endsWith(".desktop")
+                    readonly property real request: fileType ? Metrics.desktopIcon : Metrics.desktopIcon * Screen.devicePixelRatio
+                    sourceSize: Qt.size(request, request)
+                    smooth: true
+                    mipmap: false
                     source: icon.model.iconSource !== "" ? icon.model.iconSource : "image://icon/" + icon.model.icon
                 }
                 ShadowLabel {

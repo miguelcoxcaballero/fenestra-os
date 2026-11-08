@@ -78,11 +78,25 @@ GNOME_ONLY = frozenset({
 # Only exist in the Fenestra session (Fenestra Shell options without a GNOME counterpart).
 FENESTRA_ONLY = frozenset({
     "wallpaper-spotlight",
+    # Fenestra Shell drives it (KWin Night light pipeline); also needs a colour light sensor.
+    "adaptive-color",
 })
+
+# Features that also need hardware: shown only where the check passes.
+def _has_colour_sensor() -> bool:
+    from . import adaptive_color
+    return adaptive_color.supported()
+
+
+HARDWARE = {
+    "adaptive-color": _has_colour_sensor,
+}
 
 
 def supports(feature: str) -> bool:
     """Whether ``feature`` works in this session. Unknown names are supported (shared code)."""
+    if feature in HARDWARE and not HARDWARE[feature]():
+        return False
     if is_fenestra():
         return feature not in GNOME_ONLY
     return feature not in FENESTRA_ONLY
@@ -115,7 +129,7 @@ PAGE_FEATURES = {
 # page id -> {row key: feature}. Row keys are the SettingRow/ExpanderRow/Group ``key`` (and the
 # search index key of the same row).
 ROW_FEATURES = {
-    "display": {"brightness": "brightness", "night-light": "night-light", "hdr": "hdr",
+    "display": {"brightness": "brightness", "adaptive-color": "adaptive-color", "night-light": "night-light", "hdr": "hdr",
                 "scale": "displays", "resolution": "displays", "orientation": "displays",
                 "refresh": "displays", "multiple": "displays", "advanced-open": "displays"},
     "power": {"screen-sleep": "screen-idle", "lid": "power-button", "battery-percentage": "battery-percentage",
