@@ -8,6 +8,9 @@ export DESKTOP_SESSION=fenestra
 # Qt apps follow Fenestra (no Plasma platform theme); GTK apps keep their own settings.
 export QT_QPA_PLATFORM="wayland;xcb" QT_WAYLAND_DISABLE_WINDOWDECORATION=0
 export MOZ_ENABLE_WAYLAND=1 ELECTRON_OZONE_PLATFORM_HINT=auto
+# Programs installed per user (~/.local/bin: Fenestra apps installed for one user, pip --user…) for
+# everything launched from Start too (systemd user services get this PATH; Fedora only adds it in bash).
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$HOME/bin:$PATH" ;; esac
 # Per-user overrides of the variables below (KEY=value lines), e.g. KWIN_USE_OVERLAYS=1.
 [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/fenestra/session.env" ] && set -a && . "${XDG_CONFIG_HOME:-$HOME/.config}/fenestra/session.env" && set +a
 # No hardware overlay planes: when a shell popup closed, KWin moved windows onto overlay planes and
