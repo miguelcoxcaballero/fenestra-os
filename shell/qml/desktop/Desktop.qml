@@ -32,7 +32,9 @@ Window {
     // The window's fractional scale (Screen.devicePixelRatio is the screen's, rounded up).
     readonly property real dpr: scaleProbe.devicePixelRatio > 0 ? scaleProbe.devicePixelRatio : 1
     ShadowLabel { id: scaleProbe; visible: false; width: 1; height: 1 }
-    readonly property real cellW: Metrics.desktopCellWidth
+    // Column width in device px: 96 at 100 % (VM), 113 at 150 % (the user's Windows, 163657: bin
+    // centred at x 56.5); like the rows, Windows' grid grows by a fixed amount per 100 % of scale.
+    readonly property real cellW: Math.round(Metrics.desktopCellWidth + Metrics.tok("desktop.cell.width.perscale", 34) * Math.max(0, dpr - 1)) / dpr
     // Row pitch in device px, measured: 124 at 100 % (VM) and 153 at 150 % (the user's Windows,
     // 163657: labels at 88 and 241). Windows' grid does not scale with the DPI; it grows by 58 px
     // per 100 % of extra scale.
@@ -140,7 +142,15 @@ Window {
                 Image {
                     x: (parent.width - Metrics.desktopIcon) / 2; y: desk.iconTop
                     width: Metrics.desktopIcon; height: Metrics.desktopIcon
-                    sourceSize: Qt.size(Metrics.desktopIcon * Screen.devicePixelRatio, Metrics.desktopIcon * Screen.devicePixelRatio)
+                    // File-type icons: Windows' 48 px drawing (fewer, darker lines and a border, as Files
+                    // shows it), scaled to the screen; the 64 px+ drawings are much fainter. Folders, the
+                    // bin and app icons keep their large drawings (they match the user's capture).
+                    readonly property bool fileType: !icon.model.isDir && !icon.model.isTrash && icon.model.iconSource === ""
+                                                     && !String(icon.model.path).endsWith(".desktop")
+                    readonly property real request: fileType ? Metrics.desktopIcon : Metrics.desktopIcon * Screen.devicePixelRatio
+                    sourceSize: Qt.size(request, request)
+                    smooth: true
+                    mipmap: false
                     source: icon.model.iconSource !== "" ? icon.model.iconSource : "image://icon/" + icon.model.icon
                 }
                 ShadowLabel {
