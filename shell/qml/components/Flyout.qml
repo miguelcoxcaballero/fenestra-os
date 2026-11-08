@@ -209,6 +209,10 @@ Window {
             anchors.fill: parent
             recipe: flyout.recipe
             shadowKind: flyout.recipe.startsWith("menu") ? "menu" : "popup"
+            // Multi-card flyouts (background hidden: Quick settings, Notification Center) have no
+            // sheet of their own: each card casts its own shadow, so the gap between them is shaded
+            // like Windows' and not a bare strip of wallpaper joining the two cards into one block.
+            shadow: material.fill.visible
         }
         Item {
             id: body

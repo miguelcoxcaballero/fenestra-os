@@ -64,7 +64,8 @@ Flyout {
             readonly property int headerH: Metrics.n("notifications.header.height", 50)
             height: Notifications.count === 0 ? Metrics.n("notifications.empty.height", 232)
                                               : Math.max(Metrics.n("notifications.empty.height", 232), center.availableHeight - calendar.height)
-            clip: true
+            // Clip the content only: clipping the card cut off its shadow.
+            clipContent: true
             Text { x: 17; y: 15; text: Strings.tr("Notifications")
                    color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
             Row {
