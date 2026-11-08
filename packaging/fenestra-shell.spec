@@ -18,7 +18,14 @@ BuildRequires:  layer-shell-qt-devel plasma-wayland-protocols-devel wayland-deve
 BuildRequires:  kf6-kservice-devel kf6-kio-devel kf6-kwindowsystem-devel kf6-networkmanager-qt-devel
 BuildRequires:  kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-kglobalaccel-devel kf6-kconfig-devel
 BuildRequires:  polkit-qt6-1-devel libgweather-devel pipewire-devel
+# KWin effect plugin (kwin/plugins/fenestra-corners): KWin's headers and what its CMake config needs.
+BuildRequires:  kwin-devel libepoxy-devel libdrm-devel
 
+# KWin only loads the corners plugin with the version it was built against (KWIN_PLUGIN_VERSION_STRING).
+%global kwin_ver %(rpm -q --qf '%%{VERSION}' kwin-devel 2>/dev/null | grep -E '^[0-9]' || true)
+%if "%{kwin_ver}" != ""
+Requires:       kwin-libs%{?_isa} = %{kwin_ver}
+%endif
 Requires:       kwin xorg-x11-server-Xwayland layer-shell-qt qt6-qtsvg kscreenlocker kscreen
 # Lock screen: its PAM services (kde, kde-fingerprint), Wi-Fi list, data engines, keyboard layouts, media.
 Requires:       plasma-workspace plasma-nm plasma5support
@@ -85,6 +92,7 @@ fi
 %{_datadir}/aurorae/themes/Fenestra-Light
 %{_datadir}/kwin/tabbox/fenestra
 %{_datadir}/kwin/effects/fenestra-window-motion
+%{_libdir}/qt6/plugins/kwin/effects/plugins/fenestra-corners.so
 %{_datadir}/plasma/look-and-feel/org.fenestra.desktop
 %{_datadir}/plasma/shells/org.fenestra.desktop
 %{_libexecdir}/fenestra/fenestra-lock-hello
