@@ -12,6 +12,9 @@ f=/sys/class/firmware-attributes/samsung-galaxybook/attributes/block_recording/c
 [ -e "$f" ] && { chgrp wheel "$f"; chmod 0664 "$f"; echo "block recording: switchable by wheel"; }
 install -Dm755 "$R/packaging/privacy/fenestra-hello-enroll" /usr/libexec/fenestra/fenestra-hello-enroll
 install -Dm644 "$R/desktop/privacy/org.fenestra.hello.policy" /usr/share/polkit-1/actions/org.fenestra.hello.policy
-restorecon -F /etc/udev/rules.d/70-fenestra-recording-block.rules /usr/libexec/fenestra/fenestra-hello-enroll /usr/share/polkit-1/actions/org.fenestra.hello.policy 2>/dev/null || true
-"$R/packaging/lockscreen/fenestra-lock-hello" enable
+install -Dm644 "$R/desktop/privacy/50-fenestra-enroll.rules" /etc/polkit-1/rules.d/50-fenestra-enroll.rules
+restorecon -F /etc/polkit-1/rules.d/50-fenestra-enroll.rules /etc/udev/rules.d/70-fenestra-recording-block.rules /usr/libexec/fenestra/fenestra-hello-enroll /usr/share/polkit-1/actions/org.fenestra.hello.policy 2>/dev/null || true
+# Face sign-in on the lock screen stays off until the lock screen runs it in its own worker
+# (pam_howdy in the password chain locked the user out when the camera hung).
+"$R/packaging/lockscreen/fenestra-lock-hello" disable || true
 echo "Done."

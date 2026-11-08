@@ -35,9 +35,10 @@ QString positionsPath()
 }
 QString folderIcon(const QString &path)
 {
-    // Empty / full folder icons of the GNOME layer's DING patch (assets/generated/folders).
-    const bool empty = QDir(path).isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
-    return QStringLiteral("file:///usr/share/fenestra/assets/folders/folder-%1.svg").arg(empty ? QStringLiteral("empty") : QStringLiteral("full"));
+    // Windows' folder icons (the icon pack: "folder", "folder-full"). Explorer's "full" icon is a
+    // preview of the FILES inside: a folder holding only other folders (or nothing) is the closed one.
+    const bool hasFiles = !QDir(path).entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty();
+    return hasFiles ? QStringLiteral("folder-full") : QStringLiteral("folder");
 }
 }
 
@@ -90,7 +91,7 @@ void DesktopModel::reload()
     for (const QFileInfo &fi : entries) {
         Item it{fi.fileName(), fi.absoluteFilePath(), {}, {}, fi.isDir(), false, {}};
         if (fi.isDir()) {
-            it.iconSource = folderIcon(fi.absoluteFilePath());
+            it.icon = folderIcon(fi.absoluteFilePath());
         } else if (fi.suffix() == QLatin1String("desktop")) {
             KDesktopFile df(fi.absoluteFilePath());
             it.name = df.readName().isEmpty() ? fi.completeBaseName() : df.readName();

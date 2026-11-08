@@ -104,6 +104,7 @@ fi
 %{_udevrulesdir}/70-fenestra-recording-block.rules
 %{_libexecdir}/fenestra/fenestra-hello-enroll
 %{_datadir}/polkit-1/actions/org.fenestra.hello.policy
+%{_datadir}/polkit-1/rules.d/50-fenestra-enroll.rules
 
 
 %changelog

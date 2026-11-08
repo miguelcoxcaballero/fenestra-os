@@ -1,0 +1,10 @@
+// Fenestra: adding a fingerprint or a face to one's own account needs no extra authentication for
+// the user signed in at the machine (active local session), as the user asked; Windows asks for the
+// PIN here (protection against someone enrolling at an unlocked PC). Remove this file to get the
+// prompt back (fprintd's default: auth_self_keep).
+polkit.addRule(function(action, subject) {
+    if ((action.id == "net.reactivated.fprint.device.enroll" || action.id == "org.fenestra.hello.enroll")
+        && subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});
