@@ -15,6 +15,11 @@
 #include <QDBusServiceWatcher>
 #include <QDBusVariant>
 #include <QLoggingCategory>
+#include <QSocketNotifier>
+
+#include <csignal>
+#include <fcntl.h>
+#include <unistd.h>
 
 using namespace AdaptiveColorModel;
 
@@ -45,6 +50,13 @@ constexpr double kStartSeconds = 2.0;  // turning the feature on: quick, but sub
 int quantise(double k)
 {
     return std::clamp(int(std::lround(k / kStepK)) * kStepK, 1000, kMaxTemperature);
+}
+
+int g_termPipe[2] = {-1, -1};
+void onTerm(int)
+{
+    const char c = 1;
+    [[maybe_unused]] auto n = ::write(g_termPipe[1], &c, 1);
 }
 
 KConfigGroup nightColor()
@@ -130,7 +142,7 @@ AdaptiveColor::AdaptiveColor(QObject *parent)
         if (group.name() != kNightColor)
             return;
         const int day = std::clamp(group.readEntry(kDayKey, kMaxTemperature), 1000, kMaxTemperature);
-        if (m_wroteDay ? day != m_sentK : day != m_baseDay) {
+        if (m_wroteDay ? day != m_lastDay : day != m_baseDay) {
             // Someone else (KDE's Night light page) set the day temperature: that is the cap now.
             m_baseDay = day;
             m_wroteDay = false;
@@ -153,6 +165,7 @@ AdaptiveColor::AdaptiveColor(QObject *parent)
     connect(m_kwinWatcher, &QDBusServiceWatcher::serviceRegistered, this, [this] {
         m_previewing = false; // a new KWin has no preview of ours
         m_sentK = 0;
+        m_nlKnown = false;
         queryNightLight();
     });
     connect(m_kwinWatcher, &QDBusServiceWatcher::serviceUnregistered, this, [this] {
@@ -195,6 +208,24 @@ AdaptiveColor::AdaptiveColor(QObject *parent)
         m_thread.wait(1000);
     });
 
+    // systemd stops the shell with SIGTERM, which skips aboutToQuit: give the screen back
+    // first (user's DayTemperature, no preview), then die as before.
+    struct sigaction old {};
+    if (sigaction(SIGTERM, nullptr, &old) == 0 && old.sa_handler == SIG_DFL && ::pipe2(g_termPipe, O_CLOEXEC | O_NONBLOCK) == 0) {
+        auto *n = new QSocketNotifier(g_termPipe[0], QSocketNotifier::Read, this);
+        connect(n, &QSocketNotifier::activated, this, [this] {
+            m_quitting = true;
+            restore();
+            ::signal(SIGTERM, SIG_DFL);
+            ::raise(SIGTERM);
+        });
+        struct sigaction sa {};
+        sa.sa_handler = onTerm;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_RESTART;
+        sigaction(SIGTERM, &sa, nullptr);
+    }
+
     readSetting();
     queryNightLight();
 }
@@ -229,6 +260,7 @@ void AdaptiveColor::readKWinConfig()
         m_baseDay = std::clamp(g.readEntry(kBaseKey, kMaxTemperature), 1000, kMaxTemperature);
         m_wroteDay = true;
         m_sentK = day;
+        m_lastDay = day;
         m_appliedK = day;
     } else {
         m_baseDay = day;
@@ -274,7 +306,8 @@ void AdaptiveColor::nightLightChanged(const QVariantMap &props)
     take("running", m_nlRunning);
     take("inhibited", m_nlInhibited);
     take("daylight", m_nlDaylight);
-    if (relevant || m_output == Output::None) {
+    if (relevant || !m_nlKnown) {
+        m_nlKnown = true;
         qCInfo(lcAdaptive) << "Night light running" << m_nlRunning << "inhibited" << m_nlInhibited << "daylight" << m_nlDaylight;
         update();
     }
@@ -462,6 +495,7 @@ void AdaptiveColor::writeDayTemperature(int kelvin)
     g.writeEntry(kDayKey, kelvin, KConfig::Notify);
     g.sync();
     m_wroteDay = true;
+    m_lastDay = kelvin;
 }
 
 void AdaptiveColor::restore()

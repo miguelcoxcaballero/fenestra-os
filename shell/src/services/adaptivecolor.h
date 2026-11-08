@@ -126,6 +126,8 @@ private:
     int m_baseDay = AdaptiveColorModel::kMaxTemperature; // the user's own DayTemperature
     int m_appliedK = AdaptiveColorModel::kMaxTemperature;
     int m_sentK = 0;                // last value sent down the output path
+    int m_lastDay = 0;              // last DayTemperature written to kwinrc
+    bool m_nlKnown = false;         // Night light's state was read once
     int m_ambientK = 0;
     double m_lux = 0;
     AdaptiveColorModel::Xy m_ambient = AdaptiveColorModel::kD65;

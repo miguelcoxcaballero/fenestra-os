@@ -14,6 +14,8 @@ rm -f /run/dbus/pid; mkdir -p /run/dbus; dbus-daemon --system --fork 2>/dev/null
 mkdir -p ~/.config/fenestra
 printf '[General]\nSource=Times\n[Times]\nSunriseStart=06:00:00\nSunsetStart=18:00:00\nTransitionDuration=1800\n' > ~/.config/knighttimerc
 rm -f ~/.config/kwinrc ~/.config/fenestra/shell.conf
+# No idle lock during the bench (it would pause Adaptive color); locking is tested explicitly.
+printf '[Daemon]\nAutolock=false\nLockOnResume=false\nTimeout=0\n' > ~/.config/kscreenlockerrc
 
 # Fake IIO device, the attributes of the Galaxy Book4 Pro's HID sensor ("als").
 ALS=/tmp/als/iio:device0
@@ -65,10 +67,11 @@ run() {
     REC=$!
     sleep 2
     scene "start: daylight 6500K 400lx (Night light off)"
-    FENESTRA_ALS_PATH=/tmp/als QT_LOGGING_RULES="fenestra.adaptivecolor.debug=true" fenestra-shell > /out/shell.log 2>&1 &
+    FENESTRA_ALS_PATH=/tmp/als QT_LOGGING_RULES="fenestra.adaptivecolor=true" fenestra-shell > /out/shell.log 2>&1 &
     SHELL_PID=$!
     wait_for 'grep -q FENESTRA_SHELL_READY /out/shell.log' 60
     sleep 12
+    if [ -z "${SHORT:-}" ]; then
     scene "office 4000K 300lx"; als 4000 300; sleep 30
     scene "warm lamp 2700K 100lx"; als 2700 100; sleep 30
     scene "cool office 5000K 500lx"; als 5000 500; sleep 30
@@ -91,6 +94,9 @@ run() {
     sleep 60
     a1=$(thread_cpu $SHELL_PID); p1=$(awk '{print $14+$15}' /proc/$SHELL_PID/stat)
     echo "cpu adaptive-color thread: $((a1 - a0)) ticks in 60 s; whole shell (software rendering): $((p1 - p0)) ticks (CLK_TCK $(getconf CLK_TCK))" >> /out/report.txt
+    else
+    scene "office 4000K 300lx"; als 4000 300; sleep 25
+    fi
     # Night light on, schedule 06:00-18:00 and local noon: daytime -> DayTemperature path.
     scene "Night light on (day): DayTemperature path"; kwinrc --key Active true; kwinrc --key Mode DarkLight; sleep 6
     echo "night light: running=$(nl running) daylight=$(nl daylight)" >> /out/report.txt
@@ -102,11 +108,18 @@ run() {
     scene "Night light Constant 4500K: Night light wins"; kwinrc --key NightTemperature 4500; kwinrc --key Mode Constant; sleep 6
     als 2700 100; sleep 25
     scene "Night light off again"; kwinrc --key Active false; kwinrc --key Mode DarkLight; sleep 25
-    scene "quit shell"; kill $SHELL_PID; sleep 6
+    scene "screen locked: sampling stops"
+    local s0 s1
+    s0=$(grep -c "sample xy" /out/shell.log)
+    gdbus call --session -d org.freedesktop.ScreenSaver -o /ScreenSaver -m org.freedesktop.ScreenSaver.Lock >/dev/null
+    sleep 3; s0=$(grep -c "sample xy" /out/shell.log); sleep 20; s1=$(grep -c "sample xy" /out/shell.log)
+    echo "locked: $((s1 - s0)) sensor samples in 20 s (0 expected), locked=$(gdbus call --session -d org.freedesktop.ScreenSaver -o /ScreenSaver -m org.freedesktop.ScreenSaver.GetActive)" >> /out/report.txt
+    scene "quit shell (SIGTERM)"; kill $SHELL_PID; sleep 6
     echo "kwinrc NightColor after the shell quit: $(grep -A8 '^\[NightColor\]' ~/.config/kwinrc | tr '\n' ' ')" >> /out/report.txt
     echo "night light after quit: current=$(nl currentTemperature)" >> /out/report.txt
     kill $REC $KWIN 2>/dev/null
 }
+export SHORT=${SHORT:-}
 export -f run als scene conf wait_for nl kwinrc thread_cpu
 : > /out/report.txt; : > /out/scenes.txt
 timeout "${TIMEOUT:-900}" dbus-run-session -- bash -c run
