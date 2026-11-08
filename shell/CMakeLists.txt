@@ -191,6 +191,12 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMA
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)
 # App window open/close/minimize/maximize motion as Windows 11 (KWin scripted effect).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/effects/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/effects)
+# Windows 11 window corners drawn by the compositor (KWin C++ effect plugin; needs kwin-devel and
+# is only loaded by the exact KWin version it was built against).
+option(FENESTRA_BUILD_KWIN_PLUGINS "Build the KWin effect plugins in ../kwin/plugins (needs kwin-devel)" ON)
+if(FENESTRA_BUILD_KWIN_PLUGINS)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../kwin/plugins/fenestra-corners ${CMAKE_CURRENT_BINARY_DIR}/fenestra-corners)
+endif()
 # Look-and-feel package (kdeglobals defaults) and the lock screen: Plasma 6's kscreenlocker takes
 # it from the shell package named in plasmashellrc [Shell] ShellPackage (KWinIntegration sets it).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../lnf/org.fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/look-and-feel)

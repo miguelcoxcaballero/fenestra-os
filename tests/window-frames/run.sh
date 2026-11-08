@@ -9,7 +9,11 @@
 #      CAPFONT (kdeglobals [WM] activeFont)  ACTIVE (caption of the focused window)
 #      STATE (--hover=close|minimize|maximize, --pressed=..., --dump: clients.py)
 #      SHELL_BUILD (a tests/shell-kwin build dir: the shell's desktop instead of the windows)
-#      KEEP=1 NAME=... (keep the session; act-shot.sh focuses a window and captures)
+#      KEEP=1 NAME=... (keep the session; act-shot.sh focuses a window and captures; split.sh tiles)
+#      CORNERS (a built fenestra_corners.so: the rounded-corners effect, kwin/plugins/fenestra-corners)
+#      APPS=1 (mount the host's Brave /opt/brave.com/brave and Claude desktop /usr/lib/claude-desktop:
+#      CHROMIUM=1 / ELECTRON=1 in session.sh open them)
+#      FX=1 (also Fenestra's scripted effects from kwin/effects: window motion)
 # Measurements: measure.py (frames), desk_boxes.py (desktop labels).
 set -u
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
@@ -21,11 +25,14 @@ FONTS=(); for f in "$HOME/.local/share/fonts:/root/.local/share/fonts" /usr/loca
 for m in /usr/lib64/qt6/plugins/org.kde.kdecoration3/org.kde.breeze.so /usr/lib64/gtk-3.0/modules/libwindow-decorations-gtk-module.so /usr/lib64/gtk-3.0/modules/libcolorreload-gtk-module.so; do
     [ -e "$m" ] && FONTS+=(-v "$m:$m:ro"); done
 # Icon files under test (CFG/icons/<theme>/...) are mounted over the user's icon themes.
+if [ -n "${APPS:-}" ]; then
+    for d in /opt/brave.com/brave /usr/lib/claude-desktop; do [ -d "$d" ] && FONTS+=(-v "$d:$d:ro"); done
+fi
 if [ -d "$CFG/icons" ]; then
     while IFS= read -r f; do FONTS+=(-v "$f:/root/.local/share/icons/${f#$CFG/icons/}:ro"); done < <(find "$CFG/icons" -type f)
 fi
 exec podman run --rm --security-opt label=disable --device /dev/dri/renderD128 --cap-add SYS_NICE \
-    -e SCALE="${SCALE:-1.6}" -e W="${W:-2880}" -e H="${H:-1800}" -e STATE="${STATE:-}" -e DECO="${DECO:-Fenestra-Dark}" -e LIB="${LIB:-}" -e BS="${BS:-}" -e ACTIVE="${ACTIVE:-Qt SSD}" -e CAPFONT="${CAPFONT:-}" -e SHELL_BUILD="${SHELL_BUILD:+1}" -e DESK_BG="${DESK_BG:-}" -e SHELL_LANG="${SHELL_LANG:-}" -e WAIT="${WAIT:-6}" -e HOSTUSER="$USER" -e KEEP="${KEEP:-}" ${NAME:+--name $NAME} \
-    -v "$REPO:/src:ro" -v "$CFG:/cfg:ro" ${SHELL_BUILD:+-v "$SHELL_BUILD:/build"} -v "$OUT:/out" "${FONTS[@]}" \
+    -e SCALE="${SCALE:-1.6}" -e W="${W:-2880}" -e H="${H:-1800}" -e STATE="${STATE:-}" -e DECO="${DECO:-Fenestra-Dark}" -e LIB="${LIB:-}" -e BS="${BS:-}" -e ACTIVE="${ACTIVE:-Qt SSD}" -e CAPFONT="${CAPFONT:-}" -e SHELL_BUILD="${SHELL_BUILD:+1}" -e DESK_BG="${DESK_BG:-}" -e SHELL_LANG="${SHELL_LANG:-}" -e WAIT="${WAIT:-6}" -e HOSTUSER="$USER" -e KEEP="${KEEP:-}" -e FX="${FX:-}" -e APPS="${APPS:-}" ${NAME:+--name $NAME} \
+    -v "$REPO:/src:ro" -v "$CFG:/cfg:ro" ${SHELL_BUILD:+-v "$SHELL_BUILD:/build"} -v "$OUT:/out" "${FONTS[@]}" ${CORNERS:+-v "$(realpath "$CORNERS"):/usr/lib64/qt6/plugins/kwin/effects/plugins/fenestra-corners.so:ro"} \
     -v /usr/share/icons/Fenestra:/usr/share/icons/Fenestra:ro -v "$HOME/.local/share/icons:/root/.local/share/icons:ro" \
     localhost/fenestra-kwinlab:latest bash /src/tests/window-frames/session.sh

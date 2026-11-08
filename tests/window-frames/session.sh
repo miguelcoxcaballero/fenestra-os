@@ -25,9 +25,20 @@ BorderSizeAuto=false
 Backend=OpenGL
 [Plugins]
 blurEnabled=false
+# as the Fenestra session (kwinrc of the live system): no Plasma open/close/maximize animations
+fadeEnabled=false
+glideEnabled=false
+magiclampEnabled=false
+maximizeEnabled=false
+scaleEnabled=false
+squashEnabled=false
 [Xwayland]
 Scale=1
 RC
+if [ -n "${FX:-}" ]; then
+    mkdir -p ~/.local/share/kwin; cp -r /src/kwin/effects ~/.local/share/kwin/effects
+    sed -i 's/^blurEnabled=false/blurEnabled=false\nfenestra-window-motionEnabled=true/' ~/.config/kwinrc
+fi
 printf '[General]\nColorScheme=BreezeDark\n[WM]\nactiveFont=%s\n' "${CAPFONT:-Segoe UI Variable,10,-1,5,50,0,0,0,0,0}" > ~/.config/kdeglobals
 # Dark mode reaches GTK 4 / libadwaita through the Settings portal, as in the real session.
 mkdir -p ~/.config/xdg-desktop-portal; printf '[preferred]\ndefault=gtk\n' > ~/.config/xdg-desktop-portal/portals.conf
@@ -92,6 +103,16 @@ GDK_BACKEND=x11 python3 $C gtk3-ssd "X11 SSD" >/out/x11.log 2>&1 &
 python3 $C gtk4-adw "GTK4 Adw" $S >/out/adw.log 2>&1 &
 python3 $C gtk4 "GTK4 HeaderBar" $S >/out/gtk4.log 2>&1 &
 python3 $C gtk3-csd "GTK3 CSD" $S >/out/gtk3csd.log 2>&1 &
+if [ -n "${APPS:-}" ]; then
+    # Chromium (Brave) with the GTK title bar (system theme) and Electron (Claude desktop,
+    # titleBarStyle hidden + titleBarOverlay), both native Wayland like on the real system.
+    mkdir -p /tmp/brave/Default
+    printf '{"extensions":{"theme":{"system_theme":1}},"browser":{"custom_chrome_frame":true}}' > /tmp/brave/Default/Preferences
+    [ -x /opt/brave.com/brave/brave ] && /opt/brave.com/brave/brave --no-sandbox --user-data-dir=/tmp/brave --no-first-run \
+        --ozone-platform=wayland --gtk-version=3 --disable-gpu --window-size=760,520 "data:text/html,<title>Brave</title>" >/out/brave.log 2>&1 &
+    [ -x /usr/lib/claude-desktop/claude-desktop ] && ELECTRON_OZONE_PLATFORM_HINT=wayland /usr/lib/claude-desktop/claude-desktop \
+        --no-sandbox --disable-gpu >/out/claude.log 2>&1 &
+fi
 sleep ${WAIT:-6}
 # The window under test gets the focus (ACTIVE=caption), the rest are inactive.
 printf 'workspace.windowList().forEach(w => { if (w.caption === "%s") workspace.activeWindow = w; });\n' "${ACTIVE:-Qt SSD}" > /tmp/activate.js
