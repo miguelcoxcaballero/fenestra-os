@@ -19,6 +19,7 @@ find_package(KF6NetworkManagerQt 6.10 REQUIRED)
 find_package(KF6PulseAudioQt 1.5 REQUIRED)
 find_package(KF6GlobalAccel 6.10 REQUIRED)
 find_package(KF6Config 6.10 REQUIRED)
+find_package(KF6IdleTime 6.10 REQUIRED)
 find_package(PolkitQt6-1 0.200 REQUIRED)
 list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${ECM_FIND_MODULE_DIR})
 find_package(WaylandScanner REQUIRED)
@@ -49,6 +50,7 @@ qt_add_executable(fenestra-shell
     src/services/performancemode.cpp src/services/performancemode.h
     src/services/recordingblock.cpp src/services/recordingblock.h
     src/services/lockosd.cpp src/services/lockosd.h
+    src/services/poweridle.cpp src/services/poweridle.h
     src/services/kbdbacklight.cpp src/services/kbdbacklight.h
     src/services/adaptivecolor.cpp src/services/adaptivecolor.h src/services/adaptivecolormodel.h
     src/services/trayitems.cpp src/services/trayitems.h
@@ -158,7 +160,7 @@ target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJ
 target_link_libraries(fenestra-shell PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::DBus Qt6::WaylandClient Qt6::WaylandClientPrivate
     LayerShellQt::Interface Wayland::Client
-    KF6::Service KF6::KIOGui KF6::KIOCore KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt KF6::GlobalAccel KF6::ConfigCore
+    KF6::Service KF6::KIOGui KF6::KIOCore KF6::WindowSystem KF6::NetworkManagerQt KF6::PulseAudioQt KF6::GlobalAccel KF6::ConfigCore KF6::IdleTime
     PolkitQt6-1::Agent PkgConfig::GWEATHER PkgConfig::PIPEWIRE)
 
 install(TARGETS fenestra-shell RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

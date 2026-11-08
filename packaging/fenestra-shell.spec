@@ -16,7 +16,7 @@ BuildRequires:  cmake ninja-build gcc-c++ extra-cmake-modules python3
 BuildRequires:  qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtwayland-devel
 BuildRequires:  layer-shell-qt-devel plasma-wayland-protocols-devel wayland-devel
 BuildRequires:  kf6-kservice-devel kf6-kio-devel kf6-kwindowsystem-devel kf6-networkmanager-qt-devel
-BuildRequires:  kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-kglobalaccel-devel kf6-kconfig-devel
+BuildRequires:  kf6-bluez-qt-devel pulseaudio-qt-qt6-devel kf6-kglobalaccel-devel kf6-kconfig-devel kf6-kidletime-devel
 BuildRequires:  polkit-qt6-1-devel libgweather-devel pipewire-devel
 # KWin effect plugin (kwin/plugins/fenestra-corners): KWin's headers and what its CMake config needs.
 BuildRequires:  kwin-devel libepoxy-devel libdrm-devel
