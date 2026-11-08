@@ -36,14 +36,6 @@ check L-no-lockout-dead-camera-hung-fprintd test $(( (t1 - t0) / 1000000 )) -lt 
 check L-stand-ins-killed test "$($C sh 'pgrep -x sleep | wc -l')" = 1
 $C finger wait
 
-# 0b. A dead password worker (kscreenlocker never restarts a cancelled/killed one: "DBus worker not
-#     initialized" forever, the lock-out of 2026-11-08): the lock screen rebuilds the workers.
-start
-$C sh "pkill -f 'kscreenlocker_worker kde root\$'"; sleep 7
-$C key 57; sleep 2; $C type Fenestra1; $C key 28
-check L-dead-worker-revived exited
-check L-revive-logged has "FENESTRA_LOCK revive"
-
 # 1. Password: a wrong one shows Windows' message and OK; the right one unlocks.
 $C face fail; $C sh "echo 1 > /tmp/face-delay"
 start
@@ -81,7 +73,7 @@ L=[l.split() for l in open(sys.argv[1]) if 'FENESTRA_FRAME' in l]
 # Only frames with the sign-in screen up (t = 620): on the clock view the Hello animation is hidden
 # and nothing is drawn between heartbeats. The first is the idle time before it, the last the
 # greeter quitting after the smile.
-S=[x for x in L[1:-1] if float(x[4]) >= 620][1:]
+S=[x for x in L[1:-2] if float(x[4]) >= 620][1:]   # (the last two: the smile done, the workers stopped, quitting)
 d=[float(x[3]) for x in S]
 late=[(x[3], x[4], x[5]) for x in S if float(x[3]) > 25]
 print("hello frames", len(d), "late", late, file=sys.stderr)
@@ -143,6 +135,18 @@ check L-boot-locked test "$($C sh 'pgrep -x kscreenlocker_g | wc -l')" = 1
 $C shot 10-boot-lock
 $C key 57; sleep 2; $C type Fenestra1; $C key 28; sleep 2
 check L-boot-unlocked test "$($C sh 'pgrep -x kscreenlocker_g | wc -l')" = 0
+
+# 6. A dead password worker (kscreenlocker never restarts a cancelled or crashed one: "DBus worker
+#    not initialized" for ever, as in the lock-out of 2026-11-08). The lock screen notices and ends
+#    its greeter; KWin's locker starts a new one, still locked; the password unlocks.
+$C sh "loginctl lock-session 2>/dev/null; dbus-send --session --dest=org.freedesktop.ScreenSaver --type=method_call /ScreenSaver org.freedesktop.ScreenSaver.Lock"; sleep 5
+g1=$($C sh 'pgrep -x kscreenlocker_g')
+$C sh "pkill -f 'kscreenlocker_worker kde '\$USER'\$' ; pkill -f 'kscreenlocker_worker kde root\$'"; sleep 9
+g2=$($C sh 'pgrep -x kscreenlocker_g')
+echo "greeter before $g1, after $g2"
+check L-dead-worker-new-greeter test -n "$g1" -a -n "$g2" -a "$g1" != "$g2"
+$C key 57; sleep 2; $C type Fenestra1; $C key 28; sleep 3
+check L-dead-worker-unlocked test "$($C sh 'pgrep -x kscreenlocker_g | wc -l')" = 0
 podman rm -f fenestra-lockbench >/dev/null 2>&1
 echo "screenshots and logs: $OUT"
 [ $FAILS = 0 ] && echo "QA_RESULT PASS" || { echo "QA_RESULT FAIL ($FAILS)"; exit 1; }

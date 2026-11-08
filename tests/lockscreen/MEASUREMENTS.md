@@ -104,6 +104,19 @@ password never got asked — the user was locked out. Now:
   never returns (hung fprintd): the password unlocks 0.46-0.56 s after Enter; both stand-ins are
   gone after the unlock; over 40 s the face was tried exactly twice.
 
+### A dead worker
+
+kscreenlocker 6.8.2 never restarts a PAM worker: `PamAuthenticator::cancel()` (also reached through
+`stopAuthenticating()`) quits the worker process and nothing starts it again, and a crashed worker
+leaves a D-Bus link that answers "Not connected to D-Bus server". Both give "DBus worker not
+initialized, cannot authenticate yet" for ever — the log of the lock-out. Version 1's "Try again"
+called `authenticator.cancel()`. Now the lock screen never cancels, and when the password worker
+fails twice without a password being sent (or does not ask for the password for 5 s) it switches
+the authenticator type (Smartcard, then Regular), which makes kscreenlocker build new workers; with
+a dead worker kscreenlocker_greet 6.8.2 crashes doing it, and KWin's locker starts a new greeter at
+once (still locked, new workers). Bench step 6: password worker killed under KWin's real locker →
+new greeter (pid 65 → 426) → the password unlocks.
+
 ## One sign-in screen
 
 Boot: GDM signs the user in by itself (`fenestra-sign-in enable USER`), `fenestra-session` sees

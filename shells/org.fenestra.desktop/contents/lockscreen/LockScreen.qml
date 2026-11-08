@@ -90,17 +90,21 @@ Item {
     // Never locked out. kscreenlocker kills a PAM worker for good when it is cancelled or stopped
     // (PamAuthenticator::cancel(): no restart; "DBus worker not initialized" from then on), and a
     // PAM module can hang. If the password worker has not asked for the password for 5 s while
-    // nothing is being checked, both workers are made again: switching the authenticator type
-    // (Fingerprint, then Regular) makes kscreenlocker build new ones and start them.
+    // nothing is being checked (or it fails twice with no password sent: a crashed worker), the
+    // lock screen starts again with new workers (see revive()).
     property real quietSince: Date.now()
     property int revivals: 0
     function revive() {
+        if (unlocking) return
         revivals++
         root.log("FENESTRA_LOCK revive", revivals)
-        const A = ScreenLocker.Authenticators.Authenticator
-        authenticator.authenticator = A ? A.Fingerprint : 1
-        authenticator.authenticator = A ? A.Regular : 0
-        quietSince = Date.now()
+        // kscreenlocker builds new workers when the authenticator type changes (Smartcard, then
+        // Regular: kde-smartcard's worker comes and goes). kscreenlocker_greet 6.8.2 crashes doing
+        // so while a worker is dead (SIGSEGV, bench) — which also recovers: KWin's screen locker
+        // (ksld) starts a new greeter with new workers at once, the session staying locked (after 3
+        // restarts in one lock it shows its emergency screen). Either way the password works again.
+        authenticator.authenticator = 2       // Authenticators.Smartcard
+        Qt.callLater(() => { authenticator.authenticator = 0 })   // Authenticators.Regular
     }
     Timer {
         interval: 1000; repeat: true
@@ -155,6 +159,7 @@ Item {
     // A new PAM conversation: Howdy looks again (Windows: "Try again" / the face option).
     property bool faceMatched: false
     property bool passwordInFlight: false
+    property int brokenFailures: 0
     property bool passwordSent: false
     // "Try again": pam_fenestra_hello tries the face twice per lock screen, then waits for this
     // (a file named after the greeter's pid, which is the worker's parent).
@@ -177,8 +182,15 @@ Item {
         function onFailed(kind, auth) {
             root.log("FENESTRA_LOCK failed", kind)
             if (kind === root.fingerType) { root.fingerState = "failed"; root.faceFailed(); return }
-            if (kind !== 0) return
+            if (kind !== 0 || root.unlocking) return   // after a success the workers are being stopped
             root.promptPending = false
+            if (!root.passwordInFlight) {
+                // A failure with no password sent: the worker is dead or broken (a crashed worker
+                // answers every call with "Not connected to D-Bus server"). Not a wrong password.
+                if (++root.brokenFailures >= 2) { root.brokenFailures = 0; root.revive() }
+                return
+            }
+            root.brokenFailures = 0
             root.passwordInFlight = false
             password.text = ""
             root.message = root.tr("The password is incorrect. Try again.", "La contraseña no es correcta. Inténtalo de nuevo.")
