@@ -190,6 +190,7 @@ endif()
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/privacy/70-fenestra-recording-block.rules DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/udev/rules.d)
 install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/privacy/fenestra-hello-enroll DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/privacy/org.fenestra.hello.policy DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/actions)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/privacy/50-fenestra-enroll.rules DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/rules.d)
 # Power on battery (any laptop): tuned profile that tuned-ppd uses for "Balanced" unplugged.
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/power/tuned/fenestra-battery DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tuned/profiles)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMAKE_INSTALL_DATADIR}/aurorae/themes)
