@@ -11,8 +11,8 @@ Item {
     property int bars: 0
     property string name: ""
     readonly property string glyph: kind === "wired" ? "" : ""   // Wi-Fi: the pack's tray glyphs
-    readonly property string pack: StandardPaths.writableLocation(StandardPaths.GenericDataLocation).toString() + "/fenestra/packs/windows-11-user-export/glyphs/cp/"
-    readonly property string icon: kind === "wired" ? "" : kind === "wifi" ? pack + "wifi-" + bars + ".svg" : pack + "wifi-offline.svg"
+    readonly property string pack: StandardPaths.writableLocation(StandardPaths.GenericDataLocation).toString() + "/fenestra/packs/windows-11-user-export/glyphs/cp/white/"
+    readonly property string icon: pack + (kind === "wired" ? "wired" : kind === "wifi" ? "wifi-" + bars : "wifi-offline") + ".svg"
     readonly property string fallbackIcon: kind === "wifi"
         ? "file:///usr/share/fenestra/assets/status/network-wireless-signal-" + ["none", "weak", "ok", "good", "excellent"][bars] + "-symbolic.svg"
         : kind === "wired" ? "file:///usr/share/fenestra/assets/security/network-wired.svg" : "file:///usr/share/fenestra/assets/status/network-wireless-offline-symbolic.svg"

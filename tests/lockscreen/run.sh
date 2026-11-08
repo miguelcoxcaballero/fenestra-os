@@ -44,7 +44,10 @@ $C key 57; sleep 2; $C shot 02-signin
 check L-reveal-smooth python3 - "$OUT/greet.log" <<'PY'
 import sys
 L=[l.split() for l in open(sys.argv[1]) if 'FENESTRA_FRAME' in l]
-d=[float(x[3]) for x in L[1:] if 0 < float(x[4]) < 620]
+# The frame trace has a line per presented frame; the first one of the reveal also carries the idle
+# time before it (nothing is drawn while nothing changes), so it is left out.
+d=[float(x[3]) for x in L[1:] if 0 < float(x[4]) < 620][1:]
+print("reveal frames", len(d), "max", max(d) if d else None, file=sys.stderr)
 sys.exit(0 if d and max(d) <= 25 else 1)
 PY
 $C type wrongpass; $C key 28; sleep 3.5; $C shot 03-wrong
@@ -65,8 +68,12 @@ check L-unlock-face exited
 check L-hello-smooth python3 - "$OUT/greet.log" <<'PY'
 import sys
 L=[l.split() for l in open(sys.argv[1]) if 'FENESTRA_FRAME' in l]
-d=[float(x[3]) for x in L[1:-1]]   # the last one is the greeter quitting after the smile
-late=[(x[3], x[4], x[5]) for x in L[1:-1] if float(x[3]) > 25]
+# Only frames with the sign-in screen up (t = 620): on the clock view the Hello animation is hidden
+# and nothing is drawn between heartbeats. The first is the idle time before it, the last the
+# greeter quitting after the smile.
+S=[x for x in L[1:-1] if float(x[4]) >= 620][1:]
+d=[float(x[3]) for x in S]
+late=[(x[3], x[4], x[5]) for x in S if float(x[3]) > 25]
 print("hello frames", len(d), "late", late, file=sys.stderr)
 sys.exit(0 if len(d) > 60 and not late else 1)
 PY

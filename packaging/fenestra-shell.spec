@@ -46,8 +46,6 @@ python3 tools/build-aurorae-theme.py
 %install
 %cmake_install
 install -Dm755 packaging/lockscreen/fenestra-lock-hello %{buildroot}%{_libexecdir}/fenestra/fenestra-lock-hello
-%{_libexecdir}/fenestra/fenestra-sign-in
-%{_libdir}/security/pam_fenestra_hello.so
 install -Dm755 packaging/lockscreen/fenestra-sign-in %{buildroot}%{_libexecdir}/fenestra/fenestra-sign-in
 # Windows Hello for the lock screen: face + fingerprint in kscreenlocker's parallel worker only.
 install -d %{buildroot}%{_libdir}/security
@@ -99,6 +97,8 @@ fi
 %{_datadir}/plasma/look-and-feel/org.fenestra.desktop
 %{_datadir}/plasma/shells/org.fenestra.desktop
 %{_libexecdir}/fenestra/fenestra-lock-hello
+%{_libexecdir}/fenestra/fenestra-sign-in
+%{_libdir}/security/pam_fenestra_hello.so
 %{_datadir}/xdg-desktop-portal/fenestra-portals.conf
 %{_prefix}/lib/tuned/profiles/fenestra-battery
 %{_udevrulesdir}/70-fenestra-recording-block.rules
