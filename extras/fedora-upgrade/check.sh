@@ -77,6 +77,13 @@ if [ -x "$L/nautilus" ]; then
     have=$(strings "$L/nautilus" 2>/dev/null | grep -m1 -oE '^4[0-9]\.[0-9]+(\.[0-9]+)?$' | cut -d. -f1)
     if [ -n "$want" ] && [ "$want" = "$have" ]; then ok "Explorer layer matches Nautilus $want"
     else bad "Explorer layer built for Nautilus ${have:-?}, system has ${want:-?}  ->  bash extras/fedora-upgrade/nautilus-user-refresh.sh"; fi
+    # A layer refreshed before the open / save dialog existed has no nautilus-file-chooser.ui: every
+    # app's Save as then shows stock Nautilus' chooser instead of the Explorer dialog.
+    [ -f "$L/overlay/ui/nautilus-file-chooser.ui" ] && ok "Explorer open / save dialog in the layer" \
+        || bad "Explorer layer has no open / save dialog  ->  bash extras/fedora-upgrade/nautilus-user-refresh.sh"
+    if [ -f ~/.local/share/nautilus-python/extensions/fenestra-explorer.py ] && [ ! -f ~/.local/share/nautilus-python/extensions/fenestra_chooser.py ]; then
+        bad "per-user Explorer modules lack fenestra_chooser.py  ->  bash extras/fedora-upgrade/nautilus-user-refresh.sh"
+    fi
 fi
 
 hdr "Third-party repositories"

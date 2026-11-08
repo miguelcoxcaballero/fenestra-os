@@ -16,7 +16,8 @@ _L = {
            'Cancel': 'Cancelar', 'Select all': 'Seleccionar todo', 'Show hidden files': 'Mostrar archivos ocultos',
            'Properties': 'Propiedades', 'Close': 'Cerrar', 'Hide Folders': 'Ocultar carpetas',
            'Browse Folders': 'Examinar carpetas', '_Save': '_Guardar', '_Open': '_Abrir', '_Select': '_Seleccionar',
-           'Name': 'Nombre', 'Date modified': 'Fecha de modificación', 'Type': 'Tipo', 'Size': 'Tamaño'},
+           'Name': 'Nombre', 'Date modified': 'Fecha de modificación', 'Type': 'Tipo', 'Size': 'Tamaño',
+           'Recent locations': 'Ubicaciones recientes', 'No items match your search.': 'Ningún elemento coincide con el criterio de búsqueda.', 'Get help': 'Muestra ayuda.'},
 }
 
 
