@@ -49,6 +49,7 @@ qt_add_executable(fenestra-shell
     src/services/performancemode.cpp src/services/performancemode.h
     src/services/recordingblock.cpp src/services/recordingblock.h
     src/services/kbdbacklight.cpp src/services/kbdbacklight.h
+    src/services/adaptivecolor.cpp src/services/adaptivecolor.h src/services/adaptivecolormodel.h
     src/services/trayitems.cpp src/services/trayitems.h
     src/services/startservices.cpp src/services/startservices.h
     src/services/search.cpp src/services/search.h
@@ -197,6 +198,20 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMA
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)
 # App window open/close/minimize/maximize motion as Windows 11 (KWin scripted effect).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/effects/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/effects)
+# Windows 11 window corners drawn by the compositor (KWin C++ effect plugin; needs kwin-devel and
+# is only loaded by the exact KWin version it was built against).
+option(FENESTRA_BUILD_KWIN_PLUGINS "Build the KWin effect plugins in ../kwin/plugins (needs kwin-devel)" ON)
+if(FENESTRA_BUILD_KWIN_PLUGINS)
+    # Without kwin-devel (and the libepoxy/libdrm headers its CMake config looks up) the shell
+    # still builds; the RPM lists the plugin, so a package build without it fails.
+    find_package(Qt6 QUIET COMPONENTS Widgets)
+    find_package(KWin QUIET)
+    if(KWin_FOUND AND TARGET Qt6::Widgets)
+        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../kwin/plugins/fenestra-corners ${CMAKE_CURRENT_BINARY_DIR}/fenestra-corners)
+    else()
+        message(WARNING "kwin-devel (with libepoxy-devel, libdrm-devel) not found: fenestra-corners is not built")
+    endif()
+endif()
 # Look-and-feel package (kdeglobals defaults) and the lock screen: Plasma 6's kscreenlocker takes
 # it from the shell package named in plasmashellrc [Shell] ShellPackage (KWinIntegration sets it).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../lnf/org.fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/look-and-feel)

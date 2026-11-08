@@ -8,6 +8,11 @@ export DESKTOP_SESSION=fenestra
 # Qt apps follow Fenestra (no Plasma platform theme); GTK apps keep their own settings.
 export QT_QPA_PLATFORM="wayland;xcb" QT_WAYLAND_DISABLE_WINDOWDECORATION=0
 export MOZ_ENABLE_WAYLAND=1 ELECTRON_OZONE_PLATFORM_HINT=auto
+# One open / save dialog for every app: the FileChooser portal (Files with the Explorer layer).
+# Chromium/Brave/Electron and GTK 4 use the portal on their own; GTK 3's GtkFileChooserNative only
+# with GTK_USE_PORTAL=1 (tests/explorer-dialogs/host.sh: without it GTK 3 draws its own chooser).
+# GTK 3 apps that create a GtkFileChooserDialog directly cannot be steered.
+export GTK_USE_PORTAL=1
 # Programs installed per user (~/.local/bin: Fenestra apps installed for one user, pip --user…) for
 # everything launched from Start too (systemd user services get this PATH; Fedora only adds it in bash).
 case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$HOME/bin:$PATH" ;; esac

@@ -8,7 +8,8 @@ gi.require_version('Nautilus', '4.1')
 gi.require_version('Gtk', '4.0')
 from gi.repository import GLib, GObject, Gtk, Nautilus
 
-REQ = '/tmp/treedump'
+REQ = os.environ.get('TREEDUMP_REQ', '/tmp/treedump')
+OUT = os.environ.get('SHOTQA_OUT', '/out')
 
 
 def dump(widget, root, depth, out):
@@ -47,6 +48,6 @@ class FenestraTreeDump(GObject.GObject, Nautilus.MenuProvider):
             for w in Gtk.Window.list_toplevels():
                 if w.get_mapped():
                     dump(w, w, 0, out)
-            with open(f'/out/{n}.tree.txt', 'w') as f:
+            with open(f'{OUT}/{n}.tree.txt', 'w') as f:
                 f.write('\n'.join(out) + '\n')
         return True

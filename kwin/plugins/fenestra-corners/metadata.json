@@ -1,0 +1,11 @@
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "Fenestra OS" }],
+        "Category": "Appearance",
+        "Description": "Rounds the corners of every free-floating window like Windows 11 (8 px), square when maximized, snapped or full screen",
+        "EnabledByDefault": true,
+        
+        "License": "GPL",
+        "Name": "Fenestra rounded corners"
+    }
+}

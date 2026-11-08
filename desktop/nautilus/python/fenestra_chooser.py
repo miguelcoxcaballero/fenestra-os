@@ -18,15 +18,28 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gio, GLib, GObject, Gtk, Nautilus, Pango  # noqa: E402
 from fenestra_sidebar import FenestraSidebar, tr  # noqa: E402
 
+import json
+
 SHOT = os.environ.get('FENESTRA_CHOOSER_SHOT')
-SHOT_REQUESTS = '/tmp/shotreq'
-# Outer size of the reference dialog is 946 x 533 including its 1 px frame; GTK draws that frame
-# outside the content (window.win11-chooser box-shadow), so the content is 944 x 531.
-SIZE = (944, 531)
+SHOT_REQUESTS = os.environ.get('SHOTQA_REQ', '/tmp/shotreq')
+# Windows' common item dialog opens at 628 x 474 (outer, 1 px frame included) in any app that never
+# resized it (Edge's and Brave's Save as, Paint's Open; reference-shots/filedialog/*-150-edge-*, 942 x 711
+# physical px at 150 %); GTK draws the frame outside the content (window.win11-chooser box-shadow),
+# so the content is 626 x 472. Notepad's 946 x 533 (design/reference/dialogs.md) is a size Notepad
+# remembers. Like Windows, the size the user leaves a dialog at is remembered (STATE), and the size
+# stock Nautilus saved before the Explorer layer (initial-size-file-chooser) is ignored.
+SIZE = (626, 472)
+STATE = os.path.join(GLib.get_user_state_dir(), 'fenestra', 'file-dialog.json')
+# Windows lays the dialog out per DPI, not as the 100 % layout scaled: at 150 % the title bar is 43 px,
+# the navigation row 74, the command bar 48 + 1 and the buttons strip 99 (physical px), where 1.5 x the
+# 100 % layout gives 45, 82.5, 46.5 and 87. The scale class selects those metrics in gtk.css.
+SCALES = ((1.375, 1.625, 'fenestra-dlg-150'),)
 # Details columns (reference header dividers at x 432, 576, 696, 776 of the window).
 COLUMNS = {'name': 273, 'date': 144, 'type': 120, 'size': 80}
 SIZE_TEXT = re.compile(r'^[\d.,]+\s*\S*$')  # "1 KB", "5 bytes", "3 items" (dates have ':' and '/')
-ACCEPT = {'_Save': '_Save', '_Open': '_Open', '_Select': '_Select', 'Save': '_Save', 'Open': '_Open'}
+# Nautilus says Replace when the name exists; Windows keeps Save and asks on confirm.
+ACCEPT = {'_Save': '_Save', '_Open': '_Open', '_Select': '_Select', 'Save': '_Save', 'Open': '_Open',
+          '_Replace': '_Save', 'Replace': '_Save'}
 
 
 def walk(widget):
@@ -71,6 +84,10 @@ class Chooser:
         self.sidebar.entries = {uri: (order.get(icon, rank) if 10 <= rank < 50 else rank, label, icon)
                                 for uri, (rank, label, icon) in self.sidebar.entries.items()}
         self.default_size()
+        self.window.connect('realize', self.scale_class)
+        self.window.connect('notify::scale-factor', self.scale_class)
+        if self.window.get_realized():
+            self.scale_class()
         self.labels()
         self.navigation()
         self.commandbar()
@@ -80,17 +97,50 @@ class Chooser:
 
     # -- window ------------------------------------------------------------------------------
     def default_size(self):
-        """Reference size unless the user resized a dialog before (Nautilus remembers that)."""
+        """Windows' default size, or the size the user left the last dialog at (STATE)."""
+        size = SIZE
         try:
-            settings = Gio.Settings.new('org.gnome.nautilus.window-state')
-            if settings.get_user_value('initial-size-file-chooser') is not None:
-                return
-        except GLib.Error:
+            with open(STATE) as f:
+                saved = json.load(f).get('size')
+            if isinstance(saved, list) and len(saved) == 2 and all(isinstance(v, int) and 200 <= v <= 8000 for v in saved):
+                size = tuple(saved)
+        except (OSError, ValueError, AttributeError):
             pass
-        self.window.set_default_size(*SIZE)
-        # Nautilus applies its own initial size after the template: apply ours again before mapping.
-        GLib.idle_add(lambda: (self.window.set_default_size(*SIZE), GLib.SOURCE_REMOVE)[1], priority=GLib.PRIORITY_HIGH)
-        self.window.connect('realize', lambda w: w.set_default_size(*SIZE))
+        self.window.set_default_size(*size)
+        # Nautilus applies its own remembered size after the template: apply ours again before mapping.
+        GLib.idle_add(lambda: (self.window.set_default_size(*size), GLib.SOURCE_REMOVE)[1], priority=GLib.PRIORITY_HIGH)
+        self.window.connect('realize', lambda w: w.set_default_size(*size))
+        # The dialog is often mapped before this layer attaches; Nautilus then restores its own size
+        # (initial-size-file-chooser) while it settles: keep ours for the first 1.5 s (tick()).
+        self.want_size = size
+        self.window.connect('close-request', self.save_size)
+        self.window.connect('unrealize', self.save_size)
+
+    def save_size(self, *_):
+        hidden = by_id(self.window, 'fenestra_hide_folders')
+        if hidden is not None and hidden.get_active():
+            return False  # the folded "Hide folders" height is not a size to reopen at
+        width, height = self.window.get_width(), self.window.get_height()
+        if width < 200 or height < 200 or self.window.is_maximized():
+            return False
+        try:
+            os.makedirs(os.path.dirname(STATE), exist_ok=True)
+            with open(STATE + '.tmp', 'w') as f:
+                json.dump({'size': [width, height]}, f)
+            os.replace(STATE + '.tmp', STATE)
+        except OSError:
+            pass
+        return False
+
+    def scale_class(self, *_):
+        """fenestra-dlg-150 etc. on the window: Windows' per-DPI layout (see SCALES)."""
+        surface = self.window.get_surface()
+        scale = surface.get_scale() if surface is not None and hasattr(surface, 'get_scale') else self.window.get_scale_factor()
+        for lo, hi, css in SCALES:
+            (self.window.add_css_class if lo <= scale < hi else self.window.remove_css_class)(css)
+        if surface is not None and not getattr(self, '_scale_watch', False):
+            self._scale_watch = True
+            surface.connect('notify::scale', self.scale_class)
 
     def labels(self):
         for w in walk(self.window):
@@ -130,6 +180,24 @@ class Chooser:
         if up:
             up.add_css_class('fenestra-dlg-up')
             up.set_valign(Gtk.Align.CENTER)
+            # "Recent locations" (the chevron between Forward and Up): the folders visited in this
+            # dialog, newest first, as Windows lists them.
+            self.recent = []
+            self.recent_menu = Gio.Menu()
+            recent = Gtk.MenuButton(icon_name='win11-explorer-chevron-down', menu_model=self.recent_menu)
+            recent.set_tooltip_text(tr('Recent locations'))
+            recent.add_css_class('fenestra-dlg-recent')
+            recent.set_valign(Gtk.Align.CENTER)
+            recent.set_sensitive(False)
+            self.recent_button = recent
+            parent = up.get_parent()
+            if isinstance(parent, Gtk.Box):
+                parent.insert_child_after(recent, up.get_prev_sibling()) if up.get_prev_sibling() else parent.prepend(recent)
+            pop = recent.get_popover()
+            if pop is not None:
+                pop.add_css_class('fenestra-dlg-menu')
+                pop.set_has_arrow(False)
+                pop.set_halign(Gtk.Align.START)
         path = by_id(toolbar, 'path_bar')
         refresh = by_action(toolbar, 'slot.reload')
         if path:
@@ -226,6 +294,13 @@ class Chooser:
                 break
         if hasattr(self, 'lead_icon'):
             self.lead_icon.set_from_icon_name(icon)
+        if hasattr(self, 'recent_menu'):
+            uri = location.get_uri()
+            self.recent = [(uri, name or uri)] + [r for r in self.recent if r[0] != uri][:9]
+            self.recent_menu.remove_all()
+            for target, label in self.recent[1:]:
+                self.recent_menu.append(label, Gio.Action.print_detailed_name('slot.open-location', GLib.Variant('s', target)))
+            self.recent_button.set_sensitive(len(self.recent) > 1)
         for w in walk(self.window):
             if isinstance(w, Gtk.Label) and w.has_css_class('win11-search-label'):
                 w.set_label(tr('Search %s') % name if name else tr('Search'))
@@ -233,9 +308,25 @@ class Chooser:
 
     # -- command bar ------------------------------------------------------------------------
     def commandbar(self):
+        organize = by_id(self.window, 'organize_button')
+        if organize:
+            for w in walk(organize):
+                if isinstance(w, Gtk.Image) and w.has_css_class('win11-cmd-chevron'):
+                    w.set_from_icon_name('win11-dialog-dropdown-symbolic')  # Windows' small filled triangle
+                    w.add_css_class('fenestra-dlg-dropdown')
         controls = by_id(self.window, 'view_controls')
         if controls:
-            controls.set_margin_end(54)  # the reference has Help (?) there; Nautilus has no help here
+            # Help (?) at the right end of the command bar, as in Windows ("Get help": Files' help).
+            parent = controls.get_parent()
+            if isinstance(parent, Gtk.Box) and not getattr(self, 'help_button', None):
+                self.help_button = Gtk.Button(icon_name='win11-dialog-help', action_name='app.help')
+                self.help_button.set_tooltip_text(tr('Get help'))
+                self.help_button.add_css_class('fenestra-dlg-help')
+                self.help_button.set_valign(Gtk.Align.CENTER)
+                parent.insert_child_after(self.help_button, controls)
+                controls.set_margin_end(0)
+            else:
+                controls.set_margin_end(54)
             split = find(controls, lambda w: kind(w) == 'AdwSplitButton')
             main = split.get_first_child() if split else None
             if isinstance(main, Gtk.Button):
@@ -295,6 +386,8 @@ class Chooser:
             filename.connect('notify::visible', lambda *_: self.sync_mode())
         if accept:
             accept.connect('notify::label', lambda *_: self.sync_accept())
+            # The accept button is the dialog's default button (Windows' blue-bordered Save / Open).
+            self.window.set_default_widget(accept)
         if new_folder:
             # The reference Open dialog has New folder too (view.new-folder works in both modes).
             new_folder.connect('notify::visible', lambda w, _p: w.set_visible(True) if not w.get_visible() else None)
@@ -391,6 +484,12 @@ class Chooser:
         if self.window.get_root() is None:
             return GLib.SOURCE_REMOVE
         self.ticks += 1
+        want = getattr(self, 'want_size', None)
+        if want and self.ticks <= 15 and not self.window.is_maximized() and \
+                (self.window.get_width(), self.window.get_height()) != want:
+            hidden = by_id(self.window, 'fenestra_hide_folders')
+            if hidden is None or not hidden.get_active():
+                self.window.set_default_size(*want)
         container = by_id(self.window, 'slot_container')
         slot = container.get_child() if container else None
         if slot is not None and slot is not self.slot and slot.find_property('location'):
@@ -471,6 +570,18 @@ class Chooser:
                     column.set_resizable(True)
         for cell in (w for w in walk(slot) if kind(w) in ('NautilusLabelCell', 'NautilusNameCell')):
             self.cell(cell)
+        for page in (w for w in walk(slot) if kind(w) == 'AdwStatusPage'):
+            # An empty folder: Windows writes one line under the column headers, no picture.
+            if page.get_icon_name():
+                page.set_icon_name(None)
+            want = tr('No items match your search.')
+            if page.get_title() != want:
+                page.set_title(want)
+                page.set_description(None)
+            page.add_css_class('fenestra-dlg-empty')
+            box = find(page, lambda w: isinstance(w, Gtk.Box))
+            if box is not None and box.get_valign() != Gtk.Align.START:
+                box.set_valign(Gtk.Align.START)
         return GLib.SOURCE_REMOVE
 
     @staticmethod
