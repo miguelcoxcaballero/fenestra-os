@@ -167,7 +167,8 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
         finger_pid = spawn(cmd);
         info(pamh, "Place your finger on the fingerprint reader");
     }
-    int result = PAM_AUTH_ERR;
+    int result = PAM_AUTH_ERR, quick = 0;
+    long finger_started = now_ms();
     while (face_pid > 0 || finger_pid > 0) {
         const long t = now_ms() - start;
         int status;
@@ -199,11 +200,15 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
                     result = PAM_SUCCESS;
                     break;
                 }
-                // No match (or the reader was busy): keep listening until the deadline, as Windows.
-                if (t + 1000 < finger_timeout) {
+                // No match: keep listening until the deadline, as Windows. An fprintd-verify that
+                // gives up at once (no print on the sensor any more, device claimed by someone
+                // else) twice in a row is not retried in this attempt: no busy loop.
+                quick = (now_ms() - finger_started < 1500) ? quick + 1 : 0;
+                if (quick < 2 && t + 1000 < finger_timeout) {
                     usleep(300 * 1000);
                     char *cmd[] = {(char *)fprintd, (char *)user, NULL};
                     finger_pid = spawn(cmd);
+                    finger_started = now_ms();
                 }
             } else if (t > finger_timeout) {
                 kill_tree(finger_pid);  // fprintd hung (or nobody touched the reader)
