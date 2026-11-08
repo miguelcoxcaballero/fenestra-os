@@ -671,7 +671,11 @@ window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-forwar
 window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up { min-width: 33px; min-height: 32px; padding: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-back { margin-left: 4px; }
 window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-forward { margin-left: 2px; }
-window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up { margin-left: 28px; }
+window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-up { margin-left: 2px; }
+/* Recent locations: the chevron between Forward and Up (26 px box, 10 px chevron). */
+window.win11-chooser.win11-explorer .win11-navigation menubutton.fenestra-dlg-recent > button { min-width: 26px; min-height: 32px; padding: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+window.win11-chooser.win11-explorer .win11-navigation menubutton.fenestra-dlg-recent > button image { -gtk-icon-size: 10px; }
+window.win11-chooser.win11-explorer .win11-navigation menubutton.fenestra-dlg-recent > button:hover { background: #434343; box-shadow: inset 0 0 0 1px #ffffff; }
 window.win11-chooser.win11-explorer .win11-navigation button image { -gtk-icon-size: 16px; }
 window.win11-chooser.win11-explorer .win11-navigation button.fenestra-dlg-refresh image { -gtk-icon-size: 14px; }
 window.win11-chooser.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search image { -gtk-icon-size: 16px; margin-right: -1px; }
@@ -862,7 +866,57 @@ window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu separator { m
   window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide image { -gtk-icon-filter: invert(0.9); }
   window.win11-chooser.win11-explorer .fenestra-dlg-address .fenestra-dlg-lead > image { -gtk-icon-filter: none; }
   window.win11-chooser.win11-explorer .win11-commandbar menubutton image.win11-cmd-chevron { -gtk-icon-filter: none; color: #1e395b; }
+  window.win11-chooser.win11-explorer .win11-navigation menubutton.fenestra-dlg-recent > button:hover { background: #cce8ff; box-shadow: none; }
+  window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help:hover { background: #dcebf4; box-shadow: inset 0 0 0 1px #0078d4; }
 }
+/* Organize's ▾ is Windows' small filled triangle (7 x 4 physical px at 150 %), in the label colour. */
+window.win11-chooser.win11-explorer .win11-commandbar image.fenestra-dlg-dropdown { -gtk-icon-size: 16px; margin: 0 -4px 0 -2px; }
+/* Help (?) at the right end of the command bar (27 x 26 box like the view button). */
+window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help { min-width: 27px; min-height: 26px; padding: 0; margin: 2px 13px 2px 14px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help image { -gtk-icon-size: 16px; -gtk-icon-style: regular; }
+window.win11-chooser.win11-explorer .win11-commandbar button.fenestra-dlg-help:hover { background: #4d4d4d; }
+/* Motion, measured on Windows 11 (reference-shots/filedialog, QMP frames every ~17 ms, light and dark
+   at 150 %): the Explorer parts (navigation and address buttons, command bar, navigation pane rows,
+   list rows, column headers) change state at once; the Win32 push buttons, combo boxes and Hide
+   folders fade in and out over 250 ms, linear; the Organize and Recent locations menus fade in over
+   250 ms and vanish at once; a combo box list rolls down in 190 ms. */
+window.win11-chooser.win11-explorer button,
+window.win11-chooser.win11-explorer menubutton > button,
+window.win11-chooser.win11-explorer splitbutton > button,
+window.win11-chooser.win11-explorer placessidebar row,
+window.win11-chooser.win11-explorer listview > row,
+window.win11-chooser.win11-explorer columnview > header > button,
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu modelbutton { transition: none; }
+window.win11-chooser.win11-explorer button.win11-dialog-button,
+window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > button,
+window.win11-chooser.win11-explorer .win11-chooser-bottom .win11-chooser-buttons menubutton > button,
+window.win11-chooser.win11-explorer .win11-chooser-buttons button.win11-chooser-hide { transition: background-color 250ms linear, border-color 250ms linear, box-shadow 250ms linear, color 250ms linear; }
+@keyframes fenestra-dlg-menu-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fenestra-dlg-list-in { from { transform: translateY(-48px); } to { transform: none; } }
+window.win11-chooser.win11-explorer popover.menu.fenestra-dlg-menu > contents { animation: fenestra-dlg-menu-in 250ms linear; }
+window.win11-chooser.win11-explorer .win11-chooser-bottom dropdown > popover > contents { animation: fenestra-dlg-list-in 190ms linear; }
+/* 150 % (fenestra-dlg-150, set by fenestra_chooser.py from the surface scale): Windows lays the dialog
+   out per DPI, so these are its 150 % metrics (reference-shots/filedialog/*-150-notepad-save-normal,
+   physical px / 1.5): title bar 29 (43 px), navigation row 49 (74 px) with 35 px address and search
+   boxes (53 px), command bar 32 + 1 (48 + 1 px), buttons strip 66 (99 px) with the buttons 25 tall
+   (37 px) 23 below its top and Hide folders 28 below it; Back starts 2 px further right. */
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-dialog-titlebar,
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-dialog-titlebar windowcontrols > button { min-height: 29px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-navigation { min-height: 49px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-navigation button.fenestra-dlg-back { margin-left: 6px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-navigation button.fenestra-dlg-up { margin-left: 1px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-navigation .fenestra-dlg-address,
+window.win11-chooser.fenestra-dlg-150.win11-explorer .fenestra-dlg-address button.nautilus-path-button,
+window.win11-chooser.fenestra-dlg-150.win11-explorer .fenestra-dlg-address menubutton > button,
+window.win11-chooser.fenestra-dlg-150.win11-explorer .fenestra-dlg-address button.fenestra-dlg-refresh,
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-navigation .win11-search.fenestra-dlg-search { min-height: 33px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-commandbar { min-height: 32px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-chooser-buttons { min-height: 66px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer button.win11-dialog-button { min-height: 23px; margin-top: 23px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-chooser-bottom .win11-chooser-buttons menubutton { margin-top: 24px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-chooser-buttons button.win11-chooser-hide { margin-top: 28px; }
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-chooser-open-row button.win11-dialog-button,
+window.win11-chooser.fenestra-dlg-150.win11-explorer .win11-chooser-buttons .win11-chooser-open-row menubutton { margin-top: 0; }
 /* ---- end Fenestra: Explorer open / save dialog ---- */
 /* Nautilus 51 attaches sorters to the details columns; keep the 49 look (no arrow). */
 .win11-explorer columnview > header > button sort-indicator,
