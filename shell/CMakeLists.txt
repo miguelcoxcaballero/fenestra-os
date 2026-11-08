@@ -48,6 +48,7 @@ qt_add_executable(fenestra-shell
     src/services/batteryalerts.cpp src/services/batteryalerts.h
     src/services/performancemode.cpp src/services/performancemode.h
     src/services/recordingblock.cpp src/services/recordingblock.h
+    src/services/lockosd.cpp src/services/lockosd.h
     src/services/kbdbacklight.cpp src/services/kbdbacklight.h
     src/services/adaptivecolor.cpp src/services/adaptivecolor.h src/services/adaptivecolormodel.h
     src/services/trayitems.cpp src/services/trayitems.h

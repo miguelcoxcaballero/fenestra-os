@@ -427,6 +427,9 @@ class StoreWindow(Gtk.ApplicationWindow):
         if not self.store.loaded:
             self._start = (pid, arg)
             return
+        if pid == "file":
+            self.open_file(arg, record)
+            return
         if pid == "app":
             st = self.store
             app = st.get(arg) or next((a for a in st.catalogue() if arg in (a.app_id, a.pkgname, a.name)), None)
@@ -436,6 +439,26 @@ class StoreWindow(Gtk.ApplicationWindow):
             self.toast(_("No app called “%s” was found") % arg)
             pid, arg = "home", None
         self.navigate(pid or "home", arg, record)
+
+    def open_file(self, target, record=True):
+        """A .flatpakref / .rpm opens its app page; a .flatpakrepo asks before adding the source."""
+        if self.current is None:
+            self.navigate("home", None, False)
+
+        def done(res):
+            if isinstance(res, dict):
+                self.show_dialog(_("Add the software source “%s”?") % res["title"],
+                                 _("Apps from %s will appear in Fenestra Store. Only add sources you trust.")
+                                 % (res["url"] or res["title"]), _("Add source"),
+                                 lambda: self.store.add_repo(res, lambda ok, msg: self.toast(
+                                     (_("Source added: %s") % res["title"]) if ok else
+                                     (_("Could not add the source") + ": " + self.explain(msg)), 5000)))
+                return
+            self.navigate("details", res, record)
+
+        def failed(msg):
+            self.toast(_("Could not open the file") + ": " + self.explain(msg), 6000)
+        self.store.open_local(target, done, failed)
 
     def _on_loaded(self, store):
         for p in self.pages.values():
@@ -488,7 +511,7 @@ class StoreWindow(Gtk.ApplicationWindow):
             return _("read-only mode, nothing was changed")
         if msg == "source-disabled":
             return _("its source is turned off")
-        return msg
+        return _(msg)
 
     # ----------------------------------------------------------------- actions
     def launch(self, uid):

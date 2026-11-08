@@ -2,7 +2,7 @@
 section headers, toggles, the featured banner and the screenshot carousel."""
 from __future__ import annotations
 
-from gi.repository import Gdk, GLib, Graphene, Gtk, Pango
+from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk, Pango
 
 from . import art, theme, util
 from .i18n import _
@@ -104,7 +104,8 @@ class Clamp(Gtk.Widget):
 # --------------------------------------------------------------------------- images
 
 def app_icon(app, size: int) -> Gtk.Image:
-    """App icon: AppStream file/stock icon, remote icon (fetched off the UI thread) or generated."""
+    """App icon: AppStream file/stock icon, else a remote icon or a web app's site icon fetched
+    off the UI thread (a generic icon until it arrives). Demo apps get their generated icon."""
     img = Gtk.Image()
     img.set_pixel_size(size)
     img.add_css_class("app-icon")
@@ -116,16 +117,17 @@ def app_icon(app, size: int) -> Gtk.Image:
         if disp and Gtk.IconTheme.get_for_display(disp).has_icon(app.icon_name):
             img.set_from_icon_name(app.icon_name)
             return img
-    img.set_from_paintable(art.icon_texture(app, size))
-    if app.icon_url and not util.DEMO:
-        def got(path):
-            if path:
-                try:
-                    img.set_from_file(path)
-                    app.icon_path = path
-                except GLib.Error:
-                    pass
-        util.in_thread(util.fetch_cached, app.icon_url, on_done=got)
+    if util.DEMO or not (app.icon_url or app.packaging == "web"):
+        img.set_from_paintable(art.icon_texture(app, size))
+        return img
+    img.set_from_icon_name("application-x-executable")
+    from . import media
+
+    def got(res):
+        tex = res[0] if res else None
+        if tex is not None:
+            img.set_from_paintable(tex)
+    media.request_icon(app, got)
     return img
 
 
@@ -430,34 +432,181 @@ def price_text(app) -> str:
     return _("Free")
 
 
-class ArtTile(Gtk.Overlay):
-    """A generated-art tile (rounded, clipped) with content laid over it; clicking opens the app."""
+def _stops(*pairs):
+    out = []
+    for off, color in pairs:
+        st = Gsk.ColorStop()
+        st.offset = off
+        st.color = color
+        out.append(st)
+    return out
 
-    def __init__(self, win, app, height, css, radius=8):
+
+def _rect(x, y, w, h):
+    return Graphene.Rect().init(x, y, w, h)
+
+
+class BannerArt(Gtk.Widget):
+    """The picture of a hero tile: the app's real screenshot, cover-cropped, under a gradient of
+    its branding colour that keeps the text readable. While the image loads it is a neutral
+    skeleton; without a screenshot it is the branding colour (or the icon's colour) with the
+    app's icon drawn large. Never a generated placeholder (except demo mode's invented apps)."""
+    __gtype_name__ = "FstBannerArt"
+    BIG_WIDTH, SMALL_WIDTH = 1280, 640
+
+    def __init__(self, height, radius=8, mode="tile", on_ready=None):
         super().__init__()
-        self.win = win
-        self.app = app
+        self.height = height
         self.radius = radius
-        self.add_css_class("art-tile")
-        self.add_css_class(css)
-        self.area = Gtk.DrawingArea()
-        self.area.set_content_height(height)
-        self.area.set_hexpand(True)
-        self.area.set_draw_func(self._draw)
-        self.set_child(self.area)
-        self.set_overflow(Gtk.Overflow.HIDDEN)
-        self.set_cursor(Gdk.Cursor.new_from_name("pointer"))
-        click = Gtk.GestureClick()
-        click.connect("released", lambda *_: self.win.show_app(self.app.uid))
-        self.add_controller(click)
+        self.mode = mode              # "big" (text on the left) | "tile" (text at the bottom)
+        self.on_ready = on_ready
+        self.app = None
+        self.shot = None
+        self.icon = None
+        self.dom = ""
+        self.loading = False
+        self._token = 0
+        self.set_hexpand(True)
+
+    def do_measure(self, orientation, for_size):
+        if orientation == Gtk.Orientation.VERTICAL:
+            return self.height, self.height, -1, -1
+        return 0, 0, -1, -1
 
     def set_app(self, app):
         self.app = app
-        self.area.queue_draw()
+        self._token += 1
+        token = self._token
+        self.shot, self.icon, self.dom = None, None, ""
+        self.loading = True
+        self._waiting = {"banner", "icon"}
+        if not app.icon_path and app.icon_name and app.packaging != "web" and not util.DEMO:
+            disp = Gdk.Display.get_default()
+            th = Gtk.IconTheme.get_for_display(disp) if disp else None
+            if th is not None and th.has_icon(app.icon_name):
+                self.icon = th.lookup_icon(app.icon_name, None, 256, max(1, self.get_scale_factor()),
+                                           Gtk.TextDirection.NONE, 0)
 
-    def _draw(self, _a, cr, w, h):
-        hue, name = art.art_for(self.app)
-        art.draw_banner(cr, w, h, hue, name, radius=self.radius)
+        def got_banner(tex):
+            if token == self._token:
+                self.shot = tex
+                self._arrived("banner")
+
+        def got_icon(res):
+            if token == self._token:
+                tex, dom = res if res else (None, "")
+                self.icon = tex or self.icon
+                self.dom = dom
+                self._arrived("icon")
+        from . import media
+        width = self.BIG_WIDTH if self.mode == "big" or self.height > 200 else self.SMALL_WIDTH
+        media.request_banner(app, width, got_banner)
+        media.request_icon(app, got_icon)
+        self.queue_draw()
+
+    def _arrived(self, what):
+        self._waiting.discard(what)
+        # the screenshot decides the look; the icon only matters for the fallback
+        if "banner" not in self._waiting and (self.shot is not None or not self._waiting):
+            if self.loading:
+                self.loading = False
+                if self.on_ready:
+                    self.on_ready()
+        self.queue_draw()
+
+    def do_snapshot(self, snap):
+        w, h = self.get_width(), self.get_height()
+        if w <= 0 or h <= 0 or self.app is None:
+            return
+        from . import media
+        bounds = _rect(0, 0, w, h)
+        rr = Gsk.RoundedRect()
+        rr.init_from_rect(bounds, self.radius)
+        snap.push_rounded_clip(rr)
+        if self.loading:
+            dark = theme.get().dark
+            snap.append_color(media.rgba("#2f2f2f" if dark else "#e3e3e3"), bounds)
+            snap.append_linear_gradient(bounds, Graphene.Point().init(0, 0), Graphene.Point().init(w, h), _stops(
+                (0.0, media.rgba("#ffffff", 0.0)), (0.5, media.rgba("#ffffff", 0.05 if dark else 0.35)),
+                (1.0, media.rgba("#ffffff", 0.0))))
+            snap.pop()
+            return
+        base = media.banner_colour(self.app, True, self.dom)   # hero text is white: always the dark colour
+        col = media.rgba(base)
+        if self.shot is not None:
+            tw, th = self.shot.get_width(), self.shot.get_height()
+            sc = max(w / tw, h / th)
+            dw, dh = tw * sc, th * sc
+            # wide tiles show the window's top (title, toolbar) rather than its middle
+            r = _rect((w - dw) / 2, (h - dh) * 0.2, dw, dh)
+            if hasattr(snap, "append_scaled_texture"):
+                snap.append_scaled_texture(self.shot, Gsk.ScalingFilter.TRILINEAR, r)
+            else:
+                snap.append_texture(self.shot, r)
+            if self.mode == "big":
+                snap.append_linear_gradient(bounds, Graphene.Point().init(0, 0), Graphene.Point().init(w, 0), _stops(
+                    (0.0, media.rgba(base, 0.96)), (0.36, media.rgba(base, 0.82)), (0.72, media.rgba(base, 0.0))))
+                snap.append_linear_gradient(bounds, Graphene.Point().init(0, h * 0.55), Graphene.Point().init(0, h),
+                                            _stops((0.0, media.rgba("#000000", 0.0)),
+                                                   (1.0, media.rgba("#000000", 0.35))))
+            else:
+                snap.append_linear_gradient(bounds, Graphene.Point().init(0, 0), Graphene.Point().init(0, h), _stops(
+                    (0.0, media.rgba(base, 0.0)), (0.38, media.rgba(base, 0.10)), (1.0, media.rgba(base, 0.94))))
+        else:
+            light = Gdk.RGBA()
+            light.red, light.green, light.blue, light.alpha = (min(1.0, col.red * 1.35 + 0.04),
+                                                               min(1.0, col.green * 1.35 + 0.04),
+                                                               min(1.0, col.blue * 1.35 + 0.04), 1.0)
+            snap.append_linear_gradient(bounds, Graphene.Point().init(0, 0), Graphene.Point().init(w, h),
+                                        _stops((0.0, light), (1.0, col)))
+            if self.icon is not None:
+                size = h * (0.62 if self.mode == "big" else 0.5)
+                x = w * (0.72 if self.mode == "big" else 0.74) - size / 2
+                y = (h - size) / 2 if self.mode == "big" else h * 0.12
+                snap.save()
+                snap.translate(Graphene.Point().init(x, y))
+                self.icon.snapshot(snap, size, size)
+                snap.restore()
+        snap.pop()
+
+
+class BannerTile(Gtk.Overlay):
+    """A hero tile: BannerArt with content laid over it; clicking opens the app. The content
+    fades in once the picture is ready, so text never sits on the loading skeleton."""
+
+    def __init__(self, win, app, height, css, radius=8, mode="tile"):
+        super().__init__()
+        self.win = win
+        self.app = app
+        self.add_css_class("art-tile")
+        self.add_css_class(css)
+        self.art = BannerArt(height, radius, mode, on_ready=self._ready)
+        self.set_child(self.art)
+        self.set_overflow(Gtk.Overflow.HIDDEN)
+        self.set_cursor(Gdk.Cursor.new_from_name("pointer"))
+        self.set_tooltip_text(app.name)
+        click = Gtk.GestureClick()
+        click.connect("released", lambda *_: self.win.show_app(self.app.uid))
+        self.add_controller(click)
+        self.content = []
+        self.art.set_app(app)
+
+    def add_content(self, widget):
+        widget.set_opacity(0.0 if self.art.loading else 1.0)
+        self.content.append(widget)
+        self.add_overlay(widget)
+
+    def _ready(self):
+        for wdg in self.content:
+            wdg.set_opacity(1.0)
+
+    def set_app(self, app):
+        self.app = app
+        self.set_tooltip_text(app.name)
+        self.art.set_app(app)
+        if self.art.loading:
+            for wdg in self.content:
+                wdg.set_opacity(0.0)
 
 
 class Hero(Gtk.Box):
@@ -477,12 +626,12 @@ class Hero(Gtk.Box):
         row = Gtk.Box(spacing=12)
         row.add_css_class("hero-row")
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
-        self.big = ArtTile(win, self.big_apps[0], 356, "hero-big")
+        self.big = BannerTile(win, self.big_apps[0], 356, "hero-big", mode="big")
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.content.add_css_class("hero-content")
-        self.content.set_valign(Gtk.Align.START)
+        self.content.set_valign(Gtk.Align.CENTER)
         self.content.set_halign(Gtk.Align.START)
-        self.big.add_overlay(self.content)
+        self.big.add_content(self.content)
         left.append(self.big)
         self.dots = Gtk.Box(spacing=0, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
         self.dots.add_css_class("hero-dots")
@@ -492,19 +641,26 @@ class Hero(Gtk.Box):
         self.side.set_size_request(self.SIDE_W, -1)
         self.side.set_hexpand(False)
         self.side.set_valign(Gtk.Align.START)
+        self.tiles = []
         if side:
-            t = ArtTile(win, side[0], 232, "hero-tile")
-            t.add_overlay(self._tile_text(side[0], True))
+            t = BannerTile(win, side[0], 232, "hero-tile")
+            t.add_content(self._tile_text(side[0], True))
             self.side.append(t)
+            self.tiles.append(t)
         if len(side) > 1:
             small = Gtk.Box(spacing=12, homogeneous=True)
             for app in side[1:3]:
-                t = ArtTile(win, app, 112, "hero-small")
-                t.add_overlay(self._tile_text(app, False))
+                t = BannerTile(win, app, 112, "hero-small")
+                t.add_content(self._tile_text(app, False))
                 small.append(t)
+                self.tiles.append(t)
             self.side.append(small)
         row.append(self.side)
         self.append(row)
+        # fetch every banner of the rotation now, so turning the page never shows the skeleton
+        from . import media
+        for a in self.big_apps[1:]:
+            media.request_banner(a, BannerArt.BIG_WIDTH, lambda _t: None)
         self._timer = 0
         self._hover = False
         motion = Gtk.EventControllerMotion()
@@ -520,12 +676,24 @@ class Hero(Gtk.Box):
     def _tile_text(app, large):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         box.add_css_class("tile-text-large" if large else "tile-text")
-        box.set_valign(Gtk.Align.START if large else Gtk.Align.END)
+        box.set_valign(Gtk.Align.END)
         box.set_halign(Gtk.Align.START)
         box.set_can_target(False)
-        if large:
-            box.append(label(_(SOURCES.get(app.source, app.source)), "hero-chip"))
-        box.append(label(app.name, "tile-title" if large else "tile-name", ellipsize=True))
+        row = Gtk.Box(spacing=10 if large else 8)
+        ic = app_icon(app, 40 if large else 24)
+        ic.add_css_class("tile-icon")
+        ic.set_valign(Gtk.Align.CENTER)
+        row.append(ic)
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
+        name = label(app.name, "tile-title" if large else "tile-name", ellipsize=True)
+        name.set_max_width_chars(26 if large else 14)
+        texts.append(name)
+        if large and app.summary:
+            summ = label(app.summary, "tile-summary", ellipsize=True)
+            summ.set_max_width_chars(34)
+            texts.append(summ)
+        row.append(texts)
+        box.append(row)
         return box
 
     def stop(self):
@@ -550,13 +718,19 @@ class Hero(Gtk.Box):
         self.big.set_app(app)
         clear(self.content)
         clear(self.dots)
+        ic = app_icon(app, 64)
+        ic.add_css_class("hero-icon")
+        ic.set_halign(Gtk.Align.START)
+        self.content.append(ic)
         chip_lbl = label(_(SOURCES.get(app.source, app.source)), "hero-chip")
         chip_lbl.set_halign(Gtk.Align.START)
         self.content.append(chip_lbl)
         title = label(app.name, "hero-title", wrap=True, lines=2, ellipsize=True)
         title.set_max_width_chars(18)
         self.content.append(title)
-        self.content.append(label(app.summary, "hero-tagline", ellipsize=True, lines=1))
+        tag = label(app.summary, "hero-tagline", wrap=True, ellipsize=True, lines=2)
+        tag.set_max_width_chars(40)
+        self.content.append(tag)
         b = button(_("See details"), "hero-button", lambda: self.win.show_app(app.uid))
         b.set_halign(Gtk.Align.START)
         self.content.append(b)

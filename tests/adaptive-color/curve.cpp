@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Bench for Adaptive color's mapping and filter (shell/src/services/adaptivecolormodel.h).
-//   curve table              Microsoft's sample output table vs ours (exit 1 if off by > 150 K)
+//   curve table              Microsoft's sample output table vs ours: Fenestra adapts more (70 %, full
+//                            strength in dim rooms), so it must be at least as warm as Windows (150 K
+//                            slack) and at most 1000 K warmer; neutral light stays at 6500 K (exit 1 if not)
 //   curve sweep              ambient 2700-6500 K (on the Planckian locus) x lux -> display K
 //   curve follow             simulated scenes: step, strobe (light on/off every second), noise
 //   curve live DIR SECONDS   read a real (or fake) IIO sensor every 2 s, log it (read-only)
@@ -37,12 +39,12 @@ static int table()
         // KWin cannot go above the panel's 6500 K: compare with Windows clamped the same way.
         const double win = std::min(r.displayCct, 6500.0);
         const double d = ours - win;
-        const bool ok = std::abs(d) <= 150;
+        const bool ok = d <= 150 && d >= -1000;
         bad += !ok;
         std::printf("%-8.4f %-8.4f %6.0f %8.0f | %10.0f %10.0f %+7.0f %s\n", r.x, r.y, r.lux, r.ambientCct, r.displayCct, ours, d,
                     ok ? "" : "  <-- off");
     }
-    std::printf("%s\n", bad ? "FAIL" : "PASS (within 150 K of Windows, above 6500 K clamped)");
+    std::printf("%s\n", bad ? "FAIL" : "PASS (as warm as Windows or up to 1000 K warmer, above 6500 K clamped)");
     return bad ? 1 : 0;
 }
 

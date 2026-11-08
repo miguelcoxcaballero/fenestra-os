@@ -12,12 +12,8 @@ from .base import Page
 
 
 def hero_apps(st, games=None, n=7):
-    """Featured apps first, then the most popular ones, without repeats."""
-    out = []
-    for a in [x for x in st.featured() if games is None or x.is_game == games] + st.popular(games=games):
-        if a not in out:
-            out.append(a)
-    return out[:n]
+    """Featured / popular apps with real screenshots first (Store.hero)."""
+    return st.hero(games, n)
 
 
 class ShowcasePage(Page):

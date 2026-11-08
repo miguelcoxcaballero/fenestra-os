@@ -5,7 +5,7 @@ from gi.repository import GLib, Gtk, Pango
 
 from .. import util
 from ..i18n import N_, _
-from ..model import SOURCES
+from ..model import PACKAGING, SOURCES
 from ..widgets import ActionArea, app_icon, button, clear, icon, label
 from .base import Page
 
@@ -118,7 +118,7 @@ class LibraryPage(Page):
         tb.append(label(app.developer, "lib-row-dev", ellipsize=True))
         row.append(tb)
         src = label(_(SOURCES.get(app.source, app.source)) + " · " +
-                    (_("Flatpak") if app.packaging == "flatpak" else _("RPM package")), "lib-col", ellipsize=True)
+                    _(PACKAGING.get(app.packaging, app.packaging)), "lib-col", ellipsize=True)
         src.set_size_request(218, -1)
         row.append(src)
         if installed:

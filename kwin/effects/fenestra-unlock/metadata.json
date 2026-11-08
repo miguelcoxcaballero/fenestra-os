@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "KWin/Effect",
+    "KPlugin": {
+        "Authors": [{ "Name": "Fenestra OS" }],
+        "Category": "Appearance",
+        "Description": "Windows 11 unlock: the lock screen fades away over the desktop instead of vanishing in one frame",
+        "EnabledByDefault": true,
+        "Id": "fenestra-unlock",
+        "License": "GPL",
+        "Name": "Fenestra unlock"
+    },
+    "X-KDE-Ordering": 50,
+    "X-Plasma-API": "javascript"
+}

@@ -5,6 +5,11 @@ Part 1 (always, no display needed): drives the demo backend through the Store en
 catalogue loads, search finds apps (accent-insensitive), install / uninstall / update change
 state with progress callbacks, Library lists installed apps and updates, Update all, sources.
 
+Part 1b (no display): the curated popular list and how it ranks a catalogue, the hero choice,
+the banner/icon loader (one download per image, scaled cache, dominant colour), web apps
+(install = a launcher file, uninstall), the GNOME Software / Discover launcher overrides and
+the GNOME Software compatible command line (local files, appstream:// links).
+
 Part 2 (--ui, needs a Wayland/X display): opens the window in demo mode and builds every page,
 the app page of every catalogue entry and the search results, failing on any traceback.
 
@@ -20,6 +25,13 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("FENESTRA_STORE_DEMO_SPEED", "0.05")
+import tempfile  # noqa: E402
+import warnings  # noqa: E402
+
+warnings.filterwarnings("ignore", message=".*DesktopAppInfo is deprecated.*")
+
+TMP = tempfile.mkdtemp(prefix="fenestra-store-smoke-")
+os.environ["XDG_CACHE_HOME"] = os.path.join(TMP, "cache")   # never touch the user's caches
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ui", action="store_true", help="also build every page in a window")
@@ -163,6 +175,195 @@ def store_test():
     return st
 
 
+def popular_test():
+    print("== popular list, hero, banner loader")
+    from fenestra_store import popular
+    from fenestra_store.model import App, Screenshot
+
+    def mk(aid, name, shots=1, game=False, pkg=""):
+        return App(uid=f"t:{aid}", app_id=aid, backend="t", source="flathub", name=name, summary=name,
+                   categories=["games" if game else "utilities"], kind="game" if game else "app", pkgname=pkg,
+                   screenshots=[Screenshot(url=f"https://example.org/{aid}.png") for _i in range(shots)])
+    apps = [mk("org.example.Zeta", "Zeta"), mk("com.spotify.Client", "Spotify"), mk("web.youtube", "YouTube", 0),
+            mk("com.google.Chrome", "Google Chrome"), mk("org.example.Gnome", "Gnome pick"),
+            mk("com.valvesoftware.Steam", "Steam", 1, True), mk("x.firefox", "Firefox", 1, False, "firefox"),
+            mk("org.telegram.desktop", "Telegram")]
+    for a in apps:
+        a.popularity = 3
+    n = popular.apply(apps, gnome={"org.example.Gnome": popular.GNOME_POPULAR})
+    check(n == 6, f"curated entries found ({n})")
+    order = [a.name for a in sorted(apps, key=lambda a: -a.popularity)]
+    check(order[:3] == ["Google Chrome", "YouTube", "Spotify"], f"Chrome, YouTube, Spotify first ({order[:3]})")
+    check(order.index("Gnome pick") < order.index("Zeta"), "GNOME Software's picks before other apps")
+    check(next(a for a in apps if a.name == "Firefox").curated, "curated entries match package names too")
+    ids = [i for entry in popular.POPULAR_APPS for i in entry]
+    for want in ("com.google.Chrome", "web.youtube", "com.spotify.Client", "com.brave.Browser",
+                 "com.discordapp.Discord", "web.whatsapp", "org.telegram.desktop", "org.videolan.VLC", "us.zoom.Zoom",
+                 "org.mozilla.firefox", "com.microsoft.Edge", "com.obsproject.Studio", "org.gimp.GIMP",
+                 "com.visualstudio.code", "com.slack.Slack", "web.netflix", "web.primevideo", "web.disneyplus"):
+        check(want in ids, f"popular list has {want}")
+    check(ids.index("com.google.Chrome") < ids.index("web.youtube") < ids.index("com.spotify.Client")
+          < ids.index("com.brave.Browser"), "popular list order: Chrome, YouTube, Spotify, Brave")
+    from fenestra_store.backends import webapps
+    web_ids = {w[0] for w in webapps.WEB_APPS}
+    check({"web.youtube", "web.whatsapp", "web.netflix", "web.primevideo", "web.disneyplus"} <= web_ids,
+          "web apps for the services without a Linux app")
+    gp = os.path.join(TMP, "applist.xml")
+    with open(gp, "w") as f:
+        f.write('<components><component merge="append"><id>a.b.C</id><custom><value key="GnomeSoftware::FeatureTile">'
+                'True</value></custom><kudos><kudo>GnomeSoftware::popular</kudo></kudos></component>'
+                '<component><id>d.e.F</id></component></components>')
+    picks = popular.gnome_picks([gp])
+    check(picks == {"a.b.C": popular.GNOME_POPULAR + popular.GNOME_FEATURED}, f"GNOME Software app list read ({picks})")
+
+    # the Store: curated first, hero = popular apps with screenshots
+    from fenestra_store.backends import Backend
+
+    class Fake(Backend):
+        id = "t"
+        label = "test"
+
+        def load(self):
+            return [mk(a.app_id, a.name, len(a.screenshots), a.is_game, a.pkgname) for a in apps]
+    st = Store([Fake()])
+    st.load(sync=True)
+    check(st.has_popularity, "a catalogue with curated apps says 'Popular'")
+    names = [a.name for a in st.popular(games=False)]
+    check(names[:3] == ["Google Chrome", "YouTube", "Spotify"], f"Popular apps start with the curated list ({names[:4]})")
+    hero = [a.name for a in st.hero()]
+    check(hero[0] == "Google Chrome" and "Zeta" not in hero[:6], f"hero = popular apps ({hero})")
+    check(all(a.screenshots for a in st.hero()), "the hero shows apps that have screenshots")
+    check([a.name for a in st.hero(games=True)][:1] == ["Steam"], "games hero starts with Steam")
+
+    # banner / icon loader
+    import gi
+    gi.require_version("GdkPixbuf", "2.0")
+    from gi.repository import GdkPixbuf
+    from fenestra_store import media
+    src = os.path.join(TMP, "shot.png")
+    pb = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8, 2000, 1000)
+    pb.fill(0xd02020ff)
+    pb.savev(src, "png", [], [])
+    calls = []
+    ld = media.Loader(workers=2)
+    got = []
+
+    def job():
+        calls.append(1)
+        return media.banner_texture(src, 640)
+    ld.get("k", job, got.append)
+    ld.get("k", job, got.append)
+    check(wait(lambda: len(got) == 2), "two widgets asking for one banner both get it")
+    check(len(calls) == 1, f"one download/decode per banner ({len(calls)})")
+    check(got[0] is not None and got[0].get_width() == 640 and got[0].get_height() == 320,
+          f"banner scaled down to the tile width ({got[0] and (got[0].get_width(), got[0].get_height())})")
+    sync = []
+    ld.get("k", job, sync.append)
+    check(len(sync) == 1 and len(calls) == 1, "cached banner returned at once, without a new job")
+    scaled = media.scaled_file(src, 640, src)
+    check(bool(scaled) and scaled.startswith(os.path.join(TMP, "cache")) and os.path.isfile(scaled),
+          "scaled banner cached under ~/.cache/fenestra-store/banners")
+    check(media.scaled_file(src, 640, src) == scaled, "scaled banner reused")
+    col = media.dominant_color(src)
+    check(col.startswith("#") and int(col[1:3], 16) > 150 > int(col[3:5], 16), f"dominant colour of a red image ({col})")
+    a = apps[0]
+    a.brand_dark = "#123456"
+    check(media.banner_colour(a, True) == "#123456", "banner uses the branding colour")
+    a.brand_dark = a.brand_light = ""
+    check(media.banner_colour(a, True, "#ff0000").startswith("#") and media.banner_colour(a, True) == "#2b2b2b",
+          "banner falls back to the icon colour, then neutral grey")
+
+
+def webapps_test():
+    print("== web apps")
+    from fenestra_store.backends import webapps
+    apps_dir, data_dir = os.path.join(TMP, "applications"), os.path.join(TMP, "webapps")
+    pwa = os.path.join(TMP, "gnome-pwa-list-test.xml")
+    with open(pwa, "w") as f:
+        f.write('<components><component type="web-application"><id>x.desktop</id><name>Pad</name>'
+                '<summary>Notes</summary><launchable type="url">https://pad.example.org/</launchable>'
+                '<icon type="remote" width="512" height="512">https://pad.example.org/i.png</icon>'
+                '<categories><category>Office</category></categories></component></components>')
+    be = webapps.WebAppBackend(apps_dir, data_dir, [pwa])
+    apps = {a.app_id: a for a in be.load()}
+    check({"web.youtube", "web.whatsapp", "web.netflix"} <= set(apps), "curated web apps listed")
+    check("web.pad_example_org" in apps and apps["web.pad_example_org"].icon_url.endswith("/i.png"),
+          "GNOME Software's web app list read")
+    yt = apps["web.youtube"]
+    check(yt.packaging == "web" and yt.source == "web" and not yt.installed and yt.brand_dark,
+          "YouTube: web app, not installed, branding colour")
+    q = webapps.exec_quote(["/usr/bin/brave", "--app=https://x.org/?a=1&b=2"])
+    check(q == '/usr/bin/brave "--app=https://x.org/?a=1&b=2"', f"Exec quoting ({q})")
+    check(webapps.wm_class("https://www.youtube.com/", "brave") == "brave-www.youtube.com__-Default", "window class")
+    m = webapps.manifest_icon("https://s.org/m.json", '{"icons": [{"src": "a16.png", "sizes": "16x16"}, '
+                              '{"src": "m.png", "sizes": "512x512", "purpose": "maskable"}, '
+                              '{"src": "/a192.png", "sizes": "192x192"}]}')
+    check(m == "https://s.org/a192.png", f"manifest icon: largest full-colour one ({m})")
+    man, best = webapps.page_icon("https://s.org/x/", '<link rel="manifest" href="/m.json"><link rel="icon" '
+                                  'href="f.ico"><link rel="apple-touch-icon" sizes="180x180" href="/t.png">')
+    check(man == "https://s.org/m.json" and best == "https://s.org/t.png", f"page icon links ({man}, {best})")
+    events = []
+    be.install(yt, lambda f, t: events.append(f))
+    path = be.desktop_path(yt)
+    check(os.path.isfile(path), "install writes a launcher")
+    text = open(path).read()
+    check(f"{webapps.MARK}=web.youtube" in text and "https://www.youtube.com/" in text, "launcher opens the site")
+    from gi.repository import Gio
+    info = Gio.DesktopAppInfo.new_from_filename(path)
+    check(info is not None and info.get_name() == "YouTube", "launcher is a valid desktop entry")
+    check(webapps.WebAppBackend(apps_dir, data_dir, []).load()[0].installed, "installed after a reload")
+    be.remove(yt, lambda f, t: None)
+    check(not os.path.exists(path), "uninstall removes the launcher")
+
+
+def integration_test():
+    print("== one store: launcher overrides, command line")
+    from fenestra_store import integration
+    d = os.path.join(TMP, "overrides")
+    os.makedirs(d)
+    foreign = os.path.join(d, "org.kde.discover.snap.desktop")
+    with open(foreign, "w") as f:
+        f.write("[Desktop Entry]\nName=Mine\n")
+    exe = os.path.join(TMP, "bin", "fenestra-store")   # GLib only loads entries whose Exec exists
+    os.makedirs(os.path.dirname(exe))
+    with open(exe, "w") as f:
+        f.write("#!/bin/sh\n")
+    os.chmod(exe, 0o755)
+    written = integration.write_overrides(d, exe)
+    names = {os.path.basename(p) for p in written}
+    check({"org.gnome.Software.desktop", "org.kde.discover.desktop", "gnome-software-local-file-flatpak.desktop",
+           "gnome-software-local-file-packagekit.desktop", "org.kde.discover.urlhandler.desktop"} <= names,
+          "GNOME Software and Discover launchers overridden")
+    check(open(foreign).read().startswith("[Desktop Entry]\nName=Mine"), "a foreign override is left alone")
+    from gi.repository import Gio
+    gs = Gio.DesktopAppInfo.new_from_filename(os.path.join(d, "org.gnome.Software.desktop"))
+    check(gs is not None and gs.get_nodisplay() and gs.get_name() == "Fenestra Store"
+          and gs.get_commandline().startswith(exe), "org.gnome.Software opens Fenestra Store, hidden")
+    check("DBusActivatable" not in open(os.path.join(d, "org.gnome.Software.desktop")).read(),
+          "no D-Bus activation of GNOME Software")
+    url = open(os.path.join(d, "org.kde.discover.urlhandler.desktop")).read()
+    check("Hidden=true" in url, "Discover's link handler hidden")
+    lf = Gio.DesktopAppInfo.new_from_filename(os.path.join(d, "gnome-software-local-file-flatpak.desktop"))
+    check(lf is not None and "--local-filename" in lf.get_commandline() and
+          "application/vnd.flatpak.ref" in lf.get_supported_types(), ".flatpakref handler opens Fenestra Store")
+    removed = integration.remove_overrides(d)
+    check(len(removed) == len(written) and os.path.exists(foreign), "overrides removed, foreign file kept")
+
+    from fenestra_store import app as appmod
+    o = appmod.parse_args(["x", "--local-filename", "pkg.flatpakref"])
+    check(appmod.start_target(o) == ("file", os.path.abspath("pkg.flatpakref")), "--local-filename")
+    o = appmod.parse_args(["x", "/tmp/a.rpm"])
+    check(appmod.start_target(o) == ("file", "/tmp/a.rpm"), ".rpm as an argument")
+    o = appmod.parse_args(["x", "flatpak+https://dl.flathub.org/repo/appstream/org.x.Y.flatpakref"])
+    check(appmod.start_target(o)[0] == "file", "flatpak+https:// link")
+    o = appmod.parse_args(["x", "appstream://org.gnome.Maps.desktop"])
+    check(appmod.start_target(o) == ("app", "org.gnome.Maps.desktop"), "appstream:// link")
+    o = appmod.parse_args(["x", "--install=org.x.Y", "--interaction=full"])
+    check(appmod.start_target(o) == ("app", "org.x.Y"), "GNOME Software's --install opens the app page")
+    o = appmod.parse_args(["x", "--mode=updates"])
+    check(appmod.start_target(o) == ("updates", None), "--mode=updates")
+
+
 def ui_test():
     print(f"== UI pages (--lang {args.lang})")
     from fenestra_store import app as appmod
@@ -178,6 +379,15 @@ def ui_test():
             w.navigate(pid)
             yield
         check(True, "every page built")
+        hero = w.pages["home"].banner
+        check(hero is not None and len(hero.big_apps) >= 1 and len(hero.tiles) == 3, "home hero: banner and 3 tiles")
+        for _ in range(20):
+            if not hero.big.art.loading and not any(t.art.loading for t in hero.tiles):
+                break
+            yield
+        check(hero.big.art.shot is not None and all(t.art.shot is not None for t in hero.tiles),
+              "hero tiles show screenshots (generated ones in demo mode)")
+        check(hero.big.content[0].get_opacity() == 1.0, "hero text shown once the picture is ready")
         w.pages["home"].banner.next()
         w.pages["home"].banner.prev()
         yield
@@ -251,8 +461,14 @@ def ui_test():
 
 
 store_test()
+popular_test()
+webapps_test()
+integration_test()
 if args.ui:
     ui_test()
 ok = not failures and not errors
 print("SMOKE", "OK" if ok else "FAILED", f"failures={len(failures)} tracebacks={len(errors)}")
+import shutil  # noqa: E402
+
+shutil.rmtree(TMP, ignore_errors=True)
 sys.exit(0 if ok else 1)

@@ -187,6 +187,12 @@ _CATALOGUE = [
      {"en": "See and tidy your Git history", "es": "Ve y ordena tu historial de Git"},
      {"en": ["Ramas draws your repository history as a graph and makes staging, committing and branching visual."],
       "es": ["Ramas dibuja el historial del repositorio como un grafo y hace visual preparar, confirmar y crear ramas."]}),
+    # a web app (installed as a launcher that opens the site in an app window)
+    ("org.fenestra.demo.RadioBrisa", "Radio Brisa", DEV_BRISA, "web", ["multimedia"], "app", 0.6, "play",
+     "1.0", 0, "LicenseRef-proprietary", "2026-10-12", 820, "", None,
+     {"en": "Live radio from the web, in its own window", "es": "Radio en directo de la web, en su propia ventana"},
+     {"en": ["Radio Brisa opens the station's website in its own window, with its own icon in Start."],
+      "es": ["Radio Brisa abre la web de la emisora en su propia ventana, con su propio icono en Inicio."]}),
 ]
 
 # Lienzo is also packaged in the Fedora repositories (shows the "also available from" switch).
@@ -229,11 +235,12 @@ class DemoBackend(Backend):
         uid = f"demo:{source}:{aid}"
         size_mb = size or size_mb
         app = App(uid=uid, app_id=aid, backend=self.id, source=source, name=name,
-                  packaging=("flatpak" if source == "flathub" else "rpm"),
+                  packaging={"flathub": "flatpak", "web": "web"}.get(source, "rpm"),
                   summary=pick(summary), description=list(pick(desc)), developer=dev,
                   categories=list(cats), kind=kind, version=version or ver, license=lic,
                   download_size=int(size_mb * 1e6 * 0.42), installed_size=int(size_mb * 1e6),
                   permissions=(list(perms) if source == "flathub" else None),
+                  web_url=("https://radio.example.org/" if source == "web" else ""),
                   homepage="", keywords=[], art=(hue, glyph),
                   featured="f" in flags and source == "flathub", popularity=pop, released=rel,
                   ref=(f"app/{aid}/x86_64/stable" if source == "flathub" else f"{name.lower()};{ver};x86_64;fedora"),

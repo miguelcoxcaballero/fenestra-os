@@ -30,6 +30,10 @@
         <image type="thumbnail" width="752" height="470">https://example.org/telar-1-752.png</image>
       </screenshot>
     </screenshots>
+    <branding>
+      <color type="primary" scheme_preference="light">#BFDBFE</color>
+      <color type="primary" scheme_preference="dark">#1E3A8A</color>
+    </branding>
     <launchable type="desktop-id">org.fenestra.sample.Telar.desktop</launchable>
     <bundle type="flatpak" runtime="org.gnome.Platform/x86_64/49">app/org.fenestra.sample.Telar/x86_64/stable</bundle>
     <releases>

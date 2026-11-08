@@ -17,7 +17,7 @@ from gi.repository import Gio, GLib, Graphene, Gsk, Gtk  # noqa: E402
 
 from . import i18n, theme, util  # noqa: E402
 
-PAGES = ["home", "apps", "games", "library", "updates", "search", "sources", "category", "app"]
+PAGES = ["home", "apps", "games", "library", "updates", "search", "sources", "category", "app", "file"]
 PAGE_ALIASES = {"installed": "library", "update": "updates", "settings": "sources", "repos": "sources",
                 "overview": "home", "explore": "home", "details": "app"}
 
@@ -44,21 +44,41 @@ def parse_args(argv):
     p.add_argument("--mode", default=None, help=argparse.SUPPRESS)          # updates | installed | overview
     p.add_argument("--details", default=None, help=argparse.SUPPRESS)       # app id
     p.add_argument("--search-text", dest="gs_search", default=None, help=argparse.SUPPRESS)
+    p.add_argument("--install", dest="gs_install", default=None, help=argparse.SUPPRESS)   # app id: its page
+    p.add_argument("--pkgname", dest="gs_pkgname", default=None, help=argparse.SUPPRESS)   # package: its page
+    p.add_argument("--local-filename", dest="local_file", default=None,
+                   help="open a .flatpakref, .flatpakrepo or .rpm file (also accepted as a plain argument)")
+    p.add_argument("--interaction", default=None, help=argparse.SUPPRESS)                  # ignored
+    p.add_argument("--show-metainfo", default=None, help=argparse.SUPPRESS)               # ignored
+    p.add_argument("--set-default", action="store_true",
+                   help="make Fenestra Store this user's only software store (hides GNOME Software and Discover"
+                        " launchers, handles appstream:// links and .flatpakref/.flatpakrepo/.rpm files) and exit")
+    p.add_argument("--unset-default", action="store_true", help="undo --set-default and exit")
     o, rest = p.parse_known_args(argv[1:])
-    for r in rest:  # appstream://ID or appstream:ID URIs (what GNOME Software is given by other apps)
-        if r.startswith("appstream:") and not o.app:
+    o.local_file = o.local_file or None
+    for r in rest:
+        if r.startswith("appstream:") and not o.app:   # appstream://ID (what GNOME Software is given)
             o.app = r.split(":", 1)[1].lstrip("/")
+        elif not o.local_file and (r.startswith(("flatpak+https://", "file://")) or
+                                   r.lower().endswith((".flatpakref", ".flatpakrepo", ".rpm"))):
+            o.local_file = r if "://" in r else os.path.abspath(r)
+    if o.local_file and "://" not in o.local_file:
+        o.local_file = os.path.abspath(o.local_file)
     if o.mode and not o.page:
         o.page = {"updates": "updates", "installed": "library", "updated": "library"}.get(o.mode, "home")
     if o.details and not o.app:
         o.app = o.details
+    if (o.gs_install or o.gs_pkgname) and not o.app:
+        o.app = o.gs_install or o.gs_pkgname
     if o.gs_search and not o.search:
         o.search = o.gs_search
     return o
 
 
 def start_target(o):
-    """(page id, argument) from --page / --app / --search."""
+    """(page id, argument) from --page / --app / --search / a local file."""
+    if getattr(o, "local_file", None):
+        return "file", o.local_file
     if o.app:
         return "app", o.app
     page = (o.page or "home").strip()
@@ -183,6 +203,9 @@ def main(argv=None):
         util.DEMO = True
     if opts.read_only or opts.real_data or os.environ.get("FENESTRA_STORE_READ_ONLY"):
         util.READ_ONLY = True
+    if opts.set_default or opts.unset_default:
+        from . import integration
+        return integration.main(remove=opts.unset_default)
     if opts.list_backends:
         from .backends import choose
         for b in choose(util.DEMO):

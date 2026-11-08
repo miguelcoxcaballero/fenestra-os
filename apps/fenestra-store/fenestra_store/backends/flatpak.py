@@ -15,6 +15,7 @@ gi.require_version("Flatpak", "1.0")
 from gi.repository import Flatpak, GLib  # noqa: E402
 
 from .. import util  # noqa: E402
+from ..i18n import N_  # noqa: E402
 from ..model import App, Screenshot, Source, StoreError, map_categories  # noqa: E402
 from . import Backend, appstream  # noqa: E402
 
@@ -168,17 +169,70 @@ class FlatpakBackend(Backend):
 
     def _from_component(self, c, uid, ref, iid, remote, kind):
         cats = map_categories(c.categories)
-        return App(uid=uid, app_id=c.id.removesuffix(".desktop"), backend=self.id, source=kind, packaging="flatpak",
+        # the ref's name is the real id ("org.telegram.desktop" ends in ".desktop" on purpose)
+        parts = ref.split("/")
+        app_id = parts[1] if len(parts) >= 4 and parts[1] else c.id.removesuffix(".desktop")
+        return App(uid=uid, app_id=app_id, backend=self.id, source=kind, packaging="flatpak",
                    name=c.name, summary=c.summary, description=c.description, developer=c.developer,
                    categories=cats, kind="game" if "games" in cats else "app", version=c.version,
                    license=c.license, homepage=c.homepage, keywords=c.keywords, icon_path=c.icon_path,
                    icon_url=c.icon_url, icon_name=c.icon_name,
-                   screenshots=[Screenshot(url=u, caption=cap) for u, cap in c.screenshots],
+                   screenshots=[Screenshot(url=u, caption=cap, large=big) for u, cap, big in c.screenshots],
+                   brand_light=c.branding.get("light", ""), brand_dark=c.branding.get("dark", ""),
                    released=c.released, ref=ref, origin=remote,
-                   desktop_id=c.desktop_id or f"{c.id.removesuffix('.desktop')}.desktop")
+                   desktop_id=c.desktop_id or f"{app_id}.desktop")
 
     def _installation(self, app) -> Flatpak.Installation:
+        if app.local_file:   # .flatpakref: the system installation, as GNOME Software does
+            return next((i for i in self.installations if not i.get_is_user()), self.installations[0])
         return self._inst[app.uid.split(":")[1]]
+
+    # ------------------------------------------------------------------ local files
+    def local_app(self, path):
+        """A .flatpakref -> App (installed with add_install_flatpakref); a .flatpakrepo -> a dict
+        describing the source to add. None for other files."""
+        low = path.lower()
+        if not low.endswith((".flatpakref", ".flatpakrepo")):
+            return None
+        kf = GLib.KeyFile()
+        try:
+            kf.load_from_file(path, GLib.KeyFileFlags.NONE)
+        except GLib.Error as e:
+            raise StoreError(e.message) from e
+        group = "Flatpak Ref" if low.endswith(".flatpakref") else "Flatpak Repo"
+
+        def get(key, default=""):
+            try:
+                return kf.get_string(group, key) or default
+            except GLib.Error:
+                return default
+        url = get("Url")
+        if group == "Flatpak Repo":
+            name = os.path.splitext(os.path.basename(path))[0]
+            return {"kind": "repo", "name": name, "title": get("Title", name), "url": url, "path": path}
+        name = get("Name")
+        if not name:
+            raise StoreError(N_("The file does not name an app"))
+        if get("IsRuntime", "false").lower() == "true":
+            raise StoreError(N_("Runtimes are installed together with the apps that need them"))
+        ref = f"app/{name}/{self.arch}/{get('Branch', 'stable')}"
+        return App(uid=f"flatpak:file:{path}", app_id=name, backend=self.id,
+                   source="flathub" if "flathub.org" in url else "local", packaging="flatpak",
+                   name=get("Title", name), summary=get("Comment") or get("Description"), homepage=get("Homepage"),
+                   icon_url=get("Icon") if get("Icon").startswith("https://") else "", ref=ref,
+                   origin=get("SuggestRemoteName"), desktop_id=f"{name}.desktop", categories=["utilities"],
+                   local_file=path, details_loaded=True)
+
+    def add_remote_file(self, path, name):
+        """Add the source described by a .flatpakrepo file to the system installation (polkit)."""
+        with open(path, "rb") as f:
+            data = GLib.Bytes.new(f.read())
+        inst = next((i for i in self.installations if not i.get_is_user()), self.installations[0])
+        try:
+            remote = Flatpak.Remote.new_from_file(name, data)
+            inst.add_remote(remote, True, None)
+        except GLib.Error as e:
+            raise StoreError(e.message) from e
 
     # ------------------------------------------------------------------ details
     def details(self, app):
@@ -246,7 +300,8 @@ class FlatpakBackend(Backend):
         t.connect("new-operation", new_op)
         t.connect("operation-done", op_done)
         t.connect("operation-error", op_error)
-        t.connect("add-new-remote", lambda *_a: False)          # never add remotes behind the user's back
+        # never add remotes behind the user's back; a .flatpakref the user opened may name its own
+        t.connect("add-new-remote", lambda *_a: bool(app.local_file))
         t.connect("choose-remote-for-ref", lambda *_a: 0)
         try:
             add(t)
@@ -257,6 +312,11 @@ class FlatpakBackend(Backend):
         progress(1.0, "")
 
     def install(self, app, progress):
+        if app.local_file:
+            with open(app.local_file, "rb") as f:
+                data = GLib.Bytes.new(f.read())
+            self._run(app, progress, lambda t: t.add_install_flatpakref(data))
+            return
         self._run(app, progress, lambda t: t.add_install(app.origin, app.ref, None))
 
     def remove(self, app, progress):

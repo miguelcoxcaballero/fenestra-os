@@ -6,7 +6,7 @@ from gi.repository import Gtk
 
 from .. import util
 from ..i18n import N_, _
-from ..model import CATEGORY_TITLES, PERMISSIONS, SOURCES
+from ..model import CATEGORY_TITLES, PACKAGING, PERMISSIONS, SOURCES
 from ..widgets import ActionArea, Carousel, app_icon, button, clear, icon, label, status_text
 from .base import Page
 
@@ -66,7 +66,7 @@ class DetailsPage(Page):
         sep = Gtk.Box()
         sep.add_css_class("meta-sep")
         meta.append(sep)
-        meta.append(label(_("Flatpak") if app.packaging == "flatpak" else _("RPM package"), "app-meta-text"))
+        meta.append(label(_(PACKAGING.get(app.packaging, app.packaging)), "app-meta-text"))
         for c in app.categories[:1]:
             sep = Gtk.Box()
             sep.add_css_class("meta-sep")
@@ -98,7 +98,8 @@ class DetailsPage(Page):
         mark = Gtk.Box()
         mark.add_css_class("source-mark")
         mark.add_css_class(f"badge-{app.source}")
-        mark.append(icon("st-perm-shield-symbolic" if app.packaging != "flatpak" else "st-sources-symbolic", 20))
+        mark.append(icon({"flatpak": "st-sources-symbolic", "web": "st-perm-network-symbolic"}.get(
+            app.packaging, "st-perm-shield-symbolic"), 20))
         mark.set_valign(Gtk.Align.CENTER)
         src.append(mark)
         st = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
@@ -124,7 +125,7 @@ class DetailsPage(Page):
                 b = Gtk.Button()
                 b.add_css_class("hyperlink")
                 b.set_label(_(SOURCES.get(alt.source, alt.source)) +
-                            (" · " + (_("Flatpak") if alt.packaging == "flatpak" else _("RPM package"))))
+                            (" · " + _(PACKAGING.get(alt.packaging, alt.packaging))))
                 b.connect("clicked", lambda _b, u=alt.uid: self.win.show_app(u, record=False))
                 row.append(b)
             body.append(row)
@@ -177,12 +178,18 @@ class DetailsPage(Page):
     _tint_providers: dict = {}
 
     def _tint(self, widget, app):
-        """Gradient from the app's colour (top) to the page background, as a per-page provider."""
+        """Gradient from the app's colour (top) to the page background, as a per-page provider:
+        its AppStream branding colour when it has one, else a colour derived from its id."""
         from .. import art, theme
-        hue, _g = art.art_for(app)
         dark = theme.get().dark
-        r, g, b = (int(v * 255) for v in art.rgb(hue, 0.30 if dark else 0.86, 0.45 if dark else 0.9))
-        name = "app-tint-%d" % (round(hue * 360) % 360) + ("-d" if dark else "-l")
+        brand = app.brand(dark)
+        if brand:
+            r, g, b = (int(brand[i:i + 2], 16) for i in (1, 3, 5))
+            name = "app-tint-%s" % brand[1:] + ("-d" if dark else "-l")
+        else:
+            hue, _g = art.art_for(app)
+            r, g, b = (int(v * 255) for v in art.rgb(hue, 0.30 if dark else 0.86, 0.45 if dark else 0.9))
+            name = "app-tint-%d" % (round(hue * 360) % 360) + ("-d" if dark else "-l")
         widget.add_css_class(name)
         if name not in self._tint_providers:
             prov = Gtk.CssProvider()
@@ -208,7 +215,7 @@ class DetailsPage(Page):
             (_("License"), app.license or _("Unknown")),
             (_("Source"), _(SOURCES.get(app.source, app.source)) + (f" ({app.origin})" if app.origin and
                                                                     app.origin.lower() != app.source else "")),
-            (_("Format"), _("Flatpak") if app.packaging == "flatpak" else _("RPM package")),
+            (_("Format"), _(PACKAGING.get(app.packaging, app.packaging))),
             (_("Developer"), app.developer),
         ]
         cells = []
@@ -233,7 +240,11 @@ class DetailsPage(Page):
             card.attach(cell, col, row, 1, 1)
         self.details_box.append(card)
 
-        if app.packaging != "flatpak":
+        if app.packaging == "web":
+            self.perm_box.append(self._perm_row("st-perm-network-symbolic", _("Runs in your web browser"),
+                                                _("It has the same access as the website has in your browser."),
+                                                False))
+        elif app.packaging != "flatpak":
             self.perm_box.append(self._perm_row("st-perm-shield-symbolic",
                                                 _("Not sandboxed"),
                                                 _("System packages can use everything your account can."), True))

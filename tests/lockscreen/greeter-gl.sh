@@ -24,5 +24,5 @@ if [ -d "$MP" ]; then
 fi
 podman rm -f fenestra-lockbench >/dev/null 2>&1
 exec podman run -d --name fenestra-lockbench --security-opt label=disable --device /dev/dri/renderD128 --cap-add SYS_NICE \
-    -e SCALE="${SCALE:-1.5}" -e W="${W:-2880}" -e H="${H:-1800}" -e LOCKLANG="${LANGUAGE:-es_ES.UTF-8}" -e LOCKED="${LOCKED:-}" \
+    -e SCALE="${SCALE:-1.5}" -e W="${W:-2880}" -e H="${H:-1800}" -e LOCKLANG="${LANGUAGE:-es_ES.UTF-8}" -e LOCKED="${LOCKED:-}" -e UNLOCK_MS="${UNLOCK_MS:-}" \
     -v "$REPO:/src:ro" -v "$OUT:/out" "${M[@]}" localhost/fenestra-kwinlab:latest bash /src/tests/lockscreen/greeter-session.sh

@@ -8,6 +8,7 @@
 set -u
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=$(realpath -m "${1:-$(mktemp -d)}"); mkdir -p "$OUT"
+rm -f "$OUT/ready"   # a reused OUT: wait for this run's KWin, not the last one's
 C="$REPO/tests/lockscreen/ctl.sh"
 FAILS=0
 check() { local name=$1; shift; if "$@"; then echo "CHECK $name PASS"; else echo "CHECK $name FAIL"; FAILS=$((FAILS + 1)); fi; }
@@ -32,6 +33,7 @@ $C key 57; sleep 2; $C type Fenestra1
 t0=$(date +%s%N); $C key 28; exited >/dev/null; t1=$(date +%s%N)
 echo "password unlock with dead camera and hung fprintd: $(( (t1 - t0) / 1000000 )) ms"
 check L-no-lockout-dead-camera-hung-fprintd test $(( (t1 - t0) / 1000000 )) -lt 1000
+cp "$OUT/greet.log" "$OUT/00-greet.log"; cp "$OUT/pam.log" "$OUT/00-pam.log" 2>/dev/null
 # (the hung stand-ins exec "sleep infinity"; the bench's own session holds the only other one)
 check L-stand-ins-killed test "$($C sh 'pgrep -x sleep | wc -l')" = 1
 $C finger wait
@@ -40,6 +42,8 @@ $C finger wait
 $C face fail; $C sh "echo 1 > /tmp/face-delay"
 start
 $C shot 01-clock
+# Nothing is checked on the clock: no camera, no fingerprint reader until the clock is dismissed.
+check L-nothing-checked-on-clock bash -c "! grep -qE 'face start|finger start' '$OUT/pam.log' 2>/dev/null"
 # No QML warning of the lock screen's own files (stand-ins aside).
 check L-no-qml-warnings bash -c "! grep 'org.fenestra.desktop/contents/lockscreen/.*qml:[0-9]' '$OUT/greet.log' | grep -q ."
 $C key 57; sleep 2; $C shot 02-signin
@@ -141,7 +145,10 @@ check L-boot-unlocked test "$($C sh 'pgrep -x kscreenlocker_g | wc -l')" = 0
 #    its greeter; KWin's locker starts a new one, still locked; the password unlocks.
 $C sh "loginctl lock-session 2>/dev/null; dbus-send --session --dest=org.freedesktop.ScreenSaver --type=method_call /ScreenSaver org.freedesktop.ScreenSaver.Lock"; sleep 5
 g1=$($C sh 'pgrep -x kscreenlocker_g')
-$C sh "pkill -f 'kscreenlocker_worker kde '\$USER'\$' ; pkill -f 'kscreenlocker_worker kde root\$'"; sleep 9
+$C sh "pkill -f 'kscreenlocker_worker kde '\$USER'\$' ; pkill -f 'kscreenlocker_worker kde root\$'"; sleep 2
+# Nothing is checked while the clock shows, so the dead worker is found once the clock is
+# dismissed: the greeter is replaced within seconds (still locked), back on its clock.
+$C key 57; sleep 9
 g2=$($C sh 'pgrep -x kscreenlocker_g')
 echo "greeter before $g1, after $g2"
 check L-dead-worker-new-greeter test -n "$g1" -a -n "$g2" -a "$g1" != "$g2"

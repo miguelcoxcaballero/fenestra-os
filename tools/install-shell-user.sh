@@ -49,6 +49,16 @@ sed "s|^Exec=.*|Exec=$PREFIX/bin/fenestra-shell|" "$REPO/shell/data/org.fenestra
 # KWin looks the entry up in the KService cache: refresh it (a running KWin picks it up).
 kbuildsycoca6 >/dev/null 2>&1 || true
 
+# Fenestra's scripted KWin effects (the unlock fade, window motion): KWin reads per-user ones from
+# ~/.local/share/kwin/effects. The unlock fade is on by default; load it in the running KWin.
+KFX=$HOME/.local/share/kwin/effects
+mkdir -p "$KFX"
+for d in "$REPO"/kwin/effects/*/; do
+    n=$(basename "$d"); rm -rf "$KFX/$n.new"; cp -a "$d" "$KFX/$n.new"; rm -rf "${KFX:?}/$n"; mv "$KFX/$n.new" "$KFX/$n"
+done
+kwriteconfig6 --file kwinrc --group Plugins --key fenestra-unlockEnabled true
+busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects loadEffect s fenestra-unlock >/dev/null 2>&1 || true
+
 mkdir -p "$(dirname "$DROPIN")"
 cat > "$DROPIN" <<EOF
 # Written by tools/install-shell-user.sh ($(git -C "$REPO" rev-parse --short HEAD)); remove with --remove

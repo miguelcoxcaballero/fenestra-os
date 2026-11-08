@@ -78,7 +78,7 @@ Item {
     }
     Connections {
         target: Shortcuts
-        function onOsd(kind, value) { root.screenObjects(null).osd.show(kind, value) }
+        function onOsd(kind, value) { root.screenObjects(null).osd.show(kind, value); LockOsd.progress(kind, value) }
         function onSecurityScreenRequested() { root.securityScreen.open() }
         function onNotificationCenterRequested() { ShellState.toggleCalendar(null, -1) }
         function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
@@ -91,6 +91,9 @@ Item {
         target: PerformanceMode
         function onKeyChanged(profile) {
             const glyph = profile === "performance" ? "\uec4a" : profile === "balanced" ? "\uec49" : "\uec48"
+            // On the lock screen too (LockOsd: the shell's own surfaces are hidden while locked).
+            LockOsd.text(PerformanceMode.vendor === "samsung-galaxybook" ? "oem" : "performance", PerformanceMode.label(profile), glyph,
+                         PerformanceMode.vendor === "samsung-galaxybook" ? PerformanceMode.icon(profile, true) : "")
             if (PerformanceMode.vendor === "samsung-galaxybook")
                 root.oemBanner.show(PerformanceMode.label(profile), PerformanceMode.icon(profile, Theme.dark), glyph)
             else
@@ -100,6 +103,10 @@ Item {
     Connections {
         target: KbdBacklight
         function onKeyChanged(level) {
+            if (KbdBacklight.vendor === "samsung-galaxybook")
+                LockOsd.text("oem", KbdBacklight.samsungLabel(level), "\ued39", KbdBacklight.samsungIcon(true))
+            else
+                LockOsd.progress("keyboard", KbdBacklight.percent)
             if (KbdBacklight.vendor === "samsung-galaxybook")
                 root.oemBanner.show(KbdBacklight.samsungLabel(level), KbdBacklight.samsungIcon(Theme.dark), "\ued39")
             else

@@ -110,7 +110,10 @@ scrollbar.hovering slider, scrollbar.dragging slider { min-width: 6px; backgroun
 
 /* ------------------------------------------------------------------ hero (Home / Apps / Games) */
 .art-tile { border-radius: 8px; }
-.hero-content { padding: 88px 36px 0 33px; color: #ffffff; }
+.hero-content { padding: 0 36px 4px 33px; color: #ffffff; }
+.hero-icon { margin: 0 0 14px 3px; -gtk-icon-shadow: 0 2px 6px rgba(0,0,0,0.35); }
+.hero-content .hero-tagline { text-shadow: 0 1px 3px rgba(0,0,0,0.35); }
+.hero-content .hero-title { text-shadow: 0 1px 4px rgba(0,0,0,0.35); }
 .hero-chip, .hero-content .hero-chip {
   font-size: 12px; padding: 0 9px; min-height: 24px; border-radius: 4px; margin: 0 0 9px 3px;
   background-color: rgba(0,0,0,0.42); color: #ffffff;
@@ -132,11 +135,11 @@ button.dot {
   background-color: #9a9a9a; background-image: none;
 }
 button.dot.active { min-width: 6px; min-height: 6px; margin: 0 3px; }
-.tile-text-large { padding: 88px 24px 0 34px; color: #ffffff; }
-.tile-text-large .hero-chip { margin: 0 0 9px -2px; }
-.tile-title { font-size: 20px; font-weight: 600; color: #ffffff; }
-.tile-text { padding: 0 16px 15px 17px; color: #ffffff; }
-.tile-name { font-size: 14px; font-weight: 600; color: #ffffff; }
+.tile-text-large { padding: 0 24px 20px 22px; color: #ffffff; }
+.tile-title { font-size: 20px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.tile-summary { font-size: 13px; color: rgba(255,255,255,0.88); text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.tile-text { padding: 0 14px 12px 14px; color: #ffffff; }
+.tile-name { font-size: 14px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
 
 /* category chips under the hero on Apps */
 .category-chips { margin: 0; padding: 0; }
@@ -257,6 +260,8 @@ button.icon-action:hover { background: var(--st-subtle-hover); }
 .source-mark image { margin: 0 11px; }
 .source-mark.badge-flathub { background-color: var(--st-badge-flathub); color: var(--st-badge-flathub-fg); }
 .source-mark.badge-fedora { background-color: var(--st-badge-fedora); color: var(--st-badge-fedora-fg); }
+.badge-web, .badge-local { background-color: var(--st-badge-web); color: var(--st-badge-web-fg); }
+.source-mark.badge-web, .source-mark.badge-local { background-color: var(--st-badge-web); color: var(--st-badge-web-fg); }
 .source-block-title { font-size: 12px; font-weight: 600; }
 .source-block-text { font-size: 11px; color: var(--st-fg2); }
 .app-body { padding: 0 88px 48px 88px; }

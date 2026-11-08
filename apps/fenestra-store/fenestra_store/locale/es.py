@@ -216,4 +216,26 @@ STRINGS = {
     "Maximize": "Maximizar",
     "Restore": "Restaurar",
     "Close": "Cerrar",
+    # web apps, local files, other stores
+    "Web": "Web",
+    "Web app": "Aplicación web",
+    "This computer": "Este equipo",
+    "Runs in your web browser": "Se ejecuta en tu navegador web",
+    "It has the same access as the website has in your browser.":
+        "Tiene el mismo acceso que el sitio web tiene en tu navegador.",
+    "Add source": "Añadir origen",
+    "Add the software source “%s”?": "¿Añadir el origen de software «%s»?",
+    "Apps from %s will appear in Fenestra Store. Only add sources you trust.":
+        "Las aplicaciones de %s aparecerán en Fenestra Store. Añade solo orígenes de confianza.",
+    "Could not add the source": "No se ha podido añadir el origen",
+    "Source added: %s": "Origen añadido: %s",
+    "Could not open the file": "No se ha podido abrir el archivo",
+    "Could not download the file": "No se ha podido descargar el archivo",
+    "The file does not exist": "El archivo no existe",
+    "Fenestra Store cannot open this kind of file": "Fenestra Store no puede abrir este tipo de archivo",
+    "The file does not name an app": "El archivo no indica ninguna aplicación",
+    "Runtimes are installed together with the apps that need them":
+        "Los entornos de ejecución se instalan junto con las aplicaciones que los necesitan",
+    "Not a package PackageKit can read": "No es un paquete que PackageKit pueda leer",
+    "Flatpak is not available": "Flatpak no está disponible",
 }

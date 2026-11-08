@@ -8,6 +8,7 @@ FluentButton 1.0 FluentButton.qml
 Glyph 1.0 Glyph.qml
 Hello 1.0 Hello.qml
 KeyboardButton 1.0 KeyboardButton.qml
+LockOsd 1.0 LockOsd.qml
 LockScreen 1.0 LockScreen.qml
 MediaCard 1.0 MediaCard.qml
 NetworkFlyout 1.0 NetworkFlyout.qml

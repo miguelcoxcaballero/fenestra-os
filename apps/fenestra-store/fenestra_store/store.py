@@ -10,9 +10,10 @@ import queue
 import threading
 import time
 
-from gi.repository import GLib, GObject
+from gi.repository import Gio, GLib, GObject
 
-from . import util
+from . import popular, util
+from .i18n import N_
 from .model import (AVAILABLE, INSTALLED, INSTALLING, QUEUED, REMOVING, UPDATING, App, Source,
                     StoreError)
 
@@ -62,15 +63,31 @@ class Store(GObject.Object):
             return
         self.loading = True
 
+        def one(b, out):
+            t0 = time.monotonic()
+            try:
+                out[b.id] = (b.load(), b.sources(), None)
+            except Exception as e:  # noqa: BLE001 - one broken backend must not hide the others
+                out[b.id] = ([], [], f"{b.label}: {e}")
+                util.log("load failed", b.id, e)
+            util.log(f"{b.id}: {len(out[b.id][0])} apps in {time.monotonic() - t0:.1f} s")
+
         def work():
+            # Each backend in its own thread: Flathub's AppStream parse and PackageKit's resolve
+            # are independent and mostly wait on files and D-Bus.
+            out: dict = {}
+            threads = [threading.Thread(target=one, args=(b, out), daemon=True) for b in self.backends.values()]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
             apps, sources, errors = [], [], []
             for b in self.backends.values():
-                try:
-                    apps += b.load()
-                    sources += b.sources()
-                except Exception as e:  # noqa: BLE001 - one broken backend must not hide the others
-                    errors.append(f"{b.label}: {e}")
-                    util.log("load failed", b.id, e)
+                a, s, e = out.get(b.id, ([], [], None))
+                apps += a
+                sources += s
+                if e:
+                    errors.append(e)
             return apps, sources, errors
         if sync:
             self._loaded(work())
@@ -81,12 +98,14 @@ class Store(GObject.Object):
         apps, sources, errors = res
         self.apps = {a.uid: a for a in apps}
         self._hay = {}
-        # Real catalogues carry no download counts: rank by how complete the listing is instead,
-        # and say "Recommended" rather than "Popular" (has_popularity).
+        # Real catalogues carry no download counts: Fenestra's curated list of popular apps comes
+        # first (popular.py), then GNOME Software's own picks, then the most complete listings.
+        # Without a match on the curated list the panels say "Recommended" (has_popularity).
         self.has_popularity = any(a.popularity for a in apps)
         if not self.has_popularity:
             for a in apps:
                 a.popularity = self._quality(a)
+            self.has_popularity = popular.apply(apps) >= 5
         self._sources = sources
         self.load_errors = errors
         self.loaded = True
@@ -137,13 +156,21 @@ class Store(GObject.Object):
         f = [a for a in self.catalogue() if a.featured]
         if f:
             return sorted(f, key=lambda a: (-a.popularity, a.name))
-        # Real catalogues: five complete, recently released listings, a different set each day.
-        pool = sorted((a for a in self.catalogue() if len(a.screenshots) >= 2 and a.description and not a.installed),
-                      key=lambda a: (a.popularity, a.released), reverse=True)[:40]
-        if not pool:
-            return []
-        day = int(time.time() // 86400)
-        return [pool[(day * 7 + i * 8) % len(pool)] for i in range(min(5, len(pool)))]
+        # Real catalogues: the popular apps (curated list first) that have a screenshot to show.
+        return [a for a in self.popular() if a.screenshots and a.curated][:12]
+
+    def hero(self, games=None, n=7) -> list[App]:
+        """Apps for the hero of Home (games=None), Apps (False) or Games (True): featured /
+        popular apps with screenshots first, then popular ones without (they get their branding
+        colour and icon), never more than n."""
+        out = [a for a in self.featured() if games is None or a.is_game == games]
+        pop = self.popular(games=games)
+        for a in [x for x in pop if x.screenshots] + pop:
+            if len(out) >= n:
+                break
+            if a not in out:
+                out.append(a)
+        return out[:n]
 
     def popular(self, games=None, limit=None) -> list[App]:
         r = [a for a in self.catalogue() if games is None or a.is_game == games]
@@ -352,6 +379,57 @@ class Store(GObject.Object):
             except GLib.Error:
                 pass
         self.emit("updates-changed")
+
+    # ------------------------------------------------------------------ local files and links
+    def open_local(self, target, on_done, on_error):
+        """target: a path, file:// URI or flatpak+https:// link to a .flatpakref, .flatpakrepo or
+        .rpm. on_done(uid) for an app (the catalogue entry when the app is already listed), or
+        on_done(dict) for a .flatpakrepo source; on_error(message)."""
+        def work():
+            path = target
+            if path.startswith("flatpak+https://"):
+                path = util.fetch_cached(path[len("flatpak+"):]) or ""
+                if not path:
+                    raise StoreError(N_("Could not download the file"))
+            elif path.startswith("file://"):
+                path = Gio.File.new_for_uri(path).get_path() or ""
+            if not os.path.isfile(path):
+                raise StoreError(N_("The file does not exist"))
+            for b in self.backends.values():
+                fn = getattr(b, "local_app", None)
+                res = fn(path) if fn else None
+                if res is not None:
+                    return res
+            raise StoreError(N_("Fenestra Store cannot open this kind of file"))
+
+        def done(res):
+            if isinstance(res, dict):
+                on_done(res)
+                return
+            same = next((a for a in self.catalogue() if a.app_id == res.app_id and a.packaging == res.packaging
+                         and not a.local_file), None)
+            if same is not None and res.source != "local":
+                on_done(same.uid)
+                return
+            self.apps[res.uid] = res
+            on_done(res.uid)
+        util.in_thread(work, on_done=done, on_error=lambda e: on_error(str(e)))
+
+    def add_repo(self, info, on_done):
+        """Add the source from a .flatpakrepo (dict from open_local) and reload the catalogue."""
+        if util.READ_ONLY and not util.DEMO:
+            on_done(False, "read-only")
+            return
+        be = self.backends.get("flatpak")
+        if be is None:
+            on_done(False, N_("Flatpak is not available"))
+            return
+
+        def ok(_r):
+            on_done(True, "")
+            self.load()
+        util.in_thread(be.add_remote_file, info["path"], info["name"], on_done=ok,
+                       on_error=lambda e: on_done(False, str(e)))
 
     # ------------------------------------------------------------------ launch / sources
     def launch(self, uid) -> bool:

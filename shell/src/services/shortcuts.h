@@ -34,5 +34,9 @@ Q_SIGNALS:
 private:
     explicit Shortcuts(QObject *parent = nullptr);
     QAction *add(const QString &id, const QString &text, const QList<QKeySequence> &keys);
+    // A key that also works on the lock screen: kscreenlocker forwards only the shortcuts of a few
+    // components (kmix's volume, powerdevil's brightness and keyboard light), so the action is
+    // registered under that component and action name, and the key taken from any other owner.
+    QAction *addLockable(const QString &component, const QString &id, const QString &text, const QKeySequence &key);
     void volume(int delta);
 };
