@@ -110,8 +110,8 @@ if [ -n "${APPS:-}" ]; then
     printf '{"extensions":{"theme":{"system_theme":1}},"browser":{"custom_chrome_frame":true}}' > /tmp/brave/Default/Preferences
     [ -x /opt/brave.com/brave/brave ] && /opt/brave.com/brave/brave --no-sandbox --user-data-dir=/tmp/brave --no-first-run \
         --ozone-platform=wayland --gtk-version=3 --disable-gpu --window-size=760,520 "data:text/html,<title>Brave</title>" >/out/brave.log 2>&1 &
-    [ -x /usr/lib/claude-desktop/claude-desktop ] && ELECTRON_OZONE_PLATFORM_HINT=wayland /usr/lib/claude-desktop/claude-desktop \
-        --no-sandbox --disable-gpu >/out/claude.log 2>&1 &
+    [ -x /usr/lib/claude-desktop/claude-desktop ] && env ${ELECTRON_ENV:-} ELECTRON_OZONE_PLATFORM_HINT=wayland /usr/lib/claude-desktop/claude-desktop \
+        --no-sandbox --disable-gpu ${ELECTRON_ARGS:-} >/out/claude.log 2>&1 &
 fi
 sleep ${WAIT:-6}
 # The window under test gets the focus (ACTIVE=caption), the rest are inactive.

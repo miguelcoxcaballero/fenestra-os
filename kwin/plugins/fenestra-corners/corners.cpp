@@ -13,8 +13,10 @@
       - an opaque pixel (a square corner: Chromium/Electron, Qt, X11 apps, the client area under
         Aurorae's frame, an app snapped by the toolkit but not by KWin) is clipped to an 8 px
         (x scale) arc, antialiased, with a 1 px (x scale) ring in the colour of the window's own
-        straight edge next to that corner (its border, so the curve keeps the border), over what
-        the window shows just outside the corner (its shadow there, or nothing).
+        straight edge next to that corner (its border, so the curve keeps the border); what the
+        window draws around a clipped corner (a toolkit's 1 px outline, its shadow) follows the
+        curve too: at a distance d outside the arc it shows what lies d outside the straight side
+        edge, so no square ring of outline is left at the corner.
 
     Snapped (KWin's quick tiles and custom tiles): drawn the same way, but square: corners a frame
     left round (Aurorae rounds its title bar unless the window is maximized; a toolkit that does
@@ -101,6 +103,9 @@ void main(void)
                         : (p.y < 0.0 ? cornerRadius.x : cornerRadius.w);
     vec2 c = abs(p) - (box.zw - vec2(r)); // from the arc's centre towards the corner
     bool inCorner = r > 0.0 && c.x > 0.0 && c.y > 0.0 && abs(p).x <= box.z && abs(p).y <= box.w;
+    // The whole quadrant past the arc's centre, outside the frame too (a toolkit's 1 px outline,
+    // its shadow).
+    bool inQuadrant = r > 0.0 && c.x > 0.0 && c.y > 0.0;
     if (squareCorners > 0.5) {
         // Snapped: a corner the frame left round (its very corner pixel is see-through: Aurorae's
         // title bar, a toolkit that does not get the tiled state) is rebuilt square from the
@@ -110,14 +115,17 @@ void main(void)
             vec2 from = c.x > c.y ? vec2(abs(p).x, box.w - r - 0.5) : vec2(box.z - r - 0.5, abs(p).y);
             result = sampleAt(box.xy + s * from, toTex);
         }
-    } else if (inCorner && result.a > 0.9) {
+    } else if (inQuadrant && sampleAt(box.xy + s * (box.zw - vec2(0.5)), toTex).a > 0.9) {
+        // A square corner (its very corner pixel is opaque): rounded, and so is everything the
+        // window draws around it. What lies at a distance d outside the arc is what the window
+        // shows at the same distance outside its straight side edge (its outline, its shadow, or
+        // nothing): the ring around the frame follows the curve instead of staying a square.
         float d = length(c) - r;                          // > 0 outside the arc
         float outer = clamp(0.5 - d, 0.0, 1.0);
         float inner = clamp(0.5 - (d + borderWidth), 0.0, 1.0);
         // The window's own straight edge next to this corner (left / right border, just past the arc).
         vec4 edge = sampleAt(box.xy + s * vec2(box.z - 0.5, box.w - r - 0.5), toTex);
-        // What lies just outside the corner (the window's shadow, or nothing).
-        vec4 behind = sampleAt(box.xy + s * (box.zw + vec2(0.5)), toTex);
+        vec4 behind = sampleAt(box.xy + s * vec2(box.z + max(d, 0.5), box.w - r - 0.5), toTex);
         vec4 win = result * inner + edge * (outer - inner);
         result = win + behind * (1.0 - win.a);
     }
