@@ -13,7 +13,14 @@ Window {
     readonly property bool primary: targetScreen && Qt.application.screens.length && targetScreen.name === Qt.application.screens[0].name
     color: WallpaperSource.color
     visible: false
-    Component.onCompleted: { ShellUtil.placeOnScreen(desk, targetScreen.name); visible = true }
+    // Shown only once the wallpaper picture is decoded: mapping at once showed the fallback colour
+    // (grey) for a moment at every start. A missing / broken picture, or 2 s, shows it anyway.
+    readonly property bool wallpaperReady: WallpaperSource.image === "" || wallpaper.status === Image.Ready
+                                           || wallpaper.status === Image.Error
+    function reveal() { if (!visible) { ShellUtil.placeOnScreen(desk, targetScreen.name); visible = true } }
+    onWallpaperReadyChanged: if (wallpaperReady) reveal()
+    Component.onCompleted: { if (wallpaperReady) reveal(); else revealTimer.start() }
+    Timer { id: revealTimer; interval: 2000; onTriggered: desk.reveal() }
     LayerShell.Window.scope: "fenestra-wallpaper"
     LayerShell.Window.layer: LayerShell.Window.LayerBackground
     LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
@@ -54,12 +61,14 @@ Window {
     function selected(row) { return selection.indexOf(row) >= 0 }
 
     Image {
+        id: wallpaper
         anchors.fill: parent
         source: WallpaperSource.image
         visible: source.toString() !== ""
         fillMode: Image.PreserveAspectCrop   // background-size: cover
         asynchronous: true
-        sourceSize: Qt.size(desk.width * Screen.devicePixelRatio, desk.height * Screen.devicePixelRatio)
+        sourceSize: Qt.size((desk.targetScreen ? desk.targetScreen.width : desk.width) * Screen.devicePixelRatio,
+                            (desk.targetScreen ? desk.targetScreen.height : desk.height) * Screen.devicePixelRatio)
     }
 
     Item {
