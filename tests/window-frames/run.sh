@@ -32,7 +32,7 @@ if [ -d "$CFG/icons" ]; then
     while IFS= read -r f; do FONTS+=(-v "$f:/root/.local/share/icons/${f#$CFG/icons/}:ro"); done < <(find "$CFG/icons" -type f)
 fi
 exec podman run --rm --security-opt label=disable --device /dev/dri/renderD128 --cap-add SYS_NICE \
-    -e SCALE="${SCALE:-1.6}" -e W="${W:-2880}" -e H="${H:-1800}" -e STATE="${STATE:-}" -e DECO="${DECO:-Fenestra-Dark}" -e LIB="${LIB:-}" -e BS="${BS:-}" -e ACTIVE="${ACTIVE:-Qt SSD}" -e CAPFONT="${CAPFONT:-}" -e SHELL_BUILD="${SHELL_BUILD:+1}" -e DESK_BG="${DESK_BG:-}" -e SHELL_LANG="${SHELL_LANG:-}" -e WAIT="${WAIT:-6}" -e HOSTUSER="$USER" -e KEEP="${KEEP:-}" -e FX="${FX:-}" -e APPS="${APPS:-}" ${NAME:+--name $NAME} \
+    -e SCALE="${SCALE:-1.6}" -e W="${W:-2880}" -e H="${H:-1800}" -e STATE="${STATE:-}" -e DECO="${DECO:-Fenestra-Dark}" -e LIB="${LIB:-}" -e BS="${BS:-}" -e ACTIVE="${ACTIVE:-Qt SSD}" -e CAPFONT="${CAPFONT:-}" -e SHELL_BUILD="${SHELL_BUILD:+1}" -e DESK_BG="${DESK_BG:-}" -e SHELL_LANG="${SHELL_LANG:-}" -e WAIT="${WAIT:-6}" -e HOSTUSER="$USER" -e KEEP="${KEEP:-}" -e FX="${FX:-}" -e APPS="${APPS:-}" -e ELECTRON_ARGS="${ELECTRON_ARGS:-}" -e ELECTRON_ENV="${ELECTRON_ENV:-}" ${NAME:+--name $NAME} \
     -v "$REPO:/src:ro" -v "$CFG:/cfg:ro" ${SHELL_BUILD:+-v "$SHELL_BUILD:/build"} -v "$OUT:/out" "${FONTS[@]}" ${CORNERS:+-v "$(realpath "$CORNERS"):/usr/lib64/qt6/plugins/kwin/effects/plugins/fenestra-corners.so:ro"} \
     -v /usr/share/icons/Fenestra:/usr/share/icons/Fenestra:ro -v "$HOME/.local/share/icons:/root/.local/share/icons:ro" \
     localhost/fenestra-kwinlab:latest bash /src/tests/window-frames/session.sh
