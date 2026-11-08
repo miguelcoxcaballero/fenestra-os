@@ -4,11 +4,12 @@ from __future__ import annotations
 from gi.repository import Gdk, GLib
 
 from .. import util
+from ..backends import adaptive_color
 from ..backends import display as displayb
 from ..backends import power, session
 from ..i18n import _
-from ..widgets import (ContentDialog, Dropdown, ExpanderRow, SettingRow, Slider, button, label, show_dialog,
-                       spinner, toast,
+from ..widgets import (ContentDialog, Dropdown, ExpanderRow, SettingRow, Slider, ToggleSwitch, button, label,
+                       show_dialog, spinner, toast,
                        not_available_row, value_label)
 from .base import Page, register
 from .common import gsetting_dropdown, gsetting_toggle
@@ -22,9 +23,10 @@ class DisplayPage(Page):
     id = "display"
     parent = "system"
     title = "Display"
-    keywords = "monitor screen resolution scale brightness night light hdr refresh"
+    keywords = "monitor screen resolution scale brightness night light adaptive color hdr refresh"
     index = [
         ("brightness", "Brightness", "screen backlight dim"),
+        ("adaptive-color", "Adaptive color", "ambient light sensor white point true tone color temperature"),
         ("night-light", "Night light", "blue light warm color temperature"),
         ("scale", "Scale", "zoom size dpi text apps"),
         ("resolution", "Display resolution", "pixels screen size"),
@@ -40,6 +42,16 @@ class DisplayPage(Page):
         self.remember("brightness", self.bright_row)
         g.add(self.bright_row)
         self._load_brightness()
+
+        # Windows 11 shows "Adaptive color" here on PCs with an ambient colour sensor, on by
+        # default; Fenestra Shell follows the switch live (shell.conf [Display] AdaptiveColor).
+        if session.supports("adaptive-color"):
+            ac = SettingRow(_("Adaptive color"),
+                            _("Automatically adjust the color of your screen based on lighting conditions"),
+                            "fs-color-symbolic", key="adaptive-color",
+                            control=ToggleSwitch(adaptive_color.enabled(), self._set_adaptive_color))
+            self.remember("adaptive-color", ac)
+            g.add(ac)
 
         nl = gsetting_toggle(COLOR, "night-light-enabled")
         if nl is not None:
@@ -207,6 +219,13 @@ class DisplayPage(Page):
             return True
         timer = [GLib.timeout_add_seconds(1, tick)]
         show_dialog(self.box, dlg)
+
+    def _set_adaptive_color(self, on):
+        if util.READ_ONLY:
+            toast(self.box, _("This action is disabled in read-only mode"))
+            return
+        if not adaptive_color.set_enabled(on):
+            toast(self.box, _("The change was not applied"))
 
     def _primary_monitor(self):
         mons = Gdk.Display.get_default().get_monitors()

@@ -73,8 +73,10 @@ for value, fen in (("Fenestra", True), ("fenestra", True), ("KDE:Fenestra", True
     desktop(value)
     check(f"is_fenestra({value!r}) == {fen}", session.is_fenestra() is fen and session.is_gnome() is (not fen))
 desktop("GNOME")
-check("GNOME: nothing hidden", not session.hidden_pages() and not any(
-    session.hidden_rows(p) for p in session.ROW_FEATURES))
+check("GNOME: nothing hidden (but Fenestra-only rows)", not session.hidden_pages() and not any(
+    {k for k in session.hidden_rows(p) if session.ROW_FEATURES[p][k] not in session.FENESTRA_ONLY}
+    for p in session.ROW_FEATURES))
+check("GNOME: Adaptive color not offered", not session.supports("adaptive-color"))
 check("GNOME: GNOME panels open GNOME Settings", session.panel_target("display") == (
     "gcc", ["gnome-control-center", "display"]))
 check("GNOME: Spotlight wallpaper not offered", not session.supports("wallpaper-spotlight"))
@@ -92,6 +94,23 @@ check("Fenestra: GNOME Settings / Tweaks / extension rows hidden",
       and session.launch_target(["extension-manager"]) is None)
 check("Fenestra: standalone tools still launch", session.launch_target(["gnome-disks"]) == ("argv", ["gnome-disks"]))
 check("Fenestra: Spotlight wallpaper offered", session.supports("wallpaper-spotlight"))
+# Adaptive color: only with a colour light sensor (a fake IIO tree here).
+_als = os.path.join(TMP, "iio", "iio:device0")
+os.makedirs(_als)
+os.environ["FENESTRA_ALS_PATH"] = os.path.join(TMP, "iio")
+check("Fenestra: Adaptive color hidden without a colour sensor", not session.supports("adaptive-color")
+      and "adaptive-color" in session.hidden_rows("display"))
+for _n in ("in_chromaticity_x_raw", "in_chromaticity_y_raw"):
+    open(os.path.join(_als, _n), "w").write("361\n")
+check("Fenestra: Adaptive color shown with a colour sensor", session.supports("adaptive-color")
+      and "adaptive-color" not in session.hidden_rows("display"))
+from fenestra_settings.backends import adaptive_color  # noqa: E402
+check("Adaptive color on by default", adaptive_color.enabled())
+adaptive_color.set_enabled(False)
+check("Adaptive color off -> shell.conf [Display] AdaptiveColor=false",
+      shellconf.raw("Display/AdaptiveColor") == "false" and not adaptive_color.enabled())
+os.environ.pop("FENESTRA_ALS_PATH")
+shutil.rmtree(os.path.join(TMP, ".config", "fenestra"))
 
 # --------------------------------------------------------------------------------------------
 print("shell.conf codec")

@@ -9,6 +9,7 @@
 #include <QQuickWindow>
 
 #include "acrylic.h"
+#include "adaptivecolor.h"
 #include "backdrop.h"
 #include "batteryalerts.h"
 #include "performancemode.h"
@@ -86,6 +87,7 @@ int main(int argc, char *argv[])
     PerformanceMode::instance(); // the OEM performance-mode key's banner
     RecordingBlock::instance(); // firmware microphone/camera block: never silent
     KbdBacklight::instance();    // keyboard backlight (hotkey banner, Quick settings)
+    AdaptiveColor::instance();   // white point follows the ambient light (colour light sensor)
     TestProbe::installIfRequested(&engine);
     return app.exec();
 }
