@@ -66,6 +66,9 @@ def readers():
             check(t.version == "2.1.0" and t.released.startswith("2026"), f"{tag} newest release ({t.version} {t.released})")
             check(t.icon_path.endswith("128x128/org.fenestra.sample.Telar.png"), f"{tag} cached icon ({t.icon_path})")
             check(t.screenshots and t.screenshots[0][0].endswith("-752.png"), f"{tag} screenshot thumbnail")
+            check(t.screenshots and t.screenshots[0][2] == "https://example.org/telar-1.png",
+                  f"{tag} large screenshot for banners ({t.screenshots and t.screenshots[0][2]})")
+            check(t.branding == {"light": "#bfdbfe", "dark": "#1e3a8a"}, f"{tag} branding colours ({t.branding})")
             check(t.bundle == "app/org.fenestra.sample.Telar/x86_64/stable", f"{tag} flatpak bundle")
             check(t.desktop_id == "org.fenestra.sample.Telar.desktop", f"{tag} launchable")
             check(t.license == "GPL-3.0-or-later" and "Graphics" in t.categories, f"{tag} license and categories")
@@ -90,6 +93,31 @@ def permissions():
     check(parse_permissions("[Application]\nname=a\n") == ["none"], "no permissions -> 'none'")
 
 
+def local_files():
+    try:
+        from fenestra_store.backends.flatpak import FlatpakBackend
+    except (ImportError, ValueError):
+        print("  (Flatpak typelib not installed: .flatpakref parsing skipped)")
+        return
+    tmp = tempfile.mkdtemp()
+    ref = os.path.join(tmp, "org.example.App.flatpakref")
+    with open(ref, "w") as f:
+        f.write("[Flatpak Ref]\nName=org.example.App\nTitle=Example\nBranch=stable\n"
+                "Url=https://dl.flathub.org/repo/\nSuggestRemoteName=flathub\nIsRuntime=false\n")
+    repo = os.path.join(tmp, "example.flatpakrepo")
+    with open(repo, "w") as f:
+        f.write("[Flatpak Repo]\nTitle=Example repo\nUrl=https://example.org/repo/\n")
+    b = FlatpakBackend.__new__(FlatpakBackend)
+    b.arch = "x86_64"
+    a = b.local_app(ref)
+    check(a is not None and a.app_id == "org.example.App" and a.name == "Example" and a.local_file == ref
+          and a.ref == "app/org.example.App/x86_64/stable" and a.source == "flathub", ".flatpakref -> app")
+    r = b.local_app(repo)
+    check(isinstance(r, dict) and r["title"] == "Example repo" and r["name"] == "example", ".flatpakrepo -> source")
+    check(b.local_app(os.path.join(tmp, "x.rpm")) is None, "flatpak backend ignores .rpm")
+    shutil.rmtree(tmp)
+
+
 def backends():
     for mod, cls in (("flatpak", "FlatpakBackend"), ("packagekit", "PackageKitBackend")):
         try:
@@ -107,13 +135,29 @@ def backends():
             check(False, f"{mod} backend raised {e.__class__.__name__}: {e}")
     from fenestra_store.backends import choose
     chosen = [b.id for b in choose(demo=False)]
-    check(isinstance(chosen, list), f"choose() without demo -> {chosen}")
+    check(isinstance(chosen, list) and "webapp" in chosen, f"choose() without demo -> {chosen}")
+    # same catalogue as GNOME Software: the system AppStream catalog and every enabled remote
+    if "flatpak" in chosen or "packagekit" in chosen:
+        from fenestra_store import popular
+        from fenestra_store.store import Store
+        st = Store(choose(demo=False))
+        st.load(sync=True)
+        top = [a.name for a in st.popular(games=False)[:5]]
+        cur = [a for a in st.catalogue() if a.curated]
+        check(len(cur) >= 5, f"curated popular apps found in the real catalogue ({len(cur)}): {top}")
+        hero = st.hero()
+        check(all(a.curated for a in hero[:4]) and all(a.screenshots for a in hero[:4]),
+              f"hero: popular apps with screenshots ({[a.name for a in hero]})")
+        check(bool(popular.gnome_picks()) or not os.path.exists(popular.APP_LIST_FILES[0]),
+              f"GNOME Software's featured list read ({len(popular.gnome_picks())} apps)")
 
 
 print("== AppStream readers")
 readers()
 print("== Flatpak permissions")
 permissions()
+print("== local files")
+local_files()
 print("== real backends (no daemon / network expected)")
 backends()
 print("BACKENDS", "OK" if not failures else "FAILED", len(failures))

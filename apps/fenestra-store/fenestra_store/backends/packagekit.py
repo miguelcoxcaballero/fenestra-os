@@ -7,12 +7,15 @@ runs as root and never calls rpm/dnf directly.
 """
 from __future__ import annotations
 
+import os
+
 import gi
 
 gi.require_version("PackageKitGlib", "1.0")
 from gi.repository import Gio, GLib, PackageKitGlib as PK  # noqa: E402
 
 from .. import util  # noqa: E402
+from ..i18n import N_  # noqa: E402
 from ..model import App, Screenshot, Source, StoreError, map_categories  # noqa: E402
 from . import Backend, appstream  # noqa: E402
 
@@ -121,7 +124,8 @@ class PackageKitBackend(Backend):
                     developer=c.developer, categories=cats, kind="game" if "games" in cats else "app",
                     version=pretty_version(pkg.get_version()) if pkg else c.version, license=c.license, homepage=c.homepage,
                     keywords=c.keywords, icon_path=c.icon_path, icon_url=c.icon_url, icon_name=c.icon_name,
-                    screenshots=[Screenshot(url=u, caption=cap) for u, cap in c.screenshots],
+                    screenshots=[Screenshot(url=u, caption=cap, large=big) for u, cap, big in c.screenshots],
+                    brand_light=c.branding.get("light", ""), brand_dark=c.branding.get("dark", ""),
                     released=c.released, ref=pkg.get_id() if pkg else c.pkgname, origin=c.origin or "fedora",
                     desktop_id=c.desktop_id or c.id, installed=pkg is not None, pkgname=c.pkgname)
             a.sync_state()
@@ -155,6 +159,14 @@ class PackageKitBackend(Backend):
 
     # ------------------------------------------------------------------ transactions
     def install(self, app, progress):
+        if app.local_file:
+            try:
+                progress(None, "Preparing")
+                _check(self.client.install_files(0, [app.local_file], None, self._progress_cb(progress), None))
+            except GLib.Error as e:
+                raise StoreError(e.message) from e
+            progress(1.0, "")
+            return
         try:
             progress(None, "Preparing")
             pid = self._resolve_one(app.pkgname, "~installed;newest;arch")
@@ -203,6 +215,35 @@ class PackageKitBackend(Backend):
                 found[a.uid] = pretty_version(pkg.get_version())
                 self._update_ids[pkg.get_name()] = pkg.get_id()
         return found
+
+    # ------------------------------------------------------------------ local files
+    def local_app(self, path):
+        """An .rpm file -> App installed with install_files (PackageKit asks polkit, which also
+        covers unsigned packages). None for other files."""
+        if not path.lower().endswith(".rpm"):
+            return None
+        try:
+            res = _check(self.client.get_details_local([path], None, self._quiet, None))
+            dets = res.get_details_array()
+        except GLib.Error as e:
+            raise StoreError(e.message) from e
+        if not dets:
+            raise StoreError(N_("Not a package PackageKit can read"))
+        d = dets[0]
+        name, version, _arch, _data = (d.get_package_id().split(";") + ["", "", "", ""])[:4]
+        desc = [p for p in (d.get_description() or "").split("\n\n") if p.strip()]
+        try:
+            inst = _check(self.client.resolve(_filters("installed"), [name], None, self._quiet, None))
+            installed = bool(inst.get_package_array())
+        except (GLib.Error, StoreError):
+            installed = False
+        a = App(uid=f"packagekit:file:{path}", app_id=name, backend=self.id, source="local", packaging="rpm",
+                name=name, summary=d.get_summary() or "", description=desc, version=pretty_version(version),
+                license=d.get_license() or "", homepage=d.get_url() or "", installed_size=d.get_size(),
+                categories=["utilities"], pkgname=name, ref=d.get_package_id(), origin=os.path.basename(path),
+                desktop_id=f"{name}.desktop", installed=installed, local_file=path, details_loaded=True)
+        a.sync_state()
+        return a
 
     # ------------------------------------------------------------------ repositories
     def sources(self):

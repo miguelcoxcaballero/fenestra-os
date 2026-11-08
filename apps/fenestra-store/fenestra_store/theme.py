@@ -42,6 +42,7 @@ DARK = {
     "danger": "#ff99a4", "success": "#6ccb5f", "warning": "#fce100", "caution-bg": "rgba(252,225,0,0.08)",
     "close-hover": "#c42b1c", "shot-bg": "#161616", "badge-flathub": "rgba(76,194,255,0.16)",
     "badge-fedora": "rgba(108,203,95,0.16)", "badge-flathub-fg": "#9fdcff", "badge-fedora-fg": "#a6e39b",
+    "badge-web": "rgba(255,170,90,0.16)", "badge-web-fg": "#ffc99a",
 }
 
 LIGHT = {
@@ -61,6 +62,7 @@ LIGHT = {
     "caution-bg": "rgba(255,244,206,0.7)", "close-hover": "#c42b1c", "shot-bg": "#e6e6e6",
     "badge-flathub": "rgba(0,103,192,0.10)", "badge-fedora": "rgba(16,124,16,0.10)",
     "badge-flathub-fg": "#004f94", "badge-fedora-fg": "#0b5e0b",
+    "badge-web": "rgba(202,80,16,0.10)", "badge-web-fg": "#8a3a0a",
 }
 
 

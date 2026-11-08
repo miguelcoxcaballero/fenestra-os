@@ -46,7 +46,9 @@ def map_categories(fdo_categories) -> list[str]:
 
 
 # Source keys and labels
-SOURCES = {"flathub": N_("Flathub"), "fedora": N_("Fedora")}
+SOURCES = {"flathub": N_("Flathub"), "fedora": N_("Fedora"), "web": N_("Web"), "local": N_("This computer")}
+# Packaging formats -> label
+PACKAGING = {"flatpak": N_("Flatpak"), "rpm": N_("RPM package"), "web": N_("Web app")}
 
 # Flatpak permission keys -> (English description, icon, sensitive?)
 PERMISSIONS = {
@@ -79,8 +81,9 @@ BUSY = (QUEUED, INSTALLING, REMOVING, UPDATING)
 
 @dataclass
 class Screenshot:
-    url: str = ""                 # remote URL (downloaded into the cache) or local path
+    url: str = ""                 # remote URL (downloaded into the cache) or local path; ~752 px thumbnail
     caption: str = ""
+    large: str = ""               # the same screenshot at >= 1200 px (hero banners); "" when unknown
     art: int = 0                  # demo: layout variant drawn by art.py
 
 
@@ -91,7 +94,7 @@ class App:
     backend: str                  # backend id that handles operations
     source: str                   # "flathub" | "fedora"
     name: str
-    packaging: str = "flatpak"    # "flatpak" | "rpm"
+    packaging: str = "flatpak"    # "flatpak" | "rpm" | "web"
     summary: str = ""
     description: list = field(default_factory=list)   # paragraphs; bullet lines start with "• "
     developer: str = ""
@@ -113,6 +116,7 @@ class App:
     installed: bool = False
     featured: bool = False
     popularity: int = 0           # higher = more popular (demo / install counts when known)
+    curated: bool = False         # on Fenestra's popular list (popular.py)
     released: str = ""            # ISO date of the latest release
     state: str = AVAILABLE
     progress: float = 0.0
@@ -121,11 +125,23 @@ class App:
     ref: str = ""                 # flatpak ref ("app/org.x.Y/x86_64/stable") or package id
     origin: str = ""              # flatpak remote / rpm repo
     desktop_id: str = ""          # for launching
+    brand_light: str = ""         # AppStream <branding> primary colours ("#rrggbb")
+    brand_dark: str = ""
+    web_url: str = ""             # web apps: the site the launcher opens
+    local_file: str = ""          # opened from a .flatpakref / .rpm file
     details_loaded: bool = False
 
     @property
     def is_game(self) -> bool:
         return self.kind == "game" or "games" in self.categories
+
+    @property
+    def hero_shot(self):
+        """The screenshot used for banners (the first one), or None."""
+        return self.screenshots[0] if self.screenshots else None
+
+    def brand(self, dark: bool) -> str:
+        return (self.brand_dark or self.brand_light) if dark else (self.brand_light or self.brand_dark)
 
     @property
     def has_update(self) -> bool:

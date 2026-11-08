@@ -3,6 +3,7 @@
 * demo       deterministic in-memory catalogue (--demo-data, screenshots, tests)
 * flatpak    libflatpak (gi Flatpak-1.0) + the remotes' AppStream data (Flathub)
 * packagekit PackageKit (gi PackageKitGlib-1.0) + the system AppStream pool (Fedora RPMs)
+* webapp     web apps (YouTube, WhatsApp…): launchers that open the site in an app window
 
 All methods except `launch()` are called from worker threads and may block. `progress`
 callbacks take (fraction 0..1 or None, status text) and may be called from any thread;
@@ -77,4 +78,6 @@ def choose(demo: bool) -> list[Backend]:
                 util.log("backend unavailable:", modname, getattr(b, "why", ""))
         except (ImportError, ValueError) as e:  # typelib missing: gi raises ValueError
             util.log("backend not loaded:", modname, e)
+    from .webapps import WebAppBackend   # pure Python: always available
+    found.append(WebAppBackend())
     return found

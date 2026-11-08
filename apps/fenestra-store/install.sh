@@ -2,6 +2,11 @@
 # Install Fenestra Store.
 #   PREFIX  (default /usr)   installation prefix (PREFIX=$HOME/.local works for a per-user install)
 #   DESTDIR (default empty)  staging root for packaging
+#   REPLACE_STORES (default 1)  make Fenestra Store the only visible store: override the launchers of
+#                               GNOME Software and Discover (nothing is uninstalled). PREFIX=/usr: in
+#                               $DESTDIR/usr/local/share/applications; per-user prefix: in
+#                               ~/.local/share/applications, plus the user's default handlers for
+#                               appstream:// links and .flatpakref/.flatpakrepo/.rpm files.
 # Example: DESTDIR=/tmp/pkg PREFIX=/usr ./install.sh
 # Runtime: python3-gobject, gtk4, python3-cairo; optional: flatpak-libs (Flathub),
 # PackageKit-glib + PackageKit (Fedora RPMs), appstream (AppStream reader), appstream-data.
@@ -33,6 +38,18 @@ install -m 0644 "$SRC/data/icons/hicolor/scalable/apps/org.fenestra.Store.svg" \
     "$DESTDIR$PREFIX/share/icons/hicolor/scalable/apps/org.fenestra.Store.svg"
 install -m 0644 "$SRC/LICENSES/GPL-3.0-or-later.txt" \
     "$DESTDIR$PREFIX/share/licenses/fenestra-store/GPL-3.0-or-later.txt"
+
+# One store: GNOME Software / Discover launchers open Fenestra Store (see fenestra_store/integration.py).
+if [ "${REPLACE_STORES:-1}" = "1" ]; then
+    if [ "$PREFIX" = "/usr" ]; then
+        PYTHONPATH="$SRC" python3 -m fenestra_store.integration --system \
+            "$DESTDIR/usr/local/share/applications" fenestra-store >/dev/null
+    elif [ -z "$DESTDIR" ]; then
+        command -v update-desktop-database >/dev/null 2>&1 && \
+            update-desktop-database -q "$PREFIX/share/applications" 2>/dev/null || true
+        PATH="$PREFIX/bin:$PATH" "$PREFIX/bin/fenestra-store" --set-default
+    fi
+fi
 
 if [ -z "$DESTDIR" ]; then
     command -v gtk-update-icon-cache >/dev/null 2>&1 && \

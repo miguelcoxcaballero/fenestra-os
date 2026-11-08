@@ -12,6 +12,7 @@ Terminal=false
 StartupNotify=true
 StartupWMClass=org.fenestra.Store
 Categories=GTK;System;PackageManager;
+MimeType=x-scheme-handler/appstream;x-scheme-handler/flatpak+https;application/vnd.flatpak.ref;application/vnd.flatpak.repo;application/x-rpm;application/x-redhat-package-manager;
 Keywords=store;software;apps;install;update;flatpak;flathub;rpm;tienda;aplicaciones;instalar;actualizar;
 Actions=Updates;Library;
 

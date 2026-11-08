@@ -42,7 +42,8 @@ class Component:
     icon_path: str = ""
     icon_name: str = ""
     icon_url: str = ""
-    screenshots: list = field(default_factory=list)   # [(url, caption)]
+    screenshots: list = field(default_factory=list)   # [(thumbnail url, caption, large url)]
+    branding: dict = field(default_factory=dict)      # {"light"|"dark": "#rrggbb"} (primary colour)
     license: str = ""
     homepage: str = ""
     version: str = ""
@@ -135,6 +136,27 @@ def _icon_file(root, origin, size, name):
     return ""
 
 
+def pick_images(images):
+    """images: [(kind, width, url)] of one screenshot -> (thumbnail ~752 px wide, large >= 1200 px).
+    The large one is the smallest image at least 1200 px wide (hero banners), else the widest."""
+    thumb, best = "", None
+    for kind, w, url in images:
+        score = abs(w - 752) if kind == "thumbnail" else 5000
+        if url and (best is None or score < best):
+            best, thumb = score, url
+    big = sorted((t for t in images if t[2] and t[1] >= 1200), key=lambda t: t[1])
+    large = big[0][2] if big else max(images, key=lambda t: t[1], default=("", 0, ""))[2]
+    return thumb, large
+
+
+_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _color(value) -> str:
+    v = (value or "").strip()
+    return v.lower() if _HEX.match(v) else ""
+
+
 # --------------------------------------------------------------------------- XML reader
 
 def parse_xml(path: str, icon_root: str = "", origin: str = "") -> list[Component]:
@@ -195,15 +217,17 @@ def _component_from_xml(el, icon_root, origin):
             for s in child:
                 if s.tag != "screenshot":
                     continue
-                url, best = "", None
-                for im in s.findall("image"):
-                    w = int(im.get("width") or 0)
-                    score = abs(w - 752) if im.get("type") == "thumbnail" else 5000
-                    if best is None or score < best:
-                        best, url = score, _text(im)
+                url, large = pick_images([(im.get("type") or "", int(im.get("width") or 0), _text(im))
+                                          for im in s.findall("image")])
                 caps = {x.get(XML_LANG): _text(x) for x in s.findall("caption")}
                 if url:
-                    c.screenshots.append((url, _pick(caps)))
+                    c.screenshots.append((url, _pick(caps), large))
+        elif tag == "branding":
+            for col in child.findall("color"):
+                if col.get("type", "primary") == "primary":
+                    v = _color(col.text)
+                    if v:
+                        c.branding[col.get("scheme_preference") or "light"] = v
         elif tag == "project_license":
             c.license = _text(child)
         elif tag == "url" and child.get("type") == "homepage":
@@ -326,14 +350,19 @@ def _from_gi(AS, comp, icon_root="", origin=""):
             icons.append((kname, _safe(ic.get_height, default=64) or 64, _safe(ic.get_name, default="")))
     _choose_icon(c, icons, icon_root, c.origin)
     for s in _safe(comp.get_screenshots_all, default=[]):
-        best, url = None, ""
-        for im in _safe(s.get_images, default=[]):
-            w = _safe(im.get_width, default=0)
-            score = abs(w - 752) if _safe(im.get_kind) == AS.ImageKind.THUMBNAIL else 5000
-            if best is None or score < best:
-                best, url = score, _safe(im.get_url, default="")
+        ims = [("thumbnail" if _safe(im.get_kind) == AS.ImageKind.THUMBNAIL else "source",
+                _safe(im.get_width, default=0) or 0, _safe(im.get_url, default=""))
+               for im in _safe(s.get_images, default=[])]
+        url, large = pick_images(ims)
         if url:
-            c.screenshots.append((url, _safe(s.get_caption, default="")))
+            c.screenshots.append((url, _safe(s.get_caption, default=""), large))
+    br = _safe(comp.get_branding)
+    if br is not None:
+        for key, scheme in (("light", AS.ColorSchemeKind.LIGHT), ("dark", AS.ColorSchemeKind.DARK),
+                            ("light", AS.ColorSchemeKind.UNKNOWN)):
+            v = _color(_safe(br.get_color, AS.ColorKind.PRIMARY, scheme, default=""))
+            if v and key not in c.branding:
+                c.branding[key] = v
     return c
 
 
