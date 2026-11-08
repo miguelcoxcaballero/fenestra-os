@@ -14,7 +14,7 @@ install -Dm755 "$R/packaging/privacy/fenestra-hello-enroll" /usr/libexec/fenestr
 install -Dm644 "$R/desktop/privacy/org.fenestra.hello.policy" /usr/share/polkit-1/actions/org.fenestra.hello.policy
 install -Dm644 "$R/desktop/privacy/50-fenestra-enroll.rules" /etc/polkit-1/rules.d/50-fenestra-enroll.rules
 restorecon -F /etc/polkit-1/rules.d/50-fenestra-enroll.rules /etc/udev/rules.d/70-fenestra-recording-block.rules /usr/libexec/fenestra/fenestra-hello-enroll /usr/share/polkit-1/actions/org.fenestra.hello.policy 2>/dev/null || true
-# Face sign-in on the lock screen stays off until the lock screen runs it in its own worker
-# (pam_howdy in the password chain locked the user out when the camera hung).
-"$R/packaging/lockscreen/fenestra-lock-hello" disable || true
+# Face and fingerprint on the lock screen: in the parallel worker (kde-fingerprint) with hard time
+# limits; the password's own chain (/etc/pam.d/kde) stays stock, so a hung camera can't lock anyone out.
+"$R/packaging/lockscreen/fenestra-lock-hello" enable
 echo "Done."
