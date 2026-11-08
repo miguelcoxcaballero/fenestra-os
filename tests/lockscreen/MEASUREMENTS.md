@@ -88,3 +88,25 @@ keyboard layouts, MPRIS): same names and values.
   geometry (glyph, text column, tiles) with Windows' Wi-Fi states.
 * The weather / news widgets of the 24H2 clock view (MSN content): not drawn.
 * The idle timeout (30 s in Fenestra).
+
+## Never locked out (2026-11-08)
+
+Version 1 put `pam_howdy.so` first in `/etc/pam.d/kde`, the *password's* PAM service: with a camera
+that delivers no frames (the Galaxy Book's v4l2loopback relay), Howdy blocked that worker and the
+password never got asked — the user was locked out. Now:
+
+* `kde` (password) is the distribution's file, untouched: nothing but the password runs in it.
+* Face and fingerprint run in kscreenlocker's other worker, `kde-fingerprint`, which kscreenlocker
+  always runs in parallel with the password: `pam_fenestra_hello.so` starts Howdy's `compare.py`
+  and `fprintd-verify` as children (own process group, killed with the worker) with deadlines
+  (face 7 s, fingerprint 25 s), face at most twice per lock screen unless "Try again".
+* Bench (`run.sh`, step 0): Howdy stand-in that never returns (dead camera) + fprintd-verify that
+  never returns (hung fprintd): the password unlocks 0.46-0.56 s after Enter; both stand-ins are
+  gone after the unlock; over 40 s the face was tried exactly twice.
+
+## One sign-in screen
+
+Boot: GDM signs the user in by itself (`fenestra-sign-in enable USER`), `fenestra-session` sees
+`Service=gdm-autologin` plus the marker and starts KWin with `--lockscreen`, so the first frame is
+this lock screen (KWin's own locker, the same package as Win+L). Bench step 5: KWin started with
+`--lockscreen` runs `kscreenlocker_greet --immediateLock` with this package; the password unlocks.

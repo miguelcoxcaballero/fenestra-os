@@ -81,8 +81,10 @@ Item {
 
     // Windows returns to the clock after a while without input on the sign-in screen.
     Timer { id: idle; interval: 30000; running: root.phase === "signin" && root.menu === "" && password.text === ""; onTriggered: root.showClock() }
-    // Plasma's heartbeat: keeps the PAM conversations alive while the sign-in screen shows.
-    Timer { interval: 1000; repeat: true; running: root.phase === "signin" && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
+    // Plasma's heartbeat: (re)starts the PAM conversations. Always, not only on the sign-in screen:
+    // the workers are not ready when the lock screen loads, and face and fingerprint must listen
+    // from the clock view on, as Windows Hello does.
+    Timer { interval: 1000; repeat: true; triggeredOnStart: true; running: root.phase !== "welcome" && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
 
     // Commands of the buttons (power, accessibility) run from here: the flyouts close right away.
     Loader { id: execLoader; source: "Exec.qml" }
@@ -90,10 +92,10 @@ Item {
     function run(cmd, cb) { if (execLoader.item) execLoader.item.run(cmd, cb); else console.warn("FENESTRA_LOCK no executable engine for", cmd) }
 
     // ------------------------------------------------------------------ auth -------
-    // Password: kscreenlocker's interactive "kde" PAM service. Face: Howdy (pam_howdy) first in that
-    // same service, as GDM had it: while it looks it says "Attempting facial authentication", and it
-    // either unlocks or gives way to the password prompt (packaging/pam/kde). Fingerprint: the
-    // non-interactive "kde-fingerprint" service (fprintd) runs alongside.
+    // Password: kscreenlocker's interactive "kde" PAM service, stock: nothing else ever runs in it, so
+    // it answers whatever the camera or the reader do. Face and fingerprint: the non-interactive
+    // "kde-fingerprint" worker, in parallel, through pam_fenestra_hello.so (Howdy and fprintd as
+    // children with deadlines; packaging/lockscreen/fenestra-lock-hello).
     readonly property int fingerType: ScreenLocker.Authenticator.Fingerprint
     property bool promptPending: false   // PAM asked for the password and has no answer yet
     function isFaceMessage(m) { return /facial|face detection|autenticaci[oó]n facial|identified face|rostro|cara identificada/i.test(m || "") }
@@ -103,6 +105,7 @@ Item {
     function submit() {
         if (password.text === "") return
         idle.restart()
+        passwordSent = true
         if (promptPending) { promptPending = false; authenticator.respond(password.text) }
         else { pendingPassword = password.text; authenticator.startAuthenticating() }
     }
@@ -124,7 +127,15 @@ Item {
         }
     }
     // A new PAM conversation: Howdy looks again (Windows: "Try again" / the face option).
-    function retryFace() { faceState = ""; promptPending = false; authenticator.cancel(); authenticator.startAuthenticating() }
+    property bool faceMatched: false
+    property bool passwordSent: false
+    // "Try again": pam_fenestra_hello tries the face twice per lock screen, then waits for this
+    // (a file named after the greeter's pid, which is the worker's parent).
+    function retryFace() {
+        faceState = ""
+        run("sh -c 'mkdir -p \"$XDG_RUNTIME_DIR/fenestra-hello\" && touch \"$XDG_RUNTIME_DIR/fenestra-hello/retry-$PPID\"'")
+        authenticator.startAuthenticating()
+    }
     function faceFailed() {
         if (faceState !== "searching") return
         faceState = "failed"; hello.stop()
@@ -133,15 +144,14 @@ Item {
     Connections {
         target: authenticator
         function onSucceeded() {
-            root.log("FENESTRA_LOCK succeeded", root.faceState)
-            root.unlock(root.faceState === "searching" ? "face" : "other")
+            root.log("FENESTRA_LOCK succeeded", root.faceState, root.faceMatched)
+            root.unlock(root.faceMatched ? "face" : "other")
         }
         function onFailed(kind, auth) {
             root.log("FENESTRA_LOCK failed", kind)
-            if (kind === root.fingerType) { root.fingerState = "failed"; return }
+            if (kind === root.fingerType) { root.fingerState = "failed"; root.faceFailed(); return }
             if (kind !== 0) return
             root.promptPending = false
-            if (root.faceState === "searching") { root.faceFailed(); return }
             password.text = ""
             root.message = root.tr("The password is incorrect. Try again.", "La contraseña no es correcta. Inténtalo de nuevo.")
             root.prompt = "message"
@@ -163,15 +173,25 @@ Item {
             if (root.isFaceMessage(authenticator.errorMessage)) root.faceFailed()
         }
         function onNoninteractiveInfo(kind, auth) {
-            root.log("FENESTRA_LOCK ninfo", kind, auth ? auth.infoMessage : "")
-            if (kind === root.fingerType) { root.fingerAvailable = true; root.fingerState = "waiting" }
+            const m = auth ? auth.infoMessage : ""
+            root.log("FENESTRA_LOCK ninfo", kind, m)
+            if (kind !== root.fingerType) return
+            // pam_fenestra_hello (face + fingerprint in the parallel worker) says what it is doing.
+            if (/^Identified face/.test(m)) { root.faceMatched = true; return }
+            if (/^Face not recognised/.test(m)) { root.faceFailed(); return }
+            if (/^Fingerprint matched/.test(m)) { root.faceMatched = false; return }
+            if (root.isFaceMessage(m)) {
+                root.faceAvailable = true
+                if (root.faceState !== "success") { root.faceState = "searching"; hello.play("searching") }
+                if (root.prompt === "password" && password.text === "") root.prompt = "face"
+                return
+            }
+            root.fingerAvailable = true; root.fingerState = "waiting"
         }
         function onNoninteractiveError(kind, auth) {
             if (kind === root.fingerType) root.fingerState = "failed"
         }
         function onPromptForSecretChanged() {
-            // The face check is over when PAM asks for the password.
-            root.faceFailed()
             root.promptPending = true
             if (root.pendingPassword !== "") {
                 root.promptPending = false

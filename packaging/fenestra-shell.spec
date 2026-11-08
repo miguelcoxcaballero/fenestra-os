@@ -46,6 +46,12 @@ python3 tools/build-aurorae-theme.py
 %install
 %cmake_install
 install -Dm755 packaging/lockscreen/fenestra-lock-hello %{buildroot}%{_libexecdir}/fenestra/fenestra-lock-hello
+%{_libexecdir}/fenestra/fenestra-sign-in
+%{_libdir}/security/pam_fenestra_hello.so
+install -Dm755 packaging/lockscreen/fenestra-sign-in %{buildroot}%{_libexecdir}/fenestra/fenestra-sign-in
+# Windows Hello for the lock screen: face + fingerprint in kscreenlocker's parallel worker only.
+install -d %{buildroot}%{_libdir}/security
+gcc %{optflags} -shared -fPIC -o %{buildroot}%{_libdir}/security/pam_fenestra_hello.so packaging/lockscreen/pam_fenestra_hello.c %{_libdir}/libpam.so.0
 
 %post
 # On battery, tuned-ppd's "Balanced" becomes fenestra-battery (desktop/power/tuned): any laptop.
@@ -58,6 +64,11 @@ if [ -f "$ppd" ] && ! grep -q '^balanced=fenestra-battery' "$ppd"; then
         printf '\n[battery]\nbalanced=fenestra-battery\n' >> "$ppd"
     fi
     systemctl try-restart tuned-ppd.service >/dev/null 2>&1 || :
+fi
+# Lock screen: face and fingerprint only in kscreenlocker's parallel worker (never the password's).
+# Also undoes version 1, which had put pam_howdy.so in front of the password.
+if [ -f %{_sysconfdir}/pam.d/kde-fingerprint ]; then
+    %{_libexecdir}/fenestra/fenestra-lock-hello enable >/dev/null 2>&1 || :
 fi
 
 %postun
@@ -94,11 +105,6 @@ fi
 %{_libexecdir}/fenestra/fenestra-hello-enroll
 %{_datadir}/polkit-1/actions/org.fenestra.hello.policy
 
-%post
-# Windows Hello face sign-in on the lock screen when Howdy is installed and enrolled.
-if [ -x /usr/lib64/security/pam_howdy.so ] || [ -f /usr/lib64/security/pam_howdy.so ]; then
-    %{_libexecdir}/fenestra/fenestra-lock-hello enable >/dev/null 2>&1 || :
-fi
 
 %changelog
 * Fri Nov 06 2026 Fenestra <fenestra@users.noreply.github.com> - 0.1.0-1

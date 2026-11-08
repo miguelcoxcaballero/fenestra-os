@@ -4,7 +4,7 @@
 # 2880 x 1800, scale 1.5, with real PAM (root's password "Fenestra1"), stand-ins for Howdy and
 # fprintd (pam_exec), the user's fonts and icon pack. The container stays up (fenestra-lockbench);
 # drive it with tests/lockscreen/ctl.sh. Never touches the user's session.
-#   env: BG (picture; default today's Spotlight), HELLO (atlas dir), SCALE W H, LANGUAGE (es_ES.UTF-8)
+#   env: LOCKED=1 (KWin starts locked, as after GDM autologin), BG (picture; default today's Spotlight), HELLO (atlas dir), SCALE W H, LANGUAGE (es_ES.UTF-8)
 # The other plasma modules are stand-ins (tests/lockscreen/mock-qml); MPRIS is the real module.
 set -u
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
@@ -24,5 +24,5 @@ if [ -d "$MP" ]; then
 fi
 podman rm -f fenestra-lockbench >/dev/null 2>&1
 exec podman run -d --name fenestra-lockbench --security-opt label=disable --device /dev/dri/renderD128 --cap-add SYS_NICE \
-    -e SCALE="${SCALE:-1.5}" -e W="${W:-2880}" -e H="${H:-1800}" -e LOCKLANG="${LANGUAGE:-es_ES.UTF-8}" \
+    -e SCALE="${SCALE:-1.5}" -e W="${W:-2880}" -e H="${H:-1800}" -e LOCKLANG="${LANGUAGE:-es_ES.UTF-8}" -e LOCKED="${LOCKED:-}" \
     -v "$REPO:/src:ro" -v "$OUT:/out" "${M[@]}" localhost/fenestra-kwinlab:latest bash /src/tests/lockscreen/greeter-session.sh

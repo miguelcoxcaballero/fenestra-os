@@ -9,7 +9,8 @@
 #                                                         (HELLO_SRC=dir; never part of Fenestra)
 # What it replaces is saved once, before the first install, in ~/.local/share/fenestra/backup-lockscreen/<date>/.
 # Takes effect at the next lock; nothing running is restarted. Undo: --remove (restores the backup).
-# Face sign-in also needs root once: packaging/lockscreen/fenestra-lock-hello enable.
+# Face and fingerprint need root once: packaging/lockscreen/fenestra-lock-hello enable (parallel worker only).
+# Back to the stock (Breeze) locker: kwriteconfig6 --file plasmashellrc --group Shell --key ShellPackage org.kde.plasma.desktop
 set -eu
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 DATA=${XDG_DATA_HOME:-$HOME/.local/share}

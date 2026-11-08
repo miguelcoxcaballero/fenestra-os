@@ -15,7 +15,7 @@ Acrylic {
     property bool sticky: false
     property bool filter: false
     readonly property string kconf: "env -u KDE_HOME_READONLY kwriteconfig6 --file kaccessrc --group Keyboard --key "
-    readonly property string reconfigure: " && (qdbus6 org.kde.KWin /KWin reconfigure || qdbus org.kde.KWin /KWin reconfigure)"
+    readonly property string reconfigure: " && gdbus call --session --dest org.kde.KWin --object-path /KWin --method org.kde.KWin.reconfigure"
     Component.onCompleted: {
         root.run("kreadconfig6 --file kaccessrc --group Keyboard --key StickyKeys --default false", (out) => fly.sticky = out.trim() === "true")
         root.run("kreadconfig6 --file kaccessrc --group Keyboard --key BounceKeys --default false", (out) => fly.filter = out.trim() === "true")
@@ -37,7 +37,7 @@ Acrylic {
     }
     function toggle(k) {
         const on = !state(k)
-        if (k === "magnifier") { magnifier = on; root.run("qdbus6 org.kde.kglobalaccel /component/kwin org.kde.kglobalaccel.Component.invokeShortcut " + (on ? "view_zoom_in" : "view_actual_size")) }
+        if (k === "magnifier") { magnifier = on; root.run("gdbus call --session --dest org.kde.kglobalaccel --object-path /component/kwin --method org.kde.kglobalaccel.Component.invokeShortcut " + (on ? "view_zoom_in" : "view_actual_size")) }
         else if (k === "contrast") root.highContrast = on
         else if (k === "narrator") { narrator = on; root.run(on ? "sh -c 'orca --replace >/dev/null 2>&1 &'" : "orca --quit") }
         else if (k === "osk") root.osk = on

@@ -1,0 +1,45 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# fenestra-sign-in enable USER | disable | status   (root)
+# One sign-in screen, as Windows' LogonUI: at boot GDM signs USER in automatically into the Fenestra
+# session, which starts LOCKED (kwin_wayland --lockscreen), so the first screen is Fenestra's lock
+# screen, the same code as Win+L (shells/org.fenestra.desktop), with password, fingerprint and face.
+#  * /etc/gdm/custom.conf [daemon] AutomaticLoginEnable/AutomaticLogin (backup custom.conf.fenestra-orig)
+#  * Fenestra as USER's default session (fenestra-migrate set-default USER)
+#  * /etc/fenestra/sign-in-on-lock-screen: fenestra-session starts KWin with --lockscreen when GDM's
+#    autologin service (gdm-autologin) started it; without the marker nothing changes.
+# Nothing is shown before the lock screen; if the Fenestra session cannot start, GDM shows its own
+# sign-in screen. Undo (one line): fenestra-sign-in disable
+set -eu
+CONF=/etc/gdm/custom.conf
+MARK=/etc/fenestra/sign-in-on-lock-screen
+case "${1:-}" in
+enable)
+    u=${2:?user}; id "$u" >/dev/null
+    [ -f $CONF.fenestra-orig ] || cp -p $CONF $CONF.fenestra-orig
+    python3 -I - "$CONF" "$u" <<'PY'
+import configparser, sys
+path, user = sys.argv[1], sys.argv[2]
+c = configparser.ConfigParser(strict=False, interpolation=None)
+c.optionxform = str
+c.read(path)
+if not c.has_section("daemon"):
+    c.add_section("daemon")
+c["daemon"]["AutomaticLoginEnable"] = "True"
+c["daemon"]["AutomaticLogin"] = user
+with open(path + ".tmp", "w") as f:
+    f.write("# GDM configuration storage (Fenestra: fenestra-sign-in)\n\n")
+    c.write(f)
+PY
+    chmod 644 $CONF.tmp; mv $CONF.tmp $CONF; restorecon $CONF 2>/dev/null || true
+    /usr/libexec/fenestra/fenestra-migrate set-default "$u" || { echo "Fenestra has not run for $u yet (fenestra-migrate set-default refused); kept GDM's normal sign-in" >&2; cp -p $CONF.fenestra-orig $CONF; exit 1; }
+    install -d /etc/fenestra; printf '%s\n' "$u" > $MARK
+    echo "Next boot: Fenestra's lock screen signs $u in (GDM autologin into a locked session)" ;;
+disable)
+    [ -f $CONF.fenestra-orig ] && cp -p $CONF.fenestra-orig $CONF
+    rm -f $MARK
+    echo "GDM's own sign-in screen restored" ;;
+status)
+    grep -E 'AutomaticLogin' $CONF || echo "no autologin"; [ -f $MARK ] && echo "marker: $(cat $MARK)" || echo "no marker" ;;
+*) echo "usage: $0 enable USER | disable | status" >&2; exit 2 ;;
+esac

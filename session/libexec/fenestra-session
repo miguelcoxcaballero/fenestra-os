@@ -39,4 +39,12 @@ fi
 kread() { kreadconfig6 --file kwinrc --group "$1" --key "$2" 2>/dev/null; }
 kwrite() { [ -n "$(kread "$1" "$2")" ] || kwriteconfig6 --file kwinrc --group "$1" --key "$2" "$3"; }
 kwrite ModifierOnlyShortcuts Meta "org.fenestra.Shell,/org/fenestra/Shell,org.fenestra.Shell,ToggleStart"
-exec kwin_wayland_wrapper --xwayland --exit-with-session /usr/libexec/fenestra/fenestra-session-inner
+# One sign-in screen (packaging/lockscreen/fenestra-sign-in): when GDM signed the user in by
+# itself (gdm-autologin) and the machine is set up for it, the session starts locked, so the first
+# thing on screen is Fenestra's lock screen and nothing of the session shows before it.
+lock=()
+if [ -r /etc/fenestra/sign-in-on-lock-screen ] && [ "$(head -1 /etc/fenestra/sign-in-on-lock-screen)" = "$USER" ] &&
+   [ "$(loginctl show-session "${XDG_SESSION_ID:-}" -p Service --value 2>/dev/null)" = gdm-autologin ]; then
+    lock=(--lockscreen)
+fi
+exec kwin_wayland_wrapper --xwayland "${lock[@]}" --exit-with-session /usr/libexec/fenestra/fenestra-session-inner
