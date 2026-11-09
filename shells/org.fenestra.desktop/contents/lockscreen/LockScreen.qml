@@ -334,7 +334,7 @@ Item {
             // 48 px from the right and 28 px over the bottom (measured, network glyph).
             id: statusIcons
             anchors { right: parent.right; bottom: parent.bottom
-                      rightMargin: 48 - (item && item.hasBattery ? 8.75 : 7); bottomMargin: 28 - (item ? item.height / 2 : 7) }
+                      rightMargin: 48 - (item ? (item.hasBattery ? item.em * 0.625 : item.em / 2) : 10); bottomMargin: 28 - (item ? item.height / 2 : 10) }
             source: "StatusIcons.qml"
         }
         // Spotlight's "Learn more about this picture" (magnifier) and hotspots: left out at the

@@ -90,6 +90,9 @@ class PowerStatus : public QObject
     Q_PROPERTY(qint64 timeToEmpty READ timeToEmpty NOTIFY changed)  // seconds, 0 = unknown
     Q_PROPERTY(qint64 timeToFull READ timeToFull NOTIFY changed)
     Q_PROPERTY(QString iconSource READ iconSource NOTIFY changed)   // assets/generated/battery
+    Q_PROPERTY(double energyRate READ energyRate NOTIFY changed)    // W into or out of the battery
+    Q_PROPERTY(double chargerMaxWatts READ chargerMaxWatts NOTIFY changed) // 0 = the system doesn't say
+    Q_PROPERTY(int healthPercent READ healthPercent NOTIFY changed) // full / design capacity, 0 = unknown
 public:
     static PowerStatus *instance();
     static PowerStatus *create(QQmlEngine *, QJSEngine *);
@@ -100,6 +103,9 @@ public:
     qint64 timeToEmpty() const { return m_toEmpty; }
     qint64 timeToFull() const { return m_toFull; }
     QString iconSource() const;
+    double energyRate() const { return m_energyRate; }
+    double chargerMaxWatts() const;
+    int healthPercent() const;
 Q_SIGNALS:
     void changed();
 private Q_SLOTS:
@@ -111,6 +117,7 @@ private:
     int m_percentage = 0;
     uint m_state = 0;
     qint64 m_toEmpty = 0, m_toFull = 0;
+    double m_energyRate = 0;
 };
 
 class KeyboardStatus : public QObject

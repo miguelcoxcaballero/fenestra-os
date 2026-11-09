@@ -65,7 +65,7 @@ BOLT = 'M12.6 6.2 7.9 12.6h3.3l-1 5.2 4.9-6.6h-3.4z'
 def battery_svg(state, variant, level, color='#ffffff'):
     """Horizontal battery like the Windows 11 tray glyph (own drawing)."""
     w = 14.4 * level / 10
-    fill_col = {'low': '#ff99a4', 'saver': color}.get(state, color)
+    fill_col = {'low': '#ff99a4', 'saver': color, 'charging': '#9fd89f'}.get(state, color)
     parts = [
         '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">',
         '<defs><mask id="m"><rect width="24" height="24" fill="#fff"/>',
