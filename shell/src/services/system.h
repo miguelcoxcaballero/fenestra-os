@@ -174,11 +174,16 @@ class Privacy : public QObject
     QML_SINGLETON
     Q_PROPERTY(QStringList microphoneApps READ microphoneApps NOTIFY changed)
     Q_PROPERTY(bool locationInUse READ locationInUse NOTIFY changed)
+    // Who is using it, as far as can be told: the session's processes with GeoClue's library or Qt's
+    // GeoClue backend loaded (GeoClue doesn't tell other users who its clients are).
+    Q_PROPERTY(QStringList locationApps READ locationApps NOTIFY changed)
 public:
     static Privacy *instance();
     static Privacy *create(QQmlEngine *, QJSEngine *);
     QStringList microphoneApps() const { return m_mic; }
     bool locationInUse() const { return m_location; }
+    QStringList locationApps() const { return m_locationApps; }
+    Q_INVOKABLE void refreshLocationApps();
 Q_SIGNALS:
     void changed();
 private Q_SLOTS:
@@ -188,6 +193,7 @@ private:
     void updateMic();
     QStringList m_mic;
     bool m_location = false;
+    QStringList m_locationApps;
 };
 
 // Night light (KWin night colour): kwinrc [NightColor] Active, applied with KWin's reconfigure.

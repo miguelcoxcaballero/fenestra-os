@@ -5,6 +5,7 @@
 
 #include <KConfigGroup>
 #include <KConfigWatcher>
+#include <KDesktopFile>
 #include <KSharedConfig>
 #include <NetworkManagerQt/AccessPoint>
 #include <NetworkManagerQt/ActiveConnection>
@@ -26,6 +27,7 @@
 #include <QDBusReply>
 #include <QDir>
 #include <QFile>
+#include <QStandardPaths>
 #include <algorithm>
 #include <QDebug>
 #include <QTimer>
@@ -732,6 +734,19 @@ Privacy::Privacy(QObject *parent)
     updateMic();
     QDBusConnection::systemBus().connect(QStringLiteral("org.freedesktop.GeoClue2"), QStringLiteral("/org/freedesktop/GeoClue2/Manager"), kProps,
                                          QStringLiteral("PropertiesChanged"), this, SLOT(onGeoClue(QString, QVariantMap, QStringList)));
+    // Started after the app that uses it: no change will come. Only if it is running (asking would start it).
+    if (QDBusConnection::systemBus().interface()->isServiceRegistered(QStringLiteral("org.freedesktop.GeoClue2"))) {
+        QDBusMessage get = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.GeoClue2"), QStringLiteral("/org/freedesktop/GeoClue2/Manager"),
+                                                          QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
+        get << QStringLiteral("org.freedesktop.GeoClue2.Manager") << QStringLiteral("InUse");
+        auto *w = new QDBusPendingCallWatcher(QDBusConnection::systemBus().asyncCall(get), this);
+        connect(w, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher *w) {
+            QDBusPendingReply<QDBusVariant> reply = *w;
+            w->deleteLater();
+            if (reply.isValid())
+                onGeoClue({}, {{QStringLiteral("InUse"), reply.value().variant()}}, {});
+        });
+    }
 }
 
 void Privacy::updateMic()
@@ -758,6 +773,43 @@ void Privacy::onGeoClue(const QString &, const QVariantMap &props, const QString
 {
     if (props.contains(QStringLiteral("InUse"))) {
         m_location = props.value(QStringLiteral("InUse")).toBool();
+        refreshLocationApps();
+        Q_EMIT changed();
+    }
+}
+
+void Privacy::refreshLocationApps()
+{
+    QStringList apps;
+    const QDir proc(QStringLiteral("/proc"));
+    for (const QString &pid : proc.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        if (!pid.at(0).isDigit())
+            continue;
+        QFile maps(proc.filePath(pid + QStringLiteral("/maps")));
+        if (!maps.open(QIODevice::ReadOnly))
+            continue;
+        const QByteArray all = maps.readAll();
+        if (!all.contains("libgeoclue") && !all.contains("qtposition_geoclue"))
+            continue;
+        QFile commFile(proc.filePath(pid + QStringLiteral("/comm")));
+        if (!commFile.open(QIODevice::ReadOnly))
+            continue;
+        const QString comm = QString::fromUtf8(commFile.readAll().trimmed());
+        if (comm.startsWith(QLatin1String("xdg-desktop-por"))) // on behalf of an app that isn't named
+            continue;
+        QString name = comm;
+        for (const QString &dir : QStandardPaths::standardLocations(QStandardPaths::ApplicationsLocation)) {
+            const QStringList files = QDir(dir).entryList({QLatin1Char('*') + comm + QStringLiteral("*.desktop")}, QDir::Files);
+            if (!files.isEmpty()) {
+                name = KDesktopFile(dir + QLatin1Char('/') + files.first()).readName();
+                break;
+            }
+        }
+        if (!apps.contains(name))
+            apps << name;
+    }
+    if (apps != m_locationApps) {
+        m_locationApps = apps;
         Q_EMIT changed();
     }
 }

@@ -676,6 +676,7 @@ STRINGS = {
     'Location': 'Ubicación',
     'gps geoclue position': 'gps geoclue posición',
     'Location services': 'Servicios de ubicación',
+    'Apps using your location now': 'Aplicaciones que usan tu ubicación ahora',
     'gps geoclue': 'gps geoclue',
     'Camera': 'Cámara',
     'webcam access privacy': 'cámara web acceso privacidad',
