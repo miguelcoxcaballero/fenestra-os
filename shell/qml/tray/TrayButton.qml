@@ -12,6 +12,7 @@ Item {
     property real rpad: hpad
     property int spacing: 4
     property string accessibleName
+    readonly property bool hovered: mouse.containsMouse
     signal clicked()
     signal rightClicked()
     signal wheel(int delta)

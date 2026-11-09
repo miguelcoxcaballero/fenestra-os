@@ -157,9 +157,11 @@ def gen_privacy():
     # Windows 11 shows a plain foreground glyph in the tray while an app uses the
     # microphone / camera / location (white in dark mode; appearance.js tints it for light).
     # 20px designs cropped to their 16px glyph box: same visual weight as the Wi-Fi/volume glyphs.
-    for name, icon in {'mic': 'mic_20_regular', 'camera': 'video_20_regular',
-                       'location': 'location_20_regular'}.items():
+    for name, icon in {'mic': 'mic_20_regular', 'camera': 'video_20_regular'}.items():
         write(f'privacy/{name}.svg', fluent(icon, '#ffffff', 16).replace('viewBox="0 0 20 20"', 'viewBox="2 2 16 16"'))
+    # Windows' location indicator is an arrow (Segoe Fluent E37A): this drawing stands in without the font.
+    write('privacy/location.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">'
+          '<path fill="none" stroke="#ffffff" stroke-linejoin="round" d="M14 2 2.5 6.5l5 2 2 5z"/></svg>\n')
 
 
 # --------------------------------------------------------------- consent ---

@@ -272,6 +272,7 @@ Window {
     function testWidgets(byClick) { weather.testOpenBoard(byClick) }
     function testPreviewShown() { return preview.shown }
     function testBoardState() { const b = weather.testBoard(); return b.shown + " " + b.visible + " " + b.slide + " " + b.width + "x" + b.height }
+    function testPrivacyTip() { tray.showPrivacyTip() }
     function testTray(status, ms) { tray.testStatus = status; if (ms) tray.testSetTime(ms) }
     function testMenuOfTray(row) { tray.testMenu(row) }
     function testCloseFlyouts() { preview.close(); appMenu.close(); barMenu.close(); tray.testCloseFlyouts() }

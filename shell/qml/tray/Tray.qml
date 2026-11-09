@@ -29,18 +29,63 @@ Row {
         SymbolicIcon { src: Metrics.assets + "tray/overflow-chevron.svg"; size: Metrics.tok("tray.overflow.icon", 14) }
         onClicked: { overflow.anchorX = overflowButton.mapToItem(null, overflowButton.width / 2, 0).x; overflow.toggle() }
     }
-    // Privacy (B08): microphone and location in use, with the app names as tooltip.
+    // Privacy (B08), Windows' PrivacyButton (SystemTray.dll): one button, the microphone glyph (E720),
+    // the location arrow (E37A) or both in one (F47F). Tooltip: "Location in use by:" and the apps;
+    // click: that permission's Settings page.
+    TrayButton {
+        id: privacyButton
+        readonly property var micApps: Privacy.microphoneApps
+        readonly property bool usesMic: micApps.length > 0
+        readonly property bool usesLocation: tray.testStatus && tray.testStatus.locationApps ? true : Privacy.locationInUse
+        readonly property var locationApps: tray.testStatus && tray.testStatus.locationApps ? tray.testStatus.locationApps : Privacy.locationApps
+        readonly property string tip: {
+            const lines = []
+            if (usesMic) lines.push(Strings.tr("Microphone in use by:"), ...micApps)
+            if (usesLocation) lines.push(Strings.tr("Location in use by:"), ...(locationApps.length ? locationApps : [Strings.tr("An app")]))
+            return lines.join("\n")
+        }
+        anchors.verticalCenter: parent.verticalCenter
+        visible: usesMic || usesLocation
+        lpad: 6; rpad: 6
+        accessibleName: tip
+        FluentGlyph {
+            anchors.verticalCenter: parent.verticalCenter
+            glyph: privacyButton.usesMic && privacyButton.usesLocation ? "\uf47f" : privacyButton.usesLocation ? "\ue37a" : "\ue720"
+            fallback: Metrics.assets + "privacy/" + (privacyButton.usesLocation ? "location" : "mic") + ".svg"
+        }
+        function openSettings() {
+            Apps.runCommand("fenestra-settings --page " + (usesMic && usesLocation ? "privacy" : usesLocation ? "location" : "microphone"))
+        }
+        onClicked: { privacyTip.close(); openSettings() }
+        onRightClicked: { privacyTip.close(); openSettings() }
+        onHoveredChanged: {
+            if (hovered) { Privacy.refreshLocationApps(); privacyTipDelay.restart() }
+            else { privacyTipDelay.stop(); privacyTip.close() }
+        }
+        Timer { id: privacyTipDelay; interval: Metrics.snipTooltipDelay; onTriggered: tray.showPrivacyTip() }
+    }
+    function showPrivacyTip() {
+        privacyTip.anchorX = privacyButton.mapToItem(null, privacyButton.width / 2, 0).x
+        privacyTip.open()
+    }
+    Flyout {
+        id: privacyTip
+        targetScreen: tray.targetScreen
+        recipe: "tooltip"
+        motion: "fade"
+        takesFocus: false
+        padding: 0
+        Text {
+            leftPadding: Metrics.num("tooltip.padding.x", 10); rightPadding: leftPadding; topPadding: 7; bottomPadding: 8
+            text: privacyButton.tip
+            color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
+        }
+    }
     Row {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8; rightPadding: 6; leftPadding: 4
-        visible: Privacy.microphoneApps.length > 0 || Privacy.locationInUse || CameraWatch.inUse
-        SymbolicIcon { visible: Privacy.microphoneApps.length > 0; src: Metrics.assets + "privacy/mic.svg"
-            Accessible.name: Privacy.microphoneApps.length === 1 ? Privacy.microphoneApps[0] + " " + Strings.tr("is using your microphone")
-                             : Privacy.microphoneApps.length + " " + Strings.tr("apps are using your microphone") }
-        SymbolicIcon { visible: CameraWatch.inUse; src: Metrics.assets + "privacy/camera.svg"
-            Accessible.name: Strings.tr("Your camera is being used") }
-        SymbolicIcon { visible: Privacy.locationInUse; src: Metrics.assets + "privacy/location.svg"
-            Accessible.name: Strings.tr("Your location is being used") }
+        visible: CameraWatch.inUse
+        SymbolicIcon { src: Metrics.assets + "privacy/camera.svg"; Accessible.name: Strings.tr("Your camera is being used") }
     }
     // Input indicator: "ENG" over "ES" as Windows draws it (user-win11 163657: both lines centred, in the
     // clock's font and line positions). Windows shows it with more than one input method, or when the

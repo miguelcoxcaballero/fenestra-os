@@ -112,6 +112,37 @@ class GeneralPrivacyPage(Page):
                          control=button(_("Clear history"), clear_hist)))
 
 
+def _location_apps():
+    """The session's processes with GeoClue's library or Qt's backend for it loaded (GeoClue doesn't
+    tell other users who its clients are)."""
+    import glob
+    import os
+    from gi.repository import Gio
+    names = []
+    for pid in filter(str.isdigit, os.listdir("/proc")):
+        try:
+            with open(f"/proc/{pid}/maps", "rb") as f:
+                maps = f.read()
+            if b"libgeoclue" not in maps and b"qtposition_geoclue" not in maps:
+                continue
+            with open(f"/proc/{pid}/comm") as f:
+                comm = f.read().strip()
+        except OSError:
+            continue
+        if comm.startswith("xdg-desktop-por"):
+            continue
+        name = comm
+        for d in ("/usr/share/applications", os.path.expanduser("~/.local/share/applications")):
+            found = glob.glob(f"{d}/*{comm}*.desktop")
+            if found:
+                info = Gio.DesktopAppInfo.new_from_filename(found[0])
+                name = info.get_name() if info else comm
+                break
+        if name not in names:
+            names.append(name)
+    return names
+
+
 @register
 class LocationPage(Page):
     id = "location"
@@ -124,6 +155,13 @@ class LocationPage(Page):
         _toggle_page(self, LOC, "enabled", _("Location services"),
                      _("Apps can use your location when you allow it"), "fs-location-symbolic",
                      rkey="location-services")
+        apps = _location_apps()
+        g = self.group(_("Apps using your location now"))
+        if apps:
+            for name in apps:
+                g.add(SettingRow(name, None, None))
+        else:
+            g.add(SettingRow(_("None"), None, None))
 
 
 @register
