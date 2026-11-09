@@ -185,7 +185,6 @@ class FenestraWindowMotion {
         w.windowStartUserMovedResized.connect(() => { this.interactive = (this.interactive || 0) + 1; });
         w.windowFinishUserMovedResized.connect(() => { this.interactive = Math.max(0, (this.interactive || 0) - 1); });
         w.windowDamaged.connect(() => this.onDamaged(w));
-        w.windowFrameGeometryAboutToChange.connect(() => this.onFrameAboutToChange(w));
         w.windowFrameGeometryChanged.connect((_, old) => this.onFrameChanged(w, old));
     }
 
@@ -313,21 +312,9 @@ class FenestraWindowMotion {
         return { x: win.x + (1 - k) * win.width * ox, y: win.y + (1 - k) * win.height * oy, width: win.width * k, height: win.height * k };
     }
 
-    // X11 clients repaint at the new size a few frames after their frame has changed: until then
-    // KWin only has the old picture, which the morph would squash. With a server-side frame, show
-    // that old picture (cross-fade from it) while the new one arrives. Wayland clients commit the
-    // new size before the state changes, as Windows apps repaint in WM_SIZE: no cross-fade.
-    crossFade(w) {
-        if (!w.x11Client || !w.hasDecoration) return; // no frame: morphFrom waits for the picture
-        if (w.fenestraCrossFade) cancel(w.fenestraCrossFade);
-        w.fenestraCrossFade = animate({ window: w, duration: MOTION.maximize.duration, curve: QEasingCurve.OutCubic,
-                                        animations: [{ type: Effect.CrossFadePrevious, from: 0, to: 1 }] });
-    }
-
     onMaximizeAboutToChange(w) {
         if (!w.visible) return;
         w.fenestraOldGeometry = Object.assign({}, w.geometry);
-        this.crossFade(w);
     }
 
     static againstEdges(r, a) {
@@ -337,50 +324,32 @@ class FenestraWindowMotion {
         return near(r.x, a.x) + near(r.x + r.width, a.x + a.width) + near(r.y, a.y) + (gap >= -1 && gap <= SNAP_TASKBAR ? 1 : 0);
     }
 
-    // An X11 window's old picture has to be kept before its frame changes (see crossFade); dropped
-    // again in onFrameChanged if the change turns out not to be a snap.
-    onFrameAboutToChange(w) {
-        if (!w.x11Client || !w.hasDecoration || w.fenestraOldGeometry || w.fenestraSnapFade || this.interactive || w.move || w.resize
-            || w.fullScreen || !w.visible || !FenestraWindowMotion.isAppWindow(w)) return;
-        this.crossFade(w);
-        w.fenestraSnapFade = true;
-    }
-
-    dropSnapFade(w) {
-        if (!w.fenestraSnapFade) return;
-        delete w.fenestraSnapFade;
-        if (w.fenestraCrossFade) cancel(w.fenestraCrossFade);
-        delete w.fenestraCrossFade;
-    }
-
     // Snapping and leaving a snap: Windows plays the maximize storyboard (104). Dragging is
     // immediate on both systems: the window follows the pointer (and a snapped window dragged
     // away takes its old size at once).
     onFrameChanged(w, old) {
         if (w.fenestraOldGeometry || this.interactive || w.move || w.resize || w.fullScreen || !w.visible
-            || effects.hasActiveFullScreenEffect || !FenestraWindowMotion.isAppWindow(w)) return this.dropSnapFade(w);
+            || effects.hasActiveFullScreenEffect || !FenestraWindowMotion.isAppWindow(w)) return;
         const running = this.motions.get(w);
-        if (running && !running.done && running.kind !== "snap") return this.dropSnapFade(w); // its open, maximize...
+        if (running && !running.done && running.kind !== "snap") return; // its open, maximize...
         const g = w.geometry;
         const moved = Math.max(Math.abs(old.x - g.x), Math.abs(old.y - g.y),
                                Math.abs(old.x + old.width - g.x - g.width), Math.abs(old.y + old.height - g.y - g.height));
-        if (moved < SNAP_MIN_CHANGE || old.width <= 0 || old.height <= 0) return this.dropSnapFade(w);
+        if (moved < SNAP_MIN_CHANGE || old.width <= 0 || old.height <= 0) return;
         const a = w.screen ? w.screen.geometry : effects.virtualScreenGeometry;
-        if (Math.max(FenestraWindowMotion.againstEdges(g, a), FenestraWindowMotion.againstEdges(old, a)) < SNAP_EDGES) return this.dropSnapFade(w);
-        delete w.fenestraSnapFade;
+        if (Math.max(FenestraWindowMotion.againstEdges(g, a), FenestraWindowMotion.againstEdges(old, a)) < SNAP_EDGES) return;
         this.morphFrom(w, "snap", { x: old.x, y: old.y, width: old.width, height: old.height });
     }
 
-    // The morph from rect `from` to the window's frame. An X11 window that draws its own frame
-    // (Chromium, Electron) still holds its old picture when its frame has already changed, in the
-    // top-left corner of an otherwise empty surface: that corner stays exactly where the window
+    // The morph from rect `from` to the window's frame. An X11 window still holds its old picture
+    // when its frame has already changed, in the top-left corner of an otherwise empty surface: that corner stays exactly where the window
     // was (moved, and cropped to the old size) until the client's next picture arrives, and the
     // morph starts from there.
     morphFrom(w, kind, from) {
         this.dropHold(w);
         const g = w.geometry;
         // A window that only shrinks has no empty area to hide: the morph can start at once.
-        if (w.x11Client && !w.hasDecoration && !(g.width <= from.width && g.height <= from.height)) {
+        if (w.x11Client && !(g.width <= from.width && g.height <= from.height)) {
             const topLeft = Effect.Left | Effect.Top;
             const d = { value1: from.x - g.x, value2: from.y - g.y };
             // AnimationEffect's Clip is in screen coordinates, before the translation: the crop

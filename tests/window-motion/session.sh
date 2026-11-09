@@ -7,6 +7,9 @@ export XDG_RUNTIME_DIR=/tmp/xdg LANG=C.UTF-8 QT_FORCE_STDERR_LOGGING=1 XDG_SESSI
 mkdir -p -m700 $XDG_RUNTIME_DIR ~/.config ~/.local/share/aurorae/themes ~/.local/share/kwin/effects
 cp -r /src/kwin/aurorae/* ~/.local/share/aurorae/themes/
 cp -r /src/kwin/effects/fenestra-window-motion ~/.local/share/kwin/effects/
+# What the shell writes: the preview shown while dragging to a screen edge.
+OUTLINE=${OUTLINE:-dark}
+mkdir -p ~/.local/share/kwin/outline; cp -r /src/kwin/outline/fenestra ~/.local/share/kwin/outline/
 if [ "${EFFECT:-fenestra}" = fenestra ]; then
     # What the shell writes (shell/src/services/kwinintegration.cpp).
     PLUGINS='fenestra-window-motionEnabled=true
@@ -36,6 +39,8 @@ $PLUGINS
 Debug=true
 [Xwayland]
 Scale=1
+[Outline]
+QmlPath=kwin/outline/fenestra/$OUTLINE.qml
 RC
 PY=$(readlink -f /usr/bin/python3)
 cat > /usr/share/applications/fenestra-motion-shot.desktop <<DE

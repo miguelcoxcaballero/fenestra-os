@@ -100,6 +100,7 @@ fi
 %{_datadir}/aurorae/themes/Fenestra-Dark
 %{_datadir}/aurorae/themes/Fenestra-Light
 %{_datadir}/kwin/tabbox/fenestra
+%{_datadir}/kwin/outline/fenestra
 %{_datadir}/kwin/effects/fenestra-window-motion
 %{_datadir}/kwin/effects/fenestra-unlock
 %{_libdir}/qt6/plugins/kwin/effects/plugins/fenestra-corners.so
