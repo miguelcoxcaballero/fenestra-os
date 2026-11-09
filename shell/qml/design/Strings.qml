@@ -37,7 +37,7 @@ QtObject {
         "Open": "Abrir", "Open results in browser": "Abrir resultados en el navegador", "Open file location": "Abrir ubicación de archivo",
         "Copy full path": "Copiar ruta de acceso",
         "Playing": "Reproduciendo", "Previous": "Anterior", "Pause": "Pausar", "Play": "Reproducir", "Next": "Siguiente",
-        "Wi-Fi": "Wi-Fi", "Bluetooth": "Bluetooth", "Airplane mode": "Modo avión", "Battery saver": "Ahorro de batería", "Power from the cable": "Entrada por el cable", "Charger maximum": "Máximo del cargador", "Into the battery": "A la batería", "Power use": "Consumo actual", "Time to full charge": "Hasta completar la carga", "Time remaining": "Tiempo restante", "Battery health": "Estado de la batería", "Battery details": "Detalles de la batería",
+        "Wi-Fi": "Wi-Fi", "Bluetooth": "Bluetooth", "Airplane mode": "Modo avión", "Battery saver": "Ahorro de batería", "More keyboard settings": "Más configuración del teclado", "Power from the cable": "Entrada por el cable", "Charger maximum": "Máximo del cargador", "Into the battery": "A la batería", "Power use": "Consumo actual", "Time to full charge": "Hasta completar la carga", "Time remaining": "Tiempo restante", "Battery health": "Estado de la batería", "Battery details": "Detalles de la batería",
         "Night light": "Luz nocturna", "Accessibility": "Accesibilidad", "Sound output": "Salida de sonido", "All settings": "Toda la configuración",
         "Connected": "Conectado", "Secured": "Segura", "Open": "Abrir", "No networks found": "No se encontraron redes",
         "Paired": "Emparejado", "Add a device": "Agregar un dispositivo",
@@ -68,4 +68,6 @@ QtObject {
         "Rename": "Cambiar nombre", "Delete": "Eliminar", "Copy as path": "Copiar como ruta de acceso", "Properties": "Propiedades",
     })
     function tr(s) { return es && table[s] !== undefined ? table[s] : s }
+    // The second line of a keyboard in the input switcher: "Teclado español", "Spanish keyboard".
+    function keyboardOf(name) { return es ? "Teclado " + name.charAt(0).toLowerCase() + name.slice(1) : name + " keyboard" }
 }

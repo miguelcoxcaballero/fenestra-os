@@ -9,6 +9,8 @@ QtObject {
     signal quickSettingsRequested(var screen, real anchorX)
     signal calendarRequested(var screen, real anchorX)
     function toggleQuickSettings(screen, x) { quickSettingsRequested(screen, x) }
+    signal inputSwitcherRequested(var screen)
+    function showInputSwitcher(screen) { inputSwitcherRequested(screen) }
     function toggleCalendar(screen, x) { calendarRequested(screen, x) }
     function toggleStart(screen, x) { startRequested(screen, x) }
     function toggleSearch(screen, x) { searchRequested(screen, x) }

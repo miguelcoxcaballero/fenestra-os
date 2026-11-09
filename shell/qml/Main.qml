@@ -25,6 +25,7 @@ Item {
             property QuickSettings quick: QuickSettings { targetScreen: modelData; rightAligned: true }
             property NotificationCenter center: NotificationCenter { targetScreen: modelData; rightAligned: true }
             property Osd osd: Osd { targetScreen: modelData }
+            property InputSwitcher inputSwitcher: InputSwitcher { targetScreen: modelData; rightAligned: true }
             // Snipping overlay (Q04): one per output, toolbar on the first; opened by Snip.start().
             property SnipOverlay snip: SnipOverlay {
                 targetScreen: modelData
@@ -74,6 +75,10 @@ Item {
     Connections {
         target: ShellState
         function onQuickSettingsRequested(screen, x) { const o = root.screenObjects(screen); o.center.close(); o.quick.toggle() }
+        function onInputSwitcherRequested(screen) {
+            const o = root.screenObjects(screen)
+            if (o.inputSwitcher.shown) o.inputSwitcher.close(); else o.inputSwitcher.present(5000)
+        }
         function onCalendarRequested(screen, x) { const o = root.screenObjects(screen); o.quick.close(); o.center.toggle() }
     }
     Connections {
@@ -82,6 +87,11 @@ Item {
         function onSecurityScreenRequested() { root.securityScreen.open() }
         function onNotificationCenterRequested() { ShellState.toggleCalendar(null, -1) }
         function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
+        function onNextKeyboardRequested() {
+            if (KeyboardStatus.count < 2) return
+            KeyboardStatus.next()
+            root.screenObjects(null).inputSwitcher.present(Metrics.osdTimeout)
+        }
         function onSearchRequested() { ShellState.toggleSearch(null, -1) }
         function onSnapLayoutsRequested() { root.snapLayouts.open() }
     }
