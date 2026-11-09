@@ -136,6 +136,9 @@ class KeyboardStatus : public QObject
     // region (2 letters, "ES"), e.g. English (United Kingdom) with a Spanish keyboard.
     Q_PROPERTY(QString language READ language NOTIFY changed)
     Q_PROPERTY(QString region READ region NOTIFY changed)
+    // The installed keyboards for the input switcher: {badge ("ESP"), name}.
+    Q_PROPERTY(QVariantList layouts READ layouts NOTIFY changed)
+    Q_PROPERTY(int current READ current NOTIFY changed)
 public:
     static KeyboardStatus *instance();
     static KeyboardStatus *create(QQmlEngine *, QJSEngine *);
@@ -144,7 +147,10 @@ public:
     int count() const { return m_short.size(); }
     QString language() const;
     QString region() const;
+    QVariantList layouts() const;
+    int current() const { return m_current; }
     Q_INVOKABLE void next();
+    Q_INVOKABLE void setCurrent(int index);
 Q_SIGNALS:
     void changed();
 private Q_SLOTS:

@@ -73,7 +73,7 @@ Row {
                 text: KeyboardStatus.language + "\n" + KeyboardStatus.region
             }
         }
-        onClicked: KeyboardStatus.next()
+        onClicked: KeyboardStatus.count > 1 ? ShellState.showInputSwitcher(null) : Apps.runCommand("fenestra-settings --page typing")
     }
     TrayButton {
         id: quick

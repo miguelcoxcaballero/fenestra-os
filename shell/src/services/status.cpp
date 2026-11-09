@@ -2,6 +2,7 @@
 #include "status.h"
 
 #include <algorithm>
+#include <libintl.h>
 
 #include <QDir>
 #include <QElapsedTimer>
@@ -458,6 +459,30 @@ QString KeyboardStatus::region() const
         return {};
     const QString code = m_layouts.at(m_current).toUpper();
     return code == QLatin1String("GB") ? QStringLiteral("UK") : code;
+}
+
+QVariantList KeyboardStatus::layouts() const
+{
+    // Windows' abbreviation of each keyboard's language; the rest, from its name.
+    static const QHash<QString, QString> badges = {
+        {QStringLiteral("us"), QStringLiteral("ENG")}, {QStringLiteral("gb"), QStringLiteral("ENG")}, {QStringLiteral("au"), QStringLiteral("ENG")},
+        {QStringLiteral("es"), QStringLiteral("ESP")}, {QStringLiteral("latam"), QStringLiteral("ESP")}, {QStringLiteral("fr"), QStringLiteral("FRA")},
+        {QStringLiteral("de"), QStringLiteral("DEU")}, {QStringLiteral("it"), QStringLiteral("ITA")}, {QStringLiteral("pt"), QStringLiteral("POR")},
+        {QStringLiteral("br"), QStringLiteral("POR")}, {QStringLiteral("nl"), QStringLiteral("NLD")}, {QStringLiteral("ru"), QStringLiteral("RUS")},
+        {QStringLiteral("pl"), QStringLiteral("POL")}, {QStringLiteral("jp"), QStringLiteral("JPN")}, {QStringLiteral("kr"), QStringLiteral("KOR")}};
+    QVariantList out;
+    for (int i = 0; i < m_layouts.size(); ++i) {
+        const QString name = i < m_long.size() ? QString::fromUtf8(dgettext("xkeyboard-config", m_long.at(i).toUtf8().constData())) : m_layouts.at(i);
+        out << QVariantMap{{QStringLiteral("badge"), badges.value(m_layouts.at(i), name.left(3).toUpper())}, {QStringLiteral("name"), name}};
+    }
+    return out;
+}
+
+void KeyboardStatus::setCurrent(int index)
+{
+    QDBusMessage set = QDBusMessage::createMethodCall(kKeyboard, kLayouts, kLayoutsIface, QStringLiteral("setLayout"));
+    set << uint(index);
+    QDBusConnection::sessionBus().asyncCall(set);
 }
 
 void KeyboardStatus::next()

@@ -27,6 +27,7 @@ Q_SIGNALS:
     void securityScreenRequested();
     void notificationCenterRequested();
     void quickSettingsRequested();
+    void nextKeyboardRequested();
     void searchRequested();
     void screenshotSaved(const QString &path);
     void snapLayoutsRequested();

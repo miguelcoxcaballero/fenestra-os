@@ -117,6 +117,7 @@ qt_add_qml_module(fenestra-shell
         qml/notifications/NotificationCenter.qml
         qml/notifications/Toasts.qml
         qml/osd/Osd.qml
+        qml/osd/InputSwitcher.qml
         qml/osd/OemBanner.qml
         qml/quicksettings/QuickSettings.qml
         qml/quicksettings/QuickTile.qml
