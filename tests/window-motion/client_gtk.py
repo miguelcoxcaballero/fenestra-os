@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-# GTK 3 window under test (GDK_BACKEND=x11: an Xwayland window with KWin's frame).
+# GTK 3 window under test (GDK_BACKEND=x11: an Xwayland window with KWin's frame; with "csd" it
+# draws its own frame, as Chromium and Electron do).
 import colorsys
+import sys
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-w = Gtk.Window(title='Motion X11'); w.set_default_size(640, 420)
+csd = 'csd' in sys.argv
+w = Gtk.Window(title='Motion CSD' if csd else 'Motion X11'); w.set_default_size(640, 420)
+if csd:
+    bar = Gtk.HeaderBar(title='Motion CSD', show_close_button=True); w.set_titlebar(bar)
 g = Gtk.Grid(); g.set_row_spacing(8); g.set_column_spacing(8); g.set_margin_start(24); g.set_margin_top(24)
 css = Gtk.CssProvider(); rules = []
 for i in range(40):

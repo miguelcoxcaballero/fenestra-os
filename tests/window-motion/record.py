@@ -58,10 +58,11 @@ def record(name, area, ms, trigger):
 
 FIND = 'const w = workspace.windowList().find(c => c.caption === "%s");\n'
 for client in sys.argv[2:]:
-    title = {'qt': 'Motion Qt', 'gtk3-x11': 'Motion X11'}[client]
+    title = {'qt': 'Motion Qt', 'gtk3-x11': 'Motion X11', 'x11-csd': 'Motion CSD'}[client]
     cmd = {'qt': ['/usr/lib64/qt6/bin/qml', '/src/tests/window-motion/client.qml'],
-           'gtk3-x11': ['python3', '/src/tests/window-motion/client_gtk.py']}[client]
-    env = dict(os.environ, QT_QPA_PLATFORM='wayland', GDK_BACKEND='x11' if client == 'gtk3-x11' else 'wayland')
+           'gtk3-x11': ['python3', '/src/tests/window-motion/client_gtk.py'],
+           'x11-csd': ['python3', '/src/tests/window-motion/client_gtk.py', 'csd']}[client]
+    env = dict(os.environ, QT_QPA_PLATFORM='wayland', GDK_BACKEND='x11' if client in ('gtk3-x11', 'x11-csd') else 'wayland')
     # Around the centred window, down to the bottom edge (minimize goes there); maximize: all.
     area = (560, 300, 800, 900)
     if os.environ.get('SHELL_BUILD'):
@@ -82,6 +83,12 @@ for client in sys.argv[2:]:
     record(f'{client}-maximize', (0, 0, W, H), 700, lambda: script('max', FIND % title + 'if (w) w.setMaximize(true, true);'))
     time.sleep(0.5)
     record(f'{client}-unmaximize', (0, 0, W, H), 700, lambda: script('unmax', FIND % title + 'if (w) w.setMaximize(false, false);'))
+    time.sleep(0.5)
+    script('activate', FIND % title + 'if (w) workspace.activeWindow = w;')
+    time.sleep(0.5)
+    record(f'{client}-snap', (0, 0, W, H), 700, lambda: script('snap', 'workspace.slotWindowQuickTileLeft();'))
+    time.sleep(0.5)
+    record(f'{client}-unsnap', (0, 0, W, H), 700, lambda: script('unsnap', FIND % title + 'if (w) w.tile = null;'))
     time.sleep(0.5)
     record(f'{client}-close', area, 600, lambda: script('close', FIND % title + 'if (w) w.closeWindow();'))
     time.sleep(0.5)

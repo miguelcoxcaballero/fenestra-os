@@ -88,9 +88,14 @@ def report_morph(name, d, kind):
     n = len(times)
     load = lambda i: np.asarray(Image.open(f'{d}/f{i:03d}.png').convert('RGB'), dtype=np.float32)
     small = load(0 if kind == 'maximize' else n - 1)
-    bg = np.median(small[:, :200], axis=1)[:, None, :]
+    # A snap to the left covers the left columns: the right ones stay backdrop.
+    bg = np.median(small[:, -200:] if kind in ('snap', 'unsnap') else small[:, :200], axis=1)[:, None, :]
     def box(i):
         D = np.abs(load(i) - bg).sum(axis=2) > 40
+        # The backdrop window's own rounded corners (fenestra-corners) are not the window under test.
+        for ry in (slice(0, 16), slice(-16, None)):
+            for rx in (slice(0, 16), slice(-16, None)):
+                D[ry, rx] = False
         ys, xs = np.nonzero(D)
         return np.array([xs.min(), ys.min(), xs.max() + 1, ys.max() + 1], dtype=float) if len(xs) else None
     b0, b1 = box(0), box(n - 1)
