@@ -136,6 +136,8 @@ void Shortcuts::install()
             &QAction::triggered, this, &Shortcuts::notificationCenterRequested);
     connect(add(QStringLiteral("quick-settings"), QStringLiteral("Quick settings"), {QKeySequence(Qt::META | Qt::Key_A)}),
             &QAction::triggered, this, &Shortcuts::quickSettingsRequested);
+    connect(add(QStringLiteral("next-keyboard"), QStringLiteral("Next keyboard"), {QKeySequence(Qt::META | Qt::Key_Space)}),
+            &QAction::triggered, this, [] { KeyboardStatus::instance()->next(); });
     connect(add(QStringLiteral("search"), QStringLiteral("Search"), {QKeySequence(Qt::META | Qt::Key_S)}),
             &QAction::triggered, this, &Shortcuts::searchRequested);
     connect(add(QStringLiteral("snap-layouts"), QStringLiteral("Snap layouts"), {QKeySequence(Qt::META | Qt::Key_Z)}),

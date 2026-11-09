@@ -48,6 +48,27 @@ KWinIntegration::KWinIntegration(QObject *parent)
     connect(&m_spotlightWatcher, &QFileSystemWatcher::directoryChanged, this, &KWinIntegration::applyLockScreen);
     applyTheme();
     applyLockScreen();
+    applyKeyboard();
+}
+
+void KWinIntegration::applyKeyboard()
+{
+    // Windows' Spanish layout has the euro on AltGr+E and on AltGr+5; XKB's only on E. The option
+    // acts on the first layout only, and on other layouts AltGr+5 is taken (French: "[").
+    auto cfg = KSharedConfig::openConfig(QStringLiteral("kxkbrc"));
+    KConfigGroup layout = cfg->group(QStringLiteral("Layout"));
+    const QString euro = QStringLiteral("eurosign:5");
+    QStringList options = layout.readEntry("Options", QString()).split(QLatin1Char(','), Qt::SkipEmptyParts);
+    const bool wanted = layout.readEntry("LayoutList", QString()).split(QLatin1Char(',')).value(0) == QLatin1String("es");
+    if (options.contains(euro) == wanted)
+        return;
+    options.removeAll(euro);
+    if (wanted)
+        options.append(euro);
+    // KConfig::Notify: KWin watches kxkbrc and reloads the keymap.
+    layout.writeEntry("ResetOldOptions", true, KConfig::Notify);
+    layout.writeEntry("Options", options.join(QLatin1Char(',')), KConfig::Notify);
+    cfg->sync();
 }
 
 void KWinIntegration::applyTheme()
