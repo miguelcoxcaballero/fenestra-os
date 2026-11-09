@@ -105,6 +105,16 @@ void KWinIntegration::applyTheme()
         tabbox.writeEntry("LayoutName", QStringLiteral("fenestra"));
         changed = true;
     }
+    // The preview shown while a window is dragged to a screen edge (kwin/outline/fenestra). KWin
+    // loads it the first time it shows one: a change of scheme applies from the next session.
+    // QmlPath is relative to the data directories (KWin passes it to QStandardPaths::locate).
+    const QString preview = QStringLiteral("kwin/outline/fenestra/") + scheme.toLower() + QStringLiteral(".qml");
+    const bool previewInstalled = !QStandardPaths::locate(QStandardPaths::GenericDataLocation, preview).isEmpty();
+    KConfigGroup outline = cfg->group(QStringLiteral("Outline"));
+    if (previewInstalled && outline.readEntry("QmlPath") != preview) {
+        outline.writeEntry("QmlPath", preview);
+        changed = true;
+    }
     if (!changed)
         return;
     cfg->sync();

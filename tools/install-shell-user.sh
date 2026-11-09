@@ -56,6 +56,8 @@ mkdir -p "$KFX"
 for d in "$REPO"/kwin/effects/*/; do
     n=$(basename "$d"); rm -rf "$KFX/$n.new"; cp -a "$d" "$KFX/$n.new"; rm -rf "${KFX:?}/$n"; mv "$KFX/$n.new" "$KFX/$n"
 done
+# The preview shown while a window is dragged to a screen edge: found here by kwinintegration.cpp.
+mkdir -p "$HOME/.local/share/kwin/outline"; rm -rf "$HOME/.local/share/kwin/outline/fenestra"; cp -a "$REPO/kwin/outline/fenestra" "$HOME/.local/share/kwin/outline/"
 kwriteconfig6 --file kwinrc --group Plugins --key fenestra-unlockEnabled true
 busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects loadEffect s fenestra-unlock >/dev/null 2>&1 || true
 

@@ -93,3 +93,6 @@ for client in sys.argv[2:]:
     record(f'{client}-close', area, 600, lambda: script('close', FIND % title + 'if (w) w.closeWindow();'))
     time.sleep(0.5)
     if proc and proc.poll() is None: proc.kill()
+
+# The preview shown while a window is dragged to a screen edge (the left half of the work area).
+record('outline', (0, 0, W, H), 400, lambda: script('outline', 'workspace.showOutline(0, 0, 960, 1152);'))

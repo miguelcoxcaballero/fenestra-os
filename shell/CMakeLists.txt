@@ -199,6 +199,7 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/privacy/50-fenestra-enroll.
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../desktop/power/tuned/fenestra-battery DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tuned/profiles)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/aurorae/ DESTINATION ${CMAKE_INSTALL_DATADIR}/aurorae/themes)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/tabbox/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/tabbox)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/outline/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/outline)
 # App window open/close/minimize/maximize motion as Windows 11 (KWin scripted effect).
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../kwin/effects/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kwin/effects)
 # Windows 11 window corners drawn by the compositor (KWin C++ effect plugin; needs kwin-devel and
