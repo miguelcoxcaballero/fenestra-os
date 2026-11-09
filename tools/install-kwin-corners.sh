@@ -15,4 +15,12 @@ if [ -n "$want" ] && [ -n "$built" ] && [ "$want" != "$built" ]; then
     exit 1
 fi
 sudo install -Dm755 "$SO" "$DEST"
-gdbus call --session -d org.kde.KWin -o /Effects -m org.kde.kwin.Effects.loadEffect fenestra-corners
+# The window motion effect works with this plugin (X11 windows crop their old picture through it):
+# both go live together. Unload first: an effect already loaded would keep its old code.
+REPO=$(cd "$(dirname "$0")/.." && pwd)
+mkdir -p "$HOME/.local/share/kwin/effects"
+cp -r "$REPO/kwin/effects/fenestra-window-motion" "$HOME/.local/share/kwin/effects/"
+for effect in fenestra-corners fenestra-window-motion; do
+    gdbus call --session -d org.kde.KWin -o /Effects -m org.kde.kwin.Effects.unloadEffect "$effect" >/dev/null
+    gdbus call --session -d org.kde.KWin -o /Effects -m org.kde.kwin.Effects.loadEffect "$effect"
+done

@@ -65,8 +65,15 @@ Three KWin 6.8 quirks shaped the code. Each has a comment in `main.js`:
 - **Calling `cancel()` inside `animationEnded` crashes KWin.** Finished motions are swept at the
   next pointer motion or window event instead.
 
-X11 clients repaint at the new size a few frames after a maximize. For them only, the morph
-cross-fades from the old picture.
+Snapping has no signal of its own in the effect API, so a frame change counts as a snap when it
+is not interactive, moves an edge by 32 px or more, and one of the two rects lies against at least
+two edges of the screen.
+
+X11 clients repaint at the new size a few frames after a maximize or snap. With a server-side
+frame, the morph cross-fades from the old picture. An X11 window that draws its own frame
+(Chromium, Electron) keeps its old picture at the old place, cropped by `fenestra-corners` to hide
+the new empty pixmap, until the client's picture arrives; the morph starts then. A window that only
+shrinks starts at once.
 
 The window shrinks into the centre of its taskbar button. Fenestra's taskbar sends that position
 with `org_kde_plasma_window.set_minimized_geometry` (`TaskbarModel::setButtonGeometry`).

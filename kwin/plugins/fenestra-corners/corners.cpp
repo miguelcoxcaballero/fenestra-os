@@ -51,6 +51,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
+#include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
 
@@ -78,6 +79,10 @@ constexpr qreal CaptionStripWidth = 113.0;
 constexpr qreal CaptionStripHeight = 36.0;
 
 // Electron apps whose title bar has no window-manager frame and whose buttons are Electron's.
+// fenestra-window-motion, while an X11 window that draws its own frame waits for its new picture:
+// "WxH" (logical px), only that much of the window's top-left is its old picture.
+constexpr int HoldCropRole = 0x46454e;
+
 const char *const CaptionApps[] = {"com.anthropic.claude"};
 
 QRectF captionRect(const RectF &frame)
@@ -110,6 +115,7 @@ uniform int capPress;
 uniform float capInactive;
 uniform float capRestore;  // 1: maximized, the restore glyph
 uniform sampler2D capGlyphs; // minimize, maximize, restore, close in a row
+uniform vec2 holdCrop;     // device px; 0: none (see HoldCropRole)
 in vec2 position0;
 
 #if TRAIT_MODULATE
@@ -205,6 +211,10 @@ void main(void)
         vec4 behind = sampleAt(box.xy + s * vec2(box.z + max(d, 0.5), box.w - r - 0.5), toTex);
         vec4 win = result * inner + edge * (outer - inner);
         result = win + behind * (1.0 - win.a);
+    }
+
+    if (holdCrop.x > 0.0 && (position0.x >= holdCrop.x || position0.y >= holdCrop.y)) {
+        result = vec4(0.0);
     }
 
 #if TRAIT_TRANSFORM_COLORSPACE
@@ -453,7 +463,8 @@ CornersEffect::Corners CornersEffect::cornersFor(const EffectWindow *w)
         return Corners::None;
     }
     if (window->maximizeMode() == MaximizeFull) {
-        return hasCaption(w) ? Corners::Square : Corners::None; // the shader draws its buttons
+        // The shader draws its buttons, or crops its old picture.
+        return hasCaption(w) || w->data(HoldCropRole).isValid() ? Corners::Square : Corners::None;
     }
     const RectF frame = w->frameGeometry();
     if (frame.width() <= 2 * Radius || frame.height() <= 2 * Radius) {
@@ -526,6 +537,12 @@ bool CornersEffect::drawWindow(const RenderTarget &renderTarget, const RenderVie
         m_shader->setUniform("cornerRadius", QVector4D(r, r, r, r));
         m_shader->setUniform("borderWidth", float(Border * scale));
         m_shader->setUniform("squareCorners", it->second == Corners::Square ? 1.0f : 0.0f);
+        QVector2D crop;
+        const QStringList size = w->data(HoldCropRole).toString().split(QLatin1Char('x'));
+        if (size.size() == 2) {
+            crop = QVector2D(std::round(size[0].toDouble() * scale), std::round(size[1].toDouble() * scale));
+        }
+        m_shader->setUniform("holdCrop", crop);
         const bool caption = hasCaption(w);
         if (caption) {
             const int cell = int(std::round(16 * scale));
