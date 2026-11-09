@@ -93,6 +93,9 @@ class PowerStatus : public QObject
     Q_PROPERTY(double energyRate READ energyRate NOTIFY changed)    // W into or out of the battery
     Q_PROPERTY(double chargerMaxWatts READ chargerMaxWatts NOTIFY changed) // 0 = the system doesn't say
     Q_PROPERTY(int healthPercent READ healthPercent NOTIFY changed) // full / design capacity, 0 = unknown
+    // Power coming in through the cable, estimated: laptops have no meter for it, so it is what goes
+    // into the battery plus what the PC draws (median of UPower's latest on-battery readings). 0 = unknown.
+    Q_PROPERTY(double inputWattsEstimate READ inputWattsEstimate NOTIFY changed)
 public:
     static PowerStatus *instance();
     static PowerStatus *create(QQmlEngine *, QJSEngine *);
@@ -106,6 +109,7 @@ public:
     double energyRate() const { return m_energyRate; }
     double chargerMaxWatts() const;
     int healthPercent() const;
+    double inputWattsEstimate() const;
 Q_SIGNALS:
     void changed();
 private Q_SLOTS:

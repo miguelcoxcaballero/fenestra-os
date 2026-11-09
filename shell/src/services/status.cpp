@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "status.h"
 
+#include <algorithm>
+
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 
 #include <NetworkManagerQt/AccessPoint>
@@ -309,6 +312,47 @@ double PowerStatus::chargerMaxWatts() const
             best = std::max(best, sysfsNumber(base + QStringLiteral("voltage_max")) * sysfsNumber(base + QStringLiteral("current_max")) / 1e12);
     }
     return best;
+}
+
+namespace
+{
+// Median of the latest on-battery readings in UPower's history of the laptop's battery.
+double typicalDrainWatts()
+{
+    const QDir dir(QStringLiteral("/var/lib/upower"));
+    QList<double> best;
+    for (const QString &name : dir.entryList({QStringLiteral("history-rate-*.dat")}, QDir::Files)) {
+        QFile f(dir.filePath(name));
+        if (!f.open(QIODevice::ReadOnly))
+            continue;
+        QList<double> rates;
+        for (const QByteArray &line : f.readAll().split('\n')) {
+            const QList<QByteArray> cols = line.simplified().split(' ');
+            if (cols.size() == 3 && cols[2] == "discharging" && cols[1].toDouble() > 0)
+                rates.append(cols[1].toDouble());
+        }
+        if (rates.size() > best.size())
+            best = rates;
+    }
+    if (best.size() < 10)
+        return 0;
+    best = best.mid(std::max<qsizetype>(0, best.size() - 200));
+    std::sort(best.begin(), best.end());
+    return best[best.size() / 2];
+}
+}
+
+double PowerStatus::inputWattsEstimate() const
+{
+    if (!pluggedIn())
+        return 0;
+    static QElapsedTimer age;
+    static double drain = 0;
+    if (!age.isValid() || age.elapsed() > 10 * 60 * 1000) {
+        drain = typicalDrainWatts();
+        age.start();
+    }
+    return drain > 0 ? drain + (charging() ? m_energyRate : 0) : 0;
 }
 
 int PowerStatus::healthPercent() const

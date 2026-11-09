@@ -23,6 +23,7 @@ public:
 private:
     explicit KWinIntegration(QObject *parent = nullptr);
     void applyTheme();
+    void applyKeyboard();
     void applyLockScreen();
     void runScript(const QString &name, const QString &code);
     QFileSystemWatcher m_spotlightWatcher;

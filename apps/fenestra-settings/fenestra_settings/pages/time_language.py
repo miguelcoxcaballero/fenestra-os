@@ -4,7 +4,7 @@ from __future__ import annotations
 from gi.repository import GLib, Gtk
 
 from .. import i18n, util
-from ..backends import timedate
+from ..backends import keyboard, timedate
 from ..i18n import N_, _
 from ..widgets import (Dropdown, ExpanderRow, SettingRow, ToggleSwitch, button, label, not_available_row,
                        toast, value_label)
@@ -220,7 +220,8 @@ class TypingPage(Page):
         self.exp = exp
         self.names = _xkb_names()
         self._fill()
-        util.gconnect(INPUT, "sources", self._fill)
+        util.gconnect(INPUT, "sources", self._sources_changed)
+        util.gconnect(INPUT, "per-window", self._apply)
         pw = gsetting_toggle(INPUT, "per-window")
         if pw:
             r = SettingRow(_("Let me use a different input method for each app window"), None,
@@ -231,7 +232,16 @@ class TypingPage(Page):
         self.nav_row(g2, "fx-shortcuts", _("Keyboard shortcuts"), None, "fs-keyboard-symbolic")
         self.nav_row(g2, "a11y-keyboard", _("On-screen keyboard"), None, "fs-keyboard-symbolic", focus="osk")
 
-    def _fill(self):
+    def _apply(self, *_args):
+        # KWin reads kxkbrc, not GNOME's input sources.
+        if not util.DEMO:
+            keyboard.apply(util.gget(INPUT, "sources") or [], bool(util.gget(INPUT, "per-window")))
+
+    def _sources_changed(self, *_args):
+        self._apply()
+        self._fill()
+
+    def _fill(self, *_args):
         exp = self.exp
         exp.clear()
         sources = util.gget(INPUT, "sources")

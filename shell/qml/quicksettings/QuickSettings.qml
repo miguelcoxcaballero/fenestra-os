@@ -297,10 +297,18 @@ Flyout {
                             model: {
                                 const b = qs.bat, rows = []
                                 const rate = qs.watts(b.energyRate)
-                                if (b.pluggedIn)
-                                    rows.push([Strings.tr("Charging power"), rate + (b.chargerMaxWatts > 0 ? " / " + Math.round(b.chargerMaxWatts) : "") + " W"])
-                                else
+                                if (b.pluggedIn) {
+                                    // No laptop has a meter on the cable: "≈" (PowerStatus.inputWattsEstimate).
+                                    const max = b.chargerMaxWatts > 0 ? " / " + Math.round(b.chargerMaxWatts) : ""
+                                    if (b.inputWattsEstimate > 0)
+                                        rows.push([Strings.tr("Power from the cable"), "≈ " + qs.watts(b.inputWattsEstimate) + max + " W"])
+                                    else if (max !== "")
+                                        rows.push([Strings.tr("Charger maximum"), Math.round(b.chargerMaxWatts) + " W"])
+                                    if (b.charging)
+                                        rows.push([Strings.tr("Into the battery"), rate + " W"])
+                                } else {
                                     rows.push([Strings.tr("Power use"), rate + " W"])
+                                }
                                 if (b.charging && b.timeToFull > 0)
                                     rows.push([Strings.tr("Time to full charge"), qs.duration(b.timeToFull)])
                                 else if (!b.pluggedIn && b.timeToEmpty > 0)
