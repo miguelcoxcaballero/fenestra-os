@@ -14,7 +14,17 @@ Flyout {
     recipe: "panel"
     blurItems: [mediaCard.material, card.material]
     property string page: ""            // "" | "wifi" | "bluetooth" | "output"
-    onDismissed: page = ""
+    onDismissed: { page = ""; batteryOpen = false }
+    // The battery details above the footer (click on the battery; a second click hides them).
+    property bool batteryOpen: false
+    // Test hook (tests/shell-kwin): the bench has no battery.
+    property var testBattery: null
+    readonly property var bat: testBattery || PowerStatus
+    function watts(v) { return v.toFixed(1).replace(".", Strings.es ? "," : ".") }
+    function duration(s) {
+        const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60)
+        return (h > 0 ? h + " h " : "") + m + " min"
+    }
     // Test hooks (tests/shell-kwin): fake Wi-Fi networks and Bluetooth devices.
     property ListModel testWifi: ListModel {}
     property ListModel testDevices: ListModel {}
@@ -97,7 +107,7 @@ Flyout {
             width: Metrics.quickWidth
             clipContent: pageMotion.busy
             readonly property int footerH: Metrics.quickFooterHeight
-            height: (qs.page === "" ? main.height : sub.height) + footerH + 2
+            height: (qs.page === "" ? main.height : sub.height) + footerH + 2 + batteryDetails.height
             Item {
                 id: main
                 visible: qs.page === ""
@@ -267,6 +277,51 @@ Flyout {
                                 onClicked: { qs.close(); Apps.runCommand("fenestra-settings --page " + (qs.page === "wifi" ? "wifi" : "bluetooth")) } }
                 }
             }
+            // ---- Battery details: same band as the footer, opens upwards from it ----
+            Item {
+                id: batteryDetails
+                x: 1; y: parent.height - 1 - card.footerH - 1 - height
+                width: parent.width - 2
+                height: qs.batteryOpen && qs.bat.hasBattery ? batteryRows.height + 1 : 0
+                clip: true
+                Behavior on height { NumberAnimation { duration: 167; easing.type: Easing.BezierSpline; easing.bezierCurve: [0, 0, 0, 1, 1, 1] } }
+                Rectangle { width: parent.width; height: 1; color: Metrics.pcol("panel.divider") }
+                Rectangle {
+                    y: 1; width: parent.width; height: batteryRows.height
+                    color: Metrics.pcol("panel.fill.alt")
+                    Column {
+                        id: batteryRows
+                        width: parent.width
+                        topPadding: 8; bottomPadding: 8
+                        Repeater {
+                            model: {
+                                const b = qs.bat, rows = []
+                                const rate = qs.watts(b.energyRate)
+                                if (b.pluggedIn)
+                                    rows.push([Strings.tr("Charging power"), rate + (b.chargerMaxWatts > 0 ? " / " + Math.round(b.chargerMaxWatts) : "") + " W"])
+                                else
+                                    rows.push([Strings.tr("Power use"), rate + " W"])
+                                if (b.charging && b.timeToFull > 0)
+                                    rows.push([Strings.tr("Time to full charge"), qs.duration(b.timeToFull)])
+                                else if (!b.pluggedIn && b.timeToEmpty > 0)
+                                    rows.push([Strings.tr("Time remaining"), qs.duration(b.timeToEmpty)])
+                                if (b.healthPercent > 0)
+                                    rows.push([Strings.tr("Battery health"), b.healthPercent + (Strings.es ? " %" : "%")])
+                                return rows
+                            }
+                            delegate: Item {
+                                required property var modelData
+                                width: batteryRows.width; height: 28
+                                Text { x: 19; anchors.verticalCenter: parent.verticalCenter; text: parent.modelData[0]
+                                       color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                                Text { anchors { right: parent.right; rightMargin: 19; verticalCenter: parent.verticalCenter }
+                                       text: parent.modelData[1]
+                                       color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption }
+                            }
+                        }
+                    }
+                }
+            }
             // ---- Footer: divider, 47 px band, battery left, All settings right ----
             Rectangle {
                 x: 1; y: parent.height - 1 - card.footerH - 1; width: parent.width - 2; height: 1
@@ -278,12 +333,34 @@ Flyout {
                 width: parent.width - 2; height: card.footerH
                 bottomLeftRadius: Metrics.flyoutRadius - 1; bottomRightRadius: Metrics.flyoutRadius - 1
                 color: Metrics.pcol("panel.fill.alt")
-                Row {
-                    x: 19; anchors.verticalCenter: parent.verticalCenter; spacing: 8
-                    visible: PowerStatus.hasBattery
-                    SymbolicIcon { monochrome: true; src: PowerStatus.iconSource; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: PowerStatus.percentage + (Strings.es ? " %" : "%"); color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
-                           anchors.verticalCenter: parent.verticalCenter }
+                Rectangle {
+                    // Hover and press as the footer's other buttons; the icon stays where it was.
+                    id: batteryButton
+                    x: 11; anchors.verticalCenter: parent.verticalCenter
+                    width: batteryRow.width + 16; height: 32
+                    radius: Metrics.controlRadius
+                    visible: qs.bat.hasBattery
+                    color: batteryMouse.pressed ? Theme.pressed : batteryMouse.containsMouse ? Theme.hover : "transparent"
+                    Accessible.role: Accessible.Button
+                    Accessible.name: Strings.tr("Battery details")
+                    Row {
+                        id: batteryRow
+                        x: 8; anchors.verticalCenter: parent.verticalCenter; spacing: 8
+                        // Green while charging, as Windows draws it: the glyph's own fill in dark
+                        // mode, the theme's success green over a recoloured glyph in light mode.
+                        SymbolicIcon {
+                            monochrome: !(qs.bat.charging && Theme.dark)
+                            tint: qs.bat.charging ? "#0f7b0f" : Theme.text
+                            src: qs.bat.iconSource
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text { text: qs.bat.percentage + (Strings.es ? " %" : "%"); color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontCaption
+                               anchors.verticalCenter: parent.verticalCenter }
+                        FluentGlyph { glyph: "\ue70e"; fallback: "go-up-symbolic"; size: FluentFont.available ? 10 : 8
+                                      rotation: qs.batteryOpen ? 180 : 0; anchors.verticalCenter: parent.verticalCenter
+                                      Behavior on rotation { NumberAnimation { duration: 167 } } }
+                    }
+                    MouseArea { id: batteryMouse; anchors.fill: parent; hoverEnabled: true; onClicked: qs.batteryOpen = !qs.batteryOpen }
                 }
                 GlyphButton {
                     // the gear's centre is 31 px from the card's right edge (dark-100-12-quick element 26)

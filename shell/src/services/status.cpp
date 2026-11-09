@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "status.h"
 
+#include <QDir>
+#include <QFile>
+
 #include <NetworkManagerQt/AccessPoint>
 #include <NetworkManagerQt/ActiveConnection>
 #include <NetworkManagerQt/Manager>
@@ -257,6 +260,8 @@ void PowerStatus::onPropertiesChanged(const QString &interface, const QVariantMa
         m_toEmpty = props.value(QStringLiteral("TimeToEmpty")).toLongLong();
     if (props.contains(QStringLiteral("TimeToFull")))
         m_toFull = props.value(QStringLiteral("TimeToFull")).toLongLong();
+    if (props.contains(QStringLiteral("EnergyRate")))
+        m_energyRate = props.value(QStringLiteral("EnergyRate")).toDouble();
     Q_EMIT changed();
 }
 
@@ -268,6 +273,56 @@ QString PowerStatus::iconSource() const
     return QStringLiteral("file:///usr/share/fenestra/assets/battery/%1-0-%2.svg")
         .arg(pluggedIn() ? QStringLiteral("charging") : QStringLiteral("normal"))
         .arg(std::clamp(qRound(m_percentage / 10.0), 0, 10));
+}
+
+namespace
+{
+double sysfsNumber(const QString &path)
+{
+    QFile f(path);
+    return f.open(QIODevice::ReadOnly) ? f.readAll().trimmed().split(' ').value(0).toDouble() : 0;
+}
+}
+
+double PowerStatus::chargerMaxWatts() const
+{
+    // What the charger offers over USB Power Delivery (the best of its supplies, mV x mA).
+    double best = 0;
+    const QDir typec(QStringLiteral("/sys/class/typec"));
+    for (const QString &partner : typec.entryList({QStringLiteral("port*-partner")}, QDir::Dirs | QDir::NoDotAndDotDot)) {
+        const QDir caps(typec.filePath(partner + QStringLiteral("/usb_power_delivery/source-capabilities")));
+        for (const QString &supply : caps.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            const QString base = caps.filePath(supply) + QLatin1Char('/');
+            double mv = sysfsNumber(base + QStringLiteral("voltage"));
+            if (mv <= 0)
+                mv = sysfsNumber(base + QStringLiteral("maximum_voltage"));
+            best = std::max(best, mv * sysfsNumber(base + QStringLiteral("maximum_current")) / 1e6);
+        }
+    }
+    if (best > 0)
+        return best;
+    // Some adapters only report it as a power supply (uV x uA).
+    const QDir supplies(QStringLiteral("/sys/class/power_supply"));
+    for (const QString &name : supplies.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        const QString base = supplies.filePath(name) + QLatin1Char('/');
+        if (sysfsNumber(base + QStringLiteral("online")) > 0)
+            best = std::max(best, sysfsNumber(base + QStringLiteral("voltage_max")) * sysfsNumber(base + QStringLiteral("current_max")) / 1e12);
+    }
+    return best;
+}
+
+int PowerStatus::healthPercent() const
+{
+    const QDir supplies(QStringLiteral("/sys/class/power_supply"));
+    for (const QString &name : supplies.entryList({QStringLiteral("BAT*")}, QDir::Dirs | QDir::NoDotAndDotDot)) {
+        const QString base = supplies.filePath(name) + QLatin1Char('/');
+        for (const QString &kind : {QStringLiteral("energy"), QStringLiteral("charge")}) {
+            const double design = sysfsNumber(base + kind + QStringLiteral("_full_design"));
+            if (design > 0)
+                return qRound(100 * sysfsNumber(base + kind + QStringLiteral("_full")) / design);
+        }
+    }
+    return 0;
 }
 
 // ---- Keyboard layout (KWin's org.kde.KeyboardLayouts) ----------------------------------------

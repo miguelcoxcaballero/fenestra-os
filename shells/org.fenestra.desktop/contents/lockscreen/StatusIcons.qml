@@ -4,7 +4,9 @@
 // and Wi-Fi glyphs; here the icon pack's white exports of them, cp/white/*.svg). Measured on the
 // reference VM (wired, no battery): the network glyph 21 x 21 device px at 150 % (a 14 px em),
 // centred 48 px from the right and 28 px over the bottom. The battery is drawn in the taskbar's
-// proportion to the network glyph (20 / 16) and 10.5 px after it (the taskbar's 12 px x 14 / 16).
+// proportion to the network glyph (20 / 16) and 15 px after it. The glyphs are drawn larger than
+// measured (a 20 px em, not 14): at that size they were too small on a dense laptop panel. They
+// also follow the screen's height, like the clock, so they keep their size at any scale.
 // State: plasma-nm (Wi-Fi bars = signal / 20, wired, offline) and UPower through the
 // powermanagement engine (level in 10 % steps, charging, energy saver, critical).
 import QtQuick
@@ -13,11 +15,13 @@ import org.kde.plasma.plasma5support as P5Support
 
 Row {
     id: icons
-    spacing: 10.5
+    readonly property real k: Math.max(1, root.height / 1200)
+    readonly property real em: 20 * k
+    spacing: 15 * k
     readonly property string white: StandardPaths.writableLocation(StandardPaths.GenericDataLocation).toString() + "/fenestra/packs/windows-11-user-export/glyphs/cp/white/"
     Loader { id: net; source: "NetworkStatus.qml"; visible: false }
     IconFile {
-        size: 14
+        size: icons.em
         anchors.verticalCenter: parent.verticalCenter
         name: !net.item ? "" : net.item.kind === "wired" ? "wired" : net.item.kind === "wifi" ? "wifi-" + net.item.bars : "wifi-offline"
         fallback: net.item ? net.item.fallbackIcon : ""
@@ -38,7 +42,7 @@ Row {
     readonly property bool plugged: power.data["AC Adapter"] ? !!power.data["AC Adapter"]["Plugged in"] : false
     IconFile {
         visible: icons.hasBattery
-        size: 17.5
+        size: icons.em * 1.25
         anchors.verticalCenter: parent.verticalCenter
         readonly property int level: Math.max(0, Math.min(100, Math.round(icons.percent / 10) * 10))
         name: icons.plugged ? "battery-" + level + "-charging"
