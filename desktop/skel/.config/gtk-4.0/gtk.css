@@ -761,7 +761,9 @@ window.win11-chooser.win11-explorer .nautilus-list-view listview.view > row.acti
 window.win11-chooser.win11-explorer .nautilus-list-view scrollbar { background: transparent; }
 /* Bottom (Save): fields area 100 px, buttons strip 57 px. (Open): one 81 px area. */
 window.win11-chooser.win11-explorer .win11-chooser-bottom { padding: 0; margin: 0; border: 0; background: transparent; box-shadow: none; }
-window.win11-chooser.win11-explorer .win11-chooser-fields { padding: 11px 5px 41px 0; border-spacing: 5px 2px; background: #383838; }
+/* The buttons follow the type list: extra options are a menu button in the strip, not a row
+   (the reference, Notepad's dialog, has its Encoding row there: 41 px that a plain dialog lacks). */
+window.win11-chooser.win11-explorer .win11-chooser-fields { padding: 11px 5px 0 0; border-spacing: 5px 2px; background: #383838; }
 window.win11-chooser.win11-explorer label.win11-chooser-caption { min-width: 120px; padding: 0; margin: 0; font-size: 12px; color: #ffffff; }
 window.win11-chooser.win11-explorer .win11-chooser-buttons { min-height: 57px; padding: 0; background: #383838; }
 window.win11-chooser.win11-explorer .win11-chooser-buttons.win11-chooser-open { min-height: 81px; }
