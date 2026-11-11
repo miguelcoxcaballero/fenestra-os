@@ -592,6 +592,24 @@ void Session::reboot() { login1(QStringLiteral("Reboot"), {true}); }
 
 void Session::logout()
 {
+    // One sign-in screen (packaging/lockscreen/fenestra-sign-in, this user signs in on Fenestra's
+    // lock screen): signing out goes to that same screen, as on Windows, never to GDM's own. The
+    // screen locks, then every app is closed and the autostart services and the shell start afresh.
+    QFile mark(QStringLiteral("/etc/fenestra/sign-in-on-lock-screen"));
+    if (mark.open(QIODevice::ReadOnly) && QString::fromUtf8(mark.readLine()).trimmed() == qEnvironmentVariable("USER")) {
+        lock();
+        QProcess::startDetached(QStringLiteral("systemd-run"), {QStringLiteral("--user"), QStringLiteral("--collect"), QStringLiteral("--unit=fenestra-sign-out"),
+            QStringLiteral("/bin/sh"), QStringLiteral("-c"),
+            // not before the lock screen is up; windows are asked to close, then the apps' units are stopped
+            QStringLiteral("S=$(loginctl show-user \"$(id -un)\" -p Display --value); for i in 1 2 3 4 5 6 7 8 9 10; do sleep 0.5; "
+                           "[ \"$(loginctl show-session \"$S\" -p LockedHint --value 2>/dev/null)\" = yes ] && break; done; "
+                           "[ \"$(loginctl show-session \"$S\" -p LockedHint --value 2>/dev/null)\" = yes ] || exit 0; "
+                           "systemctl --user stop 'app-*.scope' 'fenestra-*.scope' 2>/dev/null; "
+                           "for u in $(systemctl --user list-units --type=service --state=running --no-legend 'app-*.service' | awk '{print $1}'); do "
+                           "case $u in *@autostart.service) systemctl --user restart \"$u\";; *) systemctl --user stop \"$u\";; esac; done; "
+                           "systemctl --user restart fenestra-shell.service")});
+        return;
+    }
     // Ends fenestra-session-inner, then KWin and the session (session/libexec/fenestra-session-inner).
     QProcess::startDetached(QStringLiteral("systemctl"), {QStringLiteral("--user"), QStringLiteral("stop"), QStringLiteral("fenestra-session.target")});
 }
