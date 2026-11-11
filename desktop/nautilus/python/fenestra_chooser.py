@@ -382,6 +382,31 @@ class Chooser:
         stack = by_id(self.window, 'filename_widget')
         if isinstance(stack, Gtk.Stack):
             stack.set_vhomogeneous(False)  # the 23 px entry, not the taller edit button page
+            # Windows' file name is always an edit box. Nautilus swaps it for a button (centred
+            # name and a pencil) when it loses the focus: that page is drawn exactly like the box
+            # (gtk.css .fenestra-name-button), so nothing changes shape; a click edits again.
+            stack.set_transition_type(Gtk.StackTransitionType.NONE)
+            container = by_id(self.window, 'filename_button_container')
+            label = by_id(self.window, 'filename_label')
+            pencil = by_id(self.window, 'filename_button_end')
+            button = container.get_child() if container is not None else None
+            if isinstance(button, Gtk.Button) and label is not None:
+                button.add_css_class('fenestra-name-button')
+                box = button.get_child()
+                if isinstance(box, Gtk.CenterBox) and box.get_center_widget() is label:
+                    label.set_xalign(0)
+                    label.set_hexpand(True)
+                    label.set_halign(Gtk.Align.FILL)
+                    box.set_center_widget(None)
+                    box.set_start_widget(label)
+                if pencil is not None:
+                    pencil.set_visible(False)
+            undo = by_id(self.window, 'filename_undo_button')
+            if undo is not None:   # Windows has no "reset name" arrow over the box
+                undo.connect('notify::visible', lambda w, _p: w.get_visible() and w.set_visible(False))
+                undo.set_visible(False)
+        if self.window.find_property('visible-dialog'):
+            self.window.connect('notify::visible-dialog', self.confirm)
         if filename:
             filename.connect('notify::visible', lambda *_: self.sync_mode())
         if accept:
@@ -395,6 +420,60 @@ class Chooser:
         if filters:
             filters.connect('notify::visible', lambda *_: self.sync_accept())
         self.sync_mode()
+
+    def confirm(self, *_):
+        """Nautilus' "Replace When Saving?" as Windows' "Confirm Save As": the name, the question,
+        Yes and No (No is the default button), Yes on the left."""
+        dialog = self.window.get_property('visible-dialog')
+        if dialog is None or not hasattr(dialog, 'has_response') or dialog.has_css_class('fenestra-confirm'):
+            return
+        ids = [r for r in ('replace', 'cancel') if dialog.has_response(r)]
+        if len(ids) != 2:
+            return
+        entry = by_id(self.window, 'filename_entry')
+        name = entry.get_text() if entry else ''
+        dialog.add_css_class('fenestra-confirm')
+        dialog.set_heading(tr('Confirm Save As'))
+        dialog.set_body(tr('{0} already exists.\nDo you want to replace it?').format(name))
+        dialog.set_response_label('replace', '_' + tr('Yes'))
+        dialog.set_response_label('cancel', '_' + tr('No'))
+        try:
+            import gi as _gi
+            _gi.require_version('Adw', '1')
+            from gi.repository import Adw
+            dialog.set_response_appearance('replace', Adw.ResponseAppearance.DEFAULT)
+        except (ValueError, ImportError):
+            pass
+        dialog.set_default_response('cancel')
+        dialog.set_close_response('cancel')
+
+        if hasattr(dialog, 'set_content_width'):
+            dialog.set_content_width(340)
+            dialog.set_follows_content_size(False) if hasattr(dialog, 'set_follows_content_size') else None
+
+        def order():
+            found = {}
+            for w in walk(dialog):
+                if isinstance(w, Gtk.Label):
+                    text = (w.get_text() or '')
+                    if text in (tr('Yes'), tr('No')):
+                        button = w.get_ancestor(Gtk.Button)
+                        if button is not None:
+                            found[text] = button
+                    else:
+                        if text == tr('Confirm Save As'):
+                            w.add_css_class('fenestra-confirm-title')
+                        w.set_xalign(0)
+                        w.set_halign(Gtk.Align.FILL)
+                        w.set_justify(Gtk.Justification.LEFT)
+            yes, no = found.get(tr('Yes')), found.get(tr('No'))
+            if yes is not None and no is not None and yes.get_parent() is no.get_parent():
+                # Windows: Yes, then No. The dialog lays its responses out in its own order: mirror the row.
+                yes.get_parent().set_direction(Gtk.TextDirection.RTL)
+                for b in (yes, no):
+                    b.set_direction(Gtk.TextDirection.LTR)
+            return GLib.SOURCE_REMOVE
+        GLib.idle_add(order)
 
     def sync_mode(self):
         save = self.save_mode()

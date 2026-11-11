@@ -14,7 +14,8 @@ _L = {
            # file chooser (fenestra_chooser.py)
            'Organize': 'Organizar', 'File name:': 'Nombre:', 'Save as type:': 'Tipo:', 'Files of type:': 'Tipo:',
            'Cancel': 'Cancelar', 'Select all': 'Seleccionar todo', 'Show hidden files': 'Mostrar archivos ocultos',
-           'Properties': 'Propiedades', 'Close': 'Cerrar', 'Hide Folders': 'Ocultar carpetas',
+           'Properties': 'Propiedades', 'Close': 'Cerrar', 'Hide Folders': 'Ocultar carpetas', 'Confirm Save As': 'Confirmar Guardar como', 'Yes': 'Sí', 'No': 'No',
+           '{0} already exists.\nDo you want to replace it?': '{0} ya existe.\n¿Desea reemplazarlo?',
            'Browse Folders': 'Examinar carpetas', '_Save': '_Guardar', '_Open': '_Abrir', '_Select': '_Seleccionar',
            'Name': 'Nombre', 'Date modified': 'Fecha de modificación', 'Type': 'Tipo', 'Size': 'Tamaño',
            'Recent locations': 'Ubicaciones recientes', 'No items match your search.': 'Ningún elemento coincide con el criterio de búsqueda.', 'Get help': 'Muestra ayuda.'},
