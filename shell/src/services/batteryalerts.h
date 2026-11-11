@@ -37,7 +37,11 @@ private:
     int m_refreshState = -1;      // last applied: 1 battery, 0 AC, -1 none
     bool m_testing = false;
     int m_last = -1;              // last level seen on battery, -1 = plugged in / unknown
+    static QString stateFile();
+    void rememberSaver();
+    void leaveSaver();
     bool m_saverAuto = false;     // Energy saver turned on by us
+    int m_saverRetries = 0;
     QString m_saverBefore;        // the power profile it replaced
     int m_brightnessBefore = -1;  // brightness before we dimmed, -1 = not dimmed
     int m_brightnessSet = -1;     // what we set (the user changing it cancels the restore)

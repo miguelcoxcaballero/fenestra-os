@@ -45,6 +45,15 @@ script=${i:PROFILE_DIR}/script.sh
 CONF
     cat > "$PROFILE/script.sh" <<'SCRIPT'
 #!/bin/sh
+# Devices that are idle go to sleep by themselves (runtime power management), as powertop's
+# tunables: PCI devices, SATA links, I2C adapters. They wake on use; nothing gets slower. Left on
+# when the profile ends: it is the kernel's own recommendation for laptops.
+if [ "$1" = start ]; then
+    for f in /sys/bus/pci/devices/*/power/control /sys/bus/i2c/devices/*/power/control \
+             /sys/block/*/device/power/control /sys/class/scsi_host/*/device/power/control; do
+        [ -w "$f" ] && echo auto > "$f" 2>/dev/null
+    done
+fi
 # intel_lpmd: AUTO on battery, OFF when this profile ends. Harmless where it doesn't exist.
 command -v intel_lpmd_control >/dev/null 2>&1 || exit 0
 systemctl -q is-active intel_lpmd || exit 0
@@ -67,12 +76,24 @@ cat > "$HOOK" <<'SLEEP'
 # After each suspend: seconds asleep, seconds the hardware really slept, and the blockers if low.
 STATE=/run/fenestra-power-suspend; LOG=/var/log/fenestra-power.log
 case "$1" in
-pre) date +%s > "$STATE" ;;
+pre) date +%s > "$STATE"
+     cat /proc/interrupts > "$STATE.irq" 2>/dev/null
+     grep -H . /sys/firmware/acpi/interrupts/gpe[0-9A-F]* /sys/firmware/acpi/interrupts/sci 2>/dev/null | awk '{print $1, $2}' > "$STATE.gpe" ;;
 post)
     [ -r "$STATE" ] || exit 0
     t=$(( $(date +%s) - $(cat "$STATE") )); hw=$(( $(cat /sys/power/suspend_stats/last_hw_sleep 2>/dev/null || echo 0) / 1000000 ))
     pct=$(( t > 0 ? 100 * hw / t : 0 ))
     echo "$(date -Is) $2 slept ${t}s hardware ${hw}s (${pct}%)" >> "$LOG"
+    if [ "$t" -gt 120 ] && [ -r "$STATE.irq" ]; then
+        # What woke the CPU while asleep: the interrupts and ACPI events that fired most.
+        echo "--- interrupts during sleep (count name)" >> "$LOG"
+        cat /proc/interrupts | awk 'NR==FNR { k=$1; s=0; for (i=2;i<=NF;i++) if ($i ~ /^[0-9]+$/) s+=$i; a[k]=s; next }
+            { k=$1; s=0; n=""; for (i=2;i<=NF;i++) { if ($i ~ /^[0-9]+$/) s+=$i; else n=n" "$i } d=s-a[k]; if (d>0) print d, k n }' "$STATE.irq" - \
+            | sort -rn | head -12 >> "$LOG"
+        echo "--- ACPI events during sleep (count name)" >> "$LOG"
+        grep -H . /sys/firmware/acpi/interrupts/gpe[0-9A-F]* /sys/firmware/acpi/interrupts/sci 2>/dev/null | awk '{print $1, $2}' \
+            | awk 'NR==FNR { a[$1]=$2; next } { d=$2-a[$1]; if (d>0) { sub(/.*\//,"",$1); print d, $1 } }' "$STATE.gpe" - | sort -rn | head -8 >> "$LOG"
+    fi
     if [ "$t" -gt 120 ] && [ "$pct" -lt 90 ]; then
         d=/sys/kernel/debug/pmc_core
         for f in substate_status_registers substate_live_status_registers package_cstate_show ltr_show pch_ip_power_gating_status; do

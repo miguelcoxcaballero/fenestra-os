@@ -11,6 +11,7 @@
 #include <QLocale>
 #include <QProcess>
 #include <QSettings>
+#include <QTimer>
 #include <QStandardPaths>
 
 namespace
@@ -44,9 +45,47 @@ BatteryAlerts::BatteryAlerts(QObject *parent)
         if (p->hasBattery())
             applyRefresh(!p->pluggedIn());
     });
+    // Energy saver we turned on survives a restart of the shell (and of the PC: tuned keeps the
+    // profile): without this note nobody would turn it off again and the PC would stay throttled.
+    QSettings state(stateFile(), QSettings::IniFormat);
+    if (state.value(QStringLiteral("Battery/SaverAuto"), false).toBool()) {
+        m_saverAuto = true;
+        m_saverBefore = state.value(QStringLiteral("Battery/SaverBefore")).toString();
+        if (p->hasBattery() && !p->pluggedIn() && p->percentage() > kSaverLevel)
+            leaveSaver();   // charged above the level while the shell was not looking
+        else
+            m_last = p->hasBattery() && !p->pluggedIn() ? p->percentage() : -2;
+    }
     if (p->hasBattery())
         applyRefresh(!p->pluggedIn());
     update(p->percentage(), p->hasBattery(), p->pluggedIn());
+}
+
+QString BatteryAlerts::stateFile()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + QStringLiteral("/fenestra/shell-state.conf");
+}
+
+void BatteryAlerts::rememberSaver()
+{
+    QSettings state(stateFile(), QSettings::IniFormat);
+    state.setValue(QStringLiteral("Battery/SaverAuto"), m_saverAuto);
+    state.setValue(QStringLiteral("Battery/SaverBefore"), m_saverBefore);
+}
+
+void BatteryAlerts::leaveSaver()
+{
+    if (!m_saverAuto)
+        return;
+    auto *pp = PowerProfiles::instance();
+    if (!pp->available() && m_saverRetries++ < 10) {   // the profiles daemon answers a moment after start
+        QTimer::singleShot(3000, this, &BatteryAlerts::leaveSaver);
+        return;
+    }
+    if (pp->available() && pp->active() == QLatin1String("power-saver"))
+        pp->setActive(m_saverBefore.isEmpty() || m_saverBefore == QLatin1String("power-saver") ? QStringLiteral("balanced") : m_saverBefore);
+    m_saverAuto = false;
+    rememberSaver();
 }
 
 void BatteryAlerts::dimBy(double factor)
@@ -64,12 +103,7 @@ void BatteryAlerts::dimBy(double factor)
 
 void BatteryAlerts::restore()
 {
-    if (m_saverAuto) {
-        auto *pp = PowerProfiles::instance();
-        if (pp->available() && pp->active() == QLatin1String("power-saver"))
-            pp->setActive(m_saverBefore.isEmpty() ? QStringLiteral("balanced") : m_saverBefore);
-        m_saverAuto = false;
-    }
+    leaveSaver();
     auto *b = Brightness::instance();
     // Give the brightness back only if nobody changed it meanwhile (as Windows on plugging in).
     if (m_brightnessBefore >= 0 && b->available() && b->percent() == m_brightnessSet)
@@ -81,7 +115,7 @@ void BatteryAlerts::restore()
 void BatteryAlerts::update(int percent, bool hasBattery, bool pluggedIn)
 {
     if (!hasBattery || pluggedIn) {
-        if (m_last >= 0)
+        if (m_last >= 0 || m_last == -2 || m_saverAuto)
             restore();
         m_last = -1;
         return;
@@ -99,6 +133,7 @@ void BatteryAlerts::update(int percent, bool hasBattery, bool pluggedIn)
             m_saverBefore = pp->active();
             pp->setActive(QStringLiteral("power-saver"));
             m_saverAuto = true;
+            rememberSaver();
         }
         dimBy(kSaverDim);
     }
