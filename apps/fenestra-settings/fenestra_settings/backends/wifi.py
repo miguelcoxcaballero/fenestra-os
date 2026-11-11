@@ -412,7 +412,7 @@ class Wifi:
                 util.log("scan:", e.message)
         d.request_scan_async(None, done)
 
-    def connect(self, net: Network, key=None, identity=None, autoconnect=True, hidden_ssid=None, cb=None):
+    def connect(self, net: Network, key=None, identity=None, autoconnect=True, hidden_ssid=None, cb=None, eap=None):
         """Start connecting; progress arrives through changed() and self.attempt.
 
         net: a Network from networks(). key/identity: what the user typed (None = use the saved
@@ -455,11 +455,12 @@ class Wifi:
         if existing is not None:
             att.uuid = existing.get_uuid()
             att.conn_path = existing.get_path()
-            if key is not None or identity is not None or existing.get_setting_connection().get_autoconnect() \
+            if key is not None or identity is not None or eap is not None \
+                    or existing.get_setting_connection().get_autoconnect() \
                     != autoconnect:
                 # wrong/changed key of a saved network: update that profile (never a duplicate)
                 conn = NM.SimpleConnection.new_clone(existing)
-                self._fill_security(conn, net.security, key, identity)
+                self._fill_security(conn, net.security, key, identity, eap)
                 conn.get_setting_connection().props.autoconnect = autoconnect
                 existing.replace_settings_from_connection(conn)
 
@@ -479,7 +480,7 @@ class Wifi:
             self.changed(0)
             return att
 
-        conn = self._new_connection(raw, net.security, key, identity, autoconnect, hidden=net.hidden)
+        conn = self._new_connection(raw, net.security, key, identity, autoconnect, hidden=net.hidden, eap=eap)
         att.uuid = conn.get_uuid()
         att.created = True
         self.client.add_and_activate_connection_async(
@@ -487,7 +488,7 @@ class Wifi:
         self.changed(0)
         return att
 
-    def _new_connection(self, raw, security, key, identity, autoconnect, hidden=False):
+    def _new_connection(self, raw, security, key, identity, autoconnect, hidden=False, eap=None):
         conn = NM.SimpleConnection.new()
         s_con = NM.SettingConnection.new()
         s_con.props.id = ssid_text(raw)
@@ -505,11 +506,11 @@ class Wifi:
         conn.get_setting_ip4_config().props.method = "auto"
         conn.add_setting(NM.SettingIP6Config.new())
         conn.get_setting_ip6_config().props.method = "auto"
-        self._fill_security(conn, security, key, identity)
+        self._fill_security(conn, security, key, identity, eap)
         return conn
 
     @staticmethod
-    def _fill_security(conn, security, key, identity):
+    def _fill_security(conn, security, key, identity, eap=None):
         if security == OPEN:
             conn.remove_setting(NM.SettingWirelessSecurity)
             return
@@ -540,6 +541,8 @@ class Wifi:
                 conn.add_setting(x)
                 x.props.eap = ["peap"]
                 x.props.phase2_auth = "mschapv2"
+            if eap is not None:
+                apply_8021x(x, eap)
             if identity is not None:
                 x.props.identity = identity
             if key is not None:
@@ -670,12 +673,12 @@ class Wifi:
                 cb(ok)
         conn.commit_changes_async(True, None, done)
 
-    def add_network(self, ssid, security, key, autoconnect=True, hidden=False, cb=None):
+    def add_network(self, ssid, security, key, autoconnect=True, hidden=False, cb=None, eap=None):
         """'Add a new network' (Manage known networks): save a profile without connecting."""
         if _blocked(f"add {ssid}"):
             return self._fail(cb)
         conn = self._new_connection(ssid.encode(), security, key, None if security != EAP else "", autoconnect,
-                                    hidden=hidden)
+                                    hidden=hidden, eap=eap)
 
         def done(client, res):
             try:
@@ -686,6 +689,31 @@ class Wifi:
             if cb:
                 cb(ok, msg)
         self.client.add_connection_async(conn, True, None, done)
+
+    def eap_settings(self, conn):
+        """The 802.1X settings of a saved profile (pages/wifi_enterprise.py), without the password."""
+        return read_8021x(conn.get_setting_802_1x() if conn is not None else None)
+
+    def update_security(self, conn, eap, cb=None):
+        """Replace a saved enterprise profile's 802.1X settings (and password, when given)."""
+        if _blocked(f"update 802.1x {conn.get_id()}"):
+            return self._fail(cb)
+        x = conn.get_setting_802_1x()
+        if x is None:
+            x = NM.Setting8021x.new()
+            conn.add_setting(x)
+        apply_8021x(x, eap)
+        if eap.get("identity") is not None:
+            x.props.identity = eap["identity"]
+        if eap.get("password"):
+            x.props.password = eap["password"]
+            x.props.password_flags = NM.SettingSecretFlags.NONE
+
+        def done(rc, res):
+            ok = _finish_quiet(rc.commit_changes_finish, res)
+            if cb:
+                cb(ok)
+        conn.commit_changes_async(True, None, done)
 
     def get_key(self, conn, cb):
         """The saved key ('View Wi-Fi security key'); cb(key or None)."""
@@ -782,6 +810,63 @@ def _protocol(dev, ap):
     if rate > 54:
         return "Wi-Fi 4 (802.11n)"
     return "802.11g" if ap.get_frequency() < 4900 else "802.11a"
+
+
+PHASE2_EAP_PREFIX = "eap-"
+
+
+def apply_8021x(x, e):
+    """e: method, phase2, anonymous, ca (system/file/none), ca_path, domain, client_cert,
+    private_key, key_password, peapver. Identity and password are set by the caller."""
+    def path(v):   # the "path" scheme of the certificate properties
+        return GLib.Bytes.new(b"file://" + v.encode() + b"\0") if v else None
+    method = e.get("method") or "peap"
+    x.props.eap = [method]
+    x.props.phase2_auth = None
+    x.props.phase2_autheap = None
+    p2 = e.get("phase2") or ""
+    if method in ("peap", "ttls", "fast") and p2:
+        if p2.startswith(PHASE2_EAP_PREFIX):
+            x.props.phase2_autheap = p2[len(PHASE2_EAP_PREFIX):]
+        else:
+            x.props.phase2_auth = p2
+    x.props.anonymous_identity = e.get("anonymous") or None
+    x.props.phase1_peapver = e.get("peapver") if e.get("peapver") in ("0", "1") else None
+    ca = e.get("ca") or "none"
+    x.props.system_ca_certs = ca == "system"
+    x.props.ca_cert = path(e.get("ca_path") if ca == "file" else None)
+    x.props.domain_suffix_match = e.get("domain") or None
+    if method == "fast":
+        x.props.phase1_fast_provisioning = "3"
+    if method == "tls":
+        x.props.client_cert = path(e.get("client_cert"))
+        x.props.private_key = path(e.get("private_key"))
+        if e.get("key_password"):
+            x.props.private_key_password = e["key_password"]
+        x.props.private_key_password_flags = NM.SettingSecretFlags.NONE
+    else:
+        x.props.client_cert = None
+        x.props.private_key = None
+
+
+def _cert_path(blob):
+    if blob is None:
+        return ""
+    data = bytes(blob.get_data())
+    return data[len(b"file://"):].rstrip(b"\0").decode(errors="replace") if data.startswith(b"file://") else ""
+
+
+def read_8021x(x):
+    if x is None:
+        return {"method": "peap", "phase2": "mschapv2", "ca": "none"}
+    method = (x.get_eap_method(0) if x.get_num_eap_methods() else None) or "peap"
+    p2 = x.props.phase2_auth or (PHASE2_EAP_PREFIX + x.props.phase2_autheap if x.props.phase2_autheap else "")
+    ca_path = _cert_path(x.props.ca_cert)
+    return {"method": method, "phase2": p2, "identity": x.props.identity or "",
+            "anonymous": x.props.anonymous_identity or "",
+            "ca": "file" if ca_path else "system" if x.props.system_ca_certs else "none", "ca_path": ca_path,
+            "domain": x.props.domain_suffix_match or "", "peapver": x.props.phase1_peapver or "",
+            "client_cert": _cert_path(x.props.client_cert), "private_key": _cert_path(x.props.private_key)}
 
 
 def _nm_error(msg: str) -> str:
@@ -923,7 +1008,14 @@ class DemoWifi(Wifi):
     def get_key(self, conn, cb):
         GLib.idle_add(lambda: (cb(None), False)[1])
 
-    def connect(self, net, key=None, identity=None, autoconnect=True, hidden_ssid=None, cb=None):
+    def eap_settings(self, conn):
+        return read_8021x(getattr(conn, 'get_setting_802_1x', lambda: None)())
+
+    def update_security(self, conn, eap, cb=None):
+        if cb:
+            cb(True)
+
+    def connect(self, net, key=None, identity=None, autoconnect=True, hidden_ssid=None, cb=None, eap=None):
         att = Attempt(net.key, net.ssid, net.security)
         att.phase, att.error = "failed", "read-only"
         self.attempt = att

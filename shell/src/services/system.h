@@ -141,7 +141,7 @@ public:
     // Known network or open one: activates it. Secured unknown one (or a saved one whose key was
     // just rejected): needs the password. Enterprise networks open Settings › Wi-Fi instead.
     Q_INVOKABLE bool needsPassword(int row) const;
-    Q_INVOKABLE void connectTo(int row, const QString &password = QString());
+    Q_INVOKABLE void connectTo(int row, const QString &password = QString(), const QString &identity = QString());
     Q_INVOKABLE void disconnectFrom(int row);
     Q_INVOKABLE void cancel(int row);
 Q_SIGNALS:

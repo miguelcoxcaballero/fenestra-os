@@ -28,10 +28,12 @@ Flyout {
     // Test hooks (tests/shell-kwin): fake Wi-Fi networks and Bluetooth devices.
     property ListModel testWifi: ListModel {}
     property ListModel testDevices: ListModel {}
+    property int testAsk: -1
     function testFill(networks, devices) {
         testWifi.clear(); testDevices.clear()
         for (let i = 0; i < networks; ++i)
-            testWifi.append({ ssid: "Network " + (i + 1), signal: 100 - (i * 7) % 90, active: i === 0, secured: i % 3 !== 2 })
+            testWifi.append({ ssid: "Network " + (i + 1), signal: 100 - (i * 7) % 90, active: i === 0, secured: i % 3 !== 2, enterprise: i === 1,
+                              connecting: false, status: i === 0 ? "Connected" : i % 3 !== 2 ? "Secured" : "Open" })
         for (let i = 0; i < devices; ++i)
             testDevices.append({ Name: "Device " + (i + 1), Paired: true, Connected: i === 0, Icon: "audio-headphones" })
     }
@@ -390,8 +392,8 @@ Flyout {
                 delegate: Rectangle {
                     required property int index
                     required property var model
-                    property bool asking: false
-                    x: 8; width: Metrics.quickWidth - 16; height: asking ? 96 : 48; radius: 4
+                    property bool asking: qs.testAsk === index
+                    x: 8; width: Metrics.quickWidth - 16; height: !asking ? 48 : model.enterprise ? 176 : 96; radius: 4
                     color: wm.containsMouse || asking ? Theme.hover : "transparent"
                     SymbolicIcon { monochrome: true; x: 12; y: 16; name: "network-wireless-signal-" + ["none", "weak", "ok", "good", "excellent"][Math.min(4, Math.floor(model.signal / 20))] + "-symbolic" }
                     Column { x: 40; y: 8
@@ -401,18 +403,38 @@ Flyout {
                     MouseArea { id: wm; anchors.fill: parent; hoverEnabled: true
                         onClicked: model.active ? WifiNetworks.disconnectFrom(index)
                                    : model.connecting ? WifiNetworks.cancel(index)
-                                   : WifiNetworks.needsPassword(index) ? (parent.asking = true, pw.forceActiveFocus()) : WifiNetworks.connectTo(index) }
+                                   : WifiNetworks.needsPassword(index) ? (parent.asking = true, (model.enterprise ? user : pw).forceActiveFocus()) : WifiNetworks.connectTo(index) }
                     Connections { target: WifiNetworks
                         // wrong key: the password field comes back, the status shows Windows' message
                         function onKeyRejected(ssid) { if (ssid === model.ssid) { pw.parent.parent.asking = true; pw.text = ""; pw.forceActiveFocus() } } }
+                    // Enterprise networks (eduroam...): user name and password, as Windows asks for them.
+                    Rectangle {
+                        visible: parent.asking && model.enterprise
+                        x: 40; y: 52; width: parent.width - 52; height: 32; radius: 4
+                        color: Theme.dark ? Qt.rgba(1, 1, 1, 0.06) : "white"
+                        border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.1)
+                        TextInput { id: user; x: 10; width: parent.width - 20; anchors.verticalCenter: parent.verticalCenter
+                                    color: Theme.text; font.pixelSize: 13
+                                    Text { visible: !parent.text; text: Strings.tr("User name"); color: Theme.textSecondary; font.pixelSize: 13 }
+                                    onAccepted: pw.forceActiveFocus()
+                                    KeyNavigation.tab: pw }
+                    }
+                    Text {
+                        visible: parent.asking && model.enterprise
+                        x: 40; y: 136; text: Strings.tr("Advanced options")
+                        color: Theme.accentText; font.family: Metrics.fontFamily; font.pixelSize: 12
+                        MouseArea { anchors.fill: parent; anchors.margins: -6; cursorShape: Qt.PointingHandCursor
+                                    onClicked: { qs.close(); Apps.runCommand("fenestra-settings --page wifi") } }
+                    }
                     Rectangle {
                         visible: parent.asking
-                        x: 40; y: 52; width: parent.width - 52; height: 32; radius: 4
+                        x: 40; y: model.enterprise ? 92 : 52; width: parent.width - 52; height: 32; radius: 4
                         color: Theme.dark ? Qt.rgba(1, 1, 1, 0.06) : "white"
                         border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.1)
                         TextInput { id: pw; x: 10; width: parent.width - 20; anchors.verticalCenter: parent.verticalCenter
                                     echoMode: TextInput.Password; color: Theme.text; font.pixelSize: 13
-                                    onAccepted: { if (text.length > 0) { WifiNetworks.connectTo(index, text); text = ""; parent.parent.asking = false } }
+                                    Text { visible: !parent.text && model.enterprise; text: Strings.tr("Password"); color: Theme.textSecondary; font.pixelSize: 13 }
+                                    onAccepted: { if (text.length > 0 && (!model.enterprise || user.text.length > 0)) { WifiNetworks.connectTo(index, text, user.text); text = ""; parent.parent.asking = false } }
                                     Keys.onEscapePressed: { text = ""; parent.parent.asking = false } }
                     }
                 }
