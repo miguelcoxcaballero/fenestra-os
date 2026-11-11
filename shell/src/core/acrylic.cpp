@@ -342,7 +342,8 @@ QImage AcrylicProvider::requestImage(const QString &id, QSize *size, const QSize
         img = renderCard(p);
     } else if (p.size() >= 6) {
         const QString source = QUrl::fromPercentEncoding(p.mid(5).join(QLatin1Char('/')).toUtf8());
-        const qreal dpr = std::max(0.5, p[4].toDouble());
+        const qreal dprIn = p[4].toDouble();
+        const qreal dpr = std::isfinite(dprIn) ? std::clamp(dprIn, 0.5, 8.0) : 1.0;
         const QSize screen(qRound(p[1].toInt() * dpr), qRound(p[2].toInt() * dpr));
         img = Acrylic::renderStrip(source, screen, qRound(p[3].toInt() * dpr), dpr,
                                    Acrylic::taskbarRecipe(p[0] != QLatin1String("light")));
@@ -382,9 +383,21 @@ QImage PopupShadowProvider::requestImage(const QString &id, QSize *size, const Q
     if (p.size() >= 5) {
         auto *t = Tokens::instance();
         const QString k = p.size() > 5 && p[5] == QLatin1String("menu") ? QStringLiteral("menu.shadow.") : QStringLiteral("popup.shadow.");
-        const qreal dpr = std::max(0.5, p[4].toDouble());
+        const qreal dprIn = p[4].toDouble();
+        const qreal dpr = std::isfinite(dprIn) ? std::clamp(dprIn, 0.5, 8.0) : 1.0;
         const float w = float(p[0].toDouble() * dpr), h = float(p[1].toDouble() * dpr), r = float(p[2].toDouble() * dpr);
         const int m = qRound(p[3].toDouble() * dpr);
+        // Sizes arrive from QML bindings: while the outputs change (sign-in, resume, a monitor
+        // unplugged) they can be NaN, negative or huge for a moment. Never allocate from those.
+        const bool sane = std::isfinite(w) && std::isfinite(h) && std::isfinite(r) && w >= 0 && h >= 0 && w <= 16384 && h <= 16384
+            && m >= 0 && m <= 1024;
+        if (!sane) {
+            img = QImage(1, 1, QImage::Format_ARGB32_Premultiplied);
+            img.fill(Qt::transparent);
+            if (size)
+                *size = img.size();
+            return img;
+        }
         const int W = int(std::ceil(w)) + 2 * m, H = int(std::ceil(h)) + 2 * m;
         // Two layers: sigma, dy (logical px) and opacity.
         struct L { float s, dy, a; };
