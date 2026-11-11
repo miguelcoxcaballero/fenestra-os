@@ -569,19 +569,14 @@ bool WifiNetworks::needsPassword(int row) const
     if (row < 0 || row >= m_nets.size())
         return false;
     const Net &n = m_nets.at(row);
-    return n.secured && !n.enterprise && (n.connectionPath.isEmpty() || m_rejected.contains(n.ssid));
+    return n.secured && (n.connectionPath.isEmpty() || m_rejected.contains(n.ssid));
 }
 
-void WifiNetworks::connectTo(int row, const QString &password)
+void WifiNetworks::connectTo(int row, const QString &password, const QString &identity)
 {
     if (row < 0 || row >= m_nets.size())
         return;
     const Net n = m_nets.at(row);
-    if (n.enterprise && n.connectionPath.isEmpty()) {
-        // user name + password: Settings › Wi-Fi asks for both inline
-        QProcess::startDetached(QStringLiteral("fenestra-settings"), {QStringLiteral("--page"), QStringLiteral("wifi")});
-        return;
-    }
     m_errors.remove(n.ssid);
     m_attempt = Attempt{n.ssid, {}, n.devicePath, false, !password.isEmpty(), false};
 
@@ -615,7 +610,17 @@ void WifiNetworks::connectTo(int row, const QString &password)
         if (c && !password.isEmpty()) {
             // a saved network whose key was rejected: update that profile, never add a duplicate
             NMVariantMapMap map = c->settings()->toMap();
-            map.insert(QStringLiteral("802-11-wireless-security"), securitySettings());
+            if (n.enterprise) {
+                // keep the saved EAP method, CA, domain...: only the user name and password change
+                QVariantMap x = map.value(QStringLiteral("802-1x"));
+                if (!identity.isEmpty())
+                    x.insert(QStringLiteral("identity"), identity);
+                x.insert(QStringLiteral("password"), password);
+                x.insert(QStringLiteral("password-flags"), 0u);
+                map.insert(QStringLiteral("802-1x"), x);
+            } else {
+                map.insert(QStringLiteral("802-11-wireless-security"), securitySettings());
+            }
             auto *w = new QDBusPendingCallWatcher(c->update(map), this);
             connect(w, &QDBusPendingCallWatcher::finished, this, [this, n, watch](QDBusPendingCallWatcher *w) {
                 w->deleteLater();
@@ -643,7 +648,16 @@ void WifiNetworks::connectTo(int row, const QString &password)
                                                               {QStringLiteral("autoconnect"), true}});
     settings.insert(QStringLiteral("802-11-wireless"), QVariantMap{{QStringLiteral("ssid"), n.ssid.toUtf8()},
                                                                    {QStringLiteral("mode"), QStringLiteral("infrastructure")}});
-    if (!n.keyMgmt.isEmpty())
+    if (n.enterprise) {
+        // Windows' first try: PEAP with MSCHAPv2 (what most universities and companies use, eduroam
+        // included); every other setting is in Settings › Wi-Fi.
+        settings.insert(QStringLiteral("802-11-wireless-security"), QVariantMap{{QStringLiteral("key-mgmt"), QStringLiteral("wpa-eap")}});
+        settings.insert(QStringLiteral("802-1x"), QVariantMap{{QStringLiteral("eap"), QStringList{QStringLiteral("peap")}},
+                                                              {QStringLiteral("phase2-auth"), QStringLiteral("mschapv2")},
+                                                              {QStringLiteral("identity"), identity},
+                                                              {QStringLiteral("password"), password},
+                                                              {QStringLiteral("password-flags"), 0u}});
+    } else if (!n.keyMgmt.isEmpty())
         settings.insert(QStringLiteral("802-11-wireless-security"), securitySettings());
     watch(NetworkManager::addAndActivateConnection(settings, n.devicePath, n.apPath));
     scheduleRebuild();
@@ -684,8 +698,14 @@ void WifiNetworks::finishAttempt(bool ok, int reason)
             if (n.ssid == a.ssid)
                 secured = n.secured;
         if (keyProblem && secured) {
-            m_errors.insert(a.ssid, wtr("The network security key isn't correct. Please try again.",
-                                        "La clave de seguridad de red no es correcta. Inténtalo de nuevo."));
+            bool enterprise = false;
+            for (const Net &n : std::as_const(m_nets))
+                if (n.ssid == a.ssid)
+                    enterprise = n.enterprise;
+            m_errors.insert(a.ssid, enterprise ? wtr("Can't connect. Check your user name and password, or the network's settings in Settings.",
+                                                     "No se puede conectar. Revisa el usuario y la contraseña, o la configuración de la red en Configuración.")
+                                               : wtr("The network security key isn't correct. Please try again.",
+                                                     "La clave de seguridad de red no es correcta. Inténtalo de nuevo."));
             if (!a.created)
                 m_rejected.insert(a.ssid);
             Q_EMIT keyRejected(a.ssid);

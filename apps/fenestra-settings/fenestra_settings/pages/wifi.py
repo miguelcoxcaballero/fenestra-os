@@ -10,6 +10,7 @@ from ..i18n import C_, _
 from ..widgets import (ContentDialog, Dropdown, ExpanderRow, SettingRow, ToggleSwitch, button, clear, icon,
                        label, link, not_available_row, show_dialog, spinner, toast)
 from .base import Page, register
+from .wifi_enterprise import EnterpriseForm
 
 SCAN_EVERY_MS = 20000
 
@@ -173,33 +174,37 @@ class NetworkRow(Gtk.Box):
                 err = label(self.error, "wifi-error", wrap=True)
                 b.append(err)
             self.user_entry = None
+            self.eap_form = None
             if sec == wb.EAP:
                 b.append(label(_("Enter your user name and password"), "caption"))
-                self.user_entry = Gtk.Entry()
-                self.user_entry.add_css_class("fluent-entry")
-                self.user_entry.set_halign(Gtk.Align.START)
-                self.user_entry.set_size_request(400, -1)
-                self.user_entry.set_placeholder_text(_("User name"))
-                b.append(self.user_entry)
+                saved = self.page.w.eap_settings(self.net.best_connection()) if self.net.known else None
+                self.eap_form = EnterpriseForm(saved, ssid=self.net.ssid)
+                self.eap_form.set_halign(Gtk.Align.START)
+                self.eap_form.set_size_request(400, -1)
+                b.append(self.eap_form)
+                self.user_entry = self.eap_form.user
             else:
                 b.append(label(_("Enter the network security key"), "caption"))
-            self.key_entry = Gtk.PasswordEntry()
-            self.key_entry.set_show_peek_icon(True)
-            self.key_entry.add_css_class("fluent-entry")
-            self.key_entry.set_halign(Gtk.Align.START)
-            self.key_entry.set_size_request(400, -1)
             if sec == wb.EAP:
-                self.key_entry.set_property("placeholder-text", _("Password"))
-            b.append(self.key_entry)
+                self.key_entry = self.eap_form.password
+            else:
+                self.key_entry = Gtk.PasswordEntry()
+                self.key_entry.set_show_peek_icon(True)
+                self.key_entry.add_css_class("fluent-entry")
+                self.key_entry.set_halign(Gtk.Align.START)
+                self.key_entry.set_size_request(400, -1)
+                b.append(self.key_entry)
             row = self._buttons([(_("Next"), self._key_next, True), (_("Cancel"), self._back, False)])
             nxt = row.get_first_child()
 
             def ok(*_a):
                 k = self.key_entry.get_text()
-                good = wb.key_valid(sec, k) if sec != wb.EAP else bool(k) and bool(self.user_entry.get_text())
+                good = wb.key_valid(sec, k) if sec != wb.EAP else self.eap_form.valid()
                 nxt.set_sensitive(good)
             self.key_entry.connect("changed", ok)
             self.key_entry.connect("activate", lambda *_: nxt.get_sensitive() and self._key_next())
+            if self.eap_form is not None:
+                self.eap_form._cb = ok
             if self.user_entry is not None:
                 self.user_entry.connect("changed", ok)
                 self.user_entry.connect("activate", lambda *_: self.key_entry.grab_focus())
@@ -261,16 +266,20 @@ class NetworkRow(Gtk.Box):
             self._start()
 
     def _key_next(self):
+        if self.eap_form is not None:
+            v = self.eap_form.get()
+            self._start(key=v["password"] or None, identity=v["identity"], eap=v)
+            return
         key = self.key_entry.get_text()
         user = self.user_entry.get_text() if self.user_entry is not None else None
         self._start(key=key, identity=user)
 
-    def _start(self, key=None, identity=None):
+    def _start(self, key=None, identity=None, eap=None):
         self.error = None
         self.stage = "connecting"
         self._refresh()
         self.page.w.connect(self.net, key=key, identity=identity, autoconnect=self.auto.get_active(),
-                            hidden_ssid=self.hidden_ssid)
+                            hidden_ssid=self.hidden_ssid, eap=eap)
 
     def _back(self):
         self.stage, self.error = "idle", None
@@ -587,6 +596,8 @@ def add_network_dialog(page):
     key.set_show_peek_icon(True)
     key.add_css_class("fluent-entry")
     box.append(key)
+    eap_form = EnterpriseForm(None, advanced=True)
+    box.append(eap_form)
     err = label("", "wifi-error", wrap=True)
     err.set_visible(False)
     box.append(err)
@@ -602,7 +613,9 @@ def add_network_dialog(page):
         needs = s in (wb.WEP, wb.PSK, wb.SAE)
         key_lbl.set_visible(needs)
         key.set_visible(needs)
-        ok = 0 < len(name.get_text().encode()) <= 32 and (not needs or wb.key_valid(s, key.get_text()))
+        eap_form.set_visible(s == wb.EAP)
+        ok = 0 < len(name.get_text().encode()) <= 32 and (not needs or wb.key_valid(s, key.get_text())) \
+            and (s != wb.EAP or eap_form.valid(need_password=False))
         if dlg is not None:
             dlg.primary_btn.set_sensitive(ok)
         return ok
@@ -618,11 +631,14 @@ def add_network_dialog(page):
             else:
                 toast(page.box, _("{0} was added").format(name.get_text()))
         s = sec.selected_id()
-        w.add_network(name.get_text(), s, key.get_text() if s in (wb.WEP, wb.PSK, wb.SAE) else None,
-                      autoconnect=auto.get_active(), hidden=hidden.get_active(), cb=done)
+        eap = eap_form.get() if s == wb.EAP else None
+        w.add_network(name.get_text(), s, key.get_text() if s in (wb.WEP, wb.PSK, wb.SAE) else
+                      ((eap or {}).get("password") or None),
+                      autoconnect=auto.get_active(), hidden=hidden.get_active(), cb=done, eap=eap)
 
     dlg = ContentDialog(_("Add a new network"), None, primary=_("Save"), close=_("Cancel"), on_response=resp,
-                        extra=box)
+                        extra=_scrolled(box))
+    eap_form._cb = valid
     for wdg in (name, key):
         wdg.connect("changed", valid)
     sec.connect("notify::selected", valid)
@@ -630,6 +646,16 @@ def add_network_dialog(page):
     show_dialog(page.box, dlg)
     name.grab_focus()
     return dlg
+
+
+def _scrolled(child, height=520):
+    """Long dialog content: scrolls inside the dialog instead of growing past the window."""
+    sc = Gtk.ScrolledWindow()
+    sc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+    sc.set_propagate_natural_height(True)
+    sc.set_max_content_height(height)
+    sc.set_child(child)
+    return sc
 
 
 def properties_card(page, rows_fn) -> Gtk.Box:
@@ -754,6 +780,13 @@ class WifiNetworkPage(Page):
             self.props_card = properties_card(self, lambda: self.w.details(c) if self._is_active(c) else [])
             g4.add(self.props_card)
             sec = c.get_setting_wireless_security()
+            if sec is not None and sec.get_key_mgmt() in ("wpa-eap", "wpa-eap-suite-b-192"):
+                v = self.w.eap_settings(c)
+                ge = self.group()
+                desc = " · ".join(x for x in (v["method"].upper(), (v.get("phase2") or "").upper(),
+                                               v.get("identity") or "") if x)
+                ge.add(SettingRow(_("Enterprise security settings"), desc, None,
+                                  control=button(_("Edit"), lambda: self._edit_eap(c))))
             if sec is not None and (sec.get_key_mgmt() in ("wpa-psk", "sae", "none")):
                 g5 = self.group()
                 g5.add(SettingRow(_("View Wi-Fi security key"), None, None,
@@ -775,6 +808,34 @@ class WifiNetworkPage(Page):
     def _edit(self, c):
         if not util.launch(["nm-connection-editor", f"--edit={c.get_uuid()}"]) and util.READ_ONLY:
             toast(self.content, _("This action is disabled in read-only mode"))
+
+    def _edit_eap(self, c):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.append(label(_("Leave the password empty to keep the saved one."), "caption", wrap=True))
+        form = EnterpriseForm(self.w.eap_settings(c), ssid=self.tr_title(), advanced=True)
+        box.append(form)
+        dlg = None
+
+        def valid():
+            if dlg is not None:
+                dlg.primary_btn.set_sensitive(form.valid(need_password=False))
+
+        def resp(r):
+            if r != "primary":
+                return
+
+            def done(ok):
+                toast(self.content, _("Saved. Connect again to use the new settings.") if ok
+                      else _("This action is disabled in read-only mode") if util.READ_ONLY
+                      else _("The change was not applied"))
+                if ok:
+                    self._render()
+            self.w.update_security(c, form.get(), done)
+        form._cb = valid
+        dlg = ContentDialog(_("Enterprise security settings"), None, primary=_("Save"), close=_("Cancel"),
+                            on_response=resp, extra=_scrolled(box))
+        valid()
+        show_dialog(self.content, dlg)
 
     def _view_key(self, c):
         def got(key):

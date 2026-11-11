@@ -21,7 +21,7 @@ Window {
     onWallpaperReadyChanged: if (wallpaperReady) reveal()
     Component.onCompleted: { if (wallpaperReady) reveal(); else revealTimer.start() }
     Timer { id: revealTimer; interval: 2000; onTriggered: desk.reveal() }
-    LayerShell.Window.scope: "fenestra-wallpaper"
+    LayerShell.Window.scope: "desktop"   // KWin: a desktop window (stays when the desktop is shown)
     LayerShell.Window.layer: LayerShell.Window.LayerBackground
     LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
                                | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight

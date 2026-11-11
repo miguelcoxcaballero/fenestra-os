@@ -25,7 +25,7 @@ Window {
     // session also starts KWin with KWIN_USE_OVERLAYS=0 (session/libexec/fenestra-session).
     Item { id: blurPin; x: 0; y: 0; width: 1; height: 1 }
     onVisibleChanged: if (visible) ShellUtil.setBlurItems(bar, [blurPin], 0)
-    LayerShell.Window.scope: "fenestra-taskbar"
+    LayerShell.Window.scope: "dock"   // KWin: a panel (stays when the desktop is shown)
     LayerShell.Window.layer: LayerShell.Window.LayerTop
     LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft
                                | LayerShell.Window.AnchorRight
