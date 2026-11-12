@@ -467,7 +467,7 @@ QString Usage::ageText(qint64 msecs)
     const bool es = QLocale().name().startsWith(QLatin1String("es"));
     const qint64 m = std::max<qint64>(0, (QDateTime::currentMSecsSinceEpoch() - msecs) / 60000);
     auto unit = [es](qint64 n, const char *en, const char *enPl, const char *esS, const char *esPl) {
-        return es ? QStringLiteral("Hace %1 %2").arg(n).arg(QLatin1String(n == 1 ? esS : esPl))
+        return es ? QStringLiteral("Hace %1 %2").arg(n).arg(QString::fromUtf8(n == 1 ? esS : esPl))
                   : QStringLiteral("%1 %2 ago").arg(n).arg(QLatin1String(n == 1 ? en : enPl));
     };
     if (m < 1)
