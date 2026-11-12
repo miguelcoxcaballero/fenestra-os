@@ -3,6 +3,9 @@
 
 #include "qwayland-fake-input.h"
 
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCallWatcher>
 #include <QClipboard>
 #include <QFile>
 #include <QGuiApplication>
@@ -188,3 +191,20 @@ void Emoji::type(const QString &emoji)
 }
 
 #include "emoji.moc"
+
+void Emoji::findCaret()
+{
+    QDBusMessage call = QDBusMessage::createMethodCall(QStringLiteral("org.kde.KWin"), QStringLiteral("/org/fenestra/TextCaret"),
+                                                       QStringLiteral("org.fenestra.KWin.TextCaret"), QStringLiteral("Rect"));
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(call, 200), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher *w) {
+        w->deleteLater();
+        const QDBusMessage reply = w->reply();
+        const QVariantList a = reply.arguments();
+        if (reply.type() != QDBusMessage::ReplyMessage || a.size() < 5 || !a.at(0).toBool()) {
+            Q_EMIT caretFound(false, QRect());
+            return;
+        }
+        Q_EMIT caretFound(true, QRect(a.at(1).toInt(), a.at(2).toInt(), a.at(3).toInt(), a.at(4).toInt()));
+    });
+}

@@ -60,6 +60,21 @@ Item {
         }
         return perScreen.objectAt(0)
     }
+    // Win+.: Windows opens the emoji panel at the text cursor, on the cursor's screen.
+    Connections {
+        target: Emoji
+        function onCaretFound(known, rect) {
+            if (!known) { root.screenObjects(null).emoji.present(); return }
+            for (let i = 0; i < perScreen.count; ++i) {
+                const o = perScreen.objectAt(i), s = o.modelData
+                if (rect.x >= s.virtualX && rect.x < s.virtualX + s.width && rect.y >= s.virtualY && rect.y < s.virtualY + s.height) {
+                    o.emoji.present(Qt.rect(rect.x - s.virtualX, rect.y - s.virtualY, rect.width, rect.height))
+                    return
+                }
+            }
+            root.screenObjects(null).emoji.present()
+        }
+    }
     Connections {
         target: ShellState
         function onStartRequested(screen, x) {
@@ -88,7 +103,13 @@ Item {
         function onSecurityScreenRequested() { root.securityScreen.open() }
         function onNotificationCenterRequested() { ShellState.toggleCalendar(null, -1) }
         function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
-        function onEmojiRequested() { const p = root.screenObjects(null).emoji; if (p.shown) p.close(); else p.present() }
+        function onEmojiRequested() {
+            for (let i = 0; i < perScreen.count; ++i) {
+                const p = perScreen.objectAt(i).emoji
+                if (p.shown) { p.close(); return }
+            }
+            Emoji.findCaret()   // answers below, before the panel takes the focus from the app
+        }
         function onNextKeyboardRequested() {
             if (KeyboardStatus.count < 2) return
             KeyboardStatus.next()

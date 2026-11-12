@@ -35,6 +35,7 @@
     pointer's hover and takes the clicks there, so the app's own buttons never see them.
 */
 #include "corners.h"
+#include "caret.h"
 
 #include <core/pixelgrid.h>
 #include <core/rendertarget.h>
@@ -289,6 +290,7 @@ CornersEffect::CornersEffect()
     });
     m_filter = std::make_unique<CaptionFilter>(this);
     input()->installInputEventFilter(m_filter.get());
+    m_caret = std::make_unique<TextCaret>();
     for (EffectWindow *w : effects->stackingOrder()) {
         update(w);
     }
