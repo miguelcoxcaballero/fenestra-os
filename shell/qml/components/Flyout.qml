@@ -153,6 +153,9 @@ Window {
         }
     }
     Connections { target: ShellSettings; function onTransparencyChanged() { if (!ShellSettings.transparency) flyout.dropBackdrop() } }
+    // The acrylic kept for the next opening is a picture of the flyout's area (megabytes for the
+    // large panels): after two minutes closed it is given back, and the next opening builds it anew.
+    Timer { interval: 120000; running: !flyout.shown && flyout.shownId > 0; onTriggered: if (!flyout.shown && !flyout.visible) flyout.dropBackdrop() }
     Timer { id: acrylicTimer; interval: 100; onTriggered: { flyout.acrylicOn = true; ShellUtil.clearBlur(flyout) } }
     // Cards that change size while open (calendar, notifications): a new capture for the new area.
     Timer { id: recapture; interval: 50; onTriggered: if (flyout.shown && flyout.backdropId) flyout.requestBackdrop() }

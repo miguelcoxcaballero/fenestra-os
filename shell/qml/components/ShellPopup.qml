@@ -85,6 +85,8 @@ Window {
             material.backdrop.source = "image://backdrop/" + id + "/" + material.backdropRecipe
         popup.backdropArrived(id)
     }
+    // As Flyout: the kept acrylic is given back after two minutes closed.
+    Timer { interval: 120000; running: !popup.shown && popup.shownId > 0; onTriggered: if (!popup.shown && !popup.visible) popup.dropBackdrop() }
     function dropBackdrop() {
         Backdrop.release(backdropId)
         Backdrop.release(shownId)
