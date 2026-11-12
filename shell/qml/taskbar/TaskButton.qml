@@ -7,6 +7,9 @@ Item {
     id: button
     property url iconSource
     property string iconName
+    // Bumped when apps are installed or removed: the icon is asked for again (QML keeps what it got).
+    property int iconStamp: 0
+    Connections { target: Apps; function onDatabaseChanged() { button.iconStamp += 1 } }
     property string label
     property int windowCount: 0
     // The group's windows ({uuid, title, row, width, height, ...}: TaskbarModel's "windows").
@@ -85,7 +88,7 @@ Item {
         width: Metrics.taskIcon; height: Metrics.taskIcon
         sourceSize: Qt.size(Metrics.taskIcon * Screen.devicePixelRatio, Metrics.taskIcon * Screen.devicePixelRatio)
         source: button.iconSource.toString() !== "" ? button.iconSource
-                : (button.iconName !== "" ? "image://icon/" + button.iconName : "")
+                : (button.iconName !== "" ? "image://icon/" + button.iconName + (button.iconStamp > 0 ? "?" + button.iconStamp : "") : "")
         // Press animation (pressAnimation.js): the icon shrinks while pressed.
         scale: mouse.pressed ? 0.82 : 1
         // ~150 ms to shrink on the reference recording (motion.json).

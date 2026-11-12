@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "iconoverrides.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -161,14 +162,66 @@ QUrl IconOverrideInterceptor::intercept(const QUrl &url, DataType type)
     return file.isEmpty() ? url : QUrl::fromLocalFile(file);
 }
 
-QPixmap IconProvider::requestPixmap(const QString &id, QSize *size, const QSize &requested)
+// An app icon the theme lookup missed: its file, straight from the icon directories. Qt trusts the
+// directories' icon-theme.cache, and a package installed without refreshing it (most that don't come
+// from the store) has icons Qt can't see until the cache is rebuilt; the same for /usr/share/pixmaps
+// and icons named with an extension. The largest drawing not smaller than `want`, else the largest.
+static QString iconFileOnDisk(const QString &name, int want)
+{
+    if (name.isEmpty() || name.contains(QLatin1Char('/')))
+        return {};
+    static const QStringList exts{QStringLiteral(".png"), QStringLiteral(".svg"), QStringLiteral(".svgz"), QStringLiteral(".xpm")};
+    QString base = name;
+    for (const QString &e : exts)
+        if (base.endsWith(e, Qt::CaseInsensitive))
+            base.chop(e.size());
+    QString best;
+    int bestSize = 0;
+    auto consider = [&](const QString &file, int px) {
+        const bool better = best.isEmpty() || (bestSize < want ? px > bestSize : (px >= want && px < bestSize));
+        if (better && QFileInfo::exists(file)) {
+            best = file;
+            bestSize = px;
+        }
+    };
+    QStringList roots = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
+    roots << QStringLiteral("/var/lib/flatpak/exports/share") << QDir::homePath() + QStringLiteral("/.local/share/flatpak/exports/share")
+          << QStringLiteral("/var/lib/snapd/desktop");
+    for (const QString &root : std::as_const(roots)) {
+        const QDir hicolor(root + QStringLiteral("/icons/hicolor"));
+        for (const QString &sizeDir : hicolor.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            const int px = sizeDir == QLatin1String("scalable") ? 4096 : sizeDir.section(QLatin1Char('x'), 0, 0).section(QLatin1Char('@'), 0, 0).toInt();
+            if (px <= 0)
+                continue;
+            for (const QString &e : exts)
+                consider(hicolor.filePath(sizeDir + QStringLiteral("/apps/") + base + e), px);
+        }
+        for (const QString &e : exts) {
+            consider(root + QStringLiteral("/pixmaps/") + base + e, 48);
+            consider(root + QStringLiteral("/icons/") + base + e, 48);
+        }
+    }
+    return best;
+}
+
+QPixmap IconProvider::requestPixmap(const QString &fullId, QSize *size, const QSize &requested)
 {
     const QSize want = requested.isValid() ? requested : QSize(32, 32);
+    const QString id = fullId.section(QLatin1Char('?'), 0, 0);   // "?N": a re-request (TaskButton.iconStamp)
     QIcon icon = IconOverrides::instance()->icon(id);
+    if (icon.isNull() && id.startsWith(QLatin1Char('/')) && QFileInfo::exists(id))
+        icon = QIcon(id);   // Icon=/absolute/path.png
     if (icon.isNull())
         icon = QIcon::fromTheme(id);
     if (icon.isNull())
         icon = QIcon::fromTheme(id.toLower());
+    if (icon.isNull() || icon.availableSizes().isEmpty() && icon.pixmap(want, 1.0).isNull()) {
+        QString file = iconFileOnDisk(id, std::max(want.width(), want.height()));
+        if (file.isEmpty())
+            file = iconFileOnDisk(id.toLower(), std::max(want.width(), want.height()));
+        if (!file.isEmpty())
+            icon = QIcon(file);
+    }
     if (icon.isNull())
         icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));
     // `want` is already in device pixels (QML asks with sourceSize = size * devicePixelRatio):
