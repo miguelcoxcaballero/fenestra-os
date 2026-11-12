@@ -67,8 +67,13 @@ Window {
         visible: source.toString() !== ""
         fillMode: Image.PreserveAspectCrop   // background-size: cover
         asynchronous: true
-        sourceSize: Qt.size((desk.targetScreen ? desk.targetScreen.width : desk.width) * Screen.devicePixelRatio,
-                            (desk.targetScreen ? desk.targetScreen.height : desk.height) * Screen.devicePixelRatio)
+        // Decoded at the screen's pixels when the picture is larger; never enlarged in memory (a
+        // 720 x 450 picture was held as 3840 x 2400, 37 MB): the GPU scales a small one up.
+        readonly property size device: Qt.size((desk.targetScreen ? desk.targetScreen.width * desk.targetScreen.devicePixelRatio : desk.width * Screen.devicePixelRatio),
+                                               (desk.targetScreen ? desk.targetScreen.height * desk.targetScreen.devicePixelRatio : desk.height * Screen.devicePixelRatio))
+        readonly property bool small: WallpaperSource.imageSize.width > 0 && WallpaperSource.imageSize.width <= device.width
+                                      && WallpaperSource.imageSize.height <= device.height
+        sourceSize: small ? Qt.size(0, 0) : device
     }
 
     Item {

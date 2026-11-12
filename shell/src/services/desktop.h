@@ -3,6 +3,7 @@
 // column-major grid; positions remembered; file operations through KIO (undoable, async).
 #pragma once
 
+#include <QSize>
 #include <QAbstractListModel>
 #include <QFileSystemWatcher>
 #include <QHash>
@@ -72,11 +73,13 @@ class WallpaperSource : public QObject
     QML_SINGLETON
     Q_PROPERTY(QString image READ image NOTIFY changed)   // file URL, or "" for a colour
     Q_PROPERTY(QString color READ color NOTIFY changed)   // background colour behind / instead of the image
+    Q_PROPERTY(QSize imageSize READ imageSize NOTIFY changed)   // the file's own pixels (empty: unknown)
 public:
     static WallpaperSource *instance();
     static WallpaperSource *create(QQmlEngine *, QJSEngine *);
     QString image() const { return m_image; }
     QString color() const { return m_color; }
+    QSize imageSize() const { return m_imageSize; }
 Q_SIGNALS:
     void changed();
 private:
@@ -84,4 +87,5 @@ private:
     void update();
     QFileSystemWatcher m_watcher;
     QString m_image, m_color = QStringLiteral("#202020");
+    QSize m_imageSize;
 };

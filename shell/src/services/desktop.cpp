@@ -19,6 +19,7 @@
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
+#include <QImageReader>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -411,6 +412,7 @@ void WallpaperSource::update()
     } else if (QFileInfo::exists(w)) {
         image = QUrl::fromLocalFile(w).toString();
     }
+    m_imageSize = image.isEmpty() ? QSize() : QImageReader(QUrl(image).toLocalFile()).size();
     if (image == m_image && color == m_color)
         return;
     m_image = image;
