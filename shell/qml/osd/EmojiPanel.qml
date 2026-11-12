@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The emoji panel (Win+. or Win+;), after Windows 11's: a search line, the categories, a grid of
 // emoji with the recently used first. Typing filters; a click, or Enter on the first match, closes
-// the panel and types the emoji where the text cursor was (Emoji.type). Windows opens it at the
-// text cursor; a Wayland shell can't know where that is, so it opens over the middle of the taskbar.
+// the panel and types the emoji where the text cursor was (Emoji.type). Like Windows it opens at
+// the text cursor: its left edge on the caret, just below it, or above when it doesn't fit (the
+// caret comes from Fenestra's KWin plugin, Emoji.findCaret). Apps that don't tell the compositor
+// where their caret is get it over the middle of the taskbar.
 // Sizes follow the shell's flyouts (40 px cells): Windows' own panel hasn't been measured.
 import QtQuick
 import Fenestra.Shell
@@ -11,7 +13,22 @@ Flyout {
     id: panel
     recipe: "panel"
     padding: 0
-    anchorX: targetScreen ? targetScreen.width / 2 : 0
+    // The caret in this screen's coordinates; height 0: unknown.
+    property rect caret: Qt.rect(0, 0, 0, 0)
+    readonly property bool atCaret: caret.height > 0 && targetScreen
+    readonly property int caretGap: 8
+    // Top of the panel: under the caret, or over it when the taskbar is in the way.
+    readonly property real caretTop: {
+        if (!atCaret) return 0
+        const floor = targetScreen.height - Metrics.taskbarHeight - Metrics.flyoutGap
+        const below = caret.y + caret.height + caretGap
+        if (below + sheetHeight <= floor) return below
+        return Math.max(Metrics.flyoutEdge, Math.min(caret.y - caretGap - sheetHeight, floor - sheetHeight))
+    }
+    anchorX: atCaret ? -1 : targetScreen ? targetScreen.width / 2 : 0
+    anchorLeft: atCaret ? Math.max(0, caret.x) : -1
+    gap: atCaret ? Math.round(targetScreen.height - Metrics.taskbarHeight - caretTop - sheetHeight) : Metrics.flyoutGap
+    motion: atCaret ? "fade" : "taskbar"
     property int group: -1            // -1 = recently used
     property string pending: ""
     readonly property var glyphs: ["\u{1F600}", "\u{1F9D1}", "\u{1F43B}", "\u{1F354}", "\u{1F697}", "\u{26BD}", "\u{1F4A1}", "\u{1F523}", "\u{1F6A9}"]
@@ -19,7 +36,8 @@ Flyout {
         if (search.text.trim() !== "") return Emoji.items(0, search.text)
         return group < 0 ? Emoji.recent : Emoji.items(group)
     }
-    function present() {
+    function present(at) {
+        caret = at !== undefined ? at : Qt.rect(0, 0, 0, 0)
         pending = ""
         search.text = ""
         group = Emoji.recent.length > 0 ? -1 : 0

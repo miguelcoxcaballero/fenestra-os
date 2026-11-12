@@ -10,6 +10,7 @@
 #include <QHash>
 #include <QObject>
 #include <QQmlEngine>
+#include <QRect>
 #include <QVariantList>
 
 class FakeInput;
@@ -32,7 +33,12 @@ public:
     Q_INVOKABLE QVariantList items(int group, const QString &query = QString());
     // After the panel has closed: type `emoji` into the focused window.
     Q_INVOKABLE void type(const QString &emoji);
+    // Where the focused window's text cursor is (desktop coordinates), asked from Fenestra's KWin
+    // plugin (kwin/plugins/fenestra-corners/caret.h) before the panel takes the focus: answers
+    // with caretFound, `known` false when the app doesn't tell the compositor or the plugin is old.
+    Q_INVOKABLE void findCaret();
 Q_SIGNALS:
+    void caretFound(bool known, const QRect &rect);
     void recentChanged();
     void canTypeChanged();
 private:
