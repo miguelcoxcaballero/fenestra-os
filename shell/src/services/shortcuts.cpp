@@ -138,6 +138,14 @@ void Shortcuts::install()
             &QAction::triggered, this, &Shortcuts::quickSettingsRequested);
     connect(add(QStringLiteral("next-keyboard"), QStringLiteral("Next keyboard"), {QKeySequence(Qt::META | Qt::Key_Space)}),
             &QAction::triggered, this, &Shortcuts::nextKeyboardRequested);
+    // Win+. (and Win+;): the emoji panel. KDE's picker when installed (it copies the emoji picked),
+    // GNOME's character map otherwise.
+    connect(add(QStringLiteral("emoji"), QStringLiteral("Emoji panel"), {QKeySequence(Qt::META | Qt::Key_Period), QKeySequence(Qt::META | Qt::Key_Semicolon)}),
+            &QAction::triggered, this, [] {
+                for (const QString &id : {QStringLiteral("org.kde.plasma.emojier.desktop"), QStringLiteral("org.gnome.Characters.desktop")})
+                    if (Apps::instance()->launch(id))
+                        return;
+            });
     connect(add(QStringLiteral("search"), QStringLiteral("Search"), {QKeySequence(Qt::META | Qt::Key_S)}),
             &QAction::triggered, this, &Shortcuts::searchRequested);
     connect(add(QStringLiteral("snap-layouts"), QStringLiteral("Snap layouts"), {QKeySequence(Qt::META | Qt::Key_Z)}),
