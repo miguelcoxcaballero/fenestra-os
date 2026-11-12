@@ -39,12 +39,16 @@ gtkcss() {
     mv "$f.new" "$f"
 }
 bootcheck() {
-    # Without root: the unit in the user's own systemd directory, pulled in by the session target.
-    install -Dm755 "$REPO/session/libexec/fenestra-boot-check" "$HOME/.local/libexec/fenestra/fenestra-boot-check" || return 1
+    # Without root: the units in the user's own systemd directory, pulled in by the session target.
+    local n
     mkdir -p "$CONF/systemd/user/fenestra-session.target.d"
-    sed "s|^ExecStart=.*|ExecStart=$HOME/.local/libexec/fenestra/fenestra-boot-check|" "$REPO/session/systemd/fenestra-boot-check.service" > "$CONF/systemd/user/fenestra-boot-check.service"
-    printf '[Unit]\nWants=fenestra-boot-check.service\n' > "$CONF/systemd/user/fenestra-session.target.d/boot-check.conf"
+    for n in fenestra-boot-check fenestra-sleep-log; do
+        install -Dm755 "$REPO/session/libexec/$n" "$HOME/.local/libexec/fenestra/$n" || return 1
+        sed "s|^ExecStart=.*|ExecStart=$HOME/.local/libexec/fenestra/$n|" "$REPO/session/systemd/$n.service" > "$CONF/systemd/user/$n.service"
+    done
+    printf '[Unit]\nWants=fenestra-boot-check.service fenestra-sleep-log.service\n' > "$CONF/systemd/user/fenestra-session.target.d/boot-check.conf"
     systemctl --user daemon-reload
+    systemctl --user restart fenestra-sleep-log.service
 }
 kwinplugin() {
     # Built for the KWin of the lab image (the same Fedora as this PC); root installs it.
@@ -64,7 +68,7 @@ step "lock screen" bash "$REPO/tools/install-lockscreen-user.sh"
 step "settings" settings
 step "file manager" files
 step "gtk stylesheet" gtkcss
-step "start-up check" bootcheck
+step "start-up check and sleep log" bootcheck
 step "kwin plugin (build)" kwinplugin
 if [ -n "$ROOT" ]; then
     step "root part" bash "$REPO/tools/install-root.sh" $TIDY

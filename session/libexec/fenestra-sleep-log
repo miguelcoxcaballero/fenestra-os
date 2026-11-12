@@ -1,0 +1,52 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# fenestra-sleep-log: what happened during each suspend, without root. A laptop that "sleeps" but
+# keeps its hardware awake drains the battery in the bag; the kernel says how long the hardware
+# really slept, and the interrupt counters say what kept firing meanwhile. One block per suspend
+# in ~/.local/state/fenestra/sleep.log:
+#   seconds suspended, seconds of hardware sleep (%), on battery or not, battery % before/after,
+#   whether sound was open, the interrupts and ACPI events that fired while suspended.
+# Runs for the whole session (fenestra-sleep-log.service), woken by logind's PrepareForSleep.
+set -u
+STATE=${XDG_STATE_HOME:-$HOME/.local/state}/fenestra
+RUN=${XDG_RUNTIME_DIR:-/tmp}/fenestra-sleep
+mkdir -p "$STATE" "$RUN"
+LOG=$STATE/sleep.log
+
+irqs() { awk 'NR>1 { s=0; for (i=2; i<=NF && $i ~ /^[0-9]+$/; i++) s+=$i; n=$1; $1=""; for (j=2; j<i; j++) $j=""; gsub(/^ +| +$/, ""); gsub(/  +/, " "); print s, n, $0 }' /proc/interrupts; }
+gpes() { for f in /sys/firmware/acpi/interrupts/*; do read -r n _ < "$f" 2>/dev/null && [ "${n:-0}" -gt 0 ] 2>/dev/null && echo "$n ${f##*/}"; done; }
+battery() { cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1; }
+online() { grep -qs 1 /sys/class/power_supply/A*/online && echo "plugged in" || echo "on battery"; }
+hw() { cat /sys/power/suspend_stats/total_hw_sleep 2>/dev/null || echo 0; }
+delta() {   # delta OLD NEW: lines "count name..." whose count grew, biggest first
+    awk 'NR==FNR { k=$2; old[k]=$1; next } { k=$2; d=$1-old[k]; if (d>0) { $1=d; print } }' "$1" "$2" | sort -rn | head -12
+}
+
+before() {
+    date +%s > "$RUN/t"; hw > "$RUN/hw"; irqs > "$RUN/irq"; gpes > "$RUN/gpe"; battery > "$RUN/bat"; online > "$RUN/ac"
+    { pactl list short sinks 2>/dev/null | awk '$NF=="RUNNING" {print "sound playing on " $2}'
+      pgrep -x easyeffects >/dev/null && echo "easyeffects running"; } > "$RUN/audio"
+}
+after() {
+    [ -r "$RUN/t" ] || return
+    local t=$(( $(date +%s) - $(cat "$RUN/t") )) h=$(( ($(hw) - $(cat "$RUN/hw")) / 1000000 ))
+    irqs > "$RUN/irq2"; gpes > "$RUN/gpe2"
+    {
+        echo "$(date -Is) suspended ${t}s, hardware asleep ${h}s ($(( t > 0 ? 100 * h / t : 0 ))%), $(cat "$RUN/ac"), battery $(cat "$RUN/bat")% -> $(battery)%"
+        sed 's/^/  /' "$RUN/audio"
+        echo "  interrupts while suspended:"; delta "$RUN/irq" "$RUN/irq2" | sed 's/^/    /'
+        echo "  ACPI events while suspended:"; delta "$RUN/gpe" "$RUN/gpe2" | sed 's/^/    /'
+    } >> "$LOG"
+    rm -f "$RUN/t"
+}
+
+case "${1:-}" in
+before) before; exit ;;
+after) after; exit ;;
+esac
+gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 2>/dev/null | while read -r line; do
+    case $line in
+    *PrepareForSleep*true*) before ;;
+    *PrepareForSleep*false*) after ;;
+    esac
+done
