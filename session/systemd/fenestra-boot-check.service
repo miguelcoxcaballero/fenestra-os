@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=Fenestra start-up check (one line per sign-in in ~/.local/state/fenestra/boot-check.log)
+After=fenestra-shell.service
+PartOf=fenestra-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/fenestra/fenestra-boot-check
+SuccessExitStatus=1
+

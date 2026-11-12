@@ -107,17 +107,37 @@ def rfkill_proxy():
     return util.dbus_proxy_sync(Gio.BusType.SESSION, *RFKILL)
 
 
+def _rfkill_states():
+    """Soft-block state of every radio (Wi-Fi, Bluetooth, WWAN) from sysfs; [] without radios."""
+    import glob
+    out = []
+    for d in glob.glob("/sys/class/rfkill/rfkill*"):
+        try:
+            with open(d + "/soft") as f:
+                out.append(f.read().strip() == "1")
+        except OSError:
+            pass
+    return out
+
+
 def airplane_mode():
+    """Every radio switched off. gsd-rfkill where it runs (GNOME), else the kernel's rfkill."""
     if util.DEMO:
         return False
-    p = rfkill_proxy()
-    v = util.prop(p, "AirplaneMode")
-    return v
+    v = util.prop(rfkill_proxy(), "AirplaneMode")
+    if v is not None:
+        return v
+    states = _rfkill_states()
+    return bool(states) and all(states)
 
 
 def set_airplane_mode(on: bool, callback=None):
-    if airplane_mode() is None:
-        util.run_async(["nmcli", "radio", "all", "off" if on else "on"], callback, mutating=True)
+    if util.prop(rfkill_proxy(), "AirplaneMode") is None:
+        # /dev/rfkill is the seat user's (uaccess): Wi-Fi, Bluetooth and WWAN in one go.
+        if util.have("rfkill"):
+            util.run_async(["rfkill", "block" if on else "unblock", "all"], callback, mutating=True)
+        else:
+            util.run_async(["nmcli", "radio", "all", "off" if on else "on"], callback, mutating=True)
         return
     util.dbus_set_prop(Gio.BusType.SESSION, RFKILL[0], RFKILL[1], RFKILL[2], "AirplaneMode",
                        GLib.Variant("b", on), callback)

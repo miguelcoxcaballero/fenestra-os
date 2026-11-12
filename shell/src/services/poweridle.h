@@ -28,6 +28,7 @@ public:
 public Q_SLOTS:
     Q_SCRIPTABLE uint AddInhibition(uint types, const QString &appName, const QString &reason);
     Q_SCRIPTABLE void ReleaseInhibition(uint cookie);
+    Q_SCRIPTABLE bool HasInhibition(uint types);   // browsers ask before a video
 
 private Q_SLOTS:
     void batteryChanged();

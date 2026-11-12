@@ -90,11 +90,13 @@ fi
 %{_libexecdir}/fenestra/fenestra-session-inner
 %{_libexecdir}/fenestra/fenestra-shell-crashlog
 %{_libexecdir}/fenestra/fenestra-shell-failed
+%{_libexecdir}/fenestra/fenestra-boot-check
 %{_datadir}/wayland-sessions/fenestra.desktop
 %{_datadir}/applications/org.fenestra.Shell.desktop
 %{_userunitdir}/fenestra-session.target
 %{_userunitdir}/fenestra-shell.service
 %{_userunitdir}/fenestra-shell-failed.service
+%{_userunitdir}/fenestra-boot-check.service
 %{_userunitdir}/fenestra-release-upgrade-user.service
 %{_userunitdir}/fenestra-oobe-first-login.service
 %{_datadir}/aurorae/themes/Fenestra-Dark

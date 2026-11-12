@@ -49,7 +49,9 @@
 #include <opengl/gltexture.h>
 #include <window.h>
 
+#include <QFile>
 #include <QImage>
+#include <QStandardPaths>
 #include <QPainter>
 #include <QPainterPath>
 #include <QVector2D>
@@ -84,7 +86,33 @@ constexpr qreal CaptionStripHeight = 36.0;
 // "WxH" (logical px), only that much of the window's top-left is its old picture.
 constexpr int HoldCropRole = 0x46454e;
 
+// Built in: the ones checked. More, without rebuilding: one window class (or part of one) per
+// line in /usr/share/fenestra/caption-apps or ~/.config/fenestra/caption-apps ("#": comment), read
+// when the effect loads.
 const char *const CaptionApps[] = {"com.anthropic.claude"};
+
+QStringList captionApps()
+{
+    QStringList apps;
+    for (const char *app : CaptionApps) {
+        apps << QLatin1String(app);
+    }
+    for (const QString &path : {QStringLiteral("/usr/share/fenestra/caption-apps"),
+                                QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/fenestra/caption-apps")}) {
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly)) {
+            continue;
+        }
+        const QList<QByteArray> lines = f.readAll().split('\n');
+        for (const QByteArray &raw : lines) {
+            const QString line = QString::fromUtf8(raw).trimmed().toLower();
+            if (!line.isEmpty() && !line.startsWith(QLatin1Char('#')) && !apps.contains(line)) {
+                apps << line;
+            }
+        }
+    }
+    return apps;
+}
 
 QRectF captionRect(const RectF &frame)
 {
@@ -325,8 +353,9 @@ bool CornersEffect::hasCaption(const EffectWindow *w)
         return false;
     }
     const QString cls = w->windowClass().toLower();
-    for (const char *app : CaptionApps) {
-        if (cls.contains(QLatin1String(app))) {
+    static const QStringList apps = captionApps(); // the plugin is unloaded and loaded to re-read
+    for (const QString &app : apps) {
+        if (cls.contains(app)) {
             return true;
         }
     }

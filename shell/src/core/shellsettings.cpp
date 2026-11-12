@@ -70,6 +70,7 @@ void ShellSettings::load()
     // Windows 11: "Open Widgets board on hover" (Widgets settings), on unless turned off.
     const bool widgetsOnHover = s.value(QStringLiteral("Taskbar/WidgetsOnHover"), true).toBool();
     const bool reduceMotion = s.value(QStringLiteral("Appearance/ReduceMotion"), false).toBool();
+    const QString clockFormat = pick(s.value(QStringLiteral("Clock/Format")).toString(), {QString(), QStringLiteral("12h"), QStringLiteral("24h")});
     const bool transparency = s.value(QStringLiteral("Appearance/Transparency"), true).toBool();
     auto iconUrl = [&s](const QString &key) {
         const QString path = s.value(key).toString();
@@ -80,7 +81,7 @@ void ShellSettings::load()
 
     Q_EMIT fileChanged();
     if (alignment == m_alignment && search == m_searchMode && weather == m_showWeather && taskView == m_showTaskView && pinned == m_pinned
-        && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper && reduceMotion == m_reduceMotion && transparency == m_transparency
+        && scheme == m_scheme && accent == m_accent && wallpaper == m_wallpaper && reduceMotion == m_reduceMotion && clockFormat == m_clockFormat && transparency == m_transparency
         && startIcon == m_startIcon && searchIcon == m_searchIcon && widgetsOnHover == m_widgetsOnHover)
         return;
     m_widgetsOnHover = widgetsOnHover;
@@ -93,6 +94,7 @@ void ShellSettings::load()
     m_accent = accent;
     m_wallpaper = wallpaper;
     m_reduceMotion = reduceMotion;
+    m_clockFormat = clockFormat;
     m_transparency = transparency;
     m_startIcon = startIcon;
     m_searchIcon = searchIcon;

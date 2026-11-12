@@ -29,6 +29,8 @@ class ShellSettings : public QObject
     Q_PROPERTY(QString accentColor READ accentColor WRITE setAccentColor NOTIFY changed)
     Q_PROPERTY(QString wallpaper READ wallpaper WRITE setWallpaper NOTIFY changed)
     Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY changed)
+    // Settings > Time & language > Time format: "12h", "24h" or "" (the regional format's).
+    Q_PROPERTY(QString clockFormat READ clockFormat NOTIFY changed)
     // Windows' "Transparency effects": off = the flat fallback colours (taskbar.fill).
     Q_PROPERTY(bool transparency READ transparency NOTIFY changed)
     // Icons imported by the user (Settings / setup icon import): file URLs, or "" for Fenestra's own.
@@ -49,6 +51,7 @@ public:
     QString accentColor() const { return m_accent; }
     QString wallpaper() const { return m_wallpaper; }
     bool reduceMotion() const { return m_reduceMotion; }
+    QString clockFormat() const { return m_clockFormat; }
     bool transparency() const { return m_transparency; }
     QString startIcon() const { return m_startIcon; }
     QString searchIcon() const { return m_searchIcon; }
@@ -88,6 +91,7 @@ private:
     bool m_widgetsOnHover = true;
     bool m_showTaskView = true;
     bool m_reduceMotion = false;
+    QString m_clockFormat;
     bool m_transparency = true;
     QString m_startIcon, m_searchIcon;
     QStringList m_pinned;

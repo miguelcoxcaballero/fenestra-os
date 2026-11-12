@@ -6,6 +6,7 @@
 #include <poll.h>
 #include <QElapsedTimer>
 #include "snip.h"
+#include "guard.h"
 
 #include "apps.h"
 #include "notifications.h"
@@ -322,12 +323,14 @@ void Snip::finish(const QImage &image, bool toClipboard)
 }
 
 QImage SnipImageProvider::requestImage(const QString &id, QSize *size, const QSize &)
-{
+try {
     const QString screen = QUrl::fromPercentEncoding(id.section(QLatin1Char('/'), 0, 0).toUtf8());
     const QImage img = Snip::instance()->frozenFor(screen);
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("SnipImageProvider", id, size);
 }
 
 void Snip::testBurst(const QString &dir, int count)

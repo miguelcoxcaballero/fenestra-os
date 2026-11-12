@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "screencast.h"
+#include "guard.h"
 
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -225,7 +226,7 @@ void WindowSnapshot::capture(const QString &uuid)
 }
 
 QImage WindowSnapshotProvider::requestImage(const QString &id, QSize *size, const QSize &requested)
-{
+try {
     // <uuid>/<serial>
     // The uuid is percent-encoded by the caller (its braces would be anyway).
     QImage img = WindowSnapshot::instance()->image(QUrl::fromPercentEncoding(id.section(QLatin1Char('/'), 0, 0).toUtf8()));
@@ -234,4 +235,6 @@ QImage WindowSnapshotProvider::requestImage(const QString &id, QSize *size, cons
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("WindowSnapshotProvider", id, size);
 }

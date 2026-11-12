@@ -93,11 +93,11 @@ void PowerIdle::rearm()
         KIdleTime::instance()->removeIdleTimeout(m_sleepTimeout);
         m_sleepTimeout = -1;
     }
-    if (!m_onBattery) {
-        return;
-    }
+    // The screen turns off by itself on battery only; sleep follows the setting of each power
+    // source (Settings > Power: "On battery power / When plugged in, put my device to sleep after").
     int ms = 0;
-    if (LockOsd::instance()->locked()) {
+    if (!m_onBattery) {
+    } else if (LockOsd::instance()->locked()) {
         ms = kLockedMs;
     } else if (m_settings && m_screenInhibitions.isEmpty()) {
         ms = int(g_settings_get_uint(m_settings, "idle-delay")) * 1000;
@@ -107,9 +107,9 @@ void PowerIdle::rearm()
     }
     int sleepMs = 0;
     if (m_power && m_sleepInhibitions.isEmpty()) {
-        gchar *type = g_settings_get_string(m_power, "sleep-inactive-battery-type");
+        gchar *type = g_settings_get_string(m_power, m_onBattery ? "sleep-inactive-battery-type" : "sleep-inactive-ac-type");
         if (qstrcmp(type, "suspend") == 0) {
-            sleepMs = g_settings_get_int(m_power, "sleep-inactive-battery-timeout") * 1000;
+            sleepMs = g_settings_get_int(m_power, m_onBattery ? "sleep-inactive-battery-timeout" : "sleep-inactive-ac-timeout") * 1000;
         }
         g_free(type);
     }
@@ -162,6 +162,12 @@ uint PowerIdle::AddInhibition(uint types, const QString &appName, const QString 
         rearm();
     }
     return cookie;
+}
+
+bool PowerIdle::HasInhibition(uint types)
+{
+    return ((types & kChangeScreenSettings) && !m_screenInhibitions.isEmpty())
+        || ((types & (kChangeScreenSettings | kInterruptSession)) && !m_sleepInhibitions.isEmpty());
 }
 
 void PowerIdle::ReleaseInhibition(uint cookie)

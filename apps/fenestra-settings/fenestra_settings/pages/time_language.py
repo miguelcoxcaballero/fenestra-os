@@ -108,6 +108,14 @@ class DateTimePage(Page):
         timedate.timezones(lambda zones: self._zones(zones, info["timezone"]))
         fmt = gsetting_dropdown(IFACE, "clock-format", [("24h", _("24-hour")), ("12h", _("12-hour"))])
         if fmt:
+            # Fenestra Shell's taskbar clock reads it from shell.conf (GTK apps from the key).
+            from ..backends import session, shellconf
+            if session.is_fenestra():
+                def mirror():
+                    shellconf.set("Clock/Format", util.gget(IFACE, "clock-format"))
+                util.gconnect(IFACE, "clock-format", mirror)
+                if not shellconf.has("Clock/Format") and util.gget(IFACE, "clock-format") == "12h":
+                    mirror()
             r = SettingRow(_("Time format"), None, "fs-clock-symbolic", control=fmt, key="clock-format")
             self.remember("clock-format", r)
             g.add(r)

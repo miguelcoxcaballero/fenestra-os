@@ -19,11 +19,13 @@ Window {
     // Shown only once the screen is set: a layer surface binds to its output when it is created.
     visible: false
     Component.onCompleted: { ShellUtil.placeOnScreen(bar, targetScreen.name); visible = true; ShellUtil.setBlurItems(bar, [blurPin], 0) }
-    // Keeps KWin's blur effect active at all times (a 1 px region nobody sees). Without it, when the
+    // Keeps KWin's blur effect active at all times (a small region under the opaque taskbar, where
+    // nobody sees it; not 1 px: KWin halves the region for each blur pass and logged "Failed to
+    // create an offscreen framebuffer" on every frame for a texture of size 0). Without it, when the
     // last blurred popup closed KWin moved windows onto hardware overlay planes and that switch dropped
     // a frame: every window flickered once (i915 "Atomic commit failed: EBUSY", Meteor Lake). The
     // session also starts KWin with KWIN_USE_OVERLAYS=0 (session/libexec/fenestra-session).
-    Item { id: blurPin; x: 0; y: 0; width: 1; height: 1 }
+    Item { id: blurPin; x: 0; y: 0; width: Metrics.taskbarHeight; height: Metrics.taskbarHeight }
     onVisibleChanged: if (visible) ShellUtil.setBlurItems(bar, [blurPin], 0)
     LayerShell.Window.scope: "dock"   // KWin: a panel (stays when the desktop is shown)
     LayerShell.Window.layer: LayerShell.Window.LayerTop
