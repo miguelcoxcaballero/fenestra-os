@@ -10,8 +10,8 @@ for f in fenestra-session fenestra-session-inner; do
     [ -f /usr/libexec/fenestra/$f ] && [ ! -f /usr/libexec/fenestra/$f.fenestra-orig ] && cp -p /usr/libexec/fenestra/$f /usr/libexec/fenestra/$f.fenestra-orig
     install -Dm755 "$R/session/libexec/$f" /usr/libexec/fenestra/$f
 done
-install -Dm755 "$R/session/libexec/fenestra-boot-check" /usr/libexec/fenestra/fenestra-boot-check
-for u in fenestra-shell.service fenestra-boot-check.service fenestra-session.target; do
+for f in fenestra-boot-check fenestra-sleep-log; do install -Dm755 "$R/session/libexec/$f" /usr/libexec/fenestra/$f; done
+for u in fenestra-shell.service fenestra-boot-check.service fenestra-sleep-log.service fenestra-session.target; do
     install -Dm644 "$R/session/systemd/$u" /usr/lib/systemd/user/$u
 done
 restorecon -F /usr/libexec/fenestra/fenestra-session /usr/libexec/fenestra/fenestra-session-inner /usr/libexec/fenestra/fenestra-boot-check 2>/dev/null || true

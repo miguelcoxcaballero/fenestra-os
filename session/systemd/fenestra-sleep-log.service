@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=Fenestra sleep log (what kept the hardware awake during each suspend)
+PartOf=fenestra-session.target
+
+[Service]
+ExecStart=/usr/libexec/fenestra/fenestra-sleep-log
+Restart=on-failure
+RestartSec=5
