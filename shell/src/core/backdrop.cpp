@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "backdrop.h"
+#include "guard.h"
 
 #include <QDBusConnection>
 #include <QDBusPendingCallWatcher>
@@ -109,7 +110,7 @@ Recipe recipe(const QString &name, bool dark)
     const QString k = QStringLiteral("acrylic.") + name + QStringLiteral(".backdrop."), s = dark ? QStringLiteral(".dark") : QStringLiteral(".light");
     // Defaults: Start's body (user-win11 160039), see design/tokens.json.
     const QColor c(t->v(k + QStringLiteral("tint") + s, dark ? "#292929" : "#f3f3f3").toString());
-    const QColor over(t->v(k + QStringLiteral("over") + s, "#00000000").toString());
+    const QColor over(t->opt(k + QStringLiteral("over") + s, "#00000000").toString());
     return {{float(c.redF()), float(c.greenF()), float(c.blueF())},
             float(t->v(k + QStringLiteral("tint.opacity") + s, dark ? 0.5 : 0.0).toDouble()),
             float(t->v(k + QStringLiteral("luminosity.opacity") + s, dark ? 0.96 : 0.9).toDouble()),
@@ -347,7 +348,7 @@ int Backdrop::request(QWindow *window, const QRectF &rect, const QString &wallpa
 }
 
 QImage BackdropProvider::requestImage(const QString &id, QSize *size, const QSize &)
-{
+try {
     // <id>/<recipe>, or noise/<dpr>: the 256 x 256 device px noise tile (the taskbar's texture).
     const QStringList p = id.split(QLatin1Char('/'));
     QImage img;
@@ -364,4 +365,6 @@ QImage BackdropProvider::requestImage(const QString &id, QSize *size, const QSiz
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("BackdropProvider", id, size);
 }

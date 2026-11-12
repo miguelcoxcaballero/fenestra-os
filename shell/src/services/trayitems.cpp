@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "trayitems.h"
+#include "guard.h"
 
 #include <QCoreApplication>
 #include <QDBusArgument>
@@ -333,7 +334,7 @@ void TrayItems::triggerMenuItem(int row, int id)
 }
 
 QImage TrayImageProvider::requestImage(const QString &id, QSize *size, const QSize &requested)
-{
+try {
     const QString key = QString::fromUtf8(QByteArray::fromHex(id.section(QLatin1Char('/'), 0, 0).toLatin1()));
     QImage img = TrayItems::instance()->pixmap(key);
     if (!img.isNull() && requested.isValid())
@@ -341,4 +342,6 @@ QImage TrayImageProvider::requestImage(const QString &id, QSize *size, const QSi
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("TrayImageProvider", id, size);
 }

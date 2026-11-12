@@ -10,6 +10,9 @@ for f in fenestra-session fenestra-session-inner; do
     [ -f /usr/libexec/fenestra/$f ] && [ ! -f /usr/libexec/fenestra/$f.fenestra-orig ] && cp -p /usr/libexec/fenestra/$f /usr/libexec/fenestra/$f.fenestra-orig
     install -Dm755 "$R/session/libexec/$f" /usr/libexec/fenestra/$f
 done
-install -Dm644 "$R/session/systemd/fenestra-shell.service" /usr/lib/systemd/user/fenestra-shell.service
-restorecon -F /usr/libexec/fenestra/fenestra-session /usr/libexec/fenestra/fenestra-session-inner 2>/dev/null || true
+install -Dm755 "$R/session/libexec/fenestra-boot-check" /usr/libexec/fenestra/fenestra-boot-check
+for u in fenestra-shell.service fenestra-boot-check.service fenestra-session.target; do
+    install -Dm644 "$R/session/systemd/$u" /usr/lib/systemd/user/$u
+done
+restorecon -F /usr/libexec/fenestra/fenestra-session /usr/libexec/fenestra/fenestra-session-inner /usr/libexec/fenestra/fenestra-boot-check 2>/dev/null || true
 echo "Done. It applies from the next sign-in."

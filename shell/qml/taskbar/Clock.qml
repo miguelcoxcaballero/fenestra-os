@@ -35,7 +35,8 @@ Item {
         // The locale's short time without seconds and its short date, as Windows takes them from the
         // regional format (en_GB: 16:00 over 04/11/2026). Qt.formatDate(d, Locale.ShortFormat) would be
         // ISO: Locale.ShortFormat is 1, which formatDate reads as Qt.ISODate.
-        text: clock.now.toLocaleTimeString(Qt.locale(), Qt.locale().timeFormat(Locale.ShortFormat).replace(/[:.]ss/, "")) + "\n"
+        text: clock.now.toLocaleTimeString(Qt.locale(), ShellSettings.clockFormat === "12h" ? "h:mm AP" : ShellSettings.clockFormat === "24h" ? "HH:mm"
+                                              : Qt.locale().timeFormat(Locale.ShortFormat).replace(/[:.]ss/, "")) + "\n"
               + clock.now.toLocaleDateString(Qt.locale(), Locale.ShortFormat)
     }
     MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; onClicked: clock.clicked() }

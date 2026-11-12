@@ -53,7 +53,7 @@ GNOME_ONLY = frozenset({
     "edge-tiling", "workspaces", "alt-tab-scope", "focus-mode", "auto-raise", "titlebar-actions",
     "center-new-windows", "resize-with-right-button", "move-modifier",
     # displays, brightness, night light, power policy, screen lock (P0 2/3/7/8, P1 11)
-    "displays", "hdr", "brightness", "night-light", "screen-idle", "sleep-timeouts", "power-button",
+    "displays", "hdr", "brightness", "night-light", "power-button",
     "battery-saver", "battery-percentage", "screen-lock", "lock-screen-picture",
     "lock-screen-notifications",
     # input (P1 10, 12, 13) and accessibility (P1 15)
@@ -73,6 +73,8 @@ GNOME_ONLY = frozenset({
     "autoplay", "location", "proxy", "over-amplification", "wallpaper-fit",
     # external GNOME tools that need GNOME Shell / Mutter / gsd
     "gnome-control-center", "gnome-tweaks", "extension-manager",
+    # GNOME lockdown keys nothing reads here (no microphone portal, no problem reporter)
+    "microphone-lockdown", "problem-reports",
 })
 
 # Only exist in the Fenestra session (Fenestra Shell options without a GNOME counterpart).
@@ -132,7 +134,9 @@ ROW_FEATURES = {
     "display": {"brightness": "brightness", "adaptive-color": "adaptive-color", "night-light": "night-light", "hdr": "hdr",
                 "scale": "displays", "resolution": "displays", "orientation": "displays",
                 "refresh": "displays", "multiple": "displays", "advanced-open": "displays"},
-    "power": {"screen-sleep": "screen-idle", "lid": "power-button", "battery-percentage": "battery-percentage",
+    "microphone": {"mic-access": "microphone-lockdown"},
+    "diagnostics": {"tech-reports": "problem-reports"},
+    "power": {"lid": "power-button", "battery-percentage": "battery-percentage",
               "battery-saver": "battery-saver"},
     "notifications": {"lock": "lock-screen-notifications", "apps": "notification-apps"},
     "clipboard": {"history": "clipboard-history"},

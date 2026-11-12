@@ -39,7 +39,7 @@ qt_add_executable(fenestra-shell
     src/core/shellutil.h
     src/core/shellcontrol.h
     src/core/iconoverrides.cpp src/core/iconoverrides.h
-    src/core/tokens.cpp src/core/tokens.h
+    src/core/tokens.cpp src/core/tokens.h src/core/guard.cpp src/core/guard.h
     src/core/acrylic.cpp src/core/acrylic.h
     src/core/backdrop.cpp src/core/backdrop.h
     src/services/apps.cpp src/services/apps.h
@@ -180,8 +180,10 @@ if(FENESTRA_INSTALL_SESSION)
     install(FILES ${session_dir}/wayland-sessions/fenestra.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
     install(PROGRAMS ${session_dir}/libexec/fenestra-session ${session_dir}/libexec/fenestra-session-inner
                      ${session_dir}/libexec/fenestra-shell-crashlog ${session_dir}/libexec/fenestra-shell-failed
+                     ${session_dir}/libexec/fenestra-boot-check
             DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
     install(FILES ${session_dir}/systemd/fenestra-session.target ${session_dir}/systemd/fenestra-shell.service
+                  ${session_dir}/systemd/fenestra-boot-check.service
                   ${session_dir}/systemd/fenestra-shell-failed.service ${session_dir}/systemd/fenestra-release-upgrade-user.service ${session_dir}/systemd/fenestra-oobe-first-login.service
             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
     install(FILES ${session_dir}/portals/fenestra-portals.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/xdg-desktop-portal)

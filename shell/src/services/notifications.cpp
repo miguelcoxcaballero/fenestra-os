@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "notifications.h"
+#include "guard.h"
 
 #include "apps.h"
 #include "shellsettings.h"
@@ -351,11 +352,13 @@ QVariantList Notifications::popups() const
 }
 
 QImage NotificationImageProvider::requestImage(const QString &id, QSize *size, const QSize &requested)
-{
+try {
     QImage img = Notifications::instance()->image(id.section(QLatin1Char('/'), 0, 0).toUInt());
     if (!img.isNull() && requested.isValid())
         img = img.scaled(requested, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("NotificationImageProvider", id, size);
 }

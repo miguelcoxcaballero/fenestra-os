@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "iconoverrides.h"
+#include "guard.h"
 
 #include <QDir>
 #include <QFile>
@@ -205,7 +206,7 @@ static QString iconFileOnDisk(const QString &name, int want)
 }
 
 QPixmap IconProvider::requestPixmap(const QString &fullId, QSize *size, const QSize &requested)
-{
+try {
     const QSize want = requested.isValid() ? requested : QSize(32, 32);
     const QString id = fullId.section(QLatin1Char('?'), 0, 0);   // "?N": a re-request (TaskButton.iconStamp)
     QIcon icon = IconOverrides::instance()->icon(id);
@@ -232,10 +233,12 @@ QPixmap IconProvider::requestPixmap(const QString &fullId, QSize *size, const QS
     if (size)
         *size = pixmap.size();
     return pixmap;
+} catch (...) {
+    return providerFailedPixmap("IconProvider", fullId, size);
 }
 
 QImage TintProvider::requestImage(const QString &id, QSize *size, const QSize &requested)
-{
+try {
     const QColor color(QLatin1Char('#') + id.section(QLatin1Char('/'), 0, 0));
     const QString what = QUrl::fromPercentEncoding(id.section(QLatin1Char('/'), 1).toUtf8());
     const QSize want = requested.isValid() ? requested : QSize(16, 16);
@@ -258,4 +261,6 @@ QImage TintProvider::requestImage(const QString &id, QSize *size, const QSize &r
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("TintProvider", id, size);
 }

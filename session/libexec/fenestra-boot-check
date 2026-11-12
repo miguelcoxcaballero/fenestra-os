@@ -1,0 +1,37 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# fenestra-boot-check: after every sign-in, checks on the real machine what no test bench covers:
+# that the session came up clean (the shell running and never restarted, no second sign-in screen
+# from GDM, this session on the screen, no crash dumps of the shell or KWin since boot). One line
+# per sign-in in ~/.local/state/fenestra/boot-check.log; a notification when something failed.
+#   fenestra-boot-check [--now]     (--now: no wait; the unit waits for the session to settle)
+set -u
+[ "${1:-}" = --now ] || sleep "${FENESTRA_BOOT_CHECK_DELAY:-45}"
+STATE=${XDG_STATE_HOME:-$HOME/.local/state}/fenestra
+mkdir -p "$STATE"
+fail=()
+systemctl --user is-active -q fenestra-shell || fail+=("the shell is not running")
+n=$(systemctl --user show fenestra-shell -p NRestarts --value 2>/dev/null)
+[ "${n:-0}" = 0 ] || fail+=("the shell restarted $n times")
+[ "$(systemctl --user show fenestra-shell-failed -p ExecMainStartTimestampMonotonic --value 2>/dev/null)" -gt 0 ] 2>/dev/null \
+    && fail+=("the 'Fenestra did not start' notice was shown")
+me=$(loginctl show-user "$(id -un)" -p Display --value 2>/dev/null)
+for s in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}'); do
+    class=$(loginctl show-session "$s" -p Class --value 2>/dev/null); state=$(loginctl show-session "$s" -p State --value 2>/dev/null)
+    [ "$class" = greeter ] && [ "$state" != closing ] && fail+=("GDM's own sign-in screen is also running (session $s)")
+done
+[ -n "$me" ] && [ "$(loginctl show-session "$me" -p Active --value 2>/dev/null)" != yes ] && fail+=("this session is not the one on the screen")
+since=$(uptime -s)
+for exe in fenestra-shell kwin_wayland; do
+    c=$(coredumpctl list --since "$since" --no-legend -q "$exe" 2>/dev/null | wc -l)
+    [ "$c" -gt 0 ] && fail+=("$c crash dumps of $exe since boot")
+done
+commit=$(sed -n 's/^# Written by .*(\(.*\)).*/\1/p' "$HOME/.config/systemd/user/fenestra-shell.service.d/50-user-build.conf" 2>/dev/null)
+if [ ${#fail[@]} -eq 0 ]; then
+    echo "$(date -Is) PASS boot=$since shell=${commit:-package}" >> "$STATE/boot-check.log"
+else
+    msg=$(IFS=';'; echo "${fail[*]}")
+    echo "$(date -Is) FAIL boot=$since shell=${commit:-package}: $msg" >> "$STATE/boot-check.log"
+    command -v notify-send >/dev/null && notify-send -a Fenestra "Fenestra start-up check failed" "$msg"
+    exit 1
+fi

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "acrylic.h"
+#include "guard.h"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -334,7 +335,7 @@ QImage renderCard(const QStringList &p)
 }
 
 QImage AcrylicProvider::requestImage(const QString &id, QSize *size, const QSize &)
-{
+try {
     // dark/1920/1080/48/1/<source>
     const QStringList p = id.split(QLatin1Char('/'));
     QImage img;
@@ -351,6 +352,8 @@ QImage AcrylicProvider::requestImage(const QString &id, QSize *size, const QSize
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("AcrylicProvider", id, size);
 }
 
 namespace
@@ -377,7 +380,7 @@ float roundedCoverage(float x, float y, float w, float h, float r)
 }
 
 QImage PopupShadowProvider::requestImage(const QString &id, QSize *size, const QSize &)
-{
+try {
     const QStringList p = id.split(QLatin1Char('/'));
     QImage img;
     if (p.size() >= 5) {
@@ -435,6 +438,8 @@ QImage PopupShadowProvider::requestImage(const QString &id, QSize *size, const Q
     if (size)
         *size = img.size();
     return img;
+} catch (...) {
+    return providerFailed("PopupShadowProvider", id, size);
 }
 
 ShadowLabel::ShadowLabel(QQuickItem *parent)

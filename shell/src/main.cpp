@@ -8,6 +8,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 
+#include "guard.h"
 #include "acrylic.h"
 #include "adaptivecolor.h"
 #include "backdrop.h"
@@ -37,7 +38,7 @@ int main(int argc, char *argv[])
     if (!qEnvironmentVariableIsSet("QSG_DISTANCEFIELD_ANTIALIASING"))
         qputenv("QSG_DISTANCEFIELD_ANTIALIASING", "gray");
     QGuiApplication::setDesktopFileName(QStringLiteral("org.fenestra.Shell"));
-    QGuiApplication app(argc, argv);
+    ShellApplication app(argc, argv);   // core/guard.h: exceptions don't end the shell
     QGuiApplication::setApplicationName(QStringLiteral("fenestra-shell"));
     QGuiApplication::setApplicationVersion(QStringLiteral(FENESTRA_SHELL_VERSION));
     // Closing the last flyout must not end the shell.

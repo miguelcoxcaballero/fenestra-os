@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "tokens.h"
 
+#include <QSet>
+
 #include <QFile>
 #include <QJsonDocument>
 #include <QStandardPaths>
@@ -37,7 +39,12 @@ QVariant Tokens::v(const QString &key, const QVariant &fallback) const
 {
     const auto it = m_values.constFind(key);
     if (it == m_values.constEnd()) {
-        qWarning("fenestra-shell: missing design token %s", qPrintable(key));
+        // Once per key: bindings ask again on every evaluation.
+        static QSet<QString> warned;
+        if (!warned.contains(key)) {
+            warned.insert(key);
+            qWarning("fenestra-shell: missing design token %s", qPrintable(key));
+        }
         return fallback;
     }
     return it->toVariant();

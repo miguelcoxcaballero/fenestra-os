@@ -2,7 +2,7 @@
 Description=Fenestra session
 Documentation=https://github.com/miguelcoxcaballero/fenestra-os/tree/main/docs/fenestra-shell
 BindsTo=graphical-session.target
-Wants=fenestra-shell.service fenestra-release-upgrade-user.service fenestra-oobe-first-login.service
+Wants=fenestra-shell.service fenestra-release-upgrade-user.service fenestra-oobe-first-login.service fenestra-boot-check.service
 # XDG autostart entries (systemd-xdg-autostart-generator), as other desktops without gnome-session.
 Wants=xdg-desktop-autostart.target
 StopWhenUnneeded=no
