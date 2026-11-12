@@ -26,6 +26,7 @@ Item {
             property NotificationCenter center: NotificationCenter { targetScreen: modelData; rightAligned: true }
             property Osd osd: Osd { targetScreen: modelData }
             property InputSwitcher inputSwitcher: InputSwitcher { targetScreen: modelData; rightAligned: true }
+            property EmojiPanel emoji: EmojiPanel { targetScreen: modelData }
             // Snipping overlay (Q04): one per output, toolbar on the first; opened by Snip.start().
             property SnipOverlay snip: SnipOverlay {
                 targetScreen: modelData
@@ -87,6 +88,7 @@ Item {
         function onSecurityScreenRequested() { root.securityScreen.open() }
         function onNotificationCenterRequested() { ShellState.toggleCalendar(null, -1) }
         function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
+        function onEmojiRequested() { const p = root.screenObjects(null).emoji; if (p.shown) p.close(); else p.present() }
         function onNextKeyboardRequested() {
             if (KeyboardStatus.count < 2) return
             KeyboardStatus.next()

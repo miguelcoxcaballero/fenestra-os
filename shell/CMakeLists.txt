@@ -51,6 +51,7 @@ qt_add_executable(fenestra-shell
     src/services/recordingblock.cpp src/services/recordingblock.h
     src/services/lockosd.cpp src/services/lockosd.h
     src/services/poweridle.cpp src/services/poweridle.h
+    src/services/emoji.cpp src/services/emoji.h
     src/services/kbdbacklight.cpp src/services/kbdbacklight.h
     src/services/adaptivecolor.cpp src/services/adaptivecolor.h src/services/adaptivecolormodel.h
     src/services/trayitems.cpp src/services/trayitems.h
@@ -80,6 +81,10 @@ ecm_add_qtwayland_client_protocol(protocol_sources
 ecm_add_qtwayland_client_protocol(protocol_sources
     PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/zkde-screencast-unstable-v1.xml
     BASENAME zkde-screencast-unstable-v1)
+# org_kde_kwin_fake_input: the emoji panel presses Ctrl+V in the focused window (services/emoji.h).
+ecm_add_qtwayland_client_protocol(protocol_sources
+    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/fake-input.xml
+    BASENAME fake-input)
 target_sources(fenestra-shell PRIVATE ${protocol_sources})
 
 set_source_files_properties(qml/design/Strings.qml qml/design/Metrics.qml qml/design/Motion.qml qml/ShellState.qml qml/components/FluentFont.qml
@@ -118,6 +123,7 @@ qt_add_qml_module(fenestra-shell
         qml/notifications/Toasts.qml
         qml/osd/Osd.qml
         qml/osd/InputSwitcher.qml
+        qml/osd/EmojiPanel.qml
         qml/osd/OemBanner.qml
         qml/quicksettings/QuickSettings.qml
         qml/quicksettings/QuickTile.qml
@@ -153,7 +159,7 @@ qt_add_qml_module(fenestra-shell
 qt_add_resources(fenestra-shell "design_tokens"
     PREFIX "/design"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/../design"
-    FILES "${CMAKE_CURRENT_SOURCE_DIR}/../design/tokens.json")
+    FILES "${CMAKE_CURRENT_SOURCE_DIR}/../design/tokens.json" "${CMAKE_CURRENT_SOURCE_DIR}/../design/emoji.json")
 
 target_include_directories(fenestra-shell PRIVATE src/core src/services ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(fenestra-shell PRIVATE FENESTRA_SHELL_VERSION="${PROJECT_VERSION}")

@@ -28,6 +28,7 @@ Q_SIGNALS:
     void notificationCenterRequested();
     void quickSettingsRequested();
     void nextKeyboardRequested();
+    void emojiRequested();
     void searchRequested();
     void screenshotSaved(const QString &path);
     void snapLayoutsRequested();
