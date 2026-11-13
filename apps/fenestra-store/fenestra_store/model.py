@@ -135,6 +135,7 @@ class App:
     # every RPM of the enabled repositories, every snap. Never listed on Home, categories or Library.
     search_only: bool = False
     verified: bool = False        # the source vouches for the publisher (Snap Store's verified accounts)
+    project_urls: list = field(default_factory=list)   # source code / website links (snaps), best first
 
     @property
     def is_game(self) -> bool:

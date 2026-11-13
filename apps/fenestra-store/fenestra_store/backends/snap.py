@@ -95,7 +95,9 @@ class SnapBackend(Backend):
                     screenshots=shots, download_size=int(s.get("download-size") or 0),
                     installed=here is not None, ref=name, origin="snapcraft", pkgname=name,
                     details_loaded=True, search_only=True,
-                    verified=(s.get("publisher") or {}).get("validation") in ("verified", "starred"))
+                    verified=(s.get("publisher") or {}).get("validation") in ("verified", "starred"),
+                    project_urls=[u for k in ("source", "website", "issues")
+                                  for u in ((s.get("links") or {}).get(k) or [])])
             a.sync_state()
             apps.append(a)
         return apps
