@@ -19,6 +19,7 @@
 #include <PulseAudioQt/SourceOutput>
 #include <QDBusArgument>
 #include <QDBusConnection>
+#include <QDBusServiceWatcher>
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
 #include <QDBusMetaType>
@@ -260,19 +261,29 @@ PowerProfiles::PowerProfiles(QObject *parent)
     : QObject(parent)
 {
     // Newer name first (power-profiles-daemon ≥ 0.20, tuned-ppd), then the original one.
+    static const QString kNew = QStringLiteral("org.freedesktop.UPower.PowerProfiles"), kOld = QStringLiteral("net.hadess.PowerProfiles");
+    auto use = [this](const QString &service) {
+        if (!m_service.isEmpty())
+            QDBusConnection::systemBus().disconnect(m_service, m_path, kProps, QStringLiteral("PropertiesChanged"), this,
+                                                    SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
+        m_service = m_iface = service;
+        m_path = QLatin1Char('/') + QString(service).replace(QLatin1Char('.'), QLatin1Char('/'));
+        QDBusConnection::systemBus().connect(m_service, m_path, kProps, QStringLiteral("PropertiesChanged"), this,
+                                             SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
+        load();
+    };
     auto *iface = QDBusConnection::systemBus().interface();
-    if (iface && iface->isServiceRegistered(QStringLiteral("org.freedesktop.UPower.PowerProfiles"))) {
-        m_service = QStringLiteral("org.freedesktop.UPower.PowerProfiles");
-        m_path = QStringLiteral("/org/freedesktop/UPower/PowerProfiles");
-        m_iface = QStringLiteral("org.freedesktop.UPower.PowerProfiles");
-    } else {
-        m_service = QStringLiteral("net.hadess.PowerProfiles");
-        m_path = QStringLiteral("/net/hadess/PowerProfiles");
-        m_iface = QStringLiteral("net.hadess.PowerProfiles");
-    }
-    QDBusConnection::systemBus().connect(m_service, m_path, kProps, QStringLiteral("PropertiesChanged"), this,
-                                         SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
-    load();
+    use(iface && iface->isServiceRegistered(kNew) ? kNew : kOld);
+    // The daemon may start after the shell (at boot it usually does): ask again when it appears.
+    auto *watcher = new QDBusServiceWatcher(this);
+    watcher->setConnection(QDBusConnection::systemBus());
+    watcher->setWatchMode(QDBusServiceWatcher::WatchForRegistration);
+    watcher->addWatchedService(kNew);
+    watcher->addWatchedService(kOld);
+    connect(watcher, &QDBusServiceWatcher::serviceRegistered, this, [this, use](const QString &service) {
+        if (service == kNew || m_profiles.isEmpty())
+            use(service);
+    });
 }
 
 void PowerProfiles::load()
@@ -374,6 +385,8 @@ void WifiNetworks::watchDevice(const QString &uni)
     auto w = NetworkManager::findNetworkInterface(uni).objectCast<NetworkManager::WirelessDevice>();
     if (!w)
         return;
+    // The scan's results are in: networks that went away leave the list, the button stops turning.
+    connect(w.data(), &NetworkManager::WirelessDevice::lastScanChanged, this, [this] { setScanning(false); scheduleRebuild(); });
     connect(w.data(), &NetworkManager::WirelessDevice::accessPointAppeared, this, [this, w](const QString &ap) {
         if (auto p = w->findAccessPoint(ap))
             connect(p.data(), &NetworkManager::AccessPoint::signalStrengthChanged, this, &WifiNetworks::scheduleRebuild,
@@ -424,11 +437,35 @@ void WifiNetworks::setAirplaneMode(bool on)
     NetworkManager::setWwanEnabled(!on);
 }
 
+void WifiNetworks::setScanning(bool on)
+{
+    if (on) {
+        if (!m_scanTimer) {
+            m_scanTimer = new QTimer(this);
+            m_scanTimer->setSingleShot(true);
+            m_scanTimer->setInterval(12000);   // a driver that never reports the scan's end
+            connect(m_scanTimer, &QTimer::timeout, this, [this] { setScanning(false); });
+        }
+        m_scanTimer->start();
+    } else if (m_scanTimer) {
+        m_scanTimer->stop();
+    }
+    if (m_scanning == on)
+        return;
+    m_scanning = on;
+    Q_EMIT scanningChanged();
+}
+
 void WifiNetworks::scan()
 {
+    bool asked = false;
     for (const NetworkManager::Device::Ptr &d : NetworkManager::networkInterfaces())
-        if (auto w = d.objectCast<NetworkManager::WirelessDevice>())
+        if (auto w = d.objectCast<NetworkManager::WirelessDevice>()) {
             w->requestScan();
+            asked = true;
+        }
+    if (asked)
+        setScanning(true);
 }
 
 void WifiNetworks::rebuild()

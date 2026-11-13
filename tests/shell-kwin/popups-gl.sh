@@ -9,6 +9,7 @@
 # BUILD is a tests/shell-kwin build dir (build.sh). env: SCALE (1.5) W H (2880 1800), WALLPAPER
 # (default: the user's from ~/.config/fenestra/shell.conf), SHELL_LANG (en_GB.UTF-8), TRANSPARENCY,
 # FENESTRA_FAKE_KBD_BACKLIGHT (driver:max) / FENESTRA_FAKE_PLATFORM_PROFILE (driver): hardware for the banners.
+# XWAYLAND=1: KWin with Xwayland (X11 apps: drag and drop to and from them).
 # NAME (container, fenestra-popups; popups-ctl.sh reads CONTAINER), IMAGE (fenestra-kwinlab).
 set -u
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
@@ -25,7 +26,7 @@ NAME=${NAME:-fenestra-popups}
 podman rm -f "$NAME" >/dev/null 2>&1
 exec podman run -d --name "$NAME" --security-opt label=disable --device /dev/dri/renderD128 --cap-add SYS_NICE \
     -e SCALE="${SCALE:-1.5}" -e W="${W:-2880}" -e H="${H:-1800}" -e HOSTUSER="$USER" -e SHELL_LANG="${SHELL_LANG:-en_GB.UTF-8}" \
-    -e TRANSPARENCY="${TRANSPARENCY:-}" -e FENESTRA_FAKE_KBD_BACKLIGHT="${FENESTRA_FAKE_KBD_BACKLIGHT:-}" \
+    -e XWAYLAND="${XWAYLAND:-}" -e TRANSPARENCY="${TRANSPARENCY:-}" -e FENESTRA_FAKE_KBD_BACKLIGHT="${FENESTRA_FAKE_KBD_BACKLIGHT:-}" \
     -e FENESTRA_FAKE_PLATFORM_PROFILE="${FENESTRA_FAKE_PLATFORM_PROFILE:-}" -e FADINGPOPUPS="${FADINGPOPUPS:-true}" -e WPEXT="${WP##*.}" \
     -v "$REPO:/src:ro" -v "$BUILD:/build" -v "$OUT:/out" "${M[@]}" \
     "${IMAGE:-localhost/fenestra-kwinlab:latest}" bash /src/tests/shell-kwin/popups-gl-session.sh

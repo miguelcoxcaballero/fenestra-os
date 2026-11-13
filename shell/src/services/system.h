@@ -124,6 +124,8 @@ class WifiNetworks : public QAbstractListModel
     Q_PROPERTY(bool airplaneMode READ airplaneMode WRITE setAirplaneMode NOTIFY enabledChanged)
     Q_PROPERTY(bool hasWifi READ hasWifi NOTIFY enabledChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    // A scan asked for with scan() is running (the refresh button turns meanwhile).
+    Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
 public:
     enum Roles { SsidRole = Qt::UserRole + 1, SignalRole, SecuredRole, ActiveRole, KnownRole, ConnectingRole,
                  StatusRole, ErrorRole, EnterpriseRole };
@@ -137,6 +139,7 @@ public:
     bool airplaneMode() const;
     void setAirplaneMode(bool on);
     bool hasWifi() const;
+    bool scanning() const { return m_scanning; }
     Q_INVOKABLE void scan();
     // Known network or open one: activates it. Secured unknown one (or a saved one whose key was
     // just rejected): needs the password. Enterprise networks open Settings › Wi-Fi instead.
@@ -146,6 +149,7 @@ public:
     Q_INVOKABLE void cancel(int row);
 Q_SIGNALS:
     void enabledChanged();
+    void scanningChanged();
     void countChanged();
     void keyRejected(const QString &ssid);
 private:
@@ -164,6 +168,9 @@ private:
     QHash<QString, QString> m_errors;   // ssid -> message shown in the row until the next attempt
     QSet<QString> m_rejected;           // ssid whose saved key was rejected: ask again
     QTimer *m_rebuildTimer = nullptr;
+    QTimer *m_scanTimer = nullptr;
+    bool m_scanning = false;
+    void setScanning(bool on);
 };
 
 // Microphone and location in use (B08 privacy glyphs).

@@ -6,6 +6,7 @@
 //   fakeinput move X Y           pointer to logical X, Y
 //   fakeinput click X Y [hold-ms] left button at X, Y
 //   fakeinput down X Y / up      left button pressed / released
+//   fakeinput drag X0 Y0 X1 Y1 [steps] [hold-ms]   press at X0,Y0, move, hold, release at X1,Y1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,6 +60,20 @@ int main(int argc, char **argv)
             org_kde_kwin_fake_input_button(fake, 0x110, 1); flush(d, argc > 4 ? atoi(argv[4]) : 40);
             if (!strcmp(op, "click")) { org_kde_kwin_fake_input_button(fake, 0x110, 0); flush(d, 20); }
         }
+    } else if (!strcmp(op, "drag") && argc > 5) {
+        // One process for the whole gesture: KWin releases a client's buttons when it disconnects.
+        double x0 = atof(argv[2]), y0 = atof(argv[3]), x1 = atof(argv[4]), y1 = atof(argv[5]);
+        int steps = argc > 6 ? atoi(argv[6]) : 20, hold = argc > 7 ? atoi(argv[7]) : 300;
+        org_kde_kwin_fake_input_pointer_motion_absolute(fake, wl_fixed_from_double(x0), wl_fixed_from_double(y0));
+        flush(d, 150);
+        org_kde_kwin_fake_input_button(fake, 0x110, 1); flush(d, 150);
+        for (int i = 1; i <= steps; i++) {
+            org_kde_kwin_fake_input_pointer_motion_absolute(fake, wl_fixed_from_double(x0 + (x1 - x0) * i / steps),
+                                                            wl_fixed_from_double(y0 + (y1 - y0) * i / steps));
+            flush(d, 30);
+        }
+        flush(d, hold);
+        org_kde_kwin_fake_input_button(fake, 0x110, 0); flush(d, 100);
     } else if (!strcmp(op, "up")) {
         org_kde_kwin_fake_input_button(fake, 0x110, 0); flush(d, 20);
     } else return 2;

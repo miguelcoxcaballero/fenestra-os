@@ -59,6 +59,16 @@ Window {
     readonly property int rows: Math.max(1, Math.floor((height - Metrics.taskbarHeight - 2 * Metrics.desktopMargin) / cellH))
     onRowsChanged: if (primary) DesktopModel.setRowsPerColumn(rows)
     function selected(row) { return selection.indexOf(row) >= 0 }
+    property bool dragging: false      // one of the desktop's icons is being dragged
+    property int dropTarget: -1        // the folder or bin the drag is over
+    // What a dragged icon carries: the selection's files (the icon's alone when it is not selected).
+    function dragData(row) {
+        const rows = selection.indexOf(row) >= 0 ? selection : [row]
+        const uris = DesktopModel.urls(rows).map(u => u.toString())
+        const data = { "application/x-fenestra-desktop-icons": rows.join(",") }
+        if (uris.length) data["text/uri-list"] = uris.join("\r\n")
+        return data
+    }
 
     Image {
         id: wallpaper
@@ -138,10 +148,20 @@ Window {
                 x: Metrics.desktopMargin + model.cell.x * desk.cellW
                 y: Metrics.desktopMargin + model.cell.y * desk.cellH
                 width: desk.cellW; height: desk.cellH
+                // A real (system) drag, so that icons can be let go on the Explorer, a browser or
+                // any app; let go on the desktop itself it comes back to the DropArea below, which
+                // knows it by `source` and rearranges. Every selected icon travels with the one
+                // dragged; the Recycle Bin carries no file and only moves on the desktop.
+                readonly property bool desktopIcon: true
                 Drag.active: drag.drag.active
                 Drag.dragType: Drag.Automatic
-                Drag.supportedActions: Qt.CopyAction | Qt.MoveAction
-                Drag.mimeData: model.isTrash ? ({}) : ({ "text/uri-list": model.url.toString() })
+                Drag.supportedActions: Qt.CopyAction | Qt.MoveAction | Qt.LinkAction
+                Drag.proposedAction: Qt.MoveAction
+                Drag.hotSpot: Qt.point(drag.pressX, drag.pressY)
+                Drag.mimeData: desk.dragData(index)
+                Drag.onDragStarted: desk.dragging = true
+                Drag.onDragFinished: { desk.dragging = false; desk.dropTarget = -1; dragGhost.x = 0; dragGhost.y = 0 }
+                opacity: desk.dragging && isSelected ? 0.5 : 1
                 Accessible.role: Accessible.ListItem
                 Accessible.name: model.name
                 // Hover / selection: the item's box (icon + label), square like Windows' desktop.
@@ -149,7 +169,7 @@ Window {
                     x: desk.itemInset; y: desk.itemTop
                     width: parent.width - 2 * desk.itemInset
                     height: desk.labelTop - desk.itemTop + Math.max(1, label.lineCount) * desk.labelLine + Metrics.tok("desktop.item.bottom", 4)
-                    color: icon.isSelected ? Tokens.v("desktop.item.selected", "#4dcce8ff")
+                    color: icon.isSelected || desk.dropTarget === icon.index ? Tokens.v("desktop.item.selected", "#4dcce8ff")
                            : drag.containsMouse ? Tokens.v("desktop.item.hover", "#33e5f3ff") : "transparent"
                     border.color: icon.isSelected ? Tokens.v("desktop.item.selected.border", "#8c99d1ff") : "transparent"
                 }
@@ -209,34 +229,81 @@ Window {
                     anchors.fill: parent
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    drag.target: dragGhost
-                    property bool moved: false
+                    drag.target: (pressedButtons & Qt.RightButton) ? null : dragGhost
+                    drag.threshold: 6
+                    property real pressX: 0
+                    property real pressY: 0
                     onPressed: (m) => {
                         surface.forceActiveFocus(); desk.requestActivate()
+                        pressX = m.x; pressY = m.y
                         if (m.modifiers & Qt.ControlModifier)
                             desk.selection = icon.isSelected ? desk.selection.filter(r => r !== icon.index) : desk.selection.concat([icon.index])
                         else if (!icon.isSelected)
                             desk.selection = [icon.index]
-                        if (m.button === Qt.RightButton) desk.openItemMenu(icon)
+                        if (m.button === Qt.RightButton) { desk.openItemMenu(icon); return }
+                        // The picture that follows the pointer: this icon as it is drawn now.
+                        icon.grabToImage(r => { icon.Drag.imageSource = r.url })
                     }
                     onDoubleClicked: DesktopModel.open(icon.index)
-                    onReleased: (m) => {
-                        if (dragGhost.x !== 0 || dragGhost.y !== 0) {
-                            const p = icon.mapToItem(surface, dragGhost.x + icon.width / 2, dragGhost.y + icon.height / 2)
-                            DesktopModel.moveTo(icon.index, Math.max(0, Math.floor((p.x - Metrics.desktopMargin) / desk.cellW)),
-                                                Math.max(0, Math.min(desk.rows - 1, Math.floor((p.y - Metrics.desktopMargin) / desk.cellH))))
-                        }
-                        dragGhost.x = 0; dragGhost.y = 0
-                    }
+                    // A click on one of several selected icons that did not become a drag selects it alone.
+                    onClicked: (m) => { if (m.button === Qt.LeftButton && !(m.modifiers & Qt.ControlModifier) && desk.selection.length > 1) desk.selection = [icon.index] }
                     Item { id: dragGhost }
                 }
             }
         }
-        // Files dragged from apps (Files, browsers) are copied to the Desktop folder; Shift moves.
+        // Everything let go on the desktop. The desktop's own icons (drop.source is the icon) are
+        // rearranged, or go into the folder / Recycle Bin they are let go on. Files from apps
+        // (the Explorer, a browser's downloads) are copied into the Desktop folder, at the cell
+        // under the pointer, or moved when the source asks for a move and allows it (Shift, or
+        // the same file manager convention as Windows' "move within the drive").
         DropArea {
+            id: drops
             anchors.fill: parent
-            keys: ["text/uri-list"]
-            onDropped: (d) => { if (d.hasUrls) { DesktopModel.dropUrls(d.urls, d.proposedAction === Qt.MoveAction); d.accept() } }
+            keys: ["text/uri-list", "application/x-fenestra-desktop-icons"]
+            function iconAt(x, y) {
+                for (let i = 0; i < icons.count; ++i) {
+                    const it = icons.itemAt(i)
+                    if (it && x >= it.x && x < it.x + it.width && y >= it.y && y < it.y + it.height) return i
+                }
+                return -1
+            }
+            // The folder or bin under the pointer that would take the drop (-1: the desktop itself).
+            function target(d) {
+                const i = iconAt(d.x, d.y)
+                if (i < 0) return -1
+                const it = icons.itemAt(i)
+                if (!it.model.isDir && !it.model.isTrash) return -1
+                if (d.source && d.source.desktopIcon && desk.selection.indexOf(i) >= 0) return -1   // onto itself
+                return i
+            }
+            function action(d) {
+                if (d.source && d.source.desktopIcon) return Qt.MoveAction
+                return d.proposedAction === Qt.MoveAction && (d.supportedActions & Qt.MoveAction) ? Qt.MoveAction : Qt.CopyAction
+            }
+            onEntered: (d) => { d.accept(action(d)); desk.dropTarget = target(d) }
+            onPositionChanged: (d) => { d.accept(action(d)); desk.dropTarget = target(d) }
+            onExited: desk.dropTarget = -1
+            onDropped: (d) => {
+                const onto = target(d)
+                desk.dropTarget = -1
+                const col = Math.max(0, Math.floor((d.x - Metrics.desktopMargin) / desk.cellW))
+                const row = Math.max(0, Math.min(desk.rows - 1, Math.floor((d.y - Metrics.desktopMargin) / desk.cellH)))
+                if (d.source && d.source.desktopIcon) {
+                    const rows = desk.selection.indexOf(d.source.index) >= 0 ? desk.selection : [d.source.index]
+                    if (onto >= 0) DesktopModel.dropRowsOnto(rows, onto)
+                    else {
+                        // The icon keeps the place under the pointer it was taken by.
+                        const ax = Math.floor((d.x - d.source.Drag.hotSpot.x + desk.cellW / 2 - Metrics.desktopMargin) / desk.cellW)
+                        const ay = Math.floor((d.y - d.source.Drag.hotSpot.y + desk.cellH / 2 - Metrics.desktopMargin) / desk.cellH)
+                        DesktopModel.moveRows(rows, d.source.index, Math.max(0, ax), Math.max(0, Math.min(desk.rows - 1, ay)))
+                    }
+                    d.accept(Qt.MoveAction)
+                } else if (d.hasUrls) {
+                    const a = action(d)
+                    DesktopModel.dropUrls(d.urls, a === Qt.MoveAction, col, row, onto)
+                    d.accept(a)
+                }
+            }
         }
     }
 

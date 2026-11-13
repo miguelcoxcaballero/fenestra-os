@@ -78,11 +78,22 @@ void BatteryAlerts::leaveSaver()
     if (!m_saverAuto)
         return;
     auto *pp = PowerProfiles::instance();
-    if (!pp->available() && m_saverRetries++ < 10) {   // the profiles daemon answers a moment after start
-        QTimer::singleShot(3000, this, &BatteryAlerts::leaveSaver);
+    // The profiles daemon answers a moment after the shell starts (later still at boot). Giving up
+    // here, or reading an active profile that is not known yet, forgot the note while the PC was
+    // still in power saver: it stayed throttled (turbo off) for good, plugged in or not. Wait for
+    // the daemon's answer, however long it takes.
+    if (!pp->available() || pp->active().isEmpty()) {
+        if (!m_leavePending) {
+            m_leavePending = true;
+            connect(pp, &PowerProfiles::changed, this, [this] {
+                if (m_leavePending)
+                    leaveSaver();
+            });
+        }
         return;
     }
-    if (pp->available() && pp->active() == QLatin1String("power-saver"))
+    m_leavePending = false;
+    if (pp->active() == QLatin1String("power-saver"))
         pp->setActive(m_saverBefore.isEmpty() || m_saverBefore == QLatin1String("power-saver") ? QStringLiteral("balanced") : m_saverBefore);
     m_saverAuto = false;
     rememberSaver();

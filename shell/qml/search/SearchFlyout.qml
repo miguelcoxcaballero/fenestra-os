@@ -142,7 +142,8 @@ ShellPopup {
                                     bl: 10 + Metrics.num("search.recent.age.baseline", 140.67) - Metrics.num("search.recent.y", 116.67)
                                     text: rr.modelData.age }
                         MouseArea { id: rrm; anchors.fill: parent; hoverEnabled: true
-                                    onClicked: { Usage.rememberApp(rr.modelData.value); Apps.launch(rr.modelData.value); search.close() } }
+                                    // rememberApp reorders the list and this row goes away with its scope: close first.
+                                    onClicked: { const app = rr.modelData.value; search.close(); Apps.launch(app); Usage.rememberApp(app) } }
                     }
                 }
             }

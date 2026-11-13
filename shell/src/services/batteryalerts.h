@@ -42,6 +42,7 @@ private:
     void leaveSaver();
     bool m_saverAuto = false;     // Energy saver turned on by us
     int m_saverRetries = 0;
+    bool m_leavePending = false;
     QString m_saverBefore;        // the power profile it replaced
     int m_brightnessBefore = -1;  // brightness before we dimmed, -1 = not dimmed
     int m_brightnessSet = -1;     // what we set (the user changing it cancels the restore)

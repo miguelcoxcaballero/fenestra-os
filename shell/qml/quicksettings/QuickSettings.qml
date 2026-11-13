@@ -278,6 +278,19 @@ Flyout {
                     MouseArea { id: flm; anchors.fill: parent; hoverEnabled: true
                                 onClicked: { qs.close(); Apps.runCommand("fenestra-settings --page " + (qs.page === "wifi" ? "wifi" : "bluetooth")) } }
                 }
+                // Windows' refresh button at the end of the footer: scans now. The list also rescans by
+                // itself every 15 s while this page is open (NetworkManager alone scans only now and then).
+                GlyphButton {
+                    id: wifiRefresh
+                    visible: qs.page === "wifi"
+                    x: parent.width - width - 12; y: sub.height - sub.footerH + 8
+                    glyph: "view-refresh-symbolic"; fluent: "\ue72c"
+                    active: !WifiNetworks.scanning && WifiNetworks.enabled
+                    onClicked: WifiNetworks.scan()
+                    RotationAnimation on rotation { running: WifiNetworks.scanning && wifiRefresh.visible; from: 0; to: 360; duration: 1000; loops: Animation.Infinite
+                                                    onRunningChanged: if (!running) wifiRefresh.rotation = 0 }
+                }
+                Timer { interval: 15000; repeat: true; running: qs.page === "wifi" && qs.shown && WifiNetworks.enabled; onTriggered: WifiNetworks.scan() }
             }
             // ---- Battery details: same band as the footer, opens upwards from it ----
             Item {
