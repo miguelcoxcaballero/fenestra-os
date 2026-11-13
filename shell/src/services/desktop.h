@@ -3,6 +3,7 @@
 // column-major grid; positions remembered; file operations through KIO (undoable, async).
 #pragma once
 
+#include <QSet>
 #include <QSize>
 #include <QAbstractListModel>
 #include <QFileSystemWatcher>
@@ -42,7 +43,14 @@ public:
     Q_INVOKABLE void paste();
     Q_INVOKABLE void properties(const QList<int> &rows);
     Q_INVOKABLE void openTerminal();
-    Q_INVOKABLE void dropUrls(const QList<QUrl> &urls, bool move);
+    // Drag and drop (desktop/Desktop.qml). Icons dragged within the desktop keep their arrangement
+    // and go to the cells at the pointer (anchorRow is the icon under it), each to the nearest free
+    // cell; nothing is swapped. Files from elsewhere are copied or moved into the Desktop folder
+    // and appear at the cell they were dropped on; onto a folder they go into it, onto the
+    // Recycle Bin they are deleted to it.
+    Q_INVOKABLE void moveRows(const QList<int> &rows, int anchorRow, int column, int gridRow);
+    Q_INVOKABLE void dropUrls(const QList<QUrl> &urls, bool move, int column = -1, int gridRow = -1, int ontoRow = -1);
+    Q_INVOKABLE void dropRowsOnto(const QList<int> &rows, int ontoRow);
     Q_INVOKABLE QList<QUrl> urls(const QList<int> &rows) const;
     Q_INVOKABLE void sortBy(const QString &key); // name | type | date
 
@@ -55,6 +63,8 @@ private:
     void reload();
     void layout();
     void savePositions() const;
+    void rememberPositions();
+    QPoint freeNear(QPoint want, const QSet<QPair<int, int>> &used) const;
     struct Item { QString name, path, icon, iconSource; bool dir = false, trash = false; QPoint cell; };
     QList<Item> m_items;
     QHash<QString, QPoint> m_positions; // file name -> cell

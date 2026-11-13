@@ -6,6 +6,9 @@
 
 #include <QRegularExpression>
 
+#include <algorithm>
+#include <climits>
+
 #include <KDesktopFile>
 #include <KIO/CopyJob>
 #include <KIO/OpenUrlJob>
@@ -155,14 +158,65 @@ void DesktopModel::setRowsPerColumn(int rows)
 
 void DesktopModel::moveTo(int row, int column, int gridRow)
 {
-    if (row < 0 || row >= m_items.size() || column < 0 || gridRow < 0 || gridRow >= m_rows)
-        return;
-    // Swap with whatever is in the target cell.
-    for (Item &other : m_items)
-        if (other.cell == QPoint(column, gridRow))
-            other.cell = m_items[row].cell;
-    m_items[row].cell = QPoint(column, gridRow);
+    moveRows({row}, row, column, gridRow);
+}
+
+QPoint DesktopModel::freeNear(QPoint want, const QSet<QPair<int, int>> &used) const
+{
+    want = QPoint(std::max(0, want.x()), std::clamp(want.y(), 0, m_rows - 1));
+    // Rings around the wanted cell, nearest first.
+    for (int d = 0; d < 200; ++d) {
+        QPoint best(-1, -1);
+        int bestDist = INT_MAX;
+        for (int x = want.x() - d; x <= want.x() + d; ++x) {
+            for (int y = want.y() - d; y <= want.y() + d; ++y) {
+                if (std::max(std::abs(x - want.x()), std::abs(y - want.y())) != d || x < 0 || y < 0 || y >= m_rows || used.contains({x, y}))
+                    continue;
+                const int dist = (x - want.x()) * (x - want.x()) + (y - want.y()) * (y - want.y());
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = QPoint(x, y);
+                }
+            }
+        }
+        if (best.x() >= 0)
+            return best;
+    }
+    return want;
+}
+
+void DesktopModel::rememberPositions()
+{
+    // The layout after the next change of the folder starts from these: without them a moved icon
+    // jumped back to its old cell as soon as any file appeared.
+    m_positions.clear();
+    for (const Item &it : std::as_const(m_items))
+        m_positions.insert(it.trash ? QStringLiteral(":trash") : it.name, it.cell);
     savePositions();
+}
+
+void DesktopModel::moveRows(const QList<int> &rows, int anchorRow, int column, int gridRow)
+{
+    if (anchorRow < 0 || anchorRow >= m_items.size() || column < 0 || gridRow < 0)
+        return;
+    QList<int> moving{anchorRow};
+    if (rows.contains(anchorRow))
+        for (int r : rows)
+            if (r >= 0 && r < m_items.size() && !moving.contains(r))
+                moving << r;
+    const QPoint delta = QPoint(column, std::min(gridRow, m_rows - 1)) - m_items.at(anchorRow).cell;
+    if (delta.isNull())
+        return;
+    QSet<QPair<int, int>> used;
+    for (int i = 0; i < m_items.size(); ++i)
+        if (!moving.contains(i))
+            used.insert({m_items.at(i).cell.x(), m_items.at(i).cell.y()});
+    for (int r : std::as_const(moving)) {
+        const QPoint p = freeNear(m_items.at(r).cell + delta, used);
+        m_items[r].cell = p;
+        used.insert({p.x(), p.y()});
+    }
+    rememberPositions();
     Q_EMIT dataChanged(index(0), index(m_items.size() - 1), {CellRole});
 }
 
@@ -307,15 +361,47 @@ void DesktopModel::paste()
     dropUrls(list, cut);
 }
 
-void DesktopModel::dropUrls(const QList<QUrl> &list, bool move)
+void DesktopModel::dropUrls(const QList<QUrl> &list, bool move, int column, int gridRow, int ontoRow)
 {
     if (list.isEmpty())
         return;
-    const QUrl dest = QUrl::fromLocalFile(m_dir);
-    if (move)
-        KIO::move(list, dest);
-    else
-        KIO::copy(list, dest);
+    if (ontoRow >= 0 && ontoRow < m_items.size() && m_items.at(ontoRow).trash) {
+        KIO::trash(list);
+        return;
+    }
+    const bool intoFolder = ontoRow >= 0 && ontoRow < m_items.size() && m_items.at(ontoRow).dir;
+    const QUrl dest = QUrl::fromLocalFile(intoFolder ? m_items.at(ontoRow).path : m_dir);
+    QList<QUrl> incoming;
+    QSet<QPair<int, int>> used;
+    for (const Item &it : std::as_const(m_items))
+        used.insert({it.cell.x(), it.cell.y()});
+    for (const QUrl &u : list) {
+        // Dropped where it already is (an icon of the desktop let go over the desktop from another
+        // screen, a folder onto itself): nothing to do, and no "file already exists" question.
+        if (u.isLocalFile() && (QFileInfo(u.toLocalFile()).absolutePath() == dest.toLocalFile() || u.toLocalFile() == dest.toLocalFile()))
+            continue;
+        incoming << u;
+        if (!intoFolder && column >= 0 && gridRow >= 0 && !u.fileName().isEmpty() && !m_positions.contains(u.fileName())) {
+            const QPoint p = freeNear(QPoint(column, gridRow), used);
+            m_positions.insert(u.fileName(), p);   // layout() puts the new file there when it appears
+            used.insert({p.x(), p.y()});
+        }
+    }
+    if (incoming.isEmpty())
+        return;
+    // A name that is already there gets a number, as a copy made in the same folder does: the
+    // shell has no "replace or skip?" dialog, and without this the drop did nothing at all.
+    KIO::CopyJob *job = move ? KIO::move(incoming, dest, KIO::HideProgressInfo) : KIO::copy(incoming, dest, KIO::HideProgressInfo);
+    job->setAutoRename(true);
+}
+
+void DesktopModel::dropRowsOnto(const QList<int> &rows, int ontoRow)
+{
+    QList<int> moving;
+    for (int r : rows)
+        if (r != ontoRow)
+            moving << r;
+    dropUrls(urls(moving), true, -1, -1, ontoRow);
 }
 
 void DesktopModel::properties(const QList<int> &rows)
