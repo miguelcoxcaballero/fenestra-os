@@ -30,7 +30,8 @@ store() {
     [ -d "$d" ] || return 0   # this PC takes the Store from its package
     rm -rf "$d/fenestra_store.new" && cp -r "$REPO/apps/fenestra-store/fenestra_store" "$d/fenestra_store.new" \
         && find "$d/fenestra_store.new" -name __pycache__ -type d -prune -exec rm -rf {} + \
-        && rm -rf "$d/fenestra_store" && mv "$d/fenestra_store.new" "$d/fenestra_store"
+        && rm -rf "$d/fenestra_store" && mv "$d/fenestra_store.new" "$d/fenestra_store" \
+        && cp "$REPO/apps/fenestra-store/data/style.css" "$d/data/style.css"
 }
 files() {
     local d=$DATA/nautilus-python/extensions
