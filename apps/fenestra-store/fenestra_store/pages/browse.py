@@ -147,7 +147,8 @@ class SearchPage(Page):
         # The package called exactly what was typed is the answer, wherever the apps rank.
         q = util.fold(self.query).strip()
         exact = [a for a in self.packages if q in (util.fold(a.name), util.fold(a.pkgname))]
-        if exact and self.results:
+        # ...unless the catalogue already has an app by that name (its listing is the better card).
+        if exact and self.results and not any(util.fold(a.name) == q for a in self.results):
             self.packages = [a for a in self.packages if a not in exact]
             top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
             self.paged_grid(top, exact)

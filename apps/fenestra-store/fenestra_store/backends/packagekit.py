@@ -162,7 +162,7 @@ class PackageKitBackend(Backend):
             repo = pkg.get_data() or ""
             a = App(uid=f"packagekit:{name}", app_id=name, backend=self.id, source="fedora", packaging="rpm",
                     name=name, summary=pkg.get_summary() or "", categories=["utilities"], kind="package",
-                    version=pretty_version(pkg.get_version()), icon_name="package-x-generic",
+                    version=pretty_version(pkg.get_version()), icon_name=name,
                     installed=pkg.get_info() == PK.InfoEnum.INSTALLED, pkgname=name, ref=pkg.get_id(),
                     origin=repo.removeprefix("installed:") or "fedora", desktop_id=f"{name}.desktop",
                     search_only=True)

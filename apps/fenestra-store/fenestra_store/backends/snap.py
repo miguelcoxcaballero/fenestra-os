@@ -92,7 +92,7 @@ class SnapBackend(Backend):
                     developer=(s.get("publisher") or {}).get("display-name", ""), categories=["utilities"],
                     kind="app", version=(here or s).get("version", ""), license=s.get("license", ""),
                     homepage=s.get("website") or s.get("contact") or "", icon_url=icon,
-                    icon_name="package-x-generic", screenshots=shots, download_size=int(s.get("download-size") or 0),
+                    screenshots=shots, download_size=int(s.get("download-size") or 0),
                     installed=here is not None, ref=name, origin="snapcraft", pkgname=name,
                     details_loaded=True, search_only=True)
             a.sync_state()

@@ -112,15 +112,18 @@ def app_icon(app, size: int) -> Gtk.Image:
     if app.icon_path:
         img.set_from_file(app.icon_path)
         return img
-    if app.icon_name:
+    remote = app.icon_url or app.packaging == "web"
+    if app.icon_name and not remote:
         disp = Gdk.Display.get_default()
         if disp and Gtk.IconTheme.get_for_display(disp).has_icon(app.icon_name):
             img.set_from_icon_name(app.icon_name)
             return img
-    if util.DEMO or not (app.icon_url or app.packaging == "web"):
-        img.set_from_paintable(art.icon_texture(app, size))
+    # No picture of its own (yet): the store's generated icon, a coloured tile with a glyph,
+    # never an empty square. A remote icon (snaps, web apps) replaces it when it arrives; a
+    # theme icon was preferred over it before, so snaps never showed theirs.
+    img.set_from_paintable(art.icon_texture(app, size))
+    if util.DEMO or not remote:
         return img
-    img.set_from_icon_name("application-x-executable")
     from . import media
 
     def got(res):
@@ -484,7 +487,7 @@ class BannerArt(Gtk.Widget):
         self.shot, self.icon, self.dom = None, None, ""
         self.loading = True
         self._waiting = {"banner", "icon"}
-        if not app.icon_path and app.icon_name and app.packaging != "web" and not util.DEMO:
+        if not app.icon_path and app.icon_name and not app.icon_url and app.packaging != "web" and not util.DEMO:
             disp = Gdk.Display.get_default()
             th = Gtk.IconTheme.get_for_display(disp) if disp else None
             if th is not None and th.has_icon(app.icon_name):
