@@ -36,6 +36,7 @@
 */
 #include "corners.h"
 #include "caret.h"
+#include "dragstart.h"
 
 #include <core/pixelgrid.h>
 #include <core/rendertarget.h>
@@ -319,6 +320,7 @@ CornersEffect::CornersEffect()
     m_filter = std::make_unique<CaptionFilter>(this);
     input()->installInputEventFilter(m_filter.get());
     m_caret = std::make_unique<TextCaret>();
+    m_dragStart = std::make_unique<DragStartFix>();
     for (EffectWindow *w : effects->stackingOrder()) {
         update(w);
     }

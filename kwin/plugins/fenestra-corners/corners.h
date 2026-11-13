@@ -23,6 +23,7 @@ class GLShader;
 class GLTexture;
 class InputEventFilter;
 class TextCaret;
+class DragStartFix;
 struct PointerButtonEvent;
 
 class CornersEffect : public OffscreenEffect
@@ -64,6 +65,7 @@ private:
     std::unordered_map<EffectWindow *, Corners> m_windows;
     std::unique_ptr<InputEventFilter> m_filter;
     std::unique_ptr<TextCaret> m_caret; ///< caret.h: the text cursor's place, for the shell
+    std::unique_ptr<DragStartFix> m_dragStart; ///< dragstart.h: drops after a quick flick
     std::unique_ptr<GLTexture> m_glyphs;
     int m_glyphCell = 0;
     EffectWindow *m_captionWindow = nullptr; ///< under the pointer, or holding the press
