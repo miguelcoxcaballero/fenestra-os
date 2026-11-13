@@ -238,4 +238,8 @@ STRINGS = {
         "Los entornos de ejecución se instalan junto con las aplicaciones que los necesitan",
     "Not a package PackageKit can read": "No es un paquete que PackageKit pueda leer",
     "Flatpak is not available": "Flatpak no está disponible",
+    'Searching every package…': 'Buscando en todos los paquetes…',
+    'Packages and tools (%d)': 'Paquetes y herramientas (%d)',
+    'Snap Store': 'Snap Store',
+    'Snap package': 'Paquete Snap',
 }

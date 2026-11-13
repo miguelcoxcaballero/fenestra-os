@@ -133,6 +133,45 @@ class PackageKitBackend(Backend):
         self._by_pkg = {a.pkgname: a for a in apps}
         return apps
 
+    # ------------------------------------------------------------------ every package
+    def search(self, text, limit=200):
+        """Every package of the enabled repositories that matches text by name or description:
+        what `dnf search` finds (command line tools, libraries, fonts, drivers...), beyond the
+        applications with a store listing. Packages already in the catalogue are left to it."""
+        words = [w for w in text.split() if w]
+        if not words:
+            return []
+        found = []
+        for fn in (self.client.search_names, self.client.search_details):
+            try:
+                res = _check(fn(_filters("newest;arch"), words, None, self._quiet, None))
+                found += res.get_package_array()
+            except (GLib.Error, StoreError) as e:
+                util.log("package search failed", e)
+        apps, seen = [], set()
+        folded = [util.fold(w) for w in words]
+        for pkg in found:
+            name = pkg.get_name()
+            if name in seen or name in self._by_pkg or name.endswith(("-debuginfo", "-debugsource")):
+                continue
+            # PackageKit matches any of several words; `dnf search` and the store want all of them.
+            hay = util.fold(name + " " + (pkg.get_summary() or ""))
+            if len(folded) > 1 and not all(w in hay for w in folded):
+                continue
+            seen.add(name)
+            repo = pkg.get_data() or ""
+            a = App(uid=f"packagekit:{name}", app_id=name, backend=self.id, source="fedora", packaging="rpm",
+                    name=name, summary=pkg.get_summary() or "", categories=["utilities"], kind="package",
+                    version=pretty_version(pkg.get_version()), icon_name=name,
+                    installed=pkg.get_info() == PK.InfoEnum.INSTALLED, pkgname=name, ref=pkg.get_id(),
+                    origin=repo.removeprefix("installed:") or "fedora", desktop_id=f"{name}.desktop",
+                    search_only=True)
+            a.sync_state()
+            apps.append(a)
+            if len(apps) >= limit:
+                break
+        return apps
+
     def _resolve_one(self, name, filters):
         res = _check(self.client.resolve(_filters(filters), [name], None, self._quiet, None))
         pkgs = res.get_package_array()
@@ -154,6 +193,8 @@ class PackageKitBackend(Backend):
                         app.download_size = d.get_download_size()
                 app.license = app.license or d.get_license()
                 app.homepage = app.homepage or d.get_url()
+                if not app.description and d.get_description():
+                    app.description = [p.strip().replace("\n", " ") for p in d.get_description().split("\n\n") if p.strip()]
         except (GLib.Error, StoreError) as e:
             util.log("details failed", app.pkgname, e)
 
@@ -180,8 +221,10 @@ class PackageKitBackend(Backend):
         try:
             progress(None, "Preparing")
             pid = self._resolve_one(app.pkgname, "installed")
-            # allow_deps: remove what depends on it, autoremove: keep unrelated leftovers
-            _check(self.client.remove_packages(_trusted(), [pid], True, False, None,
+            # allow_deps: remove what depends on it (an application's own add-ons), autoremove: keep
+            # unrelated leftovers. A bare package found by search may be something half the system
+            # needs: it is only removed when nothing depends on it.
+            _check(self.client.remove_packages(_trusted(), [pid], not app.search_only, False, None,
                                                self._progress_cb(progress), None))
         except GLib.Error as e:
             raise StoreError(e.message) from e

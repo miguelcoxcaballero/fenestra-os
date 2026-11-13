@@ -11,13 +11,16 @@
 Name:           libfprint
 
 Version:        1.94.10
-Release:        2.1.egismoc.sdcp%{?dist}
+Release:        2.2.egismoc.sdcp%{?dist}
 Summary:        Toolkit for fingerprint scanner
 
 # Automatically converted from old format: LGPLv2+ - review is highly recommended.
 License:        LicenseRef-Callaway-LGPLv2+
 URL:            http://www.freedesktop.org/wiki/Software/fprint/libfprint
 Source0:        https://gitlab.freedesktop.org/libfprint/libfprint/-/archive/feature/sdcp-v2/libfprint-feature-sdcp-v2.tar.gz
+# Fenestra: cancelled reads completed twice (and depended on GLib's English message), stale
+# answers of an interrupted session, a stale SDCP secret kept across opens.
+Patch0:         libfprint-egismoc-robust.patch
 ExcludeArch:    s390 s390x
 
 BuildRequires:  meson

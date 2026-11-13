@@ -1,0 +1,114 @@
+diff -ru a/libfprint/drivers/egismoc/egismoc.c b/libfprint/drivers/egismoc/egismoc.c
+--- a/libfprint/drivers/egismoc/egismoc.c	2026-04-07 19:36:50.000000000 +0200
++++ b/libfprint/drivers/egismoc/egismoc.c	2026-11-13 10:41:46.481057701 +0100
+@@ -141,6 +141,12 @@
+   fp_dbg ("Task SSM next state callback");
+   FpiDeviceEgisMoc *self = FPI_DEVICE_EGISMOC (device);
+ 
++  if (!self->task_ssm)
++    {
++      g_clear_error (&error);
++      return;
++    }
++
+   if (error)
+     fpi_ssm_mark_failed (self->task_ssm, error);
+   else
+@@ -363,8 +369,16 @@
+   self->wait_finger_ssm = NULL;
+   self->wait_finger_start = 0;
+ 
+-  if (error && g_strcmp0 (error->message, "Operation was cancelled") != 0)
+-    fpi_device_action_error (device, error);
++  /* The task waits on this SSM: its failure (a cancelled interrupt transfer included) fails the
++   * task, exactly once. Comparing the message with "Operation was cancelled" did not work with a
++   * translated GLib (es: "Se canceló la operación") and reported the error twice. */
++  if (error)
++    {
++      if (self->task_ssm)
++        fpi_ssm_mark_failed (self->task_ssm, error);
++      else
++        g_error_free (error);
++    }
+ }
+ 
+ static void
+@@ -1756,6 +1770,27 @@
+       return;
+     }
+ 
++  /* Answers and finger events a previous, interrupted session never read would be taken for
++   * the answers to this session's first commands. */
++  for (int i = 0; i < 8; i++)
++    {
++      guchar stale[EGISMOC_USB_IN_RECV_LENGTH];
++      gsize got = 0;
++      if (!g_usb_device_bulk_transfer (fpi_device_get_usb_device (device), EGISMOC_EP_CMD_IN,
++                                       stale, sizeof (stale), &got, 20, NULL, NULL))
++        break;
++      fp_dbg ("Dropped %" G_GSIZE_FORMAT " stale bytes from the command endpoint", got);
++    }
++  for (int i = 0; i < 8; i++)
++    {
++      guchar stale[EGISMOC_USB_INTERRUPT_IN_RECV_LENGTH];
++      gsize got = 0;
++      if (!g_usb_device_interrupt_transfer (fpi_device_get_usb_device (device), EGISMOC_EP_CMD_INTERRUPT_IN,
++                                            stale, sizeof (stale), &got, 20, NULL, NULL))
++        break;
++      fp_dbg ("Dropped %" G_GSIZE_FORMAT " stale bytes from the interrupt endpoint", got);
++    }
++
+   if (self->dev_init_done)
+     {
+       fpi_sdcp_device_open_complete (FP_SDCP_DEVICE (device), NULL);
+@@ -1778,10 +1813,13 @@
+   g_clear_object (&self->interrupt_cancellable);
+   self->interrupt_cancellable = g_cancellable_new ();
+ 
+-  /* Terminate ongoing action if cancel is called */
+-  if (self->task_ssm)
+-    fpi_ssm_mark_failed (self->task_ssm, fpi_device_error_new_msg (FP_DEVICE_ERROR_GENERAL,
+-                                                                   "Operation was cancelled"));
++  /* Terminate the ongoing action. A wait for the finger (its interrupt transfer was just
++   * cancelled) or a command in flight (the action's own cancellable) ends with an error and
++   * fails the task itself; failing it here as well completed the action twice. */
++  if (self->task_ssm && !self->wait_finger_ssm && !self->cmd_ssm)
++    fpi_ssm_mark_failed (self->task_ssm,
++                         g_error_new_literal (G_IO_ERROR, G_IO_ERROR_CANCELLED,
++                                              "Operation was cancelled"));
+ }
+ 
+ static void
+diff -ru a/libfprint/fpi-sdcp-device.c b/libfprint/fpi-sdcp-device.c
+--- a/libfprint/fpi-sdcp-device.c	2026-04-07 19:36:50.000000000 +0200
++++ b/libfprint/fpi-sdcp-device.c	2026-11-13 10:41:46.481203121 +0100
+@@ -358,8 +358,11 @@
+       if (cls->reconnect && application_secret)
+         fpi_sdcp_device_reconnect (self);
+ 
+-      /* Connect if we don't already have an application_secret */
+-      else if (!application_secret)
++      /* Connect if we don't already have an application_secret, and always when the driver
++       * cannot reconnect: the secret of an earlier open is only good while the device kept its
++       * session (not across a USB reset or a suspend), and a stale one fails every identify
++       * with "cannot be trusted" until the daemon restarts. */
++      else if (!application_secret || !cls->reconnect)
+         fpi_sdcp_device_connect (self);
+ 
+       /* Complete open if we are already connected */
+@@ -494,8 +497,13 @@
+   action = fpi_device_get_current_action (FP_DEVICE (self));
+ 
+   g_return_if_fail (action == FPI_DEVICE_ACTION_OPEN);
+-  g_return_if_fail (priv->host_private_key);
+-  g_return_if_fail (priv->host_random);
++  if (!priv->host_private_key || !priv->host_random)
++    {
++      /* A second answer to a connect that already completed: nothing is pending. */
++      fp_warn ("SDCP connect completed without a pending connect; ignored");
++      g_clear_error (&error);
++      return;
++    }
+ 
+   if (error)
+     {

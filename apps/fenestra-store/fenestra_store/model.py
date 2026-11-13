@@ -46,9 +46,10 @@ def map_categories(fdo_categories) -> list[str]:
 
 
 # Source keys and labels
-SOURCES = {"flathub": N_("Flathub"), "fedora": N_("Fedora"), "web": N_("Web"), "local": N_("This computer")}
+SOURCES = {"flathub": N_("Flathub"), "fedora": N_("Fedora"), "snap": N_("Snap Store"), "web": N_("Web"),
+           "local": N_("This computer")}
 # Packaging formats -> label
-PACKAGING = {"flatpak": N_("Flatpak"), "rpm": N_("RPM package"), "web": N_("Web app")}
+PACKAGING = {"flatpak": N_("Flatpak"), "rpm": N_("RPM package"), "snap": N_("Snap package"), "web": N_("Web app")}
 
 # Flatpak permission keys -> (English description, icon, sensitive?)
 PERMISSIONS = {
@@ -99,7 +100,7 @@ class App:
     description: list = field(default_factory=list)   # paragraphs; bullet lines start with "• "
     developer: str = ""
     categories: list = field(default_factory=list)    # store category keys
-    kind: str = "app"             # "app" | "game"
+    kind: str = "app"             # "app" | "game" | "package" (no store listing: tools, libraries)
     version: str = ""
     update_version: str = ""      # non-empty when an update is available
     download_size: int = 0
@@ -130,6 +131,9 @@ class App:
     web_url: str = ""             # web apps: the site the launcher opens
     local_file: str = ""          # opened from a .flatpakref / .rpm file
     details_loaded: bool = False
+    # Found by a package manager's own search (Store.search_packages), not part of the catalogue:
+    # every RPM of the enabled repositories, every snap. Never listed on Home, categories or Library.
+    search_only: bool = False
 
     @property
     def is_game(self) -> bool:
