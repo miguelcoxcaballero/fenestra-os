@@ -903,6 +903,19 @@ class ResultCard(Gtk.Button):
             meta.append(sep)
             meta.append(label(_(CATEGORY_TITLES.get(cat, "")), "result-meta-text", ellipsize=True))
         texts.append(meta)
+        # How much it is used, where the source says (metrics.py): arrives a moment later.
+        self.metric = label("", "result-meta-text result-metric", ellipsize=True)
+        self.metric.set_visible(False)
+        texts.append(self.metric)
+        from . import metrics
+
+        def got(res):
+            text, tip = res or ("", "")
+            if text:
+                self.metric.set_label(text)
+                self.metric.set_tooltip_text(tip or None)
+                self.metric.set_visible(True)
+        metrics.request(win.store, app, got)
         top.append(texts)
         self.chip = label("", "price-chip")
         self.chip.set_valign(Gtk.Align.START)

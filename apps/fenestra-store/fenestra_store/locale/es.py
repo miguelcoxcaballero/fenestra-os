@@ -242,4 +242,8 @@ STRINGS = {
     'Packages and tools (%d)': 'Paquetes y herramientas (%d)',
     'Snap Store': 'Snap Store',
     'Snap package': 'Paquete Snap',
+    '%s installs/month': '%s descargas/mes',
+    '%s installs in total (Flathub)': '%s instalaciones en total (Flathub)',
+    'Verified publisher': 'Editor verificado',
+    '★ %s on GitHub': '★ %s en GitHub',
 }

@@ -134,6 +134,7 @@ class App:
     # Found by a package manager's own search (Store.search_packages), not part of the catalogue:
     # every RPM of the enabled repositories, every snap. Never listed on Home, categories or Library.
     search_only: bool = False
+    verified: bool = False        # the source vouches for the publisher (Snap Store's verified accounts)
 
     @property
     def is_game(self) -> bool:

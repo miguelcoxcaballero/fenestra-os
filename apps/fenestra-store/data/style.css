@@ -203,6 +203,7 @@ button.result-card:active { background-color: var(--st-card-press); }
 .result-name { font-size: 14px; font-weight: 600; }
 .result-meta { margin-top: 3px; }
 .result-meta-text, .app-meta-text { font-size: 12px; color: var(--st-fg2); }
+.result-metric { margin-top: 2px; color: var(--st-fg); font-weight: 600; }
 .meta-sep { min-width: 1px; min-height: 12px; margin: 0 7px; background-color: var(--st-divider); }
 .result-meta .meta-sep, .app-meta .meta-sep { margin-top: 3px; margin-bottom: 2px; }
 .result-summary { font-size: 12px; color: var(--st-fg); margin-top: 14px; }
