@@ -3,6 +3,7 @@
 * demo       deterministic in-memory catalogue (--demo-data, screenshots, tests)
 * flatpak    libflatpak (gi Flatpak-1.0) + the remotes' AppStream data (Flathub)
 * packagekit PackageKit (gi PackageKitGlib-1.0) + the system AppStream pool (Fedora RPMs)
+* snap       snapd, where installed: search only (the Snap Store has no catalogue to load)
 * webapp     web apps (YouTube, WhatsApp…): launchers that open the site in an app window
 
 All methods except `launch()` are called from worker threads and may block. `progress`
@@ -40,14 +41,19 @@ class Backend:
     def update(self, app: App, progress) -> None:
         raise NotImplementedError
 
-    def launch(self, app: App) -> bool:
-        """UI thread. Start the installed app."""
-        from gi.repository import Gio, GLib
+    def launcher(self, app: App):
+        """The installed app's launcher (Gio.DesktopAppInfo), or None when it has nothing to open."""
+        from gi.repository import Gio
         did = app.desktop_id or f"{app.app_id}.desktop"
         try:
-            info = Gio.DesktopAppInfo.new(did if did.endswith(".desktop") else did + ".desktop")
+            return Gio.DesktopAppInfo.new(did if did.endswith(".desktop") else did + ".desktop")
         except TypeError:
-            info = None
+            return None
+
+    def launch(self, app: App) -> bool:
+        """UI thread. Start the installed app."""
+        from gi.repository import GLib
+        info = self.launcher(app)
         if info is None:
             return False
         try:
@@ -57,6 +63,9 @@ class Backend:
 
     def sources(self) -> list[Source]:
         return []
+
+    # Optional: `search(text) -> list[App]` (worker thread), the package manager's own search for
+    # what has no store listing; the Apps carry search_only=True. See Store.search_packages.
 
     def set_source_enabled(self, source: Source, enabled: bool) -> None:
         raise NotImplementedError
@@ -68,7 +77,8 @@ def choose(demo: bool) -> list[Backend]:
         from .demo import DemoBackend
         return [DemoBackend()]
     found = []
-    for modname, clsname in (("flatpak", "FlatpakBackend"), ("packagekit", "PackageKitBackend")):
+    for modname, clsname in (("flatpak", "FlatpakBackend"), ("packagekit", "PackageKitBackend"),
+                             ("snap", "SnapBackend")):
         try:
             mod = __import__(f"fenestra_store.backends.{modname}", fromlist=[clsname])
             b = getattr(mod, clsname)()

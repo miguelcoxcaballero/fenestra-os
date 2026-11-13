@@ -4,6 +4,9 @@
   list      open, list the templates stored on the sensor, close
   stored    the prints fprintd keeps in /var/lib/fprint (what Linux believes is enrolled)
   identify  open, wait up to 15 s for a finger, say which template the sensor matched
+  stress    what the lock screen does all day, in one process as fprintd: six times open, start
+            reading, cancel after 1.2 s without a finger, close; then open and list. Every round
+            must end "cancelled" and the last list must work (prints STRESS PASS / FAIL)
 Everything goes to stdout/stderr; doctor.sh collects it with libfprint's debug output."""
 import glob
 import sys
@@ -57,11 +60,40 @@ def device():
     return d
 
 
+def stress():
+    d = device()
+    ok = True
+    gallery = None
+    for i in range(6):
+        d.open_sync()
+        if gallery is None:
+            gallery = d.list_prints_sync()
+        cancel = Gio.Cancellable()
+        threading.Timer(1.2, cancel.cancel).start()
+        try:
+            d.identify_sync(gallery, cancel, None, None)
+            print(f"ROUND {i}: identify returned without a finger?", flush=True)
+            ok = False
+        except GLib.Error as e:
+            cancelled = e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED)
+            print(f"ROUND {i}: {'cancelled' if cancelled else 'ERROR ' + e.message}", flush=True)
+            ok = ok and cancelled
+        d.close_sync()
+    d.open_sync()
+    n = len(d.list_prints_sync())
+    d.close_sync()
+    print(f"FINAL list: {n} templates", flush=True)
+    print("STRESS PASS" if ok and n == len(gallery) else "STRESS FAIL", flush=True)
+    return ok
+
+
 def main():
     phase = sys.argv[1]
     if phase == "stored":
         stored()
         return
+    if phase == "stress":
+        sys.exit(0 if stress() else 1)
     d = device()
     print("OPEN...", flush=True)
     d.open_sync()

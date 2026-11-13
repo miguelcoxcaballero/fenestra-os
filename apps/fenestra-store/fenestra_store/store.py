@@ -130,7 +130,7 @@ class Store(GObject.Object):
         """One entry per application (alternative sources folded in), visible sources only."""
         best: dict[str, App] = {}
         for a in self.apps.values():
-            if not self.visible(a):
+            if a.search_only or not self.visible(a):
                 continue
             cur = best.get(a.app_id)
             if cur is None or self._rank(a) < self._rank(cur):
@@ -193,7 +193,7 @@ class Store(GObject.Object):
         return [a for a in self.popular() if a.developer == app.developer and a.app_id != app.app_id]
 
     def installed(self) -> list[App]:
-        return sorted((a for a in self.apps.values() if a.installed), key=lambda a: util.fold(a.name))
+        return sorted((a for a in self.apps.values() if a.installed and not a.search_only), key=lambda a: util.fold(a.name))
 
     def updates(self) -> list[App]:
         return [a for a in self.installed() if a.has_update]
@@ -224,6 +224,47 @@ class Store(GObject.Object):
                 scored.append((total, a.popularity, a))
         scored.sort(key=lambda t: (-t[0], -t[1], util.fold(t[2].name)))
         return [t[2] for t in scored]
+
+    def search_packages(self, text, on_done):
+        """Everything installable that has no store listing: asks each backend's own search (every
+        RPM of the enabled repositories, every snap) in a worker thread and calls
+        on_done(text, apps) on the UI thread, best match first. The apps join the store (details,
+        install and removal work on them) but never the catalogue."""
+        folded = util.fold(text).strip()
+        if not folded:
+            on_done(text, [])
+            return
+
+        def work():
+            out = []
+            for b in self.backends.values():
+                fn = getattr(b, "search", None)
+                if fn is None:
+                    continue
+                try:
+                    out += fn(text)
+                except Exception as e:  # noqa: BLE001 - one manager failing must not hide the others
+                    util.log("search failed", b.id, e)
+            return out
+
+        def rank(a: App):
+            n = util.fold(a.name)
+            pk = util.fold(a.pkgname or a.ref)
+            first = folded.split()[0]
+            exact = folded in (n, pk)
+            return (0 if exact else 1 if n.startswith(first) or pk.startswith(first) else 2 if first in n or first in pk else 3,
+                    0 if a.installed else 1, len(n), n)
+
+        def done(found):
+            res = []
+            for a in found:
+                cur = self.apps.get(a.uid)
+                if cur is None:
+                    cur = self.apps[a.uid] = a
+                if cur.search_only and self.visible(cur):
+                    res.append(cur)
+            on_done(text, sorted(res, key=rank))
+        util.in_thread(work, on_done=done, on_error=lambda _e: on_done(text, []))
 
     def _haystack(self, a: App):
         """Folded search text of an app, computed once per catalogue load."""
@@ -432,6 +473,14 @@ class Store(GObject.Object):
                        on_error=lambda e: on_done(False, str(e)))
 
     # ------------------------------------------------------------------ launch / sources
+    def can_launch(self, uid) -> bool:
+        """False for what has nothing to open: a command line tool, a library, a font."""
+        app = self.apps.get(uid)
+        if app is None or not app.search_only:
+            return app is not None
+        be = self.backends[app.backend]
+        return bool(getattr(be, "launcher", lambda _a: None)(app))
+
     def launch(self, uid) -> bool:
         app = self.apps.get(uid)
         if app is None or not app.installed:

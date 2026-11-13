@@ -383,10 +383,14 @@ class ActionArea(Gtk.Box):
             if app.has_update:
                 self.main = self._btn(_("Update"), True, lambda: st.update(app.uid),
                                       None if self.small else "st-update-symbolic")
-            if self.show_open:
+            if self.show_open and st.can_launch(app.uid):
                 # rows (small) use a standard Open button, like the reference's list rows
                 b = self._btn(_("Open"), not app.has_update and not self.small, lambda: self.win.launch(app.uid))
                 self.main = self.main or b
+            if self.main is None and app.search_only:
+                # A tool or a library: nothing to open, but say that it is there.
+                self.main = self._btn(_("Installed"), False, lambda: None)
+                self.main.set_sensitive(False)
 
     def clicked(self):
         """Activate the main button (tests)."""

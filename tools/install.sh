@@ -25,6 +25,13 @@ settings() {
         && rm -rf "$d/fenestra_settings" && mv "$d/fenestra_settings.new" "$d/fenestra_settings" \
         && cp "$REPO/apps/fenestra-settings/data/style.css" "$d/data/style.css"
 }
+store() {
+    local d=$DATA/fenestra-store
+    [ -d "$d" ] || return 0   # this PC takes the Store from its package
+    rm -rf "$d/fenestra_store.new" && cp -r "$REPO/apps/fenestra-store/fenestra_store" "$d/fenestra_store.new" \
+        && find "$d/fenestra_store.new" -name __pycache__ -type d -prune -exec rm -rf {} + \
+        && rm -rf "$d/fenestra_store" && mv "$d/fenestra_store.new" "$d/fenestra_store"
+}
 files() {
     local d=$DATA/nautilus-python/extensions
     mkdir -p "$d" && cp "$REPO"/desktop/nautilus/python/*.py "$d/"
@@ -66,6 +73,7 @@ shell() {
 step "shell" shell
 step "lock screen" bash "$REPO/tools/install-lockscreen-user.sh"
 step "settings" settings
+step "store" store
 step "file manager" files
 step "gtk stylesheet" gtkcss
 step "start-up check and sleep log" bootcheck

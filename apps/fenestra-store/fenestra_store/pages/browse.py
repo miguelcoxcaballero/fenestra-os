@@ -1,7 +1,7 @@
 """Apps, Games and single-category pages, and live search results."""
 from __future__ import annotations
 
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 
 from .. import util
 from ..i18n import N_, _
@@ -111,14 +111,54 @@ class SearchPage(Page):
         self.results = self.store.search(self.query, None if self.kind == "all" else self.kind)
         n = len(self.results)
         self.count.set_label(_("%d results") % n if n != 1 else _("1 result"))
-        if not self.results:
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER)
-            box.add_css_class("empty-state")
-            box.append(label(_("No apps match “%s”") % self.query, "empty-title", xalign=0.5, wrap=True))
-            box.append(label(_("Check the spelling or try a shorter word."), "empty-text", xalign=0.5, wrap=True))
-            self.results_box.append(box)
-            return
-        self.paged_grid(self.results_box, self.results)
+        self.packages = []
+        self._gen = getattr(self, "_gen", 0) + 1
+        everything = self.kind == "all" and not util.DEMO
+        if self.results:
+            self.paged_grid(self.results_box, self.results)
+        # Everything else that can be installed: the package managers' own search (every RPM of
+        # the repositories, every snap), under the apps. Asked once the text has settled.
+        self.more_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        self.results_box.append(self.more_box)
+        if everything:
+            self.more_box.append(label(_("Searching every package…"), "caption count-line"))
+            GLib.timeout_add(350, self._search_packages, self._gen, self.query)
+        elif not self.results:
+            self._empty()
+
+    def _empty(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER)
+        box.add_css_class("empty-state")
+        box.append(label(_("No apps match “%s”") % self.query, "empty-title", xalign=0.5, wrap=True))
+        box.append(label(_("Check the spelling or try a shorter word."), "empty-text", xalign=0.5, wrap=True))
+        self.more_box.append(box)
+
+    def _search_packages(self, gen, query):
+        if gen == self._gen:
+            self.store.search_packages(query, lambda _text, apps: self._packages(gen, apps))
+        return False
+
+    def _packages(self, gen, apps):
+        if gen != self._gen:
+            return   # the text changed meanwhile
+        clear(self.more_box)
+        shown = {a.uid for a in self.results}
+        self.packages = [a for a in apps if a.uid not in shown]
+        # The package called exactly what was typed is the answer, wherever the apps rank.
+        q = util.fold(self.query).strip()
+        exact = [a for a in self.packages if q in (util.fold(a.name), util.fold(a.pkgname))]
+        if exact and self.results:
+            self.packages = [a for a in self.packages if a not in exact]
+            top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            self.paged_grid(top, exact)
+            self.results_box.prepend(top)
+        n = len(self.results) + len(apps)
+        self.count.set_label(_("%d results") % n if n != 1 else _("1 result"))
+        if self.packages:
+            self.more_box.append(label(_("Packages and tools (%d)") % len(self.packages), "section-title", xalign=0))
+            self.paged_grid(self.more_box, self.packages)
+        elif not self.results:
+            self._empty()
 
     def _set_kind(self, k):
         self.kind = k
