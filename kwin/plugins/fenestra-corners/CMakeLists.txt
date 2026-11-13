@@ -15,7 +15,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets DBus Quick)
 find_package(KF6CoreAddons REQUIRED)
 find_package(KWin REQUIRED)
 
-add_library(fenestra_corners MODULE corners.cpp caret.cpp main.cpp)
+add_library(fenestra_corners MODULE corners.cpp caret.cpp dragstart.cpp main.cpp)
 target_link_libraries(fenestra_corners PRIVATE KWin::kwin KF6::CoreAddons Qt6::Core Qt6::Gui Qt6::DBus)
 set_target_properties(fenestra_corners PROPERTIES PREFIX "" OUTPUT_NAME "fenestra-corners")
 install(TARGETS fenestra_corners DESTINATION ${CMAKE_INSTALL_LIBDIR}/qt6/plugins/kwin/effects/plugins)
