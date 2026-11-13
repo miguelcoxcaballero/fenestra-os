@@ -42,9 +42,13 @@ def stored():
     return out
 
 
+CONTEXT = None   # must outlive the device: a collected context takes libusb down with it
+
+
 def device():
-    ctx = FPrint.Context()
-    devs = ctx.get_devices()
+    global CONTEXT
+    CONTEXT = FPrint.Context()
+    devs = CONTEXT.get_devices()
     if not devs:
         print("NO DEVICE", flush=True)
         sys.exit(3)
