@@ -2,8 +2,9 @@
 
 Search only: snapd has no catalogue to load, so snaps never show on Home or in the categories;
 they are found by Store.search_packages (GET /v2/find on snapd's socket, what `snap find` asks).
-Installing and removing run the `snap` command, which authorises through polkit like the terminal
-does. The store never runs as root.
+Installing and removing are requests to snapd too (POST /v2/snaps/<name>), which authorises them
+through polkit: the session's password dialog instead of the terminal's sudo. The store never
+runs as root.
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ import json
 import os
 import shutil
 import socket
-import subprocess
+import time
 import urllib.parse
 
 from .. import util
@@ -24,23 +25,38 @@ DESKTOP_DIR = "/var/lib/snapd/desktop/applications"
 
 
 class _Conn(http.client.HTTPConnection):
-    def __init__(self):
-        super().__init__("localhost", timeout=15)
+    def __init__(self, timeout):
+        super().__init__("localhost", timeout=timeout)
+        self._timeout = timeout
 
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.settimeout(15)
+        self.sock.settimeout(self._timeout)
         self.sock.connect(SOCKET)
 
 
-def _get(path):
-    c = _Conn()
+def _request(method, path, body=None, interactive=False):
+    """snapd's whole answer ({type, status-code, result, change}). `interactive` lets snapd ask
+    polkit for the user's password (what `sudo snap` replaces at a terminal): the question may
+    stay open for minutes, so the wait is long."""
+    c = _Conn(600 if interactive else 15)
+    headers = {}
+    data = None
+    if body is not None:
+        data = json.dumps(body).encode()
+        headers["Content-Type"] = "application/json"
+    if interactive:
+        headers["X-Allow-Interaction"] = "true"
     try:
-        c.request("GET", path)
+        c.request(method, path, body=data, headers=headers)
         r = c.getresponse()
-        data = json.loads(r.read().decode("utf-8", "replace"))
+        return json.loads(r.read().decode("utf-8", "replace"))
     finally:
         c.close()
+
+
+def _get(path):
+    data = _request("GET", path)
     if data.get("type") == "error":
         raise StoreError((data.get("result") or {}).get("message", "snapd error"))
     return data.get("result") or []
@@ -112,31 +128,53 @@ class SnapBackend(Backend):
             pass
         return None
 
-    def _run(self, args, progress, status):
+    def _change(self, name, action, progress, status, **extra):
+        """Ask snapd for a change to a snap and follow it to the end. snapd authorises through
+        polkit (io.snapcraft.snapd.manage): the session's password dialog, as for any package."""
         progress(None, status)
         try:
-            r = subprocess.run(["snap", *args], capture_output=True, text=True, timeout=1800, check=False)
-        except (OSError, subprocess.TimeoutExpired) as e:
+            ans = _request("POST", "/v2/snaps/" + urllib.parse.quote(name), {"action": action, **extra}, interactive=True)
+        except (OSError, ValueError) as e:
             raise StoreError(str(e)) from e
-        return r
+        res = ans.get("result") or {}
+        if ans.get("type") == "error":
+            if res.get("kind") == "snap-needs-classic" and not extra.get("classic"):
+                # Snaps without confinement (editors, compilers) must be asked for by name.
+                return self._change(name, action, progress, status, classic=True)
+            if ans.get("status-code") in (401, 403) or res.get("kind") in ("login-required", "auth-cancelled"):
+                raise StoreError("Authorisation was not given")
+            raise StoreError(res.get("message") or "snapd error")
+        change = ans.get("change")
+        if not change:
+            progress(1.0, "")
+            return
+        while True:
+            time.sleep(0.7)
+            try:
+                ch = _get("/v2/changes/" + change)
+            except (OSError, ValueError) as e:
+                raise StoreError(str(e)) from e
+            done = total = 0
+            for t in ch.get("tasks") or []:
+                p = t.get("progress") or {}
+                # A finished task counts whole; snapd reports bytes for downloads, 1/1 for the rest.
+                d, tt = p.get("done") or 0, p.get("total") or 0
+                if tt:
+                    done += d / tt
+                    total += 1
+            if total:
+                progress(min(done / total, 0.99), status)
+            if ch.get("ready"):
+                if ch.get("status") != "Done":
+                    raise StoreError(ch.get("err") or ch.get("summary") or "snapd error")
+                break
+        progress(1.0, "")
 
     def install(self, app, progress):
-        r = self._run(["install", app.ref], progress, "Installing")
-        if r.returncode != 0 and "--classic" in (r.stderr or ""):
-            # Snaps without confinement (editors, compilers) must be asked for by name.
-            r = self._run(["install", "--classic", app.ref], progress, "Installing")
-        if r.returncode != 0:
-            raise StoreError((r.stderr or r.stdout or "snap install failed").strip().splitlines()[-1])
-        progress(1.0, "")
+        self._change(app.ref, "install", progress, "Installing")
 
     def remove(self, app, progress):
-        r = self._run(["remove", app.ref], progress, "Uninstalling")
-        if r.returncode != 0:
-            raise StoreError((r.stderr or r.stdout or "snap remove failed").strip().splitlines()[-1])
-        progress(1.0, "")
+        self._change(app.ref, "remove", progress, "Uninstalling")
 
     def update(self, app, progress):
-        r = self._run(["refresh", app.ref], progress, "Updating")
-        if r.returncode != 0:
-            raise StoreError((r.stderr or r.stdout or "snap refresh failed").strip().splitlines()[-1])
-        progress(1.0, "")
+        self._change(app.ref, "refresh", progress, "Updating")

@@ -249,4 +249,5 @@ STRINGS = {
     '%s stars on GitHub (%s)': '%s estrellas en GitHub (%s)',
     '↓ %s Debian': '↓ %s Debian',
     '%s installs counted by Debian for this package (popcon)': '%s instalaciones contadas por Debian para este paquete (popcon)',
+    'Authorisation was not given': 'No se ha dado la autorización',
 }
