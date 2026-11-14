@@ -37,12 +37,14 @@ private:
     explicit PowerIdle(QObject *parent = nullptr);
     static void onDelayChanged(GSettings *, const char *, void *self);
     void rearm();
+    void applyAutolock();
     void timedOut(int id);
     void sleepIfQuiet();
 
     GSettings *m_settings = nullptr;
     GSettings *m_power = nullptr;
     bool m_onBattery = false;
+    int m_autolockMinutes = -1;   // what kscreenlockerrc was last told (-1: nothing yet)
     bool m_testBattery = false;
     int m_timeout = -1;
     int m_sleepTimeout = -1;
