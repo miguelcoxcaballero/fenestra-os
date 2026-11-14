@@ -3,6 +3,9 @@
 
 #include "lockosd.h"
 
+#include <algorithm>
+#include <KSharedConfig>
+#include <KConfigGroup>
 #include <KIdleTime>
 
 #include <QDBusConnection>
@@ -51,6 +54,8 @@ PowerIdle::PowerIdle(QObject *parent)
         m_power = g_settings_new("org.gnome.settings-daemon.plugins.power");
         g_signal_connect(m_power, "changed::sleep-inactive-battery-timeout", G_CALLBACK(onDelayChanged), this);
         g_signal_connect(m_power, "changed::sleep-inactive-battery-type", G_CALLBACK(onDelayChanged), this);
+        g_signal_connect(m_power, "changed::sleep-inactive-ac-timeout", G_CALLBACK(onDelayChanged), this);
+        g_signal_connect(m_power, "changed::sleep-inactive-ac-type", G_CALLBACK(onDelayChanged), this);
     }
 
     auto session = QDBusConnection::sessionBus();
@@ -83,8 +88,38 @@ void PowerIdle::batteryChanged()
     rearm();
 }
 
+// The session's locker (KWin's kscreenlocker) locks by itself after 5 idle minutes unless told
+// otherwise, on any power source: a PC left charging on the desk locked while a video played in
+// another room or a build ran. Plugged in it never locks by itself now (Win+L, the lid and
+// waking from sleep still lock); on battery it locks when the screen turns off, after the same
+// "turn off my screen after" time, never when that is set to "never".
+void PowerIdle::applyAutolock()
+{
+    int minutes = 0;
+    if (m_onBattery && m_settings) {
+        const uint delay = g_settings_get_uint(m_settings, "idle-delay");
+        minutes = delay > 0 ? std::max(1, int(delay + 59) / 60) : 0;
+    }
+    if (minutes == m_autolockMinutes) {
+        return;
+    }
+    m_autolockMinutes = minutes;
+    auto config = KSharedConfig::openConfig(QStringLiteral("kscreenlockerrc"));
+    KConfigGroup daemon = config->group(QStringLiteral("Daemon"));
+    daemon.writeEntry("Autolock", minutes > 0);
+    if (minutes > 0) {
+        daemon.writeEntry("Timeout", minutes);
+    }
+    config->sync();
+    // KWin reads the file again when asked.
+    QDBusConnection::sessionBus().asyncCall(QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.ScreenSaver"), QStringLiteral("/ScreenSaver"),
+                                                                           QStringLiteral("org.kde.screensaver"), QStringLiteral("configure")));
+    qInfo("FENESTRA_POWERIDLE autolock %s", minutes > 0 ? qPrintable(QStringLiteral("after %1 min").arg(minutes)) : "off");
+}
+
 void PowerIdle::rearm()
 {
+    applyAutolock();
     if (m_timeout >= 0) {
         KIdleTime::instance()->removeIdleTimeout(m_timeout);
         m_timeout = -1;
