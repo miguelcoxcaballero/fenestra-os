@@ -1,0 +1,105 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""fenestra-portal-login [SSID]: the sign-in page of a Wi-Fi network with a captive portal
+(hotels, cafés, airports), in a small window of its own, opened from Quick settings or
+Settings > Wi-Fi ("Open browser and connect").
+
+Not the user's browser: browsers turn http addresses into https (HTTPS-Upgrades, HSTS preload
+lists), and a portal only answers plain http until you have signed in, so the browser showed
+"This site can't be reached". This window loads the address NetworkManager checks connectivity
+with, exactly as http, in a session that keeps nothing (no cookies or HSTS memory of other
+sites), follows the portal's redirects and closes by itself once NetworkManager sees the
+internet. Links that open new windows (terms and conditions) open in the same view.
+"""
+import sys
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("WebKit", "6.0")
+gi.require_version("NM", "1.0")
+from gi.repository import GLib, Gtk, NM, WebKit  # noqa: E402
+
+FALLBACK = "http://fedoraproject.org/static/hotspot.txt"
+ES = GLib.get_language_names()[0].startswith("es")
+
+
+def tr(en, es):
+    return es if ES else en
+
+
+class Portal(Gtk.Application):
+    def __init__(self, ssid):
+        super().__init__(application_id="org.fenestra.PortalLogin")
+        self.ssid = ssid
+        self.client = None
+        self.win = None
+        self.checks = 0
+
+    def do_activate(self):
+        if self.win is not None:
+            self.win.present()
+            return
+        self.client = NM.Client.new(None)
+        uri = self.client.connectivity_check_get_uri() or ""
+        if not uri.startswith("http://"):
+            uri = FALLBACK
+        self.win = Gtk.ApplicationWindow(application=self, default_width=1000, default_height=760)
+        self.win.set_title(tr("Sign in to %s", "Iniciar sesión en %s") % self.ssid if self.ssid
+                           else tr("Sign in to the network", "Iniciar sesión en la red"))
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.info = Gtk.Label(xalign=0, wrap=True, margin_start=12, margin_end=12, margin_top=8, margin_bottom=8)
+        self.info.set_label(tr("This network asks you to sign in or accept its terms before you can use the internet.",
+                               "Esta red pide iniciar sesión o aceptar sus condiciones antes de usar internet."))
+        box.append(self.info)
+        self.view = WebKit.WebView(network_session=WebKit.NetworkSession.new_ephemeral())
+        self.view.set_vexpand(True)
+        self.view.connect("create", lambda v, _a: v)        # target=_blank: same view
+        self.view.connect("load-failed-with-tls-errors", self._tls)
+        self.view.connect("load-failed", self._failed)
+        box.append(self.view)
+        self.win.set_child(box)
+        self.win.present()
+        self.view.load_uri(uri)
+        self.client.connect("notify::connectivity", lambda *_: self._check_done())
+        GLib.timeout_add_seconds(3, self._recheck)
+
+    def _tls(self, view, uri, _cert, _errors):
+        self.info.set_label(tr("The network's page at %s has no valid certificate, so it was not opened. "
+                               "Ask the network's staff for the right address.",
+                               "La página de la red (%s) no tiene un certificado válido y no se ha abierto. "
+                               "Pide la dirección correcta al personal de la red.") % GLib.Uri.parse(uri, 0).get_host())
+        return True
+
+    def _failed(self, _view, _event, uri, error):
+        if error.matches(WebKit.NetworkError, WebKit.NetworkError.CANCELLED) or \
+                error.matches(WebKit.PolicyError, WebKit.PolicyError.FRAME_LOAD_INTERRUPTED_BY_POLICY_CHANGE):
+            return False
+        self.info.set_label(tr("The network's page did not load (%s). Make sure you are still connected to %s.",
+                               "La página de la red no ha cargado (%s). Comprueba que sigues conectado a %s.")
+                            % (error.message, self.ssid or tr("the network", "la red")))
+        return False
+
+    def _recheck(self):
+        # NetworkManager looks again every 5 minutes by itself; while the window is open, every 3 s.
+        self.checks += 1
+        if self.checks > 300 or self.win is None:
+            return False
+        self.client.check_connectivity_async(None, lambda c, r: self._checked(c, r))
+        return True
+
+    def _checked(self, client, res):
+        try:
+            client.check_connectivity_finish(res)
+        except GLib.Error:
+            pass
+        self._check_done()
+
+    def _check_done(self):
+        if self.win is not None and self.client.get_connectivity() == NM.ConnectivityState.FULL:
+            self.info.set_label(tr("Connected. You can use the internet.", "Conectado. Ya puedes usar internet."))
+            GLib.timeout_add_seconds(2, self.quit)
+
+
+if __name__ == "__main__":
+    sys.exit(Portal(sys.argv[1] if len(sys.argv) > 1 else "").run([sys.argv[0]]))

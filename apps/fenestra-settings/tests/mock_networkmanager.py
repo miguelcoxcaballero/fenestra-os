@@ -705,7 +705,7 @@ class MockNM:
             self.delay = a[0]
         if method == "SetConnectivity":   # 2 = a captive portal answered the check
             self.mgr.set(NM, Connectivity=a[0], ConnectivityCheckAvailable=True, ConnectivityCheckEnabled=True,
-                         ConnectivityCheckUri="http://check.example/hotspot.txt")
+                         ConnectivityCheckUri=os.environ.get("MOCK_CHECK_URI", "http://check.example/hotspot.txt"))
         if method == "SetStrength":
             for p in self.aps():
                 if self.ap_ssid(p) == a[0]:

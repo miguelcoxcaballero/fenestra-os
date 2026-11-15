@@ -127,9 +127,9 @@ class WifiNetworks : public QAbstractListModel
     // A scan asked for with scan() is running (the refresh button turns meanwhile).
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     // The Wi-Fi network in use stops at a sign-in page (hotel, airport, university guest network):
-    // NetworkManager's connectivity check is answered by a captive portal. As Windows, the
-    // browser opens on it once per connection by itself, and the row offers "Open browser and
-    // connect" until the check passes (asked again every few seconds meanwhile).
+    // NetworkManager's connectivity check is answered by a captive portal. The row says "Action
+    // needed" and offers "Open browser and connect" (Fenestra's sign-in window, openPortal) until
+    // the check passes (asked again every few seconds meanwhile). Nothing opens by itself.
     Q_PROPERTY(bool portal READ portal NOTIFY portalChanged)
 public:
     enum Roles { SsidRole = Qt::UserRole + 1, SignalRole, SecuredRole, ActiveRole, KnownRole, ConnectingRole,
@@ -180,7 +180,7 @@ private:
     bool m_scanning = false;
     void updatePortal();
     bool m_portal = false;
-    QString m_portalOpenedFor;          // ssid the browser was opened for (once per connection)
+    QString m_portalSsid;               // the network in use, for the sign-in window's title
     QTimer *m_portalTimer = nullptr;    // asks NetworkManager to check again while signing in
     qint64 m_portalSince = 0;
     void setScanning(bool on);

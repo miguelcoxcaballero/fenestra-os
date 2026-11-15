@@ -27,6 +27,8 @@ BuildRequires:  kwin-devel libepoxy-devel libdrm-devel
 Requires:       kwin-libs%{?_isa} = %{kwin_ver}
 %endif
 Requires:       kwin xorg-x11-server-Xwayland layer-shell-qt qt6-qtsvg kscreenlocker kscreen
+# Wi-Fi sign-in pages (session/libexec/fenestra-portal-login).
+Requires:       webkitgtk6.0 python3-gobject NetworkManager-libnm
 # Lock screen: its PAM services (kde, kde-fingerprint), Wi-Fi list, data engines, keyboard layouts, media.
 Requires:       plasma-workspace plasma-nm plasma5support
 Requires:       xdg-desktop-portal-kde xdg-desktop-portal-gtk kf6-bluez-qt pipewire-libs
@@ -92,6 +94,7 @@ fi
 %{_libexecdir}/fenestra/fenestra-shell-failed
 %{_libexecdir}/fenestra/fenestra-boot-check
 %{_libexecdir}/fenestra/fenestra-sleep-log
+%{_libexecdir}/fenestra/fenestra-portal-login
 %{_datadir}/wayland-sessions/fenestra.desktop
 %{_datadir}/applications/org.fenestra.Shell.desktop
 %{_userunitdir}/fenestra-session.target
