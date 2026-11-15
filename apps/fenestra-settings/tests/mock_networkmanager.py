@@ -132,6 +132,7 @@ IFACES = {
         "props": {},
         "methods": {"SetStrength": ("si", ""), "RemoveNetwork": ("s", ""),
                     "AddNetwork": ("siuuu", ""), "SetDelay": ("u", ""), "Log": ("", "as"),
+                    "SetConnectivity": ("u", ""),
                     "Reset": ("", "")},
         "signals": {},
     },
@@ -702,6 +703,9 @@ class MockNM:
             return list(self.log)
         if method == "SetDelay":
             self.delay = a[0]
+        if method == "SetConnectivity":   # 2 = a captive portal answered the check
+            self.mgr.set(NM, Connectivity=a[0], ConnectivityCheckAvailable=True, ConnectivityCheckEnabled=True,
+                         ConnectivityCheckUri="http://check.example/hotspot.txt")
         if method == "SetStrength":
             for p in self.aps():
                 if self.ap_ssid(p) == a[0]:

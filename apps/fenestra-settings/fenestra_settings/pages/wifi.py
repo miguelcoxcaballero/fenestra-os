@@ -212,6 +212,12 @@ class NetworkRow(Gtk.Box):
             b.append(row)
             focus = self.user_entry or self.key_entry
         elif self.net.state in ("connected", "connecting"):
+            if self.net.portal:
+                # Windows' row: the network asks to sign in on a web page first.
+                portal = button(_("Open browser and connect"), lambda *_: self.page.w.open_portal(),
+                                accent=True, css="wifi-btn")
+                portal.set_halign(Gtk.Align.START)
+                b.append(portal)
             line = Gtk.Box(spacing=8)
             props = link(_("Properties"), self._properties)
             props.set_hexpand(True)

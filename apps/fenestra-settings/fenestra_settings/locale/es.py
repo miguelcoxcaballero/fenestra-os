@@ -1454,4 +1454,7 @@ STRINGS = {
     'Leave the password empty to keep the saved one.': 'Deja la contraseña vacía para conservar la guardada.',
     'Saved. Connect again to use the new settings.': 'Guardado. Vuelve a conectarte para usar la nueva configuración.',
     "Use my institution's settings (eduroam)": 'Usar la configuración de mi institución (eduroam)',
+    'Action needed, secured': 'Acción necesaria, protegida',
+    'Action needed, open': 'Acción necesaria, abierta',
+    'Open browser and connect': 'Abrir explorador y conectar',
 }

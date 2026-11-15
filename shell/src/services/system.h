@@ -126,9 +126,14 @@ class WifiNetworks : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     // A scan asked for with scan() is running (the refresh button turns meanwhile).
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
+    // The Wi-Fi network in use stops at a sign-in page (hotel, airport, university guest network):
+    // NetworkManager's connectivity check is answered by a captive portal. As Windows, the
+    // browser opens on it once per connection by itself, and the row offers "Open browser and
+    // connect" until the check passes (asked again every few seconds meanwhile).
+    Q_PROPERTY(bool portal READ portal NOTIFY portalChanged)
 public:
     enum Roles { SsidRole = Qt::UserRole + 1, SignalRole, SecuredRole, ActiveRole, KnownRole, ConnectingRole,
-                 StatusRole, ErrorRole, EnterpriseRole };
+                 StatusRole, ErrorRole, EnterpriseRole, PortalRole };
     static WifiNetworks *instance();
     static WifiNetworks *create(QQmlEngine *, QJSEngine *);
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -140,6 +145,8 @@ public:
     void setAirplaneMode(bool on);
     bool hasWifi() const;
     bool scanning() const { return m_scanning; }
+    bool portal() const { return m_portal; }
+    Q_INVOKABLE void openPortal();
     Q_INVOKABLE void scan();
     // Known network or open one: activates it. Secured unknown one (or a saved one whose key was
     // just rejected): needs the password. Enterprise networks open Settings › Wi-Fi instead.
@@ -149,6 +156,7 @@ public:
     Q_INVOKABLE void cancel(int row);
 Q_SIGNALS:
     void enabledChanged();
+    void portalChanged();
     void scanningChanged();
     void countChanged();
     void keyRejected(const QString &ssid);
@@ -170,6 +178,11 @@ private:
     QTimer *m_rebuildTimer = nullptr;
     QTimer *m_scanTimer = nullptr;
     bool m_scanning = false;
+    void updatePortal();
+    bool m_portal = false;
+    QString m_portalOpenedFor;          // ssid the browser was opened for (once per connection)
+    QTimer *m_portalTimer = nullptr;    // asks NetworkManager to check again while signing in
+    qint64 m_portalSince = 0;
     void setScanning(bool on);
 };
 
