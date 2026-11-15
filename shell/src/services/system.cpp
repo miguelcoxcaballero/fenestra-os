@@ -2,6 +2,9 @@
 #include "system.h"
 
 #include "apps.h"
+#include <QDBusVariant>
+#include <QDateTime>
+#include <KIO/OpenUrlJob>
 
 #include <KConfigGroup>
 #include <KConfigWatcher>
@@ -372,6 +375,7 @@ WifiNetworks::WifiNetworks(QObject *parent)
     connect(n, &NetworkManager::Notifier::deviceAdded, this, [this](const QString &uni) { watchDevice(uni); Q_EMIT enabledChanged(); scheduleRebuild(); });
     connect(n, &NetworkManager::Notifier::deviceRemoved, this, [this] { Q_EMIT enabledChanged(); scheduleRebuild(); });
     connect(n, &NetworkManager::Notifier::activeConnectionsChanged, this, [this] { scheduleRebuild(); });
+    connect(n, &NetworkManager::Notifier::connectivityChanged, this, [this] { updatePortal(); });
     auto *sn = NetworkManager::settingsNotifier();
     connect(sn, &NetworkManager::SettingsNotifier::connectionAdded, this, [this] { scheduleRebuild(); });
     connect(sn, &NetworkManager::SettingsNotifier::connectionRemoved, this, [this] { scheduleRebuild(); });
@@ -559,12 +563,77 @@ void WifiNetworks::rebuild()
     }
     if (oldCount != m_nets.size())
         Q_EMIT countChanged();
+    updatePortal();
 }
 
 int WifiNetworks::rowCount(const QModelIndex &parent) const { return parent.isValid() ? 0 : m_nets.size(); }
 
+void WifiNetworks::updatePortal()
+{
+    QString ssid;
+    for (const Net &n : std::as_const(m_nets))
+        if (n.active)
+            ssid = n.ssid;
+    const bool portal = !ssid.isEmpty() && NetworkManager::connectivity() == NetworkManager::Portal;
+    if (ssid.isEmpty())
+        m_portalOpenedFor.clear();   // the next connection, even to the same network, opens it again
+    if (portal && m_portalOpenedFor != ssid) {
+        m_portalOpenedFor = ssid;
+        openPortal();
+    }
+    if (portal != m_portal) {
+        m_portal = portal;
+        m_portalSince = QDateTime::currentMSecsSinceEpoch();
+        if (!m_nets.isEmpty())
+            Q_EMIT dataChanged(index(0), index(m_nets.size() - 1), {StatusRole, PortalRole});
+        Q_EMIT portalChanged();
+        qInfo().noquote() << "FENESTRA_WIFI portal" << portal << ssid;
+    }
+    // NetworkManager checks every 5 minutes; after signing in the page would otherwise say
+    // "Action needed" that long. Ask again every 4 s for 15 minutes, then leave it to NM.
+    if (portal) {
+        if (!m_portalTimer) {
+            m_portalTimer = new QTimer(this);
+            m_portalTimer->setInterval(4000);
+            connect(m_portalTimer, &QTimer::timeout, this, [this] {
+                if (!m_portal || QDateTime::currentMSecsSinceEpoch() - m_portalSince > 15 * 60 * 1000) {
+                    m_portalTimer->stop();
+                    return;
+                }
+                QDBusConnection::systemBus().asyncCall(QDBusMessage::createMethodCall(
+                    QStringLiteral("org.freedesktop.NetworkManager"), QStringLiteral("/org/freedesktop/NetworkManager"),
+                    QStringLiteral("org.freedesktop.NetworkManager"), QStringLiteral("CheckConnectivity")));
+            });
+        }
+        if (!m_portalTimer->isActive())
+            m_portalTimer->start();
+    } else if (m_portalTimer) {
+        m_portalTimer->stop();
+    }
+}
+
+void WifiNetworks::openPortal()
+{
+    // Any plain http address is answered by the portal with its sign-in page; NetworkManager's own
+    // check address is the one the portal was just found on (Windows opens msftconnecttest.com).
+    QDBusMessage get = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.NetworkManager"), QStringLiteral("/org/freedesktop/NetworkManager"),
+                                                      QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
+    get << QStringLiteral("org.freedesktop.NetworkManager") << QStringLiteral("ConnectivityCheckUri");
+    const QDBusMessage reply = QDBusConnection::systemBus().call(get, QDBus::Block, 2000);
+    QString uri;
+    if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty())
+        uri = reply.arguments().first().value<QDBusVariant>().variant().toString();
+    if (!uri.startsWith(QLatin1String("http://")))
+        uri = QStringLiteral("http://fedoraproject.org/static/hotspot.txt");
+    auto *job = new KIO::OpenUrlJob(QUrl(uri));
+    job->setRunExecutables(false);
+    job->start();
+}
+
 QString WifiNetworks::statusOf(const Net &n) const
 {
+    if (n.active && m_portal)
+        return n.secured ? wtr("Action needed, secured", "Acción necesaria, protegida") : wtr("Action needed, open", "Acción necesaria, abierta");
     if (n.active)
         return n.secured ? wtr("Connected, secured", "Conectado, protegida") : wtr("Connected", "Conectado");
     if (n.connecting)
@@ -591,6 +660,7 @@ QVariant WifiNetworks::data(const QModelIndex &index, int role) const
     case StatusRole: return statusOf(n);
     case ErrorRole: return m_errors.value(n.ssid);
     case EnterpriseRole: return n.enterprise;
+    case PortalRole: return n.active && m_portal;
     }
     return {};
 }
@@ -598,7 +668,7 @@ QVariant WifiNetworks::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> WifiNetworks::roleNames() const
 {
     return {{SsidRole, "ssid"}, {SignalRole, "signal"}, {SecuredRole, "secured"}, {ActiveRole, "active"}, {KnownRole, "known"},
-            {ConnectingRole, "connecting"}, {StatusRole, "status"}, {ErrorRole, "error"}, {EnterpriseRole, "enterprise"}};
+            {ConnectingRole, "connecting"}, {StatusRole, "status"}, {ErrorRole, "error"}, {EnterpriseRole, "enterprise"}, {PortalRole, "portal"}};
 }
 
 bool WifiNetworks::needsPassword(int row) const

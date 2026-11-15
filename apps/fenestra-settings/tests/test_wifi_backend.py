@@ -144,6 +144,18 @@ def main():
     check("key-mgmt wpa-psk", p and p[0].get_setting_wireless_security().get_key_mgmt() == "wpa-psk")
     check("previous network no longer connected", net(w, "HomeNetwork").state is None)
 
+    print("captive portal")
+    att = run_connect(w, net(w, "Cafe-Guest"))
+    mock("SetConnectivity", 2, sig="u")
+    pump(2, lambda: net(w, "Cafe-Guest").portal)
+    n = net(w, "Cafe-Guest")
+    check("portal detected on the connected network", n.portal and n.state == "connected", (n.portal, n.state))
+    check("portal status text", n.status_text() == "Action needed, open", n.status_text())
+    check("portal check address", w.client.connectivity_check_get_uri() == "http://check.example/hotspot.txt")
+    mock("SetConnectivity", 4, sig="u")
+    pump(2, lambda: not net(w, "Cafe-Guest").portal)
+    check("signed in: portal gone", not net(w, "Cafe-Guest").portal and net(w, "Cafe-Guest").status_text() == "Connected")
+
     print("WPA3-only, open, enterprise, WEP, hidden")
     att = run_connect(w, net(w, "WPA3-Only"), key="sae-password")
     check("SAE connected", att.phase == "connected", (att.phase, att.error))

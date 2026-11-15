@@ -29,11 +29,12 @@ Flyout {
     property ListModel testWifi: ListModel {}
     property ListModel testDevices: ListModel {}
     property int testAsk: -1
-    function testFill(networks, devices) {
+    function testFill(networks, devices, portal) {
         testWifi.clear(); testDevices.clear()
         for (let i = 0; i < networks; ++i)
             testWifi.append({ ssid: "Network " + (i + 1), signal: 100 - (i * 7) % 90, active: i === 0, secured: i % 3 !== 2, enterprise: i === 1,
-                              connecting: false, status: i === 0 ? "Connected" : i % 3 !== 2 ? "Secured" : "Open" })
+                              connecting: false, portal: i === 0 && !!portal,
+                              status: i === 0 ? (portal ? "Action needed, secured" : "Connected") : i % 3 !== 2 ? "Secured" : "Open" })
         for (let i = 0; i < devices; ++i)
             testDevices.append({ Name: "Device " + (i + 1), Paired: true, Connected: i === 0, Icon: "audio-headphones" })
     }
@@ -406,7 +407,9 @@ Flyout {
                     required property int index
                     required property var model
                     property bool asking: qs.testAsk === index
-                    x: 8; width: Metrics.quickWidth - 16; height: !asking ? 48 : model.enterprise ? 176 : 96; radius: 4
+                    // A sign-in page in the way (captive portal): Windows' button to open it under the row.
+                    readonly property bool signIn: !!model.portal && !asking
+                    x: 8; width: Metrics.quickWidth - 16; height: signIn ? 92 : !asking ? 48 : model.enterprise ? 176 : 96; radius: 4
                     color: wm.containsMouse || asking ? Theme.hover : "transparent"
                     SymbolicIcon { monochrome: true; x: 12; y: 16; name: "network-wireless-signal-" + ["none", "weak", "ok", "good", "excellent"][Math.min(4, Math.floor(model.signal / 20))] + "-symbolic" }
                     Column { x: 40; y: 8
@@ -417,6 +420,17 @@ Flyout {
                         onClicked: model.active ? WifiNetworks.disconnectFrom(index)
                                    : model.connecting ? WifiNetworks.cancel(index)
                                    : WifiNetworks.needsPassword(index) ? (parent.asking = true, (model.enterprise ? user : pw).forceActiveFocus()) : WifiNetworks.connectTo(index) }
+                    Rectangle {
+                        id: portalButton
+                        visible: parent.signIn
+                        x: 40; y: 52; height: 32; radius: 4
+                        width: portalLabel.implicitWidth + 24
+                        color: pbm.pressed ? Theme.accentPress : pbm.containsMouse ? Theme.accentHover : Theme.accentFill
+                        Text { id: portalLabel; anchors.centerIn: parent; text: Strings.tr("Open browser and connect")
+                               color: Theme.accentOn; font.family: Metrics.fontFamily; font.pixelSize: 13 }
+                        MouseArea { id: pbm; anchors.fill: parent; hoverEnabled: true
+                                    onClicked: { qs.close(); WifiNetworks.openPortal() } }
+                    }
                     Connections { target: WifiNetworks
                         // wrong key: the password field comes back, the status shows Windows' message
                         function onKeyRejected(ssid) { if (ssid === model.ssid) { pw.parent.parent.asking = true; pw.text = ""; pw.forceActiveFocus() } } }

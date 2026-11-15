@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import time
 
-from gi.repository import GLib
+from gi.repository import Gio, GLib
 
 from .. import util
 from ..i18n import C_, _
@@ -122,6 +122,7 @@ class Network:
         self.connections = []                 # saved profiles usable with this network
         self.state = None                     # None, "connecting", "connected"
         self.no_internet = False
+        self.portal = False                   # stopped at a sign-in page (captive portal)
         self.frequency = 0
 
     @property
@@ -146,6 +147,8 @@ class Network:
 
     def status_text(self):
         if self.state == "connected":
+            if self.portal:
+                return _("Action needed, secured") if self.secured else _("Action needed, open")
             if self.no_internet:
                 return _("No internet, secured") if self.secured else _("No internet, open")
             return _("Connected, secured") if self.secured else _("Connected")
@@ -366,11 +369,27 @@ class Wifi:
                 n.state = "connected" if dstate == ST_ACTIVATED else \
                     "connecting" if ST_PREPARE <= dstate < ST_ACTIVATED else None
                 n.no_internet = n.state == "connected" and connectivity in (1, 3)  # none / limited
+                n.portal = n.state == "connected" and connectivity == 2
         out = [n for k, n in nets.items() if k is not None]
         out.sort(key=lambda n: (n.state is None, -n.strength, n.ssid.lower()))
         if None in nets:
             out.append(nets[None])
         return out
+
+    def open_portal(self):
+        """The network's sign-in page in the default browser: any plain http address is answered
+        with it, and NetworkManager's own check address is the one the portal was found on."""
+        uri = ""
+        try:
+            uri = self.client.connectivity_check_get_uri() or ""
+        except (AttributeError, GLib.Error):
+            pass
+        if not uri.startswith("http://"):
+            uri = "http://fedoraproject.org/static/hotspot.txt"
+        try:
+            Gio.AppInfo.launch_default_for_uri(uri, None)
+        except GLib.Error as e:
+            util.log("portal: could not open the browser", e)
 
     def current(self) -> Network | None:
         for n in self.networks():
