@@ -36,13 +36,15 @@ const QString kLogin1Path = QStringLiteral("/org/freedesktop/login1");
 const QString kLogin1Manager = QStringLiteral("org.freedesktop.login1.Manager");
 const QString kNightColor = QStringLiteral("NightColor");
 const char kDayKey[] = "DayTemperature";
-// What Fenestra wrote, and the user's own value before it: KWin ignores unknown keys.
+// What earlier versions wrote over DayTemperature, and the user's value before it.
 const char kOursKey[] = "X-Fenestra-AdaptiveColor";
 const char kBaseKey[] = "X-Fenestra-DayTemperature";
+// Night light's own temperature (Windows' "Strength"), kept apart from what KWin is told.
+const char kNightKey[] = "X-Fenestra-NightTemperature";
+constexpr int kDefaultNightK = 4500;
 
 constexpr int kStepK = 100;            // KWin ramps each step in 50 K steps of its own
 constexpr int kTickMs = 500;           // Windows' ColorTransitionMinTransitionTime is 300 ms
-constexpr int kKeepAliveMs = 8000;     // KWin ends a preview after 15 s
 constexpr double kResumeAfter = 15.0;  // Windows: lid open within 15 s keeps the last white point
 constexpr double kQuickSeconds = 1.5;  // ... after longer, the new white point within ~1 s
 constexpr double kStartSeconds = 2.0;  // turning the feature on: quick, but subtle
@@ -102,8 +104,14 @@ AdaptiveColor::AdaptiveColor(QObject *parent)
     m_clock.start();
     const QByteArray fake = qgetenv("FENESTRA_ALS_PATH");
     m_sensorDir = QString::fromStdString(AlsSysfs::find(fake.isEmpty() ? std::string("/sys/bus/iio/devices") : fake.toStdString()));
+    m_nightLight = ShellSettings::instance()->value(QStringLiteral("Display/NightLight"), false).toBool();
+    cleanOldKeys();
     if (m_sensorDir.isEmpty()) {
         qCInfo(lcAdaptive) << "no ambient light sensor with colour: Adaptive color unavailable";
+        // Night light alone still drives the pipeline.
+        writePipeline(m_nightLight, nightTemperature());
+        connect(ShellSettings::instance(), &ShellSettings::fileChanged, this, &AdaptiveColor::readSetting);
+        connect(qApp, &QCoreApplication::aboutToQuit, this, [this] { m_quitting = true; });
         return;
     }
     qCInfo(lcAdaptive) << "colour light sensor" << m_sensorDir;
@@ -127,32 +135,9 @@ AdaptiveColor::AdaptiveColor(QObject *parent)
     });
     m_tickTimer.setInterval(kTickMs);
     connect(&m_tickTimer, &QTimer::timeout, this, &AdaptiveColor::tick);
-    m_keepAlive.setInterval(kKeepAliveMs);
-    m_keepAlive.setTimerType(Qt::CoarseTimer);
-    connect(&m_keepAlive, &QTimer::timeout, this, [this] {
-        if (m_previewing)
-            preview(m_sentK);
-    });
-
-    // The user's (or KDE's) own DayTemperature, and leftovers of a shell that did not exit.
+    // The user's (or KDE's) own DayTemperature: the cap.
     readKWinConfig();
-    m_follower = Follower(m_wroteDay ? nightColor().readEntry(kDayKey, kMaxTemperature) : kMaxTemperature);
-    auto watcher = KConfigWatcher::create(KSharedConfig::openConfig(QStringLiteral("kwinrc")));
-    connect(watcher.data(), &KConfigWatcher::configChanged, this, [this](const KConfigGroup &group) {
-        if (group.name() != kNightColor)
-            return;
-        const int day = std::clamp(group.readEntry(kDayKey, kMaxTemperature), 1000, kMaxTemperature);
-        if (m_wroteDay ? day != m_lastDay : day != m_baseDay) {
-            // Someone else (KDE's Night light page) set the day temperature: that is the cap now.
-            m_baseDay = day;
-            m_wroteDay = false;
-            m_sentK = 0;
-            qCInfo(lcAdaptive) << "day temperature set elsewhere:" << day;
-            update();
-        }
-    });
-    static KConfigWatcher::Ptr keep;
-    keep = watcher;
+    m_follower = Follower(kMaxTemperature);
 
     connect(ShellSettings::instance(), &ShellSettings::fileChanged, this, &AdaptiveColor::readSetting);
 
@@ -163,14 +148,12 @@ AdaptiveColor::AdaptiveColor(QObject *parent)
                 QStringLiteral("ActiveChanged"), this, SLOT(onScreenSaver(bool)));
     m_kwinWatcher = new QDBusServiceWatcher(kKWin, bus, QDBusServiceWatcher::WatchForRegistration | QDBusServiceWatcher::WatchForUnregistration, this);
     connect(m_kwinWatcher, &QDBusServiceWatcher::serviceRegistered, this, [this] {
-        m_previewing = false; // a new KWin has no preview of ours
         m_sentK = 0;
         m_nlKnown = false;
         queryNightLight();
     });
     connect(m_kwinWatcher, &QDBusServiceWatcher::serviceUnregistered, this, [this] {
         m_kwin = false;
-        m_previewing = false;
         update();
     });
     auto sys = QDBusConnection::systemBus();
@@ -202,7 +185,6 @@ AdaptiveColor::AdaptiveColor(QObject *parent)
         m_quitting = true;
         m_sampleTimer.stop();
         m_tickTimer.stop();
-        m_keepAlive.stop();
         restore();
         m_thread.quit();
         m_thread.wait(1000);
@@ -238,6 +220,11 @@ AdaptiveColor::~AdaptiveColor()
 
 void AdaptiveColor::readSetting()
 {
+    const bool night = ShellSettings::instance()->value(QStringLiteral("Display/NightLight"), false).toBool();
+    if (night != m_nightLight)
+        setNightLight(night);
+    if (!available())
+        return;
     const bool on = ShellSettings::instance()->value(QStringLiteral("Display/AdaptiveColor"), true).toBool();
     if (on == m_enabled)
         return;
@@ -253,19 +240,58 @@ void AdaptiveColor::readKWinConfig()
 {
     KSharedConfig::openConfig(QStringLiteral("kwinrc"))->reparseConfiguration();
     const KConfigGroup g = nightColor();
-    const int day = std::clamp(g.readEntry(kDayKey, kMaxTemperature), 1000, kMaxTemperature);
-    const int ours = g.readEntry(kOursKey, 0);
-    if (ours != 0 && ours == day) {
-        // Left by a shell that did not exit cleanly: carry on from there.
-        m_baseDay = std::clamp(g.readEntry(kBaseKey, kMaxTemperature), 1000, kMaxTemperature);
-        m_wroteDay = true;
-        m_sentK = day;
-        m_lastDay = day;
-        m_appliedK = day;
-    } else {
-        m_baseDay = day;
-        m_wroteDay = false;
+    // An earlier version's own value is not the user's: the note before it is.
+    const int day = g.hasKey(kBaseKey) ? g.readEntry(kBaseKey, kMaxTemperature) : g.readEntry(kDayKey, kMaxTemperature);
+    m_baseDay = std::clamp(day, 1000, kMaxTemperature);
+}
+
+void AdaptiveColor::cleanOldKeys()
+{
+    KConfigGroup g = nightColor();
+    if (!g.hasKey(kOursKey) && !g.hasKey(kBaseKey))
+        return;
+    const int base = std::clamp(g.readEntry(kBaseKey, kMaxTemperature), 1000, kMaxTemperature);
+    if (base >= kMaxTemperature)
+        g.deleteEntry(kDayKey);
+    else
+        g.writeEntry(kDayKey, base);
+    g.deleteEntry(kOursKey);
+    g.deleteEntry(kBaseKey);
+    g.sync();
+}
+
+int AdaptiveColor::nightTemperature()
+{
+    return std::clamp(nightColor().readEntry(kNightKey, kDefaultNightK), 1000, kMaxTemperature);
+}
+
+void AdaptiveColor::setNightLight(bool on)
+{
+    if (on == m_nightLight && (m_lastWritten != 0) == on)
+        return;
+    m_nightLight = on;
+    qCInfo(lcAdaptive) << "Night light" << on;
+    if (on) {
+        writePipeline(true, nightTemperature());
+    } else if (!available() || output() != Output::Constant) {
+        writePipeline(false, kMaxTemperature);
     }
+    m_sentK = 0;   // Adaptive color writes its own value again right away
+    if (available())
+        update();
+    Q_EMIT changed();
+}
+
+void AdaptiveColor::writePipeline(bool active, int kelvin)
+{
+    KConfigGroup g = nightColor();
+    // KConfig::Notify: KWin's config watcher reconfigures Night light, which ramps there.
+    g.writeEntry("Mode", QStringLiteral("Constant"), KConfig::Notify);
+    if (active)
+        g.writeEntry("NightTemperature", kelvin, KConfig::Notify);
+    g.writeEntry("Active", active, KConfig::Notify);
+    g.sync();
+    m_lastWritten = active ? kelvin : 0;
 }
 
 void AdaptiveColor::queryNightLight()
@@ -353,15 +379,13 @@ AdaptiveColor::Output AdaptiveColor::output() const
 {
     if (!available() || !m_enabled || !m_kwin || m_nlInhibited)
         return Output::None;
-    if (m_nlRunning)
-        return m_nlDaylight ? Output::DayTemperature : Output::Hold;
-    return Output::Preview;
+    return m_nightLight ? Output::Hold : Output::Constant;
 }
 
 bool AdaptiveColor::sampling() const
 {
     const Output o = output();
-    return (o == Output::DayTemperature || o == Output::Preview) && !m_locked && !m_lidClosed;
+    return o == Output::Constant && !m_locked && !m_lidClosed;
 }
 
 void AdaptiveColor::update()
@@ -371,8 +395,6 @@ void AdaptiveColor::update()
     const Output o = output();
     if (o != m_output) {
         qCInfo(lcAdaptive) << "output" << int(m_output) << "->" << int(o);
-        if (m_output == Output::Preview && m_previewing)
-            stopPreview();
         if (o == Output::None) {
             restore();
             m_follower.goTo(m_baseDay, now(), 0);
@@ -380,7 +402,7 @@ void AdaptiveColor::update()
             m_fresh = true;
             Q_EMIT changed();
         }
-        m_sentK = m_wroteDay && o == Output::DayTemperature ? m_sentK : 0;
+        m_sentK = 0;
         m_output = o;
     }
 
@@ -400,7 +422,7 @@ void AdaptiveColor::update()
         m_pausedAt = now();
     }
 
-    if (o == Output::DayTemperature || o == Output::Preview) {
+    if (o == Output::Constant) {
         if (!m_fresh)
             apply(quantise(m_follower.currentKelvin(now())));
         if (m_follower.moving(now()) && !m_tickTimer.isActive())
@@ -408,8 +430,6 @@ void AdaptiveColor::update()
     } else {
         m_tickTimer.stop();
     }
-    if (m_previewing != m_keepAlive.isActive())
-        m_previewing ? m_keepAlive.start() : m_keepAlive.stop();
 }
 
 void AdaptiveColor::onSample(bool hasXy, double x, double y, bool hasCct, double cct, bool hasLux, double lux)
@@ -457,80 +477,26 @@ void AdaptiveColor::tick()
 void AdaptiveColor::apply(int kelvin)
 {
     kelvin = std::min(kelvin, m_baseDay);
-    switch (m_output) {
-    case Output::DayTemperature:
-        if (kelvin != m_sentK) {
-            writeDayTemperature(kelvin);
-            m_sentK = kelvin;
-        }
-        break;
-    case Output::Preview:
-        if (kelvin >= kMaxTemperature) {
-            if (m_previewing)
-                stopPreview();
-        } else if (kelvin != m_sentK || !m_previewing) {
-            preview(kelvin);
-        }
-        m_sentK = kelvin;
-        break;
-    case Output::None:
-    case Output::Hold:
+    if (m_output != Output::Constant)
         return;
+    if (kelvin != m_sentK) {
+        writePipeline(kelvin < kMaxTemperature, kelvin);
+        m_sentK = kelvin;
     }
-    if (m_previewing != m_keepAlive.isActive())
-        m_previewing ? m_keepAlive.start() : m_keepAlive.stop();
     if (kelvin != m_appliedK) {
         m_appliedK = kelvin;
-        qCDebug(lcAdaptive) << "applied" << kelvin << "K via" << (m_output == Output::Preview ? "preview" : "DayTemperature");
+        qCDebug(lcAdaptive) << "applied" << kelvin << "K";
         Q_EMIT changed();
     }
 }
 
-void AdaptiveColor::writeDayTemperature(int kelvin)
-{
-    KConfigGroup g = nightColor();
-    g.writeEntry(kBaseKey, m_baseDay);
-    g.writeEntry(kOursKey, kelvin);
-    // KConfig::Notify: KWin's config watcher reconfigures Night light, which ramps there.
-    g.writeEntry(kDayKey, kelvin, KConfig::Notify);
-    g.sync();
-    m_wroteDay = true;
-    m_lastDay = kelvin;
-}
-
 void AdaptiveColor::restore()
 {
-    if (m_previewing)
-        stopPreview();
-    if (m_wroteDay) {
-        KConfigGroup g = nightColor();
-        if (m_baseDay >= kMaxTemperature)
-            g.deleteEntry(kDayKey, KConfig::Notify);
-        else
-            g.writeEntry(kDayKey, m_baseDay, KConfig::Notify);
-        g.deleteEntry(kOursKey);
-        g.deleteEntry(kBaseKey);
-        g.sync();
-        m_wroteDay = false;
-    }
+    // Night light keeps its warm white (and survives the shell: KWin applies it alone).
+    if (m_nightLight)
+        writePipeline(true, nightTemperature());
+    else if (m_lastWritten != 0 || m_quitting)
+        writePipeline(false, kMaxTemperature);
     m_sentK = 0;
 }
 
-void AdaptiveColor::preview(int kelvin)
-{
-    QDBusMessage m = QDBusMessage::createMethodCall(kKWin, kNightLightPath, kNightLightIface, QStringLiteral("preview"));
-    m.setArguments({uint(kelvin)});
-    QDBusConnection::sessionBus().send(m);
-    m_previewing = true;
-}
-
-void AdaptiveColor::stopPreview()
-{
-    QDBusMessage m = QDBusMessage::createMethodCall(kKWin, kNightLightPath, kNightLightIface, QStringLiteral("stopPreview"));
-    // Blocking on quit, so the message leaves before the connection closes.
-    if (m_quitting)
-        QDBusConnection::sessionBus().call(m, QDBus::Block, 500);
-    else
-        QDBusConnection::sessionBus().send(m);
-    m_previewing = false;
-}

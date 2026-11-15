@@ -2,6 +2,8 @@
 #include "system.h"
 
 #include "apps.h"
+#include "shellsettings.h"
+#include "adaptivecolor.h"
 #include <QDBusVariant>
 #include <QDateTime>
 #include <KIO/OpenUrlJob>
@@ -941,29 +943,19 @@ SINGLETON(NightLight)
 NightLight::NightLight(QObject *parent)
     : QObject(parent)
 {
-    auto watcher = KConfigWatcher::create(KSharedConfig::openConfig(QStringLiteral("kwinrc")));
-    connect(watcher.data(), &KConfigWatcher::configChanged, this, [this](const KConfigGroup &group) {
-        if (group.name() == QLatin1String("NightColor"))
-            Q_EMIT changed();
-    });
-    // The watcher lives as long as the shell (this singleton is never destroyed).
-    static KConfigWatcher::Ptr keep;
-    keep = watcher;
+    // AdaptiveColor drives KWin's colour pipeline for both (they share it).
+    connect(AdaptiveColor::instance(), &AdaptiveColor::changed, this, &NightLight::changed);
 }
 
 bool NightLight::active() const
 {
-    auto cfg = KSharedConfig::openConfig(QStringLiteral("kwinrc"));
-    cfg->reparseConfiguration();
-    return cfg->group(QStringLiteral("NightColor")).readEntry("Active", false);
+    return AdaptiveColor::instance()->nightLight();
 }
 
 void NightLight::setActive(bool on)
 {
-    auto cfg = KSharedConfig::openConfig(QStringLiteral("kwinrc"));
-    cfg->group(QStringLiteral("NightColor")).writeEntry("Active", on, KConfig::Notify);
-    cfg->sync();
-    QDBusConnection::sessionBus().asyncCall(QDBusMessage::createMethodCall(QStringLiteral("org.kde.KWin"), QStringLiteral("/KWin"),
-                                                                           QStringLiteral("org.kde.KWin"), QStringLiteral("reconfigure")));
+    // As Windows' Quick settings toggle: on now and all day, until turned off.
+    ShellSettings::instance()->setValue(QStringLiteral("Display/NightLight"), on);
+    AdaptiveColor::instance()->setNightLight(on);
     Q_EMIT changed();
 }

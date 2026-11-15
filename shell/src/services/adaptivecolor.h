@@ -10,16 +10,18 @@
 // locked, the lid is closed, Night light owns the screen, or the feature is off.
 //
 // Output: KWin's Night light pipeline (blackbody channel factors on every output, in the
-// colour pipeline / CRTC: no repaint cost, no flicker):
-//   - Night light on, daytime: kwinrc [NightColor] DayTemperature = the adapted temperature.
-//     KWin uses it as the day end of its schedule, so at night Night light's own temperature
-//     applies and the evening/morning transitions blend from and to the adapted white.
-//   - Night light on, night (or Constant mode): Night light wins, Adaptive color holds.
-//   - Night light off: org.kde.KWin.NightLight.preview(temperature), renewed every 8 s (KWin
-//     drops a preview after 15 s, so a dead shell leaves no tint behind); kwinrc is not touched.
+// colour pipeline / CRTC: no repaint cost, no flicker), which Fenestra drives in Constant mode
+// with one temperature: [NightColor] Active, Mode=Constant, NightTemperature.
+//   - Night light on (Quick settings; shell.conf [Display] NightLight): its warm temperature,
+//     at once and all day, as Windows' toggle; Adaptive color holds meanwhile.
+//   - Night light off, Adaptive color on: the adapted temperature, written as it changes
+//     (KWin ramps between values).
+//   - Both off: the pipeline is off (Active=false), the screen neutral.
 //   - Night light suspended (inhibited: "colour-accurate" request): nothing applies.
-// The user's own DayTemperature (if they lowered it) is the cap and is restored on exit or
-// when the feature is turned off.
+// The two used to share the pipeline the other way round (Night light's schedule, Adaptive
+// color on its day end or a 15 s preview), so the toggle did nothing by day and turning it off
+// dropped the adapted white for several seconds.
+// The user's own DayTemperature (if they lowered it) caps the adapted temperature.
 //   shell.conf [Display] AdaptiveColor=true|false (Settings > System > Display), default on.
 //   FENESTRA_ALS_PATH: sensor directory (fake sysfs tree for tests).
 //   QT_LOGGING_RULES="fenestra.adaptivecolor.debug=true": log every sample.
@@ -74,6 +76,10 @@ public:
     int ambientTemperature() const { return m_ambientK; }
     double illuminance() const { return m_lux; }
     int temperature() const { return m_appliedK; }
+    // Night light (Quick settings): owned here because it shares the pipeline.
+    bool nightLight() const { return m_nightLight; }
+    void setNightLight(bool on);
+    static int nightTemperature();     // its warm temperature (K)
 
 Q_SIGNALS:
     void changed();
@@ -85,7 +91,7 @@ private Q_SLOTS:
     void onPrepareForSleep(bool sleeping);
 
 private:
-    enum class Output { None, DayTemperature, Preview, Hold };
+    enum class Output { None, Constant, Hold };
 
     explicit AdaptiveColor(QObject *parent = nullptr);
     void readSetting();
@@ -97,10 +103,9 @@ private:
     void update();          // re-evaluates what runs (sampling, output path)
     void tick();            // one step of the transition
     void apply(int kelvin); // sends a temperature down the current output path
-    void restore();         // gives the screen back (user's DayTemperature, no preview)
-    void writeDayTemperature(int kelvin);
-    void preview(int kelvin);
-    void stopPreview();
+    void restore();         // gives the screen back (pipeline off unless Night light is on)
+    void writePipeline(bool active, int kelvin);   // kwinrc [NightColor], KWin follows
+    void cleanOldKeys();    // what earlier versions wrote (DayTemperature and its notes)
     Output output() const;
     bool sampling() const;
     double now() const { return m_clock.elapsed() / 1000.0; }
@@ -108,7 +113,7 @@ private:
     QString m_sensorDir;
     QThread m_thread;
     AlsWorker *m_worker = nullptr;
-    QTimer m_sampleTimer, m_tickTimer, m_keepAlive;
+    QTimer m_sampleTimer, m_tickTimer;
     QElapsedTimer m_clock;
     QDBusServiceWatcher *m_kwinWatcher = nullptr;
     AdaptiveColorModel::Follower m_follower;
@@ -119,14 +124,13 @@ private:
     bool m_nlRunning = false, m_nlInhibited = false, m_nlDaylight = true;
     bool m_fresh = true;            // next sample starts a quick transition (start, unlock, lid open)
     bool m_sampleInFlight = false;
-    bool m_previewing = false;
+    bool m_nightLight = false;
     bool m_quitting = false;
-    bool m_wroteDay = false;        // DayTemperature currently holds our value
     double m_pausedAt = -1;
     int m_baseDay = AdaptiveColorModel::kMaxTemperature; // the user's own DayTemperature
     int m_appliedK = AdaptiveColorModel::kMaxTemperature;
     int m_sentK = 0;                // last value sent down the output path
-    int m_lastDay = 0;              // last DayTemperature written to kwinrc
+    int m_lastWritten = 0;          // last NightTemperature written (0: pipeline off)
     bool m_nlKnown = false;         // Night light's state was read once
     int m_ambientK = 0;
     double m_lux = 0;
