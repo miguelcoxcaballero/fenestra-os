@@ -84,6 +84,9 @@ Window {
                     onGone: Notifications.hidePopup(toast.modelData.notificationId)
                 }
                 Connections { target: toastMotion.shift; function onXChanged() { if (!backdrop.acrylicOn) backdrop.updateBlur() } }
+                // The clickable region follows the banner where it rests: taken while it slid in
+                // (still off to the right) it missed the banner, and its buttons took no clicks.
+                Connections { target: toastMotion; function onBusyChanged() { if (!toastMotion.busy) settle.restart() } }
                 Component.onCompleted: { toastMotion.enter(); material.backdrop.shift = toastMotion.shift }
             }
         }

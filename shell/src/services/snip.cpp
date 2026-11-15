@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <functional>
+#include <QProcess>
 #include <QFile>
 #include <memory>
 #include <atomic>
@@ -316,9 +317,18 @@ void Snip::finish(const QImage &image, bool toClipboard)
         es ? QStringLiteral("Captura de pantalla copiada en el portapapeles") : QStringLiteral("Screenshot copied to clipboard"),
         es ? QStringLiteral("Se guardó automáticamente en la carpeta de capturas de pantalla.") : QStringLiteral("Automatically saved to screenshots folder."),
         path, {QVariantMap{{QStringLiteral("key"), QStringLiteral("open")}, {QStringLiteral("label"), es ? QStringLiteral("Marcar y compartir") : QStringLiteral("Mark-up and share")}}});
-    connect(Notifications::instance(), &Notifications::shellAction, this, [id, path](uint which, const QString &) {
-        if (which == id)
-            Apps::instance()->runCommand(QStringLiteral("xdg-open \"%1\"").arg(path));
+    // "Mark-up and share" (and a click on the banner) opens the capture to draw on, as Windows
+    // opens it in Snipping Tool's editor: Fenestra Paint, else the image viewer.
+    auto *ctx = new QObject(this);
+    connect(Notifications::instance(), &Notifications::shellAction, ctx, [id, path, ctx](uint which, const QString &) {
+        if (which != id)
+            return;
+        const QString paint = QStandardPaths::findExecutable(QStringLiteral("fenestra-paint"));
+        if (!paint.isEmpty())
+            QProcess::startDetached(paint, {path});
+        else
+            QProcess::startDetached(QStringLiteral("xdg-open"), {path});
+        ctx->deleteLater();
     });
 }
 

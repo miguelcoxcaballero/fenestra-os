@@ -50,6 +50,7 @@ bootcheck() {
     # Without root: the units in the user's own systemd directory, pulled in by the session target.
     local n
     mkdir -p "$CONF/systemd/user/fenestra-session.target.d"
+    install -Dm755 "$REPO/session/libexec/fenestra-portal-login" "$HOME/.local/libexec/fenestra/fenestra-portal-login" || return 1
     for n in fenestra-boot-check fenestra-sleep-log; do
         install -Dm755 "$REPO/session/libexec/$n" "$HOME/.local/libexec/fenestra/$n" || return 1
         sed "s|^ExecStart=.*|ExecStart=$HOME/.local/libexec/fenestra/$n|" "$REPO/session/systemd/$n.service" > "$CONF/systemd/user/$n.service"

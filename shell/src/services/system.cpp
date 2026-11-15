@@ -31,6 +31,7 @@
 #include <QDBusReply>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QStandardPaths>
 #include <algorithm>
 #include <QDebug>
@@ -575,12 +576,7 @@ void WifiNetworks::updatePortal()
         if (n.active)
             ssid = n.ssid;
     const bool portal = !ssid.isEmpty() && NetworkManager::connectivity() == NetworkManager::Portal;
-    if (ssid.isEmpty())
-        m_portalOpenedFor.clear();   // the next connection, even to the same network, opens it again
-    if (portal && m_portalOpenedFor != ssid) {
-        m_portalOpenedFor = ssid;
-        openPortal();
-    }
+    m_portalSsid = ssid;
     if (portal != m_portal) {
         m_portal = portal;
         m_portalSince = QDateTime::currentMSecsSinceEpoch();
@@ -614,18 +610,16 @@ void WifiNetworks::updatePortal()
 
 void WifiNetworks::openPortal()
 {
-    // Any plain http address is answered by the portal with its sign-in page; NetworkManager's own
-    // check address is the one the portal was just found on (Windows opens msftconnecttest.com).
-    QDBusMessage get = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.NetworkManager"), QStringLiteral("/org/freedesktop/NetworkManager"),
-                                                      QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
-    get << QStringLiteral("org.freedesktop.NetworkManager") << QStringLiteral("ConnectivityCheckUri");
-    const QDBusMessage reply = QDBusConnection::systemBus().call(get, QDBus::Block, 2000);
-    QString uri;
-    if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty())
-        uri = reply.arguments().first().value<QDBusVariant>().variant().toString();
-    if (!uri.startsWith(QLatin1String("http://")))
-        uri = QStringLiteral("http://fedoraproject.org/static/hotspot.txt");
-    auto *job = new KIO::OpenUrlJob(QUrl(uri));
+    // Fenestra's sign-in window (session/libexec/fenestra-portal-login): browsers turn the http
+    // address a portal answers into https and show "This site can't be reached".
+    for (const QString &path : {QStringLiteral("/usr/libexec/fenestra/fenestra-portal-login"),
+                                QDir::homePath() + QStringLiteral("/.local/libexec/fenestra/fenestra-portal-login")}) {
+        if (QFileInfo(path).isExecutable()) {
+            QProcess::startDetached(path, {m_portalSsid});
+            return;
+        }
+    }
+    auto *job = new KIO::OpenUrlJob(QUrl(QStringLiteral("http://fedoraproject.org/static/hotspot.txt")));
     job->setRunExecutables(false);
     job->start();
 }

@@ -386,6 +386,15 @@ class Wifi:
             pass
         if not uri.startswith("http://"):
             uri = "http://fedoraproject.org/static/hotspot.txt"
+        # Fenestra's sign-in window: browsers turn the portal's http address into https.
+        import os
+        import subprocess
+        cur = self.current()
+        for path in ("/usr/libexec/fenestra/fenestra-portal-login",
+                     os.path.expanduser("~/.local/libexec/fenestra/fenestra-portal-login")):
+            if os.access(path, os.X_OK):
+                subprocess.Popen([path, cur.ssid if cur else ""], start_new_session=True)
+                return
         try:
             Gio.AppInfo.launch_default_for_uri(uri, None)
         except GLib.Error as e:
