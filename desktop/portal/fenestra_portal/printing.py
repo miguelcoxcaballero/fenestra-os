@@ -103,6 +103,7 @@ class Choice:
     duplex: str = "simplex"           # simplex | long | short
     output_uri: str = ""              # Save as PDF target
     extra: dict = field(default_factory=dict)   # app-provided settings we do not show, passed through
+    driver: dict = field(default_factory=dict)  # the printer's own options (paper type, quality...): keyword -> choice
 
     @property
     def is_pdf(self) -> bool:
@@ -380,7 +381,108 @@ def job_settings(c: Choice, app_already_applied: bool) -> tuple[Gtk.PrintSetting
         except ValueError:
             pass
     # page-set (odd/even) becomes cups-page-set in GTK's CUPS backend itself.
+    # The printer's own options, as chosen in More settings.
+    for kw, value in c.driver.items():
+        if kw != "ColorModel" and value:
+            s.set(f"cups-{kw}", value)
+    for o in driver_options(c.printer):
+        if o.keyword == "ColorModel" and o.choices[0][0]:
+            s.set("cups-ColorModel", o.choices[1][0] if c.color else o.choices[0][0])
     return s, setup
+
+
+# ---------------------------------------------------------------------- the printer's own options
+# What Windows' print dialog takes from the driver (paper type, quality) and its "printing
+# preferences" (colour adjustments), read from the CUPS queue's PPD: every driver names them
+# differently, so each row lists the keywords it stands for, first found wins. Choices keep the
+# driver's own names (translated where the catalog knows them); levels (Gutenprint's 0.0-2.0
+# adjustments, 1000 = 1.0 = unchanged) become percentages around the driver's normal.
+
+@dataclass
+class DriverOption:
+    keyword: str
+    label: str                       # English source string, translated by the dialog
+    choices: list                    # [(value, English label)]
+    default: str
+    section: str = "paper"           # paper | color
+
+
+ROWS = [
+    # (row label, section, keywords)
+    ("Paper type", "paper", ("MediaType", "media-type", "EPMediaType", "PaperType", "HPPaperType", "BRMediaType", "CNIJMediaType")),
+    ("Print quality", "paper", ("StpQuality", "cupsPrintQuality", "print-quality", "Quality", "OutputMode", "EPQuality", "HPPrintQuality", "BRResolution")),
+    ("Borderless", "paper", ("StpFullBleed", "Borderless", "EPBorderless", "HPBorderless")),
+    ("Document type", "color", ("StpImageType",)),
+    ("Colour correction", "color", ("StpColorCorrection",)),
+    ("Colour saturation", "color", ("StpSaturation",)),
+    ("Ink density", "color", ("StpDensity",)),
+    ("Brightness", "color", ("StpBrightness",)),
+    ("Contrast", "color", ("StpContrast",)),
+]
+LEVELS = {"StpSaturation", "StpDensity", "StpBrightness", "StpContrast"}
+_driver_cache: dict = {}
+
+
+def _level_choices(choices):
+    """Gutenprint levels: 50 % to 150 % of normal in 10 % steps, normal first among equals."""
+    out = [("None", "Normal")]
+    for value, _text in choices:
+        try:
+            v = int(value)
+        except ValueError:
+            continue
+        if 500 <= v <= 1500 and v != 1000:
+            pct = (v - 1000) // 10
+            out.append((value, f"{pct:+d} %"))
+    normal = out[0]
+    rest = sorted(out[1:], key=lambda c: int(c[0]))
+    lower = [c for c in rest if int(c[0]) < 1000]
+    return lower + [normal] + [c for c in rest if int(c[0]) > 1000]
+
+
+def driver_options(printer_name: str) -> list:
+    """The printer's own options this dialog shows, [] for Save as PDF or without a PPD."""
+    if not printer_name or printer_name == PDF_PRINTER:
+        return []
+    if printer_name in _driver_cache:
+        return _driver_cache[printer_name]
+    out = []
+    try:
+        import cups
+        conn = cups.Connection()
+        path = conn.getPPD(printer_name)
+        ppd = cups.PPD(path)
+        try:
+            os.unlink(path)          # a temporary copy CUPS made for us
+        except OSError:
+            pass
+        for label, section, keywords in ROWS:
+            for kw in keywords:
+                o = ppd.findOption(kw)
+                if o is None or len(o.choices) < 2:
+                    continue
+                choices = [(ch["choice"], ch["text"] or ch["choice"]) for ch in o.choices if ch["choice"] != "Custom"]
+                default = o.defchoice
+                if kw in LEVELS:
+                    choices = _level_choices(choices)
+                    if default not in {c[0] for c in choices}:
+                        default = "None"
+                elif kw == "StpImageType" or kw == "StpQuality":
+                    # "Manual Control" leaves every other setting to the expert pages Windows hides.
+                    choices = [c for c in choices if c[0] != "None"] or choices
+                out.append(DriverOption(kw, label, choices, default, section))
+                break
+        # Black and white on drivers that do not map IPP's print-color-mode themselves.
+        cm = ppd.findOption("ColorModel")
+        if cm is not None:
+            gray = next((ch["choice"] for ch in cm.choices if ch["choice"] in ("Gray", "Grayscale", "KGray")), "")
+            color = cm.defchoice
+            out.append(DriverOption("ColorModel", "", [(gray, "gray"), (color, "color")], color, "hidden"))
+    except Exception as e:  # noqa: BLE001 - no pycups, no PPD (driverless IPP Everywhere): nothing extra
+        print("fenestra-portal: printer options of", printer_name, "unavailable:", e, flush=True)
+        out = []
+    _driver_cache[printer_name] = out
+    return out
 
 
 def send_to_printer(printer: Gtk.Printer, title: str, path: str, c: Choice, app_already_applied: bool, done):

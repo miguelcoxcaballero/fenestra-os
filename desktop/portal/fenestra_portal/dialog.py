@@ -578,6 +578,12 @@ class PrintDialog(Gtk.Window):
             papers.append(self.choice.paper)
         self.paper = Choices([(p, self._paper_label(p)) for p in papers])
         self._field(box, _("Paper size"), self.paper, top=metrics.FIELD_GAP - 8)
+        # The printer's own options (paper type, quality, colour), rebuilt for each printer.
+        self.driver_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(self.driver_box)
+        self.driver_color_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)   # appended last
+        self.driver_rows = {}
+        self.driver_for = None
         self.number_up = Choices([(str(n), str(n)) for n in metrics.PAGES_PER_SHEET])
         self._field(box, _("Pages per sheet"), self.number_up)
         self.margins = Choices([("normal", _("Normal")), ("narrow", _("Narrow")), ("none", _("None"))])
@@ -588,7 +594,50 @@ class PrintDialog(Gtk.Window):
         self.duplex_label = self._field(box, _("Two-sided printing"), self.duplex)
         for w in (self.paper, self.number_up, self.margins, self.duplex):
             w.connect("notify::selected", self._on_changed)
+        box.append(self.driver_color_box)
         return box
+
+    # ------------------------------------------------------------------ the printer's own options
+    @staticmethod
+    def _driver_key(printer):
+        import re
+        return "driver-" + re.sub(r"[^A-Za-z0-9_-]", "_", printer)
+
+    def _driver_saved(self, printer):
+        out = {}
+        for part in config_get(self._driver_key(printer), "").split(";"):
+            if "=" in part:
+                k, v = part.split("=", 1)
+                out[k] = v
+        return out
+
+    def _build_driver_rows(self, printer):
+        """Rows for this printer's paper type, quality and colour adjustments (none for PDF)."""
+        if printer == self.driver_for:
+            return
+        self.driver_for = printer
+        for b in (self.driver_box, self.driver_color_box):
+            while (child := b.get_first_child()) is not None:
+                b.remove(child)
+        self.driver_rows = {}
+        saved = self._driver_saved(printer)
+        wanted = dict(saved)
+        wanted.update(self.choice.driver if self.choice.printer == printer else {})
+        options = [o for o in printing.driver_options(printer) if o.section != "hidden"]
+        header_done = False
+        for o in options:
+            target = self.driver_color_box if o.section == "color" else self.driver_box
+            if o.section == "color" and not header_done:
+                head = self._label(_("Colour adjustments"), metrics.FIELD_GAP + 8, "print-section")
+                target.append(head)
+                header_done = True
+            dd = Choices([(v, _(t)) for v, t in o.choices], selected=wanted.get(o.keyword, o.default))
+            dd.connect("notify::selected", self._on_changed)
+            self._field(target, _(o.label), dd)
+            self.driver_rows[o.keyword] = dd
+
+    def _read_driver(self):
+        return {kw: dd.value for kw, dd in self.driver_rows.items() if dd.value}
 
     @staticmethod
     def _paper_label(name):
@@ -713,6 +762,7 @@ class PrintDialog(Gtk.Window):
         c.number_up = int(self.number_up.value)
         c.margins = self.margins.value
         c.duplex = self.duplex.value
+        c.driver = self._read_driver() if self.driver_for == c.printer else {}
 
     def _ranges_valid(self):
         if self.choice.pages != "ranges":
@@ -726,9 +776,14 @@ class PrintDialog(Gtk.Window):
     def _on_changed(self, *_args):
         if getattr(self, "_loading", False) or not hasattr(self, "duplex"):
             return
+        printer = self._current_printer()
+        if printer != self.driver_for:
+            self._loading = True
+            self._build_driver_rows(printer)
+            self._loading = False
         self._read_choice()
         c = self.choice
-        info = self.printers.get(self._current_printer())
+        info = self.printers.get(printer)
         printer_is_pdf = info is None or info.is_pdf
         # Copies and colour mean nothing for a PDF file; the reference shows the PDF
         # printer with printer, orientation and print to file only.
@@ -871,6 +926,9 @@ class PrintDialog(Gtk.Window):
             config_set(printer=self._current_printer(), allow_app="1" if self.allow_app.get_active() else "0",
                        orientation=c.orientation, color="1" if c.color else "0", paper=c.paper,
                        number_up=c.number_up, margins=c.margins, duplex=c.duplex)
+            if c.driver and not c.is_pdf:
+                # Remembered per printer, as Windows keeps a printer's preferences.
+                config_set(**{self._driver_key(c.printer): ";".join(f"{k}={v}" for k, v in c.driver.items())})
         cb, self.on_done = self.on_done, None
         self.set_visible(False)
         if cb:
