@@ -3,8 +3,8 @@
 # Install the Fenestra xdg-desktop-portal backend (Print).
 #   PREFIX  (default /usr)   installation prefix
 #   DESTDIR (default empty)  staging root (build/build-overlay.sh passes the overlay root)
-# Runtime dependencies: python3, python3-gobject, python3-cairo, gtk4, poppler-glib,
-# xdg-desktop-portal. Printing goes through GTK's CUPS backend.
+# Runtime dependencies: python3, python3-gobject, python3-cairo, python3-cups (the printer's own
+# options: paper type, quality, colour), gtk4, poppler-glib, xdg-desktop-portal. Printing goes through GTK's CUPS backend.
 set -eu
 PREFIX="${PREFIX:-/usr}"
 DESTDIR="${DESTDIR:-}"

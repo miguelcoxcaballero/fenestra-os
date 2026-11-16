@@ -33,6 +33,18 @@ store() {
         && rm -rf "$d/fenestra_store" && mv "$d/fenestra_store.new" "$d/fenestra_store" \
         && cp "$REPO/apps/fenestra-store/data/style.css" "$d/data/style.css"
 }
+portal() {
+    # The print dialog (xdg-desktop-portal-fenestra): this checkout's copy, run by the user unit.
+    local d=$DATA/fenestra/portal
+    rm -rf "$d.new" && mkdir -p "$d.new" \
+        && cp -r "$REPO/desktop/portal/fenestra_portal" "$REPO/desktop/portal/xdg-desktop-portal-fenestra" "$d.new/" \
+        && find "$d.new" -name __pycache__ -type d -prune -exec rm -rf {} + \
+        && rm -rf "$d" && mv "$d.new" "$d" || return 1
+    mkdir -p "$CONF/systemd/user/xdg-desktop-portal-fenestra.service.d"
+    printf '# Written by tools/install.sh: the print dialog from this checkout\n[Service]\nExecStart=\nExecStart=%%h/.local/share/fenestra/portal/xdg-desktop-portal-fenestra\n' \
+        > "$CONF/systemd/user/xdg-desktop-portal-fenestra.service.d/50-user.conf"
+    systemctl --user daemon-reload && systemctl --user restart xdg-desktop-portal-fenestra
+}
 files() {
     local d=$DATA/nautilus-python/extensions
     mkdir -p "$d" && cp "$REPO"/desktop/nautilus/python/*.py "$d/"
@@ -76,6 +88,7 @@ step "shell" shell
 step "lock screen" bash "$REPO/tools/install-lockscreen-user.sh"
 step "settings" settings
 step "store" store
+step "print dialog" portal
 step "file manager" files
 step "gtk stylesheet" gtkcss
 step "start-up check and sleep log" bootcheck

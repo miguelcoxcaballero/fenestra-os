@@ -175,6 +175,7 @@ def geometry_css() -> str:
     return f"""
 window.fenestra-print {{ font-family: {m.FONT_TEXT}; font-size: {m.TEXT_SIZE}px; }}
 .print-title {{ font-size: {m.HEADING_SIZE}px; font-weight: {m.HEADING_WEIGHT}; }}
+.print-section {{ font-weight: 600; }}
 button.print-close {{ min-width: {m.CLOSE_BOX[2]}px; min-height: {m.CLOSE_BOX[3]}px; }}
 button.print-nav {{ min-width: {m.HEADER_BUTTON}px; min-height: {m.HEADER_BUTTON}px; }}
 dropdown.print-dropdown > button {{
