@@ -100,7 +100,7 @@ class Choice:
     paper: str = "iso_a4"
     number_up: int = 1
     margins: str = "normal"           # see metrics.MARGIN_PRESETS
-    duplex: str = "simplex"           # simplex | long | short
+    duplex: str = "simplex"           # simplex | long | short | manual-long | manual-short (no duplexer)
     output_uri: str = ""              # Save as PDF target
     extra: dict = field(default_factory=dict)   # app-provided settings we do not show, passed through
     driver: dict = field(default_factory=dict)  # the printer's own options (paper type, quality...): keyword -> choice
@@ -224,7 +224,8 @@ def choice_to_gtk(c: Choice) -> tuple[Gtk.PrintSettings, Gtk.PageSetup]:
     ps = c.page_size()
     s.set_paper_size(ps)
     s.set_number_up(c.number_up)
-    s.set_duplex({"long": Gtk.PrintDuplex.HORIZONTAL, "short": Gtk.PrintDuplex.VERTICAL}
+    s.set_duplex({"long": Gtk.PrintDuplex.HORIZONTAL, "short": Gtk.PrintDuplex.VERTICAL,
+                  "manual-long": Gtk.PrintDuplex.HORIZONTAL, "manual-short": Gtk.PrintDuplex.VERTICAL}
                  .get(c.duplex, Gtk.PrintDuplex.SIMPLEX))
     if c.is_pdf:
         s.set("output-file-format", "pdf")
@@ -355,8 +356,32 @@ def find_printer(name: str, callback, timeout_ms=10000):
 
 # ------------------------------------------------------------------ sending
 
-def job_settings(c: Choice, app_already_applied: bool) -> tuple[Gtk.PrintSettings, Gtk.PageSetup]:
-    """Settings for the CUPS job. CUPS options are passed as 'cups-<ipp name>' keys."""
+_duplex_cache: dict = {}
+
+
+def auto_duplex(printer_name: str) -> bool:
+    """The printer prints both sides by itself (IPP sides-supported). Unknown: yes."""
+    if not printer_name or printer_name == PDF_PRINTER:
+        return True
+    if printer_name not in _duplex_cache:
+        try:
+            import cups
+            a = cups.Connection().getPrinterAttributes(printer_name, requested_attributes=["sides-supported"])
+            sides = a.get("sides-supported") or []
+            _duplex_cache[printer_name] = any(x.startswith("two-sided") for x in ([sides] if isinstance(sides, str) else sides))
+        except Exception as e:  # noqa: BLE001
+            print("fenestra-portal: two-sided support of", printer_name, "unknown:", e, flush=True)
+            _duplex_cache[printer_name] = True
+    return _duplex_cache[printer_name]
+
+
+def is_manual_duplex(c: Choice) -> bool:
+    return c.duplex.startswith("manual-") and not c.is_pdf
+
+
+def job_settings(c: Choice, app_already_applied: bool, side: str | None = None) -> tuple[Gtk.PrintSettings, Gtk.PageSetup]:
+    """Settings for the CUPS job. CUPS options are passed as 'cups-<ipp name>' keys.
+    side: "front" or "back" for the two passes of manual two-sided printing."""
     s, setup = choice_to_gtk(c)
     s.set("cups-print-color-mode", "color" if c.color else "monochrome")
     s.set("cups-sides", {"long": "two-sided-long-edge", "short": "two-sided-short-edge"}
@@ -388,7 +413,29 @@ def job_settings(c: Choice, app_already_applied: bool) -> tuple[Gtk.PrintSetting
     for o in driver_options(c.printer):
         if o.keyword == "ColorModel" and o.choices[0][0]:
             s.set("cups-ColorModel", o.choices[1][0] if c.color else o.choices[0][0])
+    if side is not None:
+        # Manual two-sided printing, as Windows drivers do it for printers without a duplexer:
+        # the odd sheets' sides first, then the even ones on the backs, each pass in reading
+        # order (the driver's own reverse output order would scramble the reloaded stack).
+        s.set_page_set(Gtk.PageSet.ODD if side == "front" else Gtk.PageSet.EVEN)
+        s.set("cups-page-set", "odd" if side == "front" else "even")
+        s.set("cups-sides", "one-sided")
+        s.set("cups-page-delivery", "same-order")
+        s.set("cups-outputorder", "normal")
+        s.set("cups-OutputOrder", "Normal")
+        if side == "back" and c.duplex == "manual-short":
+            # Flipped on the short edge: the backs upside down relative to the fronts.
+            s.set("cups-orientation-requested", "5" if c.orientation == "landscape" else "6")
     return s, setup
+
+
+def output_sheets(c: Choice, n_pages: int) -> int:
+    """Sides of paper the job prints (pages after selection and pages per sheet)."""
+    try:
+        from . import render
+        return len([x for x in render.sheets_for(c, n_pages) if x])
+    except Exception:  # noqa: BLE001
+        return n_pages
 
 
 # ---------------------------------------------------------------------- the printer's own options
@@ -485,9 +532,10 @@ def driver_options(printer_name: str) -> list:
     return out
 
 
-def send_to_printer(printer: Gtk.Printer, title: str, path: str, c: Choice, app_already_applied: bool, done):
+def send_to_printer(printer: Gtk.Printer, title: str, path: str, c: Choice, app_already_applied: bool, done,
+                    side: str | None = None):
     """Queue the file on a CUPS printer; done(error_message | None)."""
-    s, setup = job_settings(c, app_already_applied)
+    s, setup = job_settings(c, app_already_applied, side)
     try:
         job = Gtk.PrintJob.new(title or "Document", printer, s, setup)
         job.set_source_file(path)

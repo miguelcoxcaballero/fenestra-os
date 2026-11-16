@@ -167,6 +167,13 @@ class Choices(Gtk.DropDown):
             self.set_selected(self.ids.index(selected))
         menu_over_combo(self, metrics.MENU_ICON_ROW_HEIGHT if icons else metrics.MENU_ROW_HEIGHT, bool(icons))
 
+    def set_items(self, items):
+        """Replace the choices, keeping the current one when it is still there."""
+        cur = self.value
+        self.ids = [i for i, _l in items]
+        self.set_model(Gtk.StringList.new([lbl for _i, lbl in items]))
+        self.set_selected(self.ids.index(cur) if cur in self.ids else 0)
+
     @property
     def value(self):
         i = self.get_selected()
@@ -588,14 +595,34 @@ class PrintDialog(Gtk.Window):
         self._field(box, _("Pages per sheet"), self.number_up)
         self.margins = Choices([("normal", _("Normal")), ("narrow", _("Narrow")), ("none", _("None"))])
         self._field(box, _("Margins"), self.margins)
-        self.duplex = Choices([("simplex", _("Print on one side")),
-                               ("long", _("Print on both sides, flip on long edge")),
-                               ("short", _("Print on both sides, flip on short edge"))])
+        self.duplex = Choices(self._duplex_items(True))
+        self.duplex_auto = True
         self.duplex_label = self._field(box, _("Two-sided printing"), self.duplex)
         for w in (self.paper, self.number_up, self.margins, self.duplex):
             w.connect("notify::selected", self._on_changed)
         box.append(self.driver_color_box)
         return box
+
+    @staticmethod
+    def _duplex_items(auto):
+        if auto:
+            return [("simplex", _("Print on one side")),
+                    ("long", _("Print on both sides, flip on long edge")),
+                    ("short", _("Print on both sides, flip on short edge"))]
+        # No duplexer (most inkjets): Windows drivers offer manual two-sided printing.
+        return [("simplex", _("Print on one side")),
+                ("manual-long", _("Print on both sides manually, flip on long edge")),
+                ("manual-short", _("Print on both sides manually, flip on short edge"))]
+
+    def _sync_duplex(self, printer):
+        auto = printing.auto_duplex(printer)
+        if auto == self.duplex_auto:
+            return
+        self.duplex_auto = auto
+        cur = self.duplex.value or "simplex"
+        self.duplex.set_items(self._duplex_items(auto))
+        twin = {"long": "manual-long", "short": "manual-short", "manual-long": "long", "manual-short": "short"}
+        self.duplex.set_value(twin.get(cur, cur))
 
     # ------------------------------------------------------------------ the printer's own options
     @staticmethod
@@ -742,7 +769,8 @@ class PrintDialog(Gtk.Window):
         self.paper.set_value(c.paper)
         self.number_up.set_value(str(c.number_up))
         self.margins.set_value(c.margins)
-        self.duplex.set_value(c.duplex)
+        twin = {"long": "manual-long", "short": "manual-short", "manual-long": "long", "manual-short": "short"}
+        self.duplex.set_value(c.duplex if c.duplex in self.duplex.ids else twin.get(c.duplex, "simplex"))
         self.to_file.set_active(False)
         self._loading = False
         self._select_printer(self.preferred_printer)
@@ -780,6 +808,7 @@ class PrintDialog(Gtk.Window):
         if printer != self.driver_for:
             self._loading = True
             self._build_driver_rows(printer)
+            self._sync_duplex(printer)
             self._loading = False
         self._read_choice()
         c = self.choice
@@ -1030,3 +1059,59 @@ class PrintDialog(Gtk.Window):
         tex.save_to_png(path)
         print(f"saved {path} ({w}x{h})")
         return True
+
+
+class ManualDuplexWindow(Gtk.Window):
+    """Between the two passes of manual two-sided printing (printers without a duplexer):
+    how to put the printed sheets back, and Continue to print the backs, as the pop-up of a
+    Windows printer driver. The order of the passes (printing.job_settings) is the one for
+    printers that deliver face up and take the front sheet of the stack first (inkjets)."""
+
+    def __init__(self, title, choice, sides, on_continue, on_cancel):
+        super().__init__(title=_("Print the other side"))
+        self.add_css_class("fenestra-print")
+        self.set_default_size(480, -1)
+        self.set_resizable(False)
+        self._cb = (on_continue, on_cancel)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(box, f"set_margin_{side}")(24)
+        head = Gtk.Label(label=_("Print the other side"), xalign=0)
+        head.add_css_class("print-title")
+        box.append(head)
+        fronts = (sides + 1) // 2
+        intro = _("The front sides are printing ({n} sheets). When the printer has finished:").format(n=fronts)
+        box.append(Gtk.Label(label=intro, xalign=0, wrap=True))
+        edge = (_("Turn the stack over like the page of a book, so the printed side faces down.")
+                if choice.duplex == "manual-long" else
+                _("Turn the stack over from top to bottom, like a notepad, so the printed side faces down."))
+        steps = [_("Take out all the printed sheets without changing their order."), edge,
+                 _("Load them in the paper tray again the way the blank paper was loaded, the top of the pages going in first.")]
+        if sides % 2:
+            steps.append(_("The last sheet has nothing on its back: put it aside."))
+        for i, text in enumerate(steps, 1):
+            box.append(Gtk.Label(label=f"{i}.  {text}", xalign=0, wrap=True, max_width_chars=60))
+        row = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        row.set_margin_top(12)
+        go = Gtk.Button(label=_("Continue"))
+        stop = Gtk.Button(label=_("Cancel"))
+        for b in (go, stop):
+            b.add_css_class("fluent-button")
+            b.add_css_class("print-button")
+            b.set_size_request(120, metrics.CONTROL_HEIGHT)
+            row.append(b)
+        go.add_css_class("accent")
+        go.connect("clicked", lambda *_: self._done(0))
+        stop.connect("clicked", lambda *_: self._done(1))
+        self.connect("close-request", lambda *_: (self._done(1), True)[1])
+        box.append(row)
+        self.set_child(box)
+        self.set_default_widget(go)
+
+    def _done(self, which):
+        cb, self._cb = self._cb, None
+        if cb is None:
+            return
+        self.set_visible(False)
+        cb[which]()
+        self.destroy()

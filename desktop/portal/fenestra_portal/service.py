@@ -17,7 +17,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib, Gtk  # noqa: E402
 
-from . import metrics, printing  # noqa: E402
+from . import metrics, printing, render  # noqa: E402
 from .dialog import Options, PrintDialog  # noqa: E402
 
 BUS_NAME = "org.freedesktop.impl.portal.desktop.fenestra"
@@ -231,6 +231,44 @@ class PrintService:
         req.dialog = PrintDialog(title, choice, self._opts(options, title, parent, self.demo), done, doc=doc)
         req.dialog.present()
 
+    def _manual_duplex(self, req, printer, title, path, choice, doc, sent):
+        """Fronts, then a window that says how to put the sheets back, then the backs."""
+        try:
+            gi.require_version("Poppler", "0.18")
+            from gi.repository import Poppler
+            pdf = doc or Poppler.Document.new_from_file(Gio.File.new_for_path(path).get_uri(), None)
+            # With the app's own page selection already applied, every page of the file prints.
+            sides = len(render.sheets_for(choice if doc is not None else printing.Choice(number_up=choice.number_up),
+                                                    pdf.get_n_pages()))
+        except Exception as e:  # noqa: BLE001
+            log(f"manual two-sided: page count unknown ({e})")
+            sides = 2
+        if sides < 2:
+            printing.send_to_printer(printer, title, path, choice, doc is None, sent)
+            return
+
+        def front_sent(err):
+            if err:
+                sent(err)
+                return
+            log(f"manual two-sided: fronts queued on {choice.printer!r} ({sides} sides)")
+            from .dialog import ManualDuplexWindow
+            req.dialog = ManualDuplexWindow(title, choice, sides, on_continue=back, on_cancel=cancelled)
+            req.dialog.present()
+
+        def back():
+            req.dialog = None
+            if req.closed:
+                return
+            printing.send_to_printer(printer, title, path, choice, doc is None, sent, side="back")
+
+        def cancelled():
+            req.dialog = None
+            log("manual two-sided: backs cancelled")
+            req.reply(RESPONSE_OK)   # the fronts did print
+
+        printing.send_to_printer(printer, title, path, choice, doc is None, front_sent, side="front")
+
     def _send(self, req: Request, title: str, path: str, choice: printing.Choice, doc):
         """doc is the Poppler document when the app did not apply our settings itself
         (Print() without a token); None when it rendered after PreparePrint."""
@@ -260,6 +298,9 @@ class PrintService:
             if printer is None:
                 log(f"printer {choice.printer!r} not found")
                 req.reply(RESPONSE_OTHER)
+                return
+            if printing.is_manual_duplex(choice):
+                self._manual_duplex(req, printer, title, path, choice, doc, sent)
                 return
             printing.send_to_printer(printer, title, path, choice, doc is None, sent)
 
