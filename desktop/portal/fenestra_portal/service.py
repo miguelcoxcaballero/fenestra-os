@@ -85,7 +85,8 @@ class Request:
         if method == "Close":
             invocation.return_value(None)
             self.closed = True
-            if self.dialog is not None:
+            # The window between the passes of manual two-sided printing outlives the request.
+            if self.dialog is not None and hasattr(self.dialog, "finish"):
                 self.dialog.finish(RESPONSE_CANCELLED)
             self.reply(RESPONSE_OTHER)
 
@@ -106,6 +107,7 @@ class Request:
 
 class PrintService:
     def __init__(self, conn: Gio.DBusConnection, demo=False):
+        self.keep = set()   # windows that outlive their request (manual two-sided printing)
         self.conn = conn
         self.demo = demo
         self.tokens: dict[int, tuple[printing.Choice, float]] = {}
@@ -232,42 +234,63 @@ class PrintService:
         req.dialog.present()
 
     def _manual_duplex(self, req, printer, title, path, choice, doc, sent):
-        """Fronts, then a window that says how to put the sheets back, then the backs."""
+        """Fronts, then a window that says how to put the sheets back, then the backs.
+        The app is answered once the fronts are queued: it may close its request any time after
+        (Brave did after 11 s, and the spooled document went with it), so the backs print from
+        a copy of their own, whatever the app does."""
         try:
             gi.require_version("Poppler", "0.18")
             from gi.repository import Poppler
             pdf = doc or Poppler.Document.new_from_file(Gio.File.new_for_path(path).get_uri(), None)
             # With the app's own page selection already applied, every page of the file prints.
             sides = len(render.sheets_for(choice if doc is not None else printing.Choice(number_up=choice.number_up),
-                                                    pdf.get_n_pages()))
+                                          pdf.get_n_pages()))
         except Exception as e:  # noqa: BLE001
             log(f"manual two-sided: page count unknown ({e})")
             sides = 2
         if sides < 2:
             printing.send_to_printer(printer, title, path, choice, doc is None, sent)
             return
+        import shutil
+        import tempfile
+        fd, own = tempfile.mkstemp(prefix="fenestra-duplex-", suffix=".pdf")
+        os.close(fd)
+        shutil.copyfile(path, own)
+        state = {"window": None}
+
+        def done_with_copy():
+            try:
+                os.unlink(own)
+            except OSError:
+                pass
 
         def front_sent(err):
             if err:
+                done_with_copy()
                 sent(err)
                 return
             log(f"manual two-sided: fronts queued on {choice.printer!r} ({sides} sides)")
+            req.reply(RESPONSE_OK)
             from .dialog import ManualDuplexWindow
-            req.dialog = ManualDuplexWindow(title, choice, sides, on_continue=back, on_cancel=cancelled)
-            req.dialog.present()
+            state["window"] = ManualDuplexWindow(title, choice, sides, on_continue=back, on_cancel=cancelled)
+            self.keep.add(state["window"])
+            state["window"].present()
 
         def back():
-            req.dialog = None
-            if req.closed:
-                return
-            printing.send_to_printer(printer, title, path, choice, doc is None, sent, side="back")
+            log("manual two-sided: printing the backs")
+            self.keep.discard(state["window"])
+
+            def back_sent(err):
+                done_with_copy()
+                log(f"manual two-sided: backs {'failed: ' + err if err else 'queued'}")
+            printing.send_to_printer(printer, title, own, choice, doc is None, back_sent, side="back")
 
         def cancelled():
-            req.dialog = None
+            self.keep.discard(state["window"])
+            done_with_copy()
             log("manual two-sided: backs cancelled")
-            req.reply(RESPONSE_OK)   # the fronts did print
 
-        printing.send_to_printer(printer, title, path, choice, doc is None, front_sent, side="front")
+        printing.send_to_printer(printer, title, own, choice, doc is None, front_sent, side="front")
 
     def _send(self, req: Request, title: str, path: str, choice: printing.Choice, doc):
         """doc is the Poppler document when the app did not apply our settings itself
