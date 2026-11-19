@@ -493,19 +493,13 @@ class HelloWizard(Gtk.Box):
             return False
         scan_body = _("Keep looking at the camera until the scan is finished. You may be asked for an "
                       "administrator password first.")
-        cam = self.camera if (self.camera is not None and self.camera.ok) else None
-        if cam is not None:
-            # Howdy takes the IR camera from here on. The face stays on screen
-            # (same page, same ring), like the reference.
-            cam.handover()
-            ring = cam.ring
-            if self.body is not None:
-                self.body.set_label(scan_body)
-            self.set_status(_("Scanning your face…"))
-        else:
-            ring = RingArt(230, face=True)
-            self._page(_("Make sure you're looking directly at your camera"), scan_body,
-                       ring, _("Scanning your face…"), [(_("Cancel"), self.close, False)])
+        # Windows shows the camera only before the scan: while it scans, the face outline with
+        # the progress ring. The preview lets go of the camera first (Howdy needs it).
+        if self.camera is not None:
+            self.camera.handover()
+        ring = RingArt(230, face=True)
+        self._page(_("Make sure you're looking directly at your camera"), scan_body,
+                   ring, _("Scanning your face…"), [(_("Cancel"), self.close, False)])
         ring.set_scanning(True)
         ring.progress.speed = 0.12
         ring.progress.set(0.92)  # creeps forward while Howdy works
