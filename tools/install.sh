@@ -84,9 +84,11 @@ bootcheck() {
     local n
     mkdir -p "$CONF/systemd/user/fenestra-session.target.d"
     install -Dm755 "$REPO/session/libexec/fenestra-portal-login" "$HOME/.local/libexec/fenestra/fenestra-portal-login" || return 1
-    for n in fenestra-boot-check fenestra-sleep-log; do
-        install -Dm755 "$REPO/session/libexec/$n" "$HOME/.local/libexec/fenestra/$n" || return 1
-        sed "s|^ExecStart=.*|ExecStart=$HOME/.local/libexec/fenestra/$n|" "$REPO/session/systemd/$n.service" > "$CONF/systemd/user/$n.service"
+    install -Dm755 "$REPO/session/libexec/fenestra-face-server" "$HOME/.local/libexec/fenestra/fenestra-face-server" || return 1
+    for n in fenestra-boot-check fenestra-sleep-log fenestra-face; do
+        [ "$n" = fenestra-face ] && exe=fenestra-face-server || exe=$n
+        install -Dm755 "$REPO/session/libexec/$exe" "$HOME/.local/libexec/fenestra/$exe" || return 1
+        sed "s|^ExecStart=.*|ExecStart=$HOME/.local/libexec/fenestra/$exe|" "$REPO/session/systemd/$n.service" > "$CONF/systemd/user/$n.service"
     done
     printf '[Unit]\nWants=fenestra-boot-check.service fenestra-sleep-log.service\n' > "$CONF/systemd/user/fenestra-session.target.d/boot-check.conf"
     systemctl --user daemon-reload

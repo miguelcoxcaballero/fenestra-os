@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 
-from gi.repository import GLib, Gtk
+from gi.repository import Gdk, GLib, Gtk
 
 from . import theme, util
 from .backends import hello
@@ -280,49 +280,69 @@ class CameraView(Gtk.Overlay):
         holder.append(self.picture)
         self.set_child(holder)
         self.add_overlay(self.ring)
+        # Whatever closes the page (Cancel, the window's X, an error page) turns the camera off.
+        self.connect("unrealize", lambda *_: self.stop())
         self.ok = self._start(device)
 
     def _start(self, device):
+        """Frames read with OpenCV in a thread, as Howdy reads them. GStreamer's v4l2src set the
+        format of the camera and failed ("device busy") on the relayed camera (v4l2loopback),
+        leaving it open: no preview, Howdy got no frames, and the camera stayed on."""
         if not device or util.READ_ONLY:
             return False
         try:
-            import gi
-            gi.require_version("Gst", "1.0")
-            from gi.repository import Gst
-            Gst.init(None)
-            pipe = Gst.parse_launch(f'v4l2src device="{device}" ! videoconvert ! videoflip method=horizontal-flip '
-                                    "! gtk4paintablesink name=sink")
-            sink = pipe.get_by_name("sink")
-            self.picture.set_paintable(sink.get_property("paintable"))
-            if pipe.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
-                pipe.set_state(Gst.State.NULL)
-                return False
-            self.pipeline = pipe
-            self._gst = Gst
-            return True
-        except Exception as e:  # noqa: BLE001 - any GStreamer problem -> illustration
-            util.log("camera preview failed", e)
-            return False
+            import threading
 
-    def handover(self, device):
-        """Howdy needs the camera now: keep showing the face, live from `device`
-        (another camera of the same module) when possible, else the last frame."""
-        frame = None
+            import cv2
+        except ImportError as e:
+            util.log("camera preview unavailable", e)
+            return False
+        self._stop = threading.Event()
+        self._frame = None
+        self._thread = threading.Thread(target=self._read, args=(cv2, device, self._stop), daemon=True)
+        self._thread.start()
+        return True
+
+    def _read(self, cv2, device, stop):
+        cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
         try:
-            paintable = self.picture.get_paintable()
-            frame = paintable.get_current_image() if paintable is not None else None
-        except Exception:  # noqa: BLE001
-            frame = None
+            while not stop.is_set() and cap.isOpened():
+                ok, frame = cap.read()
+                if not ok:
+                    stop.wait(0.05)
+                    continue
+                if frame.mean() < 3:          # the camera is still waking up
+                    continue
+                h, w = frame.shape[:2]
+                side = min(h, w)
+                square = frame[(h - side) // 2:(h + side) // 2, (w - side) // 2:(w + side) // 2]
+                small = cv2.cvtColor(cv2.flip(cv2.resize(square, (360, 360)), 1), cv2.COLOR_BGR2RGB)
+                data = GLib.Bytes.new(small.tobytes())
+                GLib.idle_add(self._show, data)
+                stop.wait(1 / 30)
+        finally:
+            cap.release()                     # the camera goes off with the preview
+
+    def _show(self, data):
+        if self._stop.is_set():
+            return False
+        tex = Gdk.MemoryTexture.new(360, 360, Gdk.MemoryFormat.R8G8B8, data, 360 * 3)
+        self._frame = tex
+        self.picture.set_paintable(tex)
+        return False
+
+    def handover(self, _device=None):
+        """Howdy needs the camera now (the relayed camera serves one reader at a time): the
+        preview lets go of it and the last picture stays on screen."""
         self.stop()
-        if device and self._start(device):
-            return
-        if frame is not None:
-            self.picture.set_paintable(frame)
 
     def stop(self):
-        if self.pipeline is not None:
-            self.pipeline.set_state(self._gst.State.NULL)
-            self.pipeline = None
+        stop = getattr(self, "_stop", None)
+        if stop is not None and not stop.is_set():
+            stop.set()
+            t = getattr(self, "_thread", None)
+            if t is not None:
+                t.join(timeout=2)      # released before Howdy opens it
 
 
 # --------------------------------------------------------------------------- wizard
@@ -477,7 +497,7 @@ class HelloWizard(Gtk.Box):
         if cam is not None:
             # Howdy takes the IR camera from here on. The face stays on screen
             # (same page, same ring), like the reference.
-            cam.handover(hello.preview_device(hello.howdy_device()))
+            cam.handover()
             ring = cam.ring
             if self.body is not None:
                 self.body.set_label(scan_body)

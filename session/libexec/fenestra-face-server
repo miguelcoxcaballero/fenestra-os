@@ -1,0 +1,144 @@
+#!/usr/bin/python3 -I
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""fenestra-face-server: Howdy kept ready for the lock screen, as the user.
+
+The lock screen's face check (pam_fenestra_hello) used to start Howdy's compare.py from
+nothing at every lock: Python, OpenCV, dlib and the face models took ~1.8 s before the first
+frame was even looked at. This user service loads them once and, for each request on
+$XDG_RUNTIME_DIR/fenestra-face.sock (this user only), forks a child that runs the comparison
+with fresh frames from the camera; the parent never sees a picture or keeps a result. The
+camera is opened only by that child, only while the lock screen asks.
+Protocol (as /usr/local/lib/howdy-preload): "USER\\n" -> "CODE\\n", Howdy's exit code (0 = face
+recognised). The client hanging up cancels the attempt (fingerprint or password won).
+"""
+import os
+import pwd
+import runpy
+import select
+import signal
+import socket
+import struct
+import sys
+import time
+
+HOWDY = next((p for p in (f"/usr/lib/python3.{v}/site-packages/howdy" for v in range(20, 9, -1)) if os.path.isdir(p)), None)
+PRELOAD = "/usr/local/lib/howdy-preload"     # this PC's tuned comparison, when present
+LIMIT = 12
+
+if HOWDY:
+    sys.path.insert(0, HOWDY)
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+
+def native():
+    adaptive = os.path.join(PRELOAD, "compare-adaptive.py")
+    return adaptive if os.path.exists(adaptive) else os.path.join(HOWDY, "compare.py")
+
+
+def prepare():
+    """Import what the comparison imports and load the models it loads, once."""
+    if os.path.exists(os.path.join(PRELOAD, "server.py")):
+        sys.path.insert(0, PRELOAD)
+        ns = runpy.run_path(os.path.join(PRELOAD, "server.py"), run_name="fenestra_face_preload")
+        ns["prepare"]()       # also hands the preloaded models to dlib's constructors
+        return
+    import cv2  # noqa: F401
+    import dlib  # noqa: F401
+    import paths_factory  # noqa: F401
+    from recorders.video_capture import VideoCapture  # noqa: F401
+
+
+def kill(pid):
+    for f in (lambda: os.killpg(pid, signal.SIGKILL), lambda: os.kill(pid, signal.SIGKILL)):
+        try:
+            f()
+            break
+        except ProcessLookupError:
+            continue
+    try:
+        os.waitpid(pid, 0)
+    except ChildProcessError:
+        pass
+
+
+def attempt(conn, listener, user):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    pid = os.fork()
+    if pid == 0:
+        os.setsid()
+        listener.close()
+        conn.close()
+        signal.alarm(LIMIT)
+        sys.argv = [native(), user]
+        code = 1
+        try:
+            runpy.run_path(sys.argv[0], run_name="__main__")
+            code = 0
+        except SystemExit as e:
+            code = e.code if isinstance(e.code, int) else 1
+        except BaseException as e:  # noqa: BLE001
+            print("fenestra-face: attempt failed:", type(e).__name__, e, flush=True)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(code if 0 <= code <= 255 else 1)
+    deadline = time.monotonic() + LIMIT
+    try:
+        while True:
+            done, status = os.waitpid(pid, os.WNOHANG)
+            if done:
+                return os.waitstatus_to_exitcode(status)
+            if time.monotonic() >= deadline:
+                return 11
+            if select.select([conn], [], [], 0.025)[0]:
+                return 1          # the lock screen hung up: cancelled
+    finally:
+        kill(pid)
+
+
+def main():
+    if not HOWDY:
+        raise SystemExit("Howdy is not installed")
+    t = time.monotonic()
+    prepare()
+    me = os.getuid()
+    name = pwd.getpwuid(me).pw_name
+    address = os.path.join(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{me}"), "fenestra-face.sock")
+    os.umask(0o077)
+    try:
+        os.unlink(address)
+    except FileNotFoundError:
+        pass
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
+        listener.bind(address)
+        listener.listen(2)
+        print(f"fenestra-face: ready in {time.monotonic() - t:.1f} s ({native()}); camera closed", flush=True)
+        while True:
+            conn, _ = listener.accept()
+            with conn:
+                try:
+                    _pid, uid, _gid = struct.unpack("3i", conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+                    if uid != me:
+                        continue
+                    conn.settimeout(1)
+                    request = b""
+                    while not request.endswith(b"\n") and len(request) < 256:
+                        chunk = conn.recv(256 - len(request))
+                        if not chunk:
+                            break
+                        request += chunk
+                    user = request[:-1].decode() if request.endswith(b"\n") else ""
+                    if user != name:
+                        continue
+                    conn.settimeout(None)
+                    t0 = time.monotonic()
+                    code = attempt(conn, listener, user)
+                    print(f"fenestra-face: exit {code} in {time.monotonic() - t0:.2f} s", flush=True)
+                    conn.sendall(f"{code if 0 <= code <= 255 else 1}\n".encode())
+                except (OSError, ValueError, UnicodeError):
+                    continue
+
+
+if __name__ == "__main__":
+    main()

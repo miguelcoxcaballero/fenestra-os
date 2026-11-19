@@ -32,6 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -83,6 +85,57 @@ static pid_t spawn(char *const cmd[])
     }
     execv(cmd[0], cmd);
     _exit(127);
+}
+
+// Face through fenestra-face-server (session/libexec): Howdy already loaded, so the comparison
+// starts at once instead of after ~2 s of Python imports and models. A child connects, asks for
+// `user` and exits with Howdy's code; killing it (fingerprint or password won) hangs up, which
+// cancels the attempt in the server. -1: no server (the caller starts Howdy itself).
+static pid_t spawn_face_server(const char *runtime, const char *user)
+{
+    char path[sizeof(((struct sockaddr_un *)0)->sun_path)];
+    if (snprintf(path, sizeof path, "%s/fenestra-face.sock", runtime) >= (int)sizeof path || access(path, W_OK) != 0)
+        return -1;
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0)
+        return -1;
+    struct sockaddr_un addr = {.sun_family = AF_UNIX};
+    snprintf(addr.sun_path, sizeof addr.sun_path, "%s", path);
+    if (connect(fd, (struct sockaddr *)&addr, sizeof addr) != 0) {
+        close(fd);
+        return -1;
+    }
+    struct ucred cred;
+    socklen_t len = sizeof cred;
+    // Only a server of this user's (anyone else could answer "recognised").
+    if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) != 0 || cred.uid != getuid()) {
+        close(fd);
+        return -1;
+    }
+    pid_t pid = fork();
+    if (pid != 0) {
+        close(fd);
+        return pid;
+    }
+    prctl(PR_SET_PDEATHSIG, SIGKILL);
+    setpgid(0, 0);
+    char line[300];
+    int n = snprintf(line, sizeof line, "%s\n", user);
+    if (n <= 0 || n >= (int)sizeof line || write(fd, line, n) != n)
+        _exit(1);
+    char reply[8] = {0};
+    ssize_t got = 0;
+    while (got < (ssize_t)sizeof reply - 1) {
+        ssize_t r = read(fd, reply + got, sizeof reply - 1 - got);
+        if (r <= 0)
+            break;
+        got += r;
+        if (reply[got - 1] == '\n')
+            break;
+    }
+    if (got < 2 || reply[got - 1] != '\n')
+        _exit(1);
+    _exit(atoi(reply) & 0xff);
 }
 
 static void kill_tree(pid_t pid)
@@ -157,14 +210,20 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     int finger = access(fprintd, X_OK) == 0;
     if (!face && !finger)
         return PAM_AUTHINFO_UNAVAIL;
-
     openlog("pam_fenestra_hello", LOG_PID, LOG_AUTHPRIV);
+
     pid_t face_pid = -1, finger_pid = -1;
     const long start = now_ms();
     if (face) {
-        char *cmd[] = {"/usr/bin/python3", compare, (char *)user, NULL};
-        if (arg(argc, argv, "howdy", NULL)) { cmd[0] = compare; cmd[1] = (char *)user; cmd[2] = NULL; }
-        face_pid = spawn(cmd);
+        if (!arg(argc, argv, "howdy", NULL))
+            face_pid = spawn_face_server(runtime, user);
+        if (face_pid > 0) {
+            syslog(LOG_INFO, "face: through fenestra-face-server");
+        } else {
+            char *cmd[] = {"/usr/bin/python3", compare, (char *)user, NULL};
+            if (arg(argc, argv, "howdy", NULL)) { cmd[0] = compare; cmd[1] = (char *)user; cmd[2] = NULL; }
+            face_pid = spawn(cmd);
+        }
         info(pamh, "Attempting facial authentication");
     }
     if (finger) {

@@ -95,6 +95,7 @@ fi
 %{_libexecdir}/fenestra/fenestra-boot-check
 %{_libexecdir}/fenestra/fenestra-sleep-log
 %{_libexecdir}/fenestra/fenestra-portal-login
+%{_libexecdir}/fenestra/fenestra-face-server
 %{_datadir}/wayland-sessions/fenestra.desktop
 %{_datadir}/applications/org.fenestra.Shell.desktop
 %{_userunitdir}/fenestra-session.target
@@ -102,6 +103,7 @@ fi
 %{_userunitdir}/fenestra-shell-failed.service
 %{_userunitdir}/fenestra-boot-check.service
 %{_userunitdir}/fenestra-sleep-log.service
+%{_userunitdir}/fenestra-face.service
 %{_userunitdir}/fenestra-release-upgrade-user.service
 %{_userunitdir}/fenestra-oobe-first-login.service
 %{_datadir}/aurorae/themes/Fenestra-Dark
