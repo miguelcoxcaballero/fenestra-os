@@ -967,12 +967,11 @@ class ManualDuplexWindow {
     const head = el("div", "fp-title", esc(_("Print the other side")));
     box.appendChild(head);
     box.appendChild(el("div", "", esc(fmt(_("The front sides are printing ({n} sheets). When the printer has finished:"), { n: fronts }))));
-    const edge = choice.duplex === "manual-long"
-      ? _("Turn the stack over like the page of a book, so the printed side faces down.")
-      : _("Turn the stack over from top to bottom, like a notepad, so the printed side faces down.");
-    const steps = [_("Take out all the printed sheets without changing their order."), edge,
+    // Same turn for both edges: the short edge's backs are already printed upside down.
+    const steps = [_("Take out all the printed sheets without changing their order."),
+      _("Turn the stack over like the page of a book, so the printed side faces down."),
       _("Load them in the paper tray again the way the blank paper was loaded, the top of the pages going in first.")];
-    if (sides % 2) steps.push(_("The last sheet has nothing on its back: put it aside."));
+    if (sides % 2) steps.push(_("The last sheet has nothing on its back: leave it in the stack, the printer passes it through without printing."));
     steps.forEach((t, i) => box.appendChild(el("div", "", `${i + 1}.&nbsp; ${esc(t)}`)));
     const row = el("div", "rowbtn");
     const go = el("button", "fp-btn accent", esc(_("Continue")));
