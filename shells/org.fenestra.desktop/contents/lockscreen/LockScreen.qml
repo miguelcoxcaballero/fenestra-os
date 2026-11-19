@@ -69,8 +69,7 @@ Item {
             // A face or fingerprint that matched while the clock came back (after 30 s idle): it
             // unlocks now that the user dismissed the clock, not before.
             if (deferredUnlock !== "") { const k = deferredUnlock; deferredUnlock = ""; unlock(k); return }
-            // The face was not recognised while the clock showed (nobody looking yet): it looks
-            // again now that someone is here.
+            // The face was not recognised on an earlier visit to the sign-in screen: it looks again.
             if (faceState === "failed") retryFace()
             // The heartbeat starts face, fingerprint and the password as soon as the reveal is over
             // (starting the PAM conversations during it cost a 36 ms frame); a password typed and
@@ -90,19 +89,14 @@ Item {
 
     // Windows returns to the clock after a while without input on the sign-in screen.
     Timer { id: idle; interval: 30000; running: root.phase === "signin" && root.menu === "" && password.text === ""; onTriggered: root.showClock() }
-    // Plasma's heartbeat: (re)starts the PAM conversations as soon as the lock screen shows, the
-    // clock included, as Windows Hello turns its camera on with the lock screen: the face is
-    // usually recognised before a key is pressed. It still never unlocks while the clock shows
-    // (the user's choice): a match there waits in deferredUnlock for the key that dismisses the
-    // clock, which then unlocks at once. The workers are not ready when the lock screen loads, so it
-    // asks every 150 ms until one answers, then every second.
+    // Plasma's heartbeat: (re)starts the PAM conversations once the clock is dismissed: nothing
+    // (face, fingerprint, password) is checked, and the camera stays off, while the clock shows
+    // (the user's choice). From the start of the sign-in screen's reveal, not its end, and every
+    // 150 ms until a worker answers (then every second): waiting for the 620 ms animation and then
+    // a whole second for a worker that was not ready put ~2 s before the face check began.
     property bool authAnswered: false
-    // Not when the shell locked because nobody used the PC (battery, screen off with the lock): the
-    // camera would look at an empty room behind a black screen. Then it waits for a key or the
-    // mouse, which bring the sign-in screen. (The shell leaves $XDG_RUNTIME_DIR/fenestra-idle-lock.)
-    property bool clockFace: false
     Timer { interval: root.authAnswered ? 1000 : 150; repeat: true; triggeredOnStart: true
-            running: !root.unlocking && (root.phase === "signin" || (root.phase === "clock" && root.clockFace)) && root.deferredUnlock === "" && !authenticator.unlocked
+            running: !root.unlocking && root.phase === "signin" && !authenticator.unlocked
             onTriggered: authenticator.startAuthenticating() }
     property bool unlocking: false
     property string deferredUnlock: ""   // "face" | "other": matched while the clock was showing
@@ -268,10 +262,8 @@ Item {
     }
     Component.onCompleted: {
         syncTypes()
-        // Face, fingerprint and password start with the clock (see the heartbeat), unless the
-        // shell locked for idleness.
-        run("sh -c 'test -e \"$XDG_RUNTIME_DIR/fenestra-idle-lock\" && echo idle || echo here'",
-            out => { root.clockFace = out.trim() !== "idle" })
+        // Nothing is checked until the clock is dismissed (showSignin starts face, fingerprint and
+        // the password together).
         root.forceActiveFocus()
     }
 

@@ -68,8 +68,6 @@ PowerIdle::PowerIdle(QObject *parent)
     QDBusConnection::systemBus().connect(s_upower, s_upowerPath, QStringLiteral("org.freedesktop.DBus.Properties"),
                                          QStringLiteral("PropertiesChanged"), this, SLOT(batteryChanged()));
     connect(LockOsd::instance(), &LockOsd::lockedChanged, this, [this] {
-        if (!LockOsd::instance()->locked())
-            QFile::remove(idleLockMarker());
         if (LockOsd::instance()->locked() && m_offAfterLock) {
             m_offAfterLock = false;
             QTimer::singleShot(1200, this, [this] {
@@ -185,12 +183,6 @@ void PowerIdle::sleepIfQuiet()
     QDBusConnection::systemBus().asyncCall(suspend);
 }
 
-QString PowerIdle::idleLockMarker()
-{
-    const QByteArray dir = qgetenv("XDG_RUNTIME_DIR");
-    return QString::fromLocal8Bit(dir.isEmpty() ? QByteArray("/tmp") : dir) + QStringLiteral("/fenestra-idle-lock");
-}
-
 void PowerIdle::screenOff()
 {
     qInfo("FENESTRA_POWERIDLE screen off");
@@ -210,10 +202,6 @@ void PowerIdle::timedOut(int id)
         // Windows: the screen goes off and the PC locks at the same time. Lock first; the screen
         // goes off once the lock screen has drawn (its first frame would light it up again).
         qInfo("FENESTRA_POWERIDLE lock and screen off");
-        // Tells the lock screen nobody is there: no face check until a key or the mouse.
-        QFile marker(idleLockMarker());
-        if (marker.open(QIODevice::WriteOnly))
-            marker.close();
         QProcess::startDetached(QStringLiteral("loginctl"), {QStringLiteral("lock-session")});
         m_offAfterLock = true;
         QTimer::singleShot(4000, this, [this] {
