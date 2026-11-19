@@ -49,7 +49,8 @@ Item {
         if (mode === m && player.running) return
         player.stop(); mode = m; clock = 0
         player.loops = m === "searching" ? Animation.Infinite : 1
-        player.to = total; player.duration = total
+        // The smile plays at twice its speed (~0.5 s): the desktop is only shown once it ends.
+        player.to = total; player.duration = m === "authentication" ? Math.round(total / 2) : total
         player.start()
     }
     function stop() { player.stop(); mode = "" }
