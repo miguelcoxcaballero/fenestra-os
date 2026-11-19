@@ -107,7 +107,7 @@ def adopt(user):
         print(f"ADOPT sensor templates {len(on_sensor)}, already in fprintd {len(on_sensor) - len(free)}, candidates {len(free)}", flush=True)
         if not free:
             print("ADOPT NONE", flush=True)
-            return 4
+            return 6 if on_sensor else 4      # 6: every print on the sensor is already in use here
         used = {k.get_finger().value_nick for k in known if k.get_username() == user}
         adopted = 0
         while free:
