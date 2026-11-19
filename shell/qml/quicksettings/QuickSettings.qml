@@ -419,7 +419,13 @@ Flyout {
                     MouseArea { id: wm; anchors.fill: parent; hoverEnabled: true
                         onClicked: model.active ? WifiNetworks.disconnectFrom(index)
                                    : model.connecting ? WifiNetworks.cancel(index)
-                                   : WifiNetworks.needsPassword(index) ? (parent.asking = true, (model.enterprise ? user : pw).forceActiveFocus()) : WifiNetworks.connectTo(index) }
+                                   : WifiNetworks.needsPassword(index) ? parent.ask() : WifiNetworks.connectTo(index) }
+                    // the saved user name is already filled in: only the password is left to type
+                    function ask() {
+                        asking = true
+                        if (model.enterprise && !user.text && model.identity) user.text = model.identity
+                        ;(model.enterprise && !user.text ? user : pw).forceActiveFocus()
+                    }
                     Rectangle {
                         id: portalButton
                         visible: parent.signIn
@@ -433,7 +439,7 @@ Flyout {
                     }
                     Connections { target: WifiNetworks
                         // wrong key: the password field comes back, the status shows Windows' message
-                        function onKeyRejected(ssid) { if (ssid === model.ssid) { pw.parent.parent.asking = true; pw.text = ""; pw.forceActiveFocus() } } }
+                        function onKeyRejected(ssid) { if (ssid === model.ssid) { pw.text = ""; pw.parent.parent.ask() } } }
                     // Enterprise networks (eduroam...): user name and password, as Windows asks for them.
                     Rectangle {
                         visible: parent.asking && model.enterprise

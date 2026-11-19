@@ -133,7 +133,7 @@ class WifiNetworks : public QAbstractListModel
     Q_PROPERTY(bool portal READ portal NOTIFY portalChanged)
 public:
     enum Roles { SsidRole = Qt::UserRole + 1, SignalRole, SecuredRole, ActiveRole, KnownRole, ConnectingRole,
-                 StatusRole, ErrorRole, EnterpriseRole, PortalRole };
+                 StatusRole, ErrorRole, EnterpriseRole, PortalRole, IdentityRole };
     static WifiNetworks *instance();
     static WifiNetworks *create(QQmlEngine *, QJSEngine *);
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -168,7 +168,7 @@ private:
     void onDeviceState(const QString &devicePath, int newState, int reason);
     void finishAttempt(bool ok, int reason);
     struct Net { QString ssid, apPath, devicePath, connectionPath; int signal = 0; bool secured = false, active = false,
-                 connecting = false, enterprise = false; QString keyMgmt; };
+                 connecting = false, enterprise = false, askSecret = false; QString keyMgmt, identity; };
     struct Attempt { QString ssid, uuid, devicePath; bool created = false, withKey = false, started = false; };
     QString statusOf(const Net &n) const;
     QList<Net> m_nets;

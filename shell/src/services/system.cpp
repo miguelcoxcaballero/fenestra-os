@@ -16,6 +16,7 @@
 #include <NetworkManagerQt/ActiveConnection>
 #include <NetworkManagerQt/Connection>
 #include <NetworkManagerQt/Manager>
+#include <NetworkManagerQt/Security8021xSetting>
 #include <NetworkManagerQt/Settings>
 #include <NetworkManagerQt/WirelessDevice>
 #include <NetworkManagerQt/WirelessSetting>
@@ -512,6 +513,11 @@ void WifiNetworks::rebuild()
                     newest = ts;
                     net.connectionPath = c->path();
                     uuid = cs->uuid();
+                    // An enterprise profile that keeps no password (flags "not saved" or "agent
+                    // owned"): with no secret agent in the session, ask for it before connecting.
+                    auto x = cs->setting(NetworkManager::Setting::Security8021x).dynamicCast<NetworkManager::Security8021xSetting>();
+                    net.identity = x ? x->identity() : QString();
+                    net.askSecret = x && (x->passwordFlags() & (NetworkManager::Setting::NotSaved | NetworkManager::Setting::AgentOwned));
                 }
             }
             const bool mine = (!acUuid.isEmpty() && acUuid == uuid) || ap->uni() == activeAp
@@ -657,6 +663,7 @@ QVariant WifiNetworks::data(const QModelIndex &index, int role) const
     case ErrorRole: return m_errors.value(n.ssid);
     case EnterpriseRole: return n.enterprise;
     case PortalRole: return n.active && m_portal;
+    case IdentityRole: return n.identity;
     }
     return {};
 }
@@ -664,7 +671,7 @@ QVariant WifiNetworks::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> WifiNetworks::roleNames() const
 {
     return {{SsidRole, "ssid"}, {SignalRole, "signal"}, {SecuredRole, "secured"}, {ActiveRole, "active"}, {KnownRole, "known"},
-            {ConnectingRole, "connecting"}, {StatusRole, "status"}, {ErrorRole, "error"}, {EnterpriseRole, "enterprise"}, {PortalRole, "portal"}};
+            {ConnectingRole, "connecting"}, {StatusRole, "status"}, {ErrorRole, "error"}, {EnterpriseRole, "enterprise"}, {PortalRole, "portal"}, {IdentityRole, "identity"}};
 }
 
 bool WifiNetworks::needsPassword(int row) const
@@ -672,7 +679,7 @@ bool WifiNetworks::needsPassword(int row) const
     if (row < 0 || row >= m_nets.size())
         return false;
     const Net &n = m_nets.at(row);
-    return n.secured && (n.connectionPath.isEmpty() || m_rejected.contains(n.ssid));
+    return n.secured && (n.connectionPath.isEmpty() || n.askSecret || m_rejected.contains(n.ssid));
 }
 
 void WifiNetworks::connectTo(int row, const QString &password, const QString &identity)
