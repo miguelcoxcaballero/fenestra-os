@@ -517,6 +517,7 @@ void WifiNetworks::rebuild()
                     // owned"): with no secret agent in the session, ask for it before connecting.
                     auto x = cs->setting(NetworkManager::Setting::Security8021x).dynamicCast<NetworkManager::Security8021xSetting>();
                     net.identity = x ? x->identity() : QString();
+                    net.autoConnect = cs->autoconnect();
                     net.askSecret = x && (x->passwordFlags() & (NetworkManager::Setting::NotSaved | NetworkManager::Setting::AgentOwned));
                 }
             }
@@ -664,6 +665,8 @@ QVariant WifiNetworks::data(const QModelIndex &index, int role) const
     case EnterpriseRole: return n.enterprise;
     case PortalRole: return n.active && m_portal;
     case IdentityRole: return n.identity;
+    case SavedRole: return !n.connectionPath.isEmpty();
+    case AutoConnectRole: return n.connectionPath.isEmpty() || n.autoConnect;
     }
     return {};
 }
@@ -671,7 +674,8 @@ QVariant WifiNetworks::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> WifiNetworks::roleNames() const
 {
     return {{SsidRole, "ssid"}, {SignalRole, "signal"}, {SecuredRole, "secured"}, {ActiveRole, "active"}, {KnownRole, "known"},
-            {ConnectingRole, "connecting"}, {StatusRole, "status"}, {ErrorRole, "error"}, {EnterpriseRole, "enterprise"}, {PortalRole, "portal"}, {IdentityRole, "identity"}};
+            {ConnectingRole, "connecting"}, {StatusRole, "status"}, {ErrorRole, "error"}, {EnterpriseRole, "enterprise"}, {PortalRole, "portal"}, {IdentityRole, "identity"},
+            {SavedRole, "saved"}, {AutoConnectRole, "autoConnect"}};
 }
 
 bool WifiNetworks::needsPassword(int row) const
@@ -682,7 +686,7 @@ bool WifiNetworks::needsPassword(int row) const
     return n.secured && (n.connectionPath.isEmpty() || n.askSecret || m_rejected.contains(n.ssid));
 }
 
-void WifiNetworks::connectTo(int row, const QString &password, const QString &identity)
+void WifiNetworks::connectTo(int row, const QString &password, const QString &identity, bool autoConnect)
 {
     if (row < 0 || row >= m_nets.size())
         return;
@@ -717,10 +721,17 @@ void WifiNetworks::connectTo(int row, const QString &password, const QString &id
     if (!n.connectionPath.isEmpty()) {
         auto c = NetworkManager::findConnection(n.connectionPath);
         m_attempt.uuid = c ? c->uuid() : QString();
-        if (c && !password.isEmpty()) {
-            // a saved network whose key was rejected: update that profile, never add a duplicate
+        const bool autoChanged = c && c->settings()->autoconnect() != autoConnect;
+        if (c && (!password.isEmpty() || autoChanged)) {
+            // a saved network whose key was rejected, or whose "Connect automatically" changed:
+            // update that profile, never add a duplicate
             NMVariantMapMap map = c->settings()->toMap();
-            if (n.enterprise) {
+            QVariantMap con = map.value(QStringLiteral("connection"));
+            con.insert(QStringLiteral("autoconnect"), autoConnect);
+            map.insert(QStringLiteral("connection"), con);
+            if (password.isEmpty()) {
+                // no secrets in the update: NetworkManager keeps the stored ones
+            } else if (n.enterprise) {
                 // keep the saved EAP method, CA, domain...: only the user name and password change
                 QVariantMap x = map.value(QStringLiteral("802-1x"));
                 if (!identity.isEmpty())
@@ -755,7 +766,7 @@ void WifiNetworks::connectTo(int row, const QString &password, const QString &id
     NMVariantMapMap settings;
     settings.insert(QStringLiteral("connection"), QVariantMap{{QStringLiteral("id"), n.ssid}, {QStringLiteral("uuid"), uuid},
                                                               {QStringLiteral("type"), QStringLiteral("802-11-wireless")},
-                                                              {QStringLiteral("autoconnect"), true}});
+                                                              {QStringLiteral("autoconnect"), autoConnect}});
     settings.insert(QStringLiteral("802-11-wireless"), QVariantMap{{QStringLiteral("ssid"), n.ssid.toUtf8()},
                                                                    {QStringLiteral("mode"), QStringLiteral("infrastructure")}});
     if (n.enterprise) {
@@ -840,6 +851,23 @@ void WifiNetworks::cancel(int row)
             if (auto c = NetworkManager::findConnectionByUuid(uuid))
                 c->remove();
         });
+    scheduleRebuild();
+}
+
+void WifiNetworks::forget(int row)
+{
+    if (row < 0 || row >= m_nets.size())
+        return;
+    const QString ssid = m_nets.at(row).ssid;
+    for (const NetworkManager::Connection::Ptr &c : NetworkManager::listConnections()) {
+        auto wifi = c->settings()->setting(NetworkManager::Setting::Wireless).dynamicCast<NetworkManager::WirelessSetting>();
+        if (wifi && QString::fromUtf8(wifi->ssid()) == ssid && wifi->mode() == NetworkManager::WirelessSetting::Infrastructure)
+            c->remove();
+    }
+    m_rejected.remove(ssid);
+    m_errors.remove(ssid);
+    if (m_attempt.ssid == ssid)
+        m_attempt = Attempt{};
     scheduleRebuild();
 }
 

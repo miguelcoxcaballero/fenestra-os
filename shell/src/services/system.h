@@ -133,7 +133,7 @@ class WifiNetworks : public QAbstractListModel
     Q_PROPERTY(bool portal READ portal NOTIFY portalChanged)
 public:
     enum Roles { SsidRole = Qt::UserRole + 1, SignalRole, SecuredRole, ActiveRole, KnownRole, ConnectingRole,
-                 StatusRole, ErrorRole, EnterpriseRole, PortalRole, IdentityRole };
+                 StatusRole, ErrorRole, EnterpriseRole, PortalRole, IdentityRole, SavedRole, AutoConnectRole };
     static WifiNetworks *instance();
     static WifiNetworks *create(QQmlEngine *, QJSEngine *);
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -151,7 +151,9 @@ public:
     // Known network or open one: activates it. Secured unknown one (or a saved one whose key was
     // just rejected): needs the password. Enterprise networks open Settings › Wi-Fi instead.
     Q_INVOKABLE bool needsPassword(int row) const;
-    Q_INVOKABLE void connectTo(int row, const QString &password = QString(), const QString &identity = QString());
+    Q_INVOKABLE void connectTo(int row, const QString &password = QString(), const QString &identity = QString(),
+                               bool autoConnect = true);
+    Q_INVOKABLE void forget(int row);   // delete the saved profile(s) of that network
     Q_INVOKABLE void disconnectFrom(int row);
     Q_INVOKABLE void cancel(int row);
 Q_SIGNALS:
@@ -168,7 +170,7 @@ private:
     void onDeviceState(const QString &devicePath, int newState, int reason);
     void finishAttempt(bool ok, int reason);
     struct Net { QString ssid, apPath, devicePath, connectionPath; int signal = 0; bool secured = false, active = false,
-                 connecting = false, enterprise = false, askSecret = false; QString keyMgmt, identity; };
+                 connecting = false, enterprise = false, askSecret = false, autoConnect = true; QString keyMgmt, identity; };
     struct Attempt { QString ssid, uuid, devicePath; bool created = false, withKey = false, started = false; };
     QString statusOf(const Net &n) const;
     QList<Net> m_nets;
