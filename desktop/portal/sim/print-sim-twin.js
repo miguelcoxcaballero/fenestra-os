@@ -15,19 +15,55 @@ const ICON = {
 };
 
 // The three "how to turn the stack over" pictures, shared by the twin and the guide.
-function howtoHTML(topPage, lastAside) {
+const SCENE_DEFS = `<defs>
+  <linearGradient id="hs-metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a626f"/><stop offset="1" stop-color="#363b44"/></linearGradient>
+  <linearGradient id="hs-tray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f343c"/><stop offset="1" stop-color="#4a505a"/></linearGradient>
+  <linearGradient id="hs-feeder" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cfd5dc"/><stop offset="1" stop-color="#e6e9ed"/></linearGradient>
+  <pattern id="hs-text" width="60" height="6" patternUnits="userSpaceOnUse"><rect width="60" height="6" fill="#fff"/><rect y="2" width="46" height="1.6" rx=".8" fill="#a3a9b2"/></pattern>
+  <marker id="hs-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+</defs>`;
+function sceneSVG(kind, n) {
+  const sheet = (dy, top) => `<path d="M52 ${70 + dy} H148 L160 ${92 + dy} H40 Z" fill="${top ? "url(#hs-text)" : "#f3f4f6"}" stroke="#c3c8cf" stroke-width=".8"/>`;
+  if (kind === "lift") {
+    return `<svg viewBox="0 0 200 120" aria-hidden="true">${SCENE_DEFS}
+      <rect x="22" y="8" width="156" height="40" rx="10" fill="url(#hs-metal)"/><rect x="48" y="40" width="104" height="4" rx="2" fill="#111"/>
+      <path d="M44 74 H156 L174 106 Q175 109 171 109 H29 Q25 109 26 106 Z" fill="url(#hs-tray)"/>
+      <g class="anim-lift">${sheet(6)}${sheet(3)}${sheet(0, true)}
+        <text x="100" y="86" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" font-family="Segoe UI Variable Text, Segoe UI, sans-serif">${n}</text></g>
+      <path class="anim-arrow" d="M170 72 C 184 56, 182 34, 166 22" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" marker-end="url(#hs-arrow)"/>
+    </svg>`;
+  }
+  if (kind === "load") {
+    return `<svg viewBox="0 0 200 120" aria-hidden="true">${SCENE_DEFS}
+      <path d="M118 66 L150 8 Q152 5 155 6 L164 10 Q167 12 165 15 L136 68 Z" fill="url(#hs-feeder)" stroke="#a6aeb8" stroke-width=".8"/>
+      <g class="anim-load"><g transform="translate(136 30) rotate(28)">
+        <rect x="-2.8" y="-34" width="5.6" height="62" rx="1.2" fill="#fff" stroke="#c3c8cf" stroke-width=".8"/>
+        <rect x="1.4" y="-34" width="1.6" height="62" fill="#a3a9b2"/>
+        <rect x="-2.8" y="22" width="5.6" height="6" rx="1" fill="var(--accent)"/></g></g>
+      <rect x="40" y="62" width="112" height="44" rx="10" fill="url(#hs-metal)"/>
+      <rect x="40" y="62" width="112" height="10" rx="5" fill="#69717f"/>
+      <path d="M40 94 L12 104 Q8 106 12 107 L40 104 Z" fill="url(#hs-tray)"/>
+      <path d="M110 40 C 116 44, 120 50, 122 58" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" marker-end="url(#hs-arrow)"/>
+      <text x="8" y="16" font-size="10.5" font-weight="600" fill="var(--accent)" font-family="Segoe UI Variable Text, Segoe UI, sans-serif">Arriba, primero</text>
+      <text x="8" y="30" font-size="10" fill="currentColor" opacity=".7" font-family="Segoe UI Variable Text, Segoe UI, sans-serif">lo impreso, hacia atrás</text>
+    </svg>`;
+  }
+  return "";
+}
+function howtoHTML(topPage) {
   const n = topPage ? String(topPage) : "";
+  const flip = `<div class="scene s-flip">
+      <svg class="flip-arc" viewBox="0 0 200 120" aria-hidden="true">${SCENE_DEFS}<path d="M128 22 C 112 4, 84 4, 70 20" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" marker-end="url(#hs-arrow)"/></svg>
+      <div class="landing"></div>
+      <div class="leaf"><div class="face front"><i class="band"></i><b>${n}</b><i class="lines"></i></div><div class="face back"><span>en blanco</span></div></div>
+    </div>`;
   const steps = [
-    ["Saca todas las hojas impresas de la bandeja de salida, sin cambiar su orden.",
-      `<div class="scene s-lift"><div class="tray-out"></div><div class="pg b"><div class="lines"></div></div><div class="pg"><div class="lines"></div><div class="n">${n}</div></div></div>`],
-    ["Dale la vuelta al montón como a la página de un libro: lo impreso queda hacia abajo.",
-      `<div class="scene s-flip"><div class="axis"></div><div class="card3d"><div class="pg"><div class="top"></div><div class="lines"></div><div class="n">${n}</div></div><div class="pg back blankface"><div class="top"></div></div></div></div>`],
-    ["Ponlo en la bandeja trasera como el papel en blanco: la parte de arriba entra primero.",
-      `<div class="scene s-load"><div class="hint">arriba ↓ primero</div><div class="tray-rear"></div><div class="body"></div><div class="arrow"></div><div class="pg blankface"><div class="top"></div></div></div>`],
+    ["Saca todas las hojas impresas de la bandeja de salida, sin cambiar su orden.", `<div class="scene">${sceneSVG("lift", n)}</div>`],
+    ["Dale la vuelta al montón como a la página de un libro: lo impreso queda hacia abajo.", flip],
+    ["Ponlo en la bandeja trasera como el papel en blanco: la parte de arriba entra primero.", `<div class="scene">${sceneSVG("load", n)}</div>`],
   ];
   return `<div class="howto">${steps.map(([cap, scene], i) =>
-    `<div class="howto-step${i === 0 ? " hi" : ""}">${scene}<div class="cap"><span class="num">${i + 1}</span><span>${esc(cap)}</span></div></div>`).join("")}</div>
-    ${lastAside ? `<div class="note-line">La última hoja no lleva nada detrás: déjala en el montón, la impresora la pasará sin imprimir.</div>` : ""}`;
+    `<div class="howto-step${i === 0 ? " hi" : ""}">${scene}<div class="cap"><span class="num">${i + 1}</span><span>${esc(cap)}</span></div></div>`).join("")}</div>`;
 }
 // highlight the step whose picture is playing (the animations last 3.2 s)
 setInterval(() => {
@@ -66,86 +102,18 @@ const Twin = {
   loop() {
     const tick = () => {
       const p = Sim.printers[Sim.view];
-      if (p && (p.busy || p.wait)) { this.live(); if (Sim.guide) Sim.guide.progress(p); }
+      if (p) this.drawArt(p);
+      if (p && (p.busy || p.wait)) this.live();
+      if (Sim.guide) Sim.guide.progress(Sim.printers[Sim.guide.group.choice.printer]);
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   },
 
-  // ---------------------------------------------------------------- the drawing
-  svg(p) {
-    const blink = Math.floor(performance.now() / 450) % 2 === 0;
-    const led = (on, col, b) => (on && (!b || blink) ? col : "#4a4f57");
-    const printing = p.feeding && p.anim === "print";
-    const stackH = (n, max) => Math.max(0, Math.min(max, n * max / p.def.capacity * 2.2));
-    const tint = (s) => (s ? (PAPER_TYPES[s.type] || PAPER_TYPES.plain).tint : "#fff");
-    if (p.def.kind === "laser") {
-      const lvl = p.ink.K / p.def.tanks.K;
-      return `<svg viewBox="0 0 560 220" role="img" aria-label="Impresora láser">
-        <defs><linearGradient id="lz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f3"/><stop offset="1" stop-color="#cfd3d9"/></linearGradient></defs>
-        <ellipse cx="280" cy="206" rx="200" ry="8" fill="rgba(0,0,0,.12)"/>
-        <rect x="110" y="44" width="340" height="156" rx="14" fill="url(#lz)" stroke="#aeb3ba"/>
-        <path d="M150 44 L170 22 L390 22 L410 44 Z" fill="#dde1e6" stroke="#aeb3ba"/>
-        ${p.out.length ? `<rect x="190" y="${18 - stackH(p.out.length, 10)}" width="180" height="${4 + stackH(p.out.length, 10)}" fill="${tint(p.out[0])}" stroke="#bbb"/>` : ""}
-        <rect x="130" y="150" width="300" height="40" rx="6" fill="#d6d9de" stroke="#a9adb4"/>
-        <rect x="250" y="166" width="60" height="7" rx="3.5" fill="#9aa0a7"/>
-        <rect x="140" y="64" width="120" height="44" rx="5" fill="#1d2a22"/>
-        <text x="150" y="84" font-size="12" fill="#7cf29b" font-family="Segoe UI, sans-serif">${p.power ? (p.wait ? "Error" : p.feeding ? "Imprimiendo" : "Lista") : ""}</text>
-        <text x="150" y="100" font-size="11" fill="#7cf29b" font-family="Segoe UI, sans-serif">${p.power ? `Tóner ${Math.round(lvl * 100)} %` : ""}</text>
-        <circle cx="290" cy="86" r="6" fill="${led(p.power, "#3fd35f", p.feeding)}"/>
-        <circle cx="312" cy="86" r="6" fill="${led(p.power && p.wait, "#ff9e3d", true)}"/>
-        ${p.jammed ? `<g><rect x="210" y="118" width="140" height="26" rx="13" fill="#c42b1c"/><text x="280" y="135" text-anchor="middle" font-size="12" font-weight="600" fill="#fff" font-family="Segoe UI, sans-serif">Atasco de papel</text></g>` : ""}
-        ${!p.power ? `<rect x="110" y="44" width="340" height="156" rx="14" fill="rgba(0,0,0,.28)"/>` : ""}
-      </svg>`;
-    }
-    const tankCol = { C: "#00a3e0", M: "#e0007a", Y: "#ffd400", K: "#26282c" };
-    const tanks = Object.keys(p.def.tanks).map((t, i) => {
-      const lvl = Math.max(0, p.ink[t] / p.def.tanks[t]);
-      const x = 404 + i * 16, h = 48 * lvl;
-      return `<rect x="${x}" y="112" width="11" height="52" rx="2" fill="#1f2226" stroke="#5a606a"/>
-        <rect x="${x + 1.5}" y="${162.5 - h}" width="8" height="${h}" rx="1" fill="${tankCol[t]}"/>`;
-    }).join("");
-    const t = performance.now();
-    const headX = printing ? 140 + (Math.sin(t / 140) + 1) / 2 * 190 : 150;
-    const inH = stackH(p.tray.length, 26), outH = stackH(p.out.length, 12);
-    const feedP = p.feeding && p.anim === "feed" ? Math.min(1, (t - p.animAt) / 400) : 0;
-    const outP = p.anim === "out" ? Math.min(1, (t - p.animAt) / 450) : 1;
-    return `<svg viewBox="0 0 560 220" role="img" aria-label="Impresora de tinta con alimentador trasero">
-      <defs>
-        <linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f5560"/><stop offset="1" stop-color="#30343b"/></linearGradient>
-        <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d646f"/><stop offset="1" stop-color="#474d56"/></linearGradient>
-      </defs>
-      <ellipse cx="280" cy="206" rx="210" ry="8" fill="rgba(0,0,0,.14)"/>
-      <!-- rear sheet feeder, paper standing in it -->
-      <path d="M160 86 L182 14 L378 14 L400 86 Z" fill="#c9ced5" stroke="#a5abb3"/>
-      ${p.tray.length ? `<path d="M174 86 L${193 - inH * .1} ${22 - inH * .2} L${367 + inH * .1} ${22 - inH * .2} L386 86 Z" fill="${tint(p.tray[0])}" stroke="#c9ccd1"/>
-        <path d="M174 86 L193 22 L367 22 L386 86" fill="none" stroke="#d9dce0" stroke-width="${Math.max(1, inH / 4)}" opacity=".7"/>` : ""}
-      ${feedP > 0 ? `<rect x="196" y="${70 + feedP * 18}" width="168" height="6" fill="${tint(p.feeding)}" opacity=".9"/>` : ""}
-      <!-- body -->
-      <rect x="90" y="80" width="380" height="104" rx="18" fill="url(#bd)"/>
-      <rect x="90" y="80" width="380" height="30" rx="18" fill="url(#lid)"/>
-      <rect x="112" y="122" width="270" height="44" rx="6" fill="#1b1e22"/>
-      <rect x="${headX}" y="128" width="44" height="22" rx="4" fill="#6b7380" stroke="#8d94a0"/>
-      ${printing ? `<rect x="${headX + 6}" y="152" width="32" height="2" fill="${blink ? "#4cc2ff" : "#ffffff"}" opacity=".8"/>` : ""}
-      <!-- panel -->
-      <circle cx="112" cy="95" r="6" fill="${led(p.power, "#3fd35f", printing)}"/>
-      <circle cx="132" cy="95" r="4" fill="${led(p.power && p.connected, "#4cc2ff")}"/>
-      <circle cx="150" cy="95" r="4" fill="${led(p.power && (p.wait === "paper" || p.wait === "jam"), "#ff9e3d", p.wait === "jam")}"/>
-      <circle cx="168" cy="95" r="4" fill="${led(p.power && p.wait === "ink", "#ff9e3d", true)}"/>
-      <text x="182" y="99" font-size="10" fill="#c9ced6" font-family="Segoe UI, sans-serif">Wi-Fi · papel · tinta</text>
-      ${tanks}
-      <!-- output tray -->
-      <path d="M150 184 L132 200 L428 200 L410 184 Z" fill="#5a606a"/>
-      ${p.out.length ? `<path d="M170 ${186 - outH} L156 ${197 - outH} L404 ${197 - outH} L390 ${186 - outH} Z" fill="${tint(p.out[0])}" stroke="#c9ccd1" opacity="${outP}"/>` : ""}
-      ${p.jammed ? `<g><rect x="200" y="132" width="150" height="26" rx="13" fill="#c42b1c"/><text x="275" y="149" text-anchor="middle" font-size="12" font-weight="600" fill="#fff" font-family="Segoe UI, sans-serif">Atasco de papel</text></g>` : ""}
-      ${!p.power ? `<rect x="90" y="80" width="380" height="104" rx="18" fill="rgba(0,0,0,.3)"/>` : ""}
-    </svg>`;
-  },
-
   // ---------------------------------------------------------------- updates
   live() {
     const p = Sim.printers[Sim.view];
-    $("#tw-svg").innerHTML = this.svg(p);
+    this.drawArt(p);
     const live = $("#tw-live");
     const cur = p.current;
     live.classList.toggle("idle", !p.feeding);
@@ -163,6 +131,13 @@ const Twin = {
     const job = Sim.jobs.find((j) => j.printer === p.name && j.state === "processing");
     $("#tw-job-bar").style.width = job ? Math.round((job.done + (p.feeding ? p.progress || 0 : 0)) / job.plan.units.length * 100) + "%" : "0";
     this.pill(p);
+  },
+  drawArt(p) {
+    if (!this.art || this.artFor !== p.name) {
+      this.art = new PrinterArt($("#tw-svg"), p.def.kind);
+      this.artFor = p.name;
+    }
+    this.art.update(p, Sim);
   },
   waitText(p) {
     return { paper: "Sin papel", jam: "Atasco de papel", ink: "Falta tinta" }[p.wait] || "";
@@ -274,7 +249,7 @@ const Twin = {
       key = "flip" + p.out.length + !!Sim.hands;
       html = head("action", ICON.flip, "Ahora te toca: dale la vuelta a las hojas",
         `Las caras delanteras han terminado (${g.front.plan.units.length} hojas). Hazlo así y luego pulsa <b>Continuar</b> en la ventana de doble cara.`) +
-        howtoHTML(top ? top.pages[0] + 1 : "", g.sides % 2 === 1) +
+        howtoHTML(top ? top.pages[0] + 1 : "") + (g.sides % 2 === 1 ? `<div class="callout-note">${ICON.info}<span>La última hoja no lleva nada detrás: déjala en el montón, la impresora la pasará sin imprimir.</span></div>` : "") +
         `<div class="acts"><button class="btn sm primary" data-a="auto">Hacerlo en la simulación</button></div></div>`;
     } else if (g && g.choice.printer === p.name && g.back && g.back.state === "completed") {
       key = "done" + p.out.length;
