@@ -38,7 +38,6 @@ private:
     static void onDelayChanged(GSettings *, const char *, void *self);
     void rearm(bool withSleep = true);
     void screenOff();
-    static QString idleLockMarker();
     void applyAutolock();
     void timedOut(int id);
     void sleepIfQuiet();
