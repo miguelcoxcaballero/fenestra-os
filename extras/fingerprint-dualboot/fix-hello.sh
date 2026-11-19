@@ -35,6 +35,8 @@ case $rc in
    say "   (Configuración > Cuentas > Opciones de inicio de sesión > Huella digital), vuelve a"
    say "   Linux y ejecuta esto otra vez." ;;
 5) say "   No se ha adoptado ninguna huella (ningún dedo coincidió). Vuelve a ejecutarlo." ;;
+6) say "   Todas las huellas del lector ya se usan en Linux: no hay nada más que adoptar."
+   say "   (Si las registraste desde Linux, Windows las borrará la próxima vez que lo arranques.)" ;;
 *) say "   Ha fallado (código $rc). Detalle en $LOG" ;;
 esac
 echo "fix-hello exit $rc" >> "$LOG"
