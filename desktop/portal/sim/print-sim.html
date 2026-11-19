@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later
+  Fenestra print simulator: the print dialog (desktop/portal/fenestra_portal) rebuilt in HTML with
+  the same sizes, colours, strings and logic, next to a simulated printer that behaves as the real
+  one (paper path, trays, ink, errors, CUPS options, manual two-sided printing).
+  Open this file in a browser; nothing is sent anywhere. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de impresión</title>
+<link rel="stylesheet" href="print-sim.css">
+</head>
+<body>
+<header class="simbar">
+  <div class="simbar-group">
+    <strong class="simbar-title">Simulador de impresión</strong>
+    <span class="simbar-sub">diálogo de Fenestra + impresora simulada</span>
+  </div>
+  <div class="simbar-group">
+    <label>Documento
+      <select id="sim-doc">
+        <option value="text">Texto, 5 páginas</option>
+        <option value="text7">Texto, 7 páginas</option>
+        <option value="slides">Presentación horizontal, 4 páginas</option>
+        <option value="photo">Foto, 1 página</option>
+        <option value="mixed">Folleto en color, 6 páginas</option>
+        <option value="none">App sin vista previa (PreparePrint)</option>
+        <option value="pdf">Abrir un PDF…</option>
+      </select>
+    </label>
+    <input type="file" id="sim-pdf" accept="application/pdf" hidden>
+    <label>Tema
+      <select id="sim-theme"><option value="light">Claro</option><option value="dark">Oscuro</option></select>
+    </label>
+    <label>Color de énfasis
+      <select id="sim-accent"></select>
+    </label>
+    <label>Idioma
+      <select id="sim-lang"><option value="es">Español</option><option value="en">English</option></select>
+    </label>
+    <button id="sim-open" class="simbtn primary">Imprimir… (Ctrl+P)</button>
+  </div>
+</header>
+
+<main class="simmain">
+  <section class="screen" id="screen">
+    <div class="appwin" id="appwin">
+      <div class="appwin-title"><span id="app-title">Documento</span></div>
+      <div class="appwin-body" id="app-body"></div>
+    </div>
+    <div class="dlg-holder" id="dlg-holder"></div>
+    <div class="overlay" id="overlay"></div>
+  </section>
+
+  <section class="printer-side">
+    <div class="printer-card">
+      <div class="printer-head">
+        <div>
+          <div class="ph-name" id="ph-name">ET-2710-Series</div>
+          <div class="ph-model" id="ph-model"></div>
+        </div>
+        <select id="sim-printer"></select>
+      </div>
+      <div class="printer-stage" id="printer-stage"></div>
+      <div class="printer-state" id="printer-state"></div>
+      <div class="hands" id="hands"></div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="out" class="on">Bandeja de salida</button>
+      <button data-tab="in">Bandeja de entrada</button>
+      <button data-tab="queue">Cola (CUPS)</button>
+      <button data-tab="ink">Tinta</button>
+      <button data-tab="faults">Averías</button>
+      <button data-tab="table">Mesa</button>
+      <button data-tab="tech">Técnico</button>
+      <button data-tab="log">Registro</button>
+    </nav>
+    <div class="tabpanes">
+      <div class="tabpane on" id="tab-out"></div>
+      <div class="tabpane" id="tab-in"></div>
+      <div class="tabpane" id="tab-queue"></div>
+      <div class="tabpane" id="tab-ink"></div>
+      <div class="tabpane" id="tab-faults"></div>
+      <div class="tabpane" id="tab-table"></div>
+      <div class="tabpane" id="tab-tech"></div>
+      <div class="tabpane" id="tab-log"></div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden></div>
+
+<script src="print-sim-data.js"></script>
+<script src="print-sim-dialog.js"></script>
+<script src="print-sim-printer.js"></script>
+</body>
+</html>
