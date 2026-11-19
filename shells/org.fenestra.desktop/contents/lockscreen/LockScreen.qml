@@ -90,8 +90,12 @@ Item {
     // Plasma's heartbeat: (re)starts the PAM conversations, only once the clock is dismissed: nothing
     // (face, fingerprint, password) is checked while the clock shows (the user's choice: no unlock
     // before the sign-in screen is up). The workers are not ready when the lock screen loads, so it
-    // keeps trying every second while the sign-in screen is up (from the end of its reveal).
-    Timer { interval: 1000; repeat: true; triggeredOnStart: true; running: !root.unlocking && root.phase === "signin" && !revealAnim.running && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
+    // keeps trying while the sign-in screen is up: every 150 ms until a worker answers (the camera
+    // starts as soon as one does), then every second. From the start of the reveal, not its end:
+    // waiting for the 620 ms animation and then a whole second for a worker that was not ready
+    // put ~2 s before the face check even began.
+    property bool authAnswered: false
+    Timer { interval: root.authAnswered ? 1000 : 150; repeat: true; triggeredOnStart: true; running: !root.unlocking && root.phase === "signin" && !authenticator.unlocked; onTriggered: authenticator.startAuthenticating() }
     property bool unlocking: false
     property string deferredUnlock: ""   // "face" | "other": matched while the clock was showing
 
@@ -209,6 +213,7 @@ Item {
             authenticator.startAuthenticating()
         }
         function onInfoMessageChanged() {
+            root.authAnswered = true
             const m = authenticator.infoMessage
             root.log("FENESTRA_LOCK info", m)
             // Howdy 3: "Failure, timeout reached" / "Face detection timeout reached" when it gives up.
@@ -223,6 +228,7 @@ Item {
             if (root.isFaceMessage(authenticator.errorMessage)) root.faceFailed()
         }
         function onNoninteractiveInfo(kind, auth) {
+            root.authAnswered = true
             const m = auth ? auth.infoMessage : ""
             root.log("FENESTRA_LOCK ninfo", kind, m)
             if (kind !== root.fingerType) return
