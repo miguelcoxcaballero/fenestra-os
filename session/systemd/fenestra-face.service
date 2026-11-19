@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=Fenestra face sign-in, kept ready (Howdy preloaded; the camera opens only to sign in)
+PartOf=fenestra-session.target
+
+[Service]
+ExecStart=/usr/libexec/fenestra/fenestra-face-server
+Restart=on-failure
+RestartSec=3
+Nice=-5
