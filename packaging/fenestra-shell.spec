@@ -103,6 +103,7 @@ fi
 %{_userunitdir}/fenestra-shell-failed.service
 %{_userunitdir}/fenestra-boot-check.service
 %{_userunitdir}/fenestra-sleep-log.service
+%{_userunitdir}/fenestra-print-resume.service
 %{_userunitdir}/fenestra-face.service
 %{_userunitdir}/fenestra-release-upgrade-user.service
 %{_userunitdir}/fenestra-oobe-first-login.service

@@ -8,6 +8,7 @@ frontend can Close() it; the method returns (response, results) when the user is
 """
 from __future__ import annotations
 
+import dataclasses
 import os
 import sys
 import time
@@ -105,6 +106,71 @@ class Request:
                 log(f"cleanup: {e}")
 
 
+class PendingDuplex:
+    """Manual two-sided printing waiting for its backs: the document's copy plus a JSON file
+    in $XDG_STATE_HOME/fenestra/print-duplex/. fenestra-print-resume.service starts the portal
+    at login while this folder has anything, so the window also survives a reboot."""
+
+    DIR = os.path.join(GLib.get_user_state_dir(), "fenestra", "print-duplex")
+    MAX_AGE_S = 7 * 24 * 3600
+
+    def __init__(self, base, title, choice, app_applied, sides):
+        self.base, self.title, self.choice, self.app_applied, self.sides = base, title, choice, app_applied, sides
+
+    @property
+    def pdf(self):
+        return self.base + ".pdf"
+
+    @classmethod
+    def create(cls, src, title, choice, app_applied, sides):
+        import json
+        import shutil
+        import tempfile
+        os.makedirs(cls.DIR, mode=0o700, exist_ok=True)
+        fd, pdf = tempfile.mkstemp(prefix="duplex-", suffix=".pdf", dir=cls.DIR)
+        os.close(fd)
+        shutil.copyfile(src, pdf)
+        p = cls(pdf[:-4], title, choice, app_applied, sides)
+        data = {"title": title, "app_applied": app_applied, "sides": sides, "created": time.time(),
+                "choice": dataclasses.asdict(choice)}
+        with open(p.base + ".json.part", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, default=str)
+        os.replace(p.base + ".json.part", p.base + ".json")
+        return p
+
+    @classmethod
+    def load_all(cls):
+        import json
+        out = []
+        try:
+            names = sorted(os.listdir(cls.DIR))
+        except OSError:
+            return out
+        for name in names:
+            if not name.endswith(".json"):
+                continue
+            base = os.path.join(cls.DIR, name[:-5])
+            try:
+                with open(base + ".json", encoding="utf-8") as f:
+                    d = json.load(f)
+                if time.time() - d.get("created", 0) > cls.MAX_AGE_S or not os.path.exists(base + ".pdf"):
+                    raise ValueError("stale")
+                fields = {f.name for f in dataclasses.fields(printing.Choice)}
+                choice = printing.Choice(**{k: v for k, v in d["choice"].items() if k in fields})
+                out.append(cls(base, d["title"], choice, bool(d["app_applied"]), int(d["sides"])))
+            except (OSError, ValueError, KeyError, TypeError) as e:
+                log(f"manual two-sided: dropping {name}: {e}")
+                cls(base, "", None, True, 0).forget()
+        return out
+
+    def forget(self):
+        for ext in (".pdf", ".json"):
+            try:
+                os.unlink(self.base + ext)
+            except OSError:
+                pass
+
+
 class PrintService:
     def __init__(self, conn: Gio.DBusConnection, demo=False):
         self.keep = set()   # windows that outlive their request (manual two-sided printing)
@@ -113,6 +179,7 @@ class PrintService:
         self.tokens: dict[int, tuple[printing.Choice, float]] = {}
         self._next_token = int(time.time()) & 0xFFFF
         self.reg_id = conn.register_object(OBJECT_PATH, PRINT_IFACE, self._on_call, None, None)
+        GLib.idle_add(self._restore_pending)
 
     # ------------------------------------------------------------------ dispatch
     def _on_call(self, conn, sender, path, iface, method, params, invocation):
@@ -251,46 +318,61 @@ class PrintService:
         if sides < 2:
             printing.send_to_printer(printer, title, path, choice, doc is None, sent)
             return
-        import shutil
-        import tempfile
-        fd, own = tempfile.mkstemp(prefix="fenestra-duplex-", suffix=".pdf")
-        os.close(fd)
-        shutil.copyfile(path, own)
-        state = {"window": None}
-
-        def done_with_copy():
-            try:
-                os.unlink(own)
-            except OSError:
-                pass
+        # The copy and what the backs need are kept on disk until Continue or Cancel, so the
+        # window comes back if the service restarts (an update, a crash, logging out).
+        pending = PendingDuplex.create(path, title, choice, doc is None, sides)
 
         def front_sent(err):
             if err:
-                done_with_copy()
+                pending.forget()
                 sent(err)
                 return
             log(f"manual two-sided: fronts queued on {choice.printer!r} ({sides} sides)")
             req.reply(RESPONSE_OK)
-            from .dialog import ManualDuplexWindow
-            state["window"] = ManualDuplexWindow(title, choice, sides, on_continue=back, on_cancel=cancelled)
-            self.keep.add(state["window"])
-            state["window"].present()
+            self._show_backs_window(pending, printer)
+
+        printing.send_to_printer(printer, title, pending.pdf, choice, doc is None, front_sent, side="front")
+
+    def _show_backs_window(self, pending, printer=None):
+        """The window between the two passes; Continue sends the backs from the kept copy."""
+        from .dialog import ManualDuplexWindow
+        state = {}
 
         def back():
             log("manual two-sided: printing the backs")
             self.keep.discard(state["window"])
 
             def back_sent(err):
-                done_with_copy()
+                pending.forget()
                 log(f"manual two-sided: backs {'failed: ' + err if err else 'queued'}")
-            printing.send_to_printer(printer, title, own, choice, doc is None, back_sent, side="back")
+
+            def with_printer(p):
+                if p is None:
+                    log(f"manual two-sided: printer {pending.choice.printer!r} not found; backs kept for later")
+                    self._show_backs_window(pending)
+                    return
+                printing.send_to_printer(p, pending.title, pending.pdf, pending.choice, pending.app_applied,
+                                         back_sent, side="back")
+            if printer is not None:
+                with_printer(printer)
+            else:
+                printing.find_printer(pending.choice.printer, with_printer)
 
         def cancelled():
             self.keep.discard(state["window"])
-            done_with_copy()
+            pending.forget()
             log("manual two-sided: backs cancelled")
 
-        printing.send_to_printer(printer, title, own, choice, doc is None, front_sent, side="front")
+        state["window"] = ManualDuplexWindow(pending.title, pending.choice, pending.sides,
+                                             on_continue=back, on_cancel=cancelled)
+        self.keep.add(state["window"])
+        state["window"].present()
+
+    def _restore_pending(self):
+        for pending in PendingDuplex.load_all():
+            log(f"manual two-sided: the backs of {pending.title!r} are still to print; showing the window again")
+            self._show_backs_window(pending)
+        return False
 
     def _send(self, req: Request, title: str, path: str, choice: printing.Choice, doc):
         """doc is the Poppler document when the app did not apply our settings itself

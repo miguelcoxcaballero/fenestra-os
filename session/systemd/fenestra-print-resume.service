@@ -1,0 +1,12 @@
+[Unit]
+Description=Fenestra: show again the second pass of a manual two-sided print
+Documentation=https://github.com/miguelcoxcaballero/fenestra-os/tree/main/desktop/portal
+# Only while the print portal keeps backs to print (fenestra_portal/service.py PendingDuplex).
+ConditionDirectoryNotEmpty=%S/fenestra/print-duplex
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+# Any call D-Bus-activates the portal, which shows the window again when it starts.
+ExecStart=/usr/bin/gdbus introspect --session --dest org.freedesktop.impl.portal.desktop.fenestra --object-path /org/freedesktop/portal/desktop

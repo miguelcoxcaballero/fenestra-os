@@ -184,7 +184,7 @@ if(FENESTRA_INSTALL_SESSION)
                      ${session_dir}/libexec/fenestra-portal-login ${session_dir}/libexec/fenestra-face-server
             DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
     install(FILES ${session_dir}/systemd/fenestra-session.target ${session_dir}/systemd/fenestra-shell.service
-                  ${session_dir}/systemd/fenestra-boot-check.service ${session_dir}/systemd/fenestra-sleep-log.service
+                  ${session_dir}/systemd/fenestra-boot-check.service ${session_dir}/systemd/fenestra-sleep-log.service ${session_dir}/systemd/fenestra-print-resume.service
                   ${session_dir}/systemd/fenestra-face.service
                   ${session_dir}/systemd/fenestra-shell-failed.service ${session_dir}/systemd/fenestra-release-upgrade-user.service ${session_dir}/systemd/fenestra-oobe-first-login.service
             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)

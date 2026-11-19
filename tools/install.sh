@@ -90,7 +90,8 @@ bootcheck() {
         install -Dm755 "$REPO/session/libexec/$exe" "$HOME/.local/libexec/fenestra/$exe" || return 1
         sed "s|^ExecStart=.*|ExecStart=$HOME/.local/libexec/fenestra/$exe|" "$REPO/session/systemd/$n.service" > "$CONF/systemd/user/$n.service"
     done
-    printf '[Unit]\nWants=fenestra-boot-check.service fenestra-sleep-log.service\n' > "$CONF/systemd/user/fenestra-session.target.d/boot-check.conf"
+    install -Dm644 "$REPO/session/systemd/fenestra-print-resume.service" "$CONF/systemd/user/fenestra-print-resume.service" || return 1
+    printf '[Unit]\nWants=fenestra-boot-check.service fenestra-sleep-log.service fenestra-face.service fenestra-print-resume.service\n' > "$CONF/systemd/user/fenestra-session.target.d/boot-check.conf"
     systemctl --user daemon-reload
     systemctl --user restart fenestra-sleep-log.service
 }
