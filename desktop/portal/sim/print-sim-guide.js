@@ -48,8 +48,11 @@ class DuplexGuide {
   progress(p) {
     const bar = $(".bar > div", this.win);
     const j = this.stage() === "fronts" ? this.group.front : this.group.back;
-    const art = $(".printing-scene.twinart", this.win);
-    if (art && (p.busy || p.wait)) art.innerHTML = Twin.svg(p);
+    const host = $(".printing-scene.twinart", this.win);
+    if (host) {
+      if (!this.art || this.art.svg.parentNode !== host) this.art = new PrinterArt(host, p.def.kind);
+      this.art.update(p, Sim);
+    }
     if (bar && j) bar.style.width = Math.round((j.done + (p.feeding ? p.progress || 0 : 0)) / j.plan.units.length * 100) + "%";
   }
   render() {
@@ -62,7 +65,7 @@ class DuplexGuide {
     let body = "", left = "", right = "";
     const printing = (title, j, total) => {
       const problem = p.wait || !p.power ? `<div class="note">${ICON.warn}<div><b>${esc(!p.power ? "La impresora está apagada" : Twin.waitText(p))}.</b> Resuélvelo en la impresora; el trabajo sigue donde estaba.</div></div>` : "";
-      return `<div class="printing-scene twinart">${Twin.svg(p)}</div>
+      return `<div class="printing-scene twinart"></div>
         <div class="status"><span>${esc(title)}</span><span>${Math.min(j.done + (p.feeding ? 1 : 0), total)} de ${total} hojas</span></div>
         <div class="bar"><div style="width:0"></div></div>${problem}`;
     };
@@ -73,7 +76,7 @@ class DuplexGuide {
     } else if (s === "turn") {
       const top = p.out[0] && p.out[0].faces[p.out[0].pose.up][0];
       body = `<div class="lead">Las caras delanteras están listas. Ahora pon las hojas para imprimir los reversos:</div>
-        ${howtoHTML(top ? top.pages[0] + 1 : "", false)}
+        ${howtoHTML(top ? top.pages[0] + 1 : "")}
         ${g.sides % 2 ? `<div class="note">${ICON.info}<div>La última hoja no lleva nada detrás: <b>déjala en el montón</b>, la impresora la pasará sin imprimir.</div></div>` : ""}`;
       left = `<button class="fp-link" data-a="auto">Hacerlo en la simulación</button>`;
       right = `<button class="fp-btn accent" data-a="go">${esc(_("Continue"))}</button><button class="fp-btn" data-a="cancel">${esc(_("Cancel"))}</button>`;
