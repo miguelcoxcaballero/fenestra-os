@@ -1082,13 +1082,15 @@ class ManualDuplexWindow(Gtk.Window):
         fronts = (sides + 1) // 2
         intro = _("The front sides are printing ({n} sheets). When the printer has finished:").format(n=fronts)
         box.append(Gtk.Label(label=intro, xalign=0, wrap=True))
-        edge = (_("Turn the stack over like the page of a book, so the printed side faces down.")
-                if choice.duplex == "manual-long" else
-                _("Turn the stack over from top to bottom, like a notepad, so the printed side faces down."))
-        steps = [_("Take out all the printed sheets without changing their order."), edge,
+        # The same turn for both edges: for the short edge the backs are already printed upside
+        # down (printing.job_settings), so turning the stack like a notepad would undo that.
+        steps = [_("Take out all the printed sheets without changing their order."),
+                 _("Turn the stack over like the page of a book, so the printed side faces down."),
                  _("Load them in the paper tray again the way the blank paper was loaded, the top of the pages going in first.")]
         if sides % 2:
-            steps.append(_("The last sheet has nothing on its back: put it aside."))
+            # CUPS (libcupsfilters >= 2.1.1) adds a blank back for it: set aside, the printer
+            # would stop for paper or take a blank sheet.
+            steps.append(_("The last sheet has nothing on its back: leave it in the stack, the printer passes it through without printing."))
         for i, text in enumerate(steps, 1):
             box.append(Gtk.Label(label=f"{i}.  {text}", xalign=0, wrap=True, max_width_chars=60))
         row = Gtk.Box(spacing=8, halign=Gtk.Align.END)
