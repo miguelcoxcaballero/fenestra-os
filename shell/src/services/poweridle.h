@@ -36,7 +36,9 @@ private Q_SLOTS:
 private:
     explicit PowerIdle(QObject *parent = nullptr);
     static void onDelayChanged(GSettings *, const char *, void *self);
-    void rearm();
+    void rearm(bool withSleep = true);
+    void screenOff();
+    static QString idleLockMarker();
     void applyAutolock();
     void timedOut(int id);
     void sleepIfQuiet();
@@ -44,7 +46,8 @@ private:
     GSettings *m_settings = nullptr;
     GSettings *m_power = nullptr;
     bool m_onBattery = false;
-    int m_autolockMinutes = -1;   // what kscreenlockerrc was last told (-1: nothing yet)
+    int m_autolockMinutes = -1;
+    bool m_offAfterLock = false;   // the shell locked for idleness: screen off once the lock screen is up   // what kscreenlockerrc was last told (-1: nothing yet)
     bool m_testBattery = false;
     int m_timeout = -1;
     int m_sleepTimeout = -1;
