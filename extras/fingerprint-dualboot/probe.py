@@ -4,6 +4,9 @@
   list      open, list the templates stored on the sensor, close
   stored    the prints fprintd keeps in /var/lib/fprint (what Linux believes is enrolled)
   identify  open, wait up to 15 s for a finger, say which template the sensor matched
+  adopt USER  use the fingerprints Windows Hello keeps on the sensor for USER: each touch is
+            identified among the sensor's templates and written to fprintd's storage under the
+            next free finger, nothing is enrolled (Windows deletes the templates it did not make)
   stress    what the lock screen does all day, in one process as fprintd: six times open, start
             reading, cancel after 1.2 s without a finger, close; then open and list. Every round
             must end "cancelled" and the last list must work (prints STRESS PASS / FAIL)
@@ -33,7 +36,7 @@ def describe(p, origin):
 
 def stored():
     out = []
-    for path in sorted(glob.glob("/var/lib/fprint/*/*/*/*")):
+    for path in sorted(glob.glob(STORE + "/*/*/*/*")):
         try:
             with open(path, "rb") as f:
                 p = FPrint.Print.deserialize(f.read())
@@ -45,6 +48,7 @@ def stored():
     return out
 
 
+STORE = __import__("os").environ.get("FENESTRA_FPRINT_DIR", "/var/lib/fprint")   # tests: another folder
 CONTEXT = None   # must outlive the device: a collected context takes libusb down with it
 
 
@@ -87,8 +91,77 @@ def stress():
     return ok
 
 
+FINGERS = ["RIGHT_INDEX", "RIGHT_MIDDLE", "LEFT_INDEX", "LEFT_MIDDLE", "RIGHT_THUMB", "LEFT_THUMB",
+           "RIGHT_RING", "LEFT_RING", "RIGHT_LITTLE", "LEFT_LITTLE"]
+
+
+def adopt(user):
+    import os
+    d = device()
+    d.open_sync()
+    try:
+        on_sensor = d.list_prints_sync()
+        known = stored()
+        known_data = [str(k.get_property("fpi-data")) for k in known]
+        free = [p for p in on_sensor if str(p.get_property("fpi-data")) not in known_data]
+        print(f"ADOPT sensor templates {len(on_sensor)}, already in fprintd {len(on_sensor) - len(free)}, candidates {len(free)}", flush=True)
+        if not free:
+            print("ADOPT NONE", flush=True)
+            return 4
+        used = {k.get_finger().value_nick for k in known if k.get_username() == user}
+        adopted = 0
+        while free:
+            say(">>> PON UN DEDO REGISTRADO EN WINDOWS HELLO EN EL LECTOR (15 s) <<<" if adopted == 0 else
+                ">>> OTRO DEDO DE WINDOWS HELLO, O ESPERA 15 s PARA TERMINAR <<<")
+            cancel = Gio.Cancellable()
+            threading.Timer(15, cancel.cancel).start()
+            try:
+                match, _seen = d.identify_sync(free, cancel, None, None)
+            except GLib.Error as e:
+                print(f"ADOPT identify ended: {e.message}", flush=True)
+                break
+            if match is None:
+                say("Ese dedo no está registrado en Windows Hello en este lector.")
+                print("ADOPT no match", flush=True)
+                continue
+            finger = next((f for f in FINGERS if getattr(FPrint.Finger, f).value_nick not in used), None)
+            if finger is None:
+                break
+            match.set_username(user)
+            match.set_finger(getattr(FPrint.Finger, finger))
+            match.set_description("Windows Hello")
+            match.set_property("device-stored", True)     # as fprintd's own enrolments on this sensor
+            data = match.serialize()
+            folder = f"{STORE}/{user}/{d.get_driver()}/{d.get_device_id()}"
+            os.makedirs(folder, mode=0o700, exist_ok=True)
+            path = f"{folder}/{int(getattr(FPrint.Finger, finger))}"
+            with open(path + ".tmp", "wb") as f:
+                f.write(bytes(data))
+            os.chmod(path + ".tmp", 0o600)
+            os.replace(path + ".tmp", path)
+            used.add(getattr(FPrint.Finger, finger).value_nick)
+            free = [p for p in free if str(p.get_property("fpi-data")) != str(match.get_property("fpi-data"))]
+            adopted += 1
+            say(f"Huella adoptada ({adopted}).")
+            print(f"ADOPT wrote {path} as {finger}", flush=True)
+        print(f"ADOPT DONE {adopted}", flush=True)
+        return 0 if adopted else 5
+    finally:
+        d.close_sync()
+
+
+def say(text):
+    try:
+        with open("/dev/tty", "w") as t:
+            t.write(text + "\n")
+    except OSError:
+        print(text, flush=True)
+
+
 def main():
     phase = sys.argv[1]
+    if phase == "adopt":
+        sys.exit(adopt(sys.argv[2]))
     if phase == "stored":
         stored()
         return

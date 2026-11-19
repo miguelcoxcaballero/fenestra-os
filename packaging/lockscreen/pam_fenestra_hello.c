@@ -5,7 +5,7 @@
 // delivers a frame or an fprintd that hangs costs this worker its timeout, nothing else, and the
 // password worker is a different process altogether.
 //
-//   auth [success=done default=die] pam_fenestra_hello.so [face_timeout=7] [finger_timeout=25]
+//   auth [success=done default=die] pam_fenestra_hello.so [face_timeout=10] [finger_timeout=25]
 //        [face_tries=2] [howdy=PATH] [fprintd=PATH]
 //
 // Messages (PAM_TEXT_INFO, read by the lock screen):
@@ -16,6 +16,9 @@
 //   "Face not recognised"                         face gave up (timeout, no camera, no model)
 // Face is tried face_tries times per lock screen (per greeter process), then only again after
 // the lock screen asks for it ($XDG_RUNTIME_DIR/fenestra-hello/retry-<greeter pid>).
+// Every attempt is logged (journalctl -t pam_fenestra_hello): Howdy's exit code and how long it
+// looked, fprintd-verify's, so that "face works badly" can be told apart from a camera, a
+// timeout or a print that is not on the sensor any more.
 // Built without pam-devel headers on purpose (the few symbols are declared below).
 #define _GNU_SOURCE
 #include <dirent.h>
@@ -32,6 +35,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <syslog.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -132,7 +136,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     const char *user = NULL;
     if (pam_get_user(pamh, &user, NULL) != PAM_SUCCESS || !user || !*user)
         return PAM_USER_UNKNOWN;
-    const long face_timeout = atol(arg(argc, argv, "face_timeout", "7")) * 1000L;
+    const long face_timeout = atol(arg(argc, argv, "face_timeout", "10")) * 1000L;
     const long finger_timeout = atol(arg(argc, argv, "finger_timeout", "25")) * 1000L;
     const int face_tries = atoi(arg(argc, argv, "face_tries", "2"));
     const char *fprintd = arg(argc, argv, "fprintd", "/usr/bin/fprintd-verify");
@@ -154,6 +158,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     if (!face && !finger)
         return PAM_AUTHINFO_UNAVAIL;
 
+    openlog("pam_fenestra_hello", LOG_PID, LOG_AUTHPRIV);
     pid_t face_pid = -1, finger_pid = -1;
     const long start = now_ms();
     if (face) {
@@ -176,6 +181,9 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
             pid_t r = waitpid(face_pid, &status, WNOHANG);
             if (r == face_pid) {
                 face_pid = -1;
+                // Howdy's codes: 0 recognised, 10 no model, 11 timed out (no match), 12 aborted,
+                // 13 every frame too dark, 14 no camera.
+                syslog(LOG_INFO, "face: exit %d after %ld ms", WIFEXITED(status) ? WEXITSTATUS(status) : -WTERMSIG(status), t);
                 if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
                     face_state(runtime, face_tries, 0);
                     info(pamh, "Identified face");
@@ -187,6 +195,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
             } else if (t > face_timeout) {
                 kill_tree(face_pid);   // a camera that delivers nothing: Howdy would wait forever
                 face_pid = -1;
+                syslog(LOG_INFO, "face: no answer within %ld ms, stopped", face_timeout);
                 face_state(runtime, face_tries, 1);
                 info(pamh, "Face not recognised");
             }
@@ -195,6 +204,8 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
             pid_t r = waitpid(finger_pid, &status, WNOHANG);
             if (r == finger_pid) {
                 finger_pid = -1;
+                syslog(LOG_INFO, "finger: fprintd-verify exit %d after %ld ms", WIFEXITED(status) ? WEXITSTATUS(status) : -WTERMSIG(status),
+                       now_ms() - finger_started);
                 if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
                     info(pamh, "Fingerprint matched");
                     result = PAM_SUCCESS;
@@ -219,6 +230,8 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     }
     kill_tree(face_pid);
     kill_tree(finger_pid);
+    syslog(LOG_INFO, "result: %s after %ld ms", result == PAM_SUCCESS ? "unlocked" : "not recognised", now_ms() - start);
+    closelog();
     return result;
 }
 

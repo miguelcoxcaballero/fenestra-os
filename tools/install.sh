@@ -45,6 +45,27 @@ portal() {
         > "$CONF/systemd/user/xdg-desktop-portal-fenestra.service.d/50-user.conf"
     systemctl --user daemon-reload && systemctl --user restart xdg-desktop-portal-fenestra
 }
+keyring() {
+    # Secret Service for the session: oo7 (Fedora 45's, gnome-keyring is gone), started with the
+    # session and unlocked by a random password sealed with this PC's TPM for this user, as
+    # Windows keeps credentials (no password to type after face or fingerprint sign-in).
+    # Electron and Chromium apps keep their encryption key there through the Secret portal.
+    command -v systemd-creds >/dev/null && [ -x /usr/libexec/oo7-daemon ] || return 0
+    local cred=$CONF/credstore.encrypted/oo7.keyring-encryption-password
+    if [ ! -s "$cred" ]; then
+        mkdir -p "$(dirname "$cred")"
+        # A login keyring made with another password cannot be opened by the new one: set aside.
+        local old=$DATA/keyrings/v1/login.keyring
+        [ -f "$old" ] && mkdir -p "$DATA/keyrings/backup-before-oo7" && mv "$old" "$DATA/keyrings/backup-before-oo7/"
+        (umask 077; head -c 48 /dev/urandom | base64 -w0 | systemd-creds --user encrypt --name=oo7.keyring-encryption-password - "$cred") || return 1
+    fi
+    mkdir -p "$DATA/dbus-1/services"
+    printf '[D-BUS Service]\nName=org.freedesktop.secrets\nExec=/bin/false\nSystemdService=oo7-daemon.service\n' \
+        > "$DATA/dbus-1/services/org.freedesktop.secrets.service"
+    systemctl --user enable --now oo7-daemon.service >/dev/null 2>&1
+    mkdir -p "$CONF/xdg-desktop-portal"
+    cp "$REPO/session/portals/fenestra-portals.conf" "$CONF/xdg-desktop-portal/fenestra-portals.conf"
+}
 files() {
     local d=$DATA/nautilus-python/extensions
     mkdir -p "$d" && cp "$REPO"/desktop/nautilus/python/*.py "$d/"
@@ -89,6 +110,7 @@ step "lock screen" bash "$REPO/tools/install-lockscreen-user.sh"
 step "settings" settings
 step "store" store
 step "print dialog" portal
+step "keyring" keyring
 step "file manager" files
 step "gtk stylesheet" gtkcss
 step "start-up check and sleep log" bootcheck
