@@ -205,8 +205,11 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     snprintf(model, sizeof model, "/etc/howdy/models/%s.dat", user);
     if (face && !arg(argc, argv, "howdy", NULL))
         face = access(model, R_OK) == 0;
+    const int face_capable = face;
     if (face)
         face = face_state(runtime, face_tries, -1);
+    char retry_file[600];
+    snprintf(retry_file, sizeof retry_file, "%s/fenestra-hello/retry-%d", runtime, (int)getppid());
     int finger = access(fprintd, X_OK) == 0;
     if (!face && !finger)
         return PAM_AUTHINFO_UNAVAIL;
@@ -214,18 +217,21 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
 
     pid_t face_pid = -1, finger_pid = -1;
     const long start = now_ms();
-    if (face) {
-        if (!arg(argc, argv, "howdy", NULL))
-            face_pid = spawn_face_server(runtime, user);
-        if (face_pid > 0) {
-            syslog(LOG_INFO, "face: through fenestra-face-server");
-        } else {
-            char *cmd[] = {"/usr/bin/python3", compare, (char *)user, NULL};
-            if (arg(argc, argv, "howdy", NULL)) { cmd[0] = compare; cmd[1] = (char *)user; cmd[2] = NULL; }
-            face_pid = spawn(cmd);
-        }
-        info(pamh, "Attempting facial authentication");
-    }
+    long face_started = start;
+#define START_FACE() do { \
+        face_pid = arg(argc, argv, "howdy", NULL) ? -1 : spawn_face_server(runtime, user); \
+        if (face_pid > 0) { \
+            syslog(LOG_INFO, "face: through fenestra-face-server"); \
+        } else { \
+            char *cmd[] = {"/usr/bin/python3", compare, (char *)user, NULL}; \
+            if (arg(argc, argv, "howdy", NULL)) { cmd[0] = compare; cmd[1] = (char *)user; cmd[2] = NULL; } \
+            face_pid = spawn(cmd); \
+        } \
+        face_started = now_ms(); \
+        info(pamh, "Attempting facial authentication"); \
+    } while (0)
+    if (face)
+        START_FACE();
     if (finger) {
         char *cmd[] = {(char *)fprintd, (char *)user, NULL};
         finger_pid = spawn(cmd);
@@ -236,6 +242,12 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     while (face_pid > 0 || finger_pid > 0) {
         const long t = now_ms() - start;
         int status;
+        // The lock screen asks to look again (someone pressed a key after a face check that found
+        // nobody): within this conversation, while the fingerprint reader still waits.
+        if (face_pid <= 0 && face_capable && access(retry_file, F_OK) == 0 && face_state(runtime, face_tries, -1)) {
+            syslog(LOG_INFO, "face: looking again (asked by the lock screen)");
+            START_FACE();
+        }
         if (face_pid > 0) {
             pid_t r = waitpid(face_pid, &status, WNOHANG);
             if (r == face_pid) {
@@ -251,7 +263,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
                 }
                 face_state(runtime, face_tries, 1);
                 info(pamh, "Face not recognised");
-            } else if (t > face_timeout) {
+            } else if (now_ms() - face_started > face_timeout) {
                 kill_tree(face_pid);   // a camera that delivers nothing: Howdy would wait forever
                 face_pid = -1;
                 syslog(LOG_INFO, "face: no answer within %ld ms, stopped", face_timeout);

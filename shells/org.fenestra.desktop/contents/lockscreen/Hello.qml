@@ -49,11 +49,21 @@ Item {
         if (mode === m && player.running) return
         player.stop(); mode = m; clock = 0
         player.loops = m === "searching" ? Animation.Infinite : 1
-        // The smile plays at twice its speed (~0.5 s): the desktop is only shown once it ends.
-        player.to = total; player.duration = m === "authentication" ? Math.round(total / 2) : total
+        // The smile at its own speed, without the still frame it ends on (200 ms of the user's
+        // Windows animation): the desktop fades in from that frame instead of after it.
+        const end = m === "authentication" ? total - trailingHold() : total
+        player.to = end; player.duration = end
         player.start()
     }
     function stop() { player.stop(); mode = "" }
+    // A last entry that only shows again a frame already shown (a pause at the end).
+    function trailingHold() {
+        if (seq.length < 2) return 0
+        const last = seq[seq.length - 1]
+        for (let i = 0; i < seq.length - 1; ++i)
+            if (seq[i][0] === last[0]) return last[1]
+        return 0
+    }
 
     width: size; height: size
     visible: mode !== "" && ready
