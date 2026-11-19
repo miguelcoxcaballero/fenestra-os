@@ -13,7 +13,9 @@
 #include <QDBusMessage>
 #include <QDBusReply>
 #include <QDebug>
+#include <QFile>
 #include <QProcess>
+#include <QTimer>
 
 // GLib uses "signals" as a struct member name; Qt defines it as a macro.
 #pragma push_macro("signals")
@@ -65,7 +67,18 @@ PowerIdle::PowerIdle(QObject *parent)
 
     QDBusConnection::systemBus().connect(s_upower, s_upowerPath, QStringLiteral("org.freedesktop.DBus.Properties"),
                                          QStringLiteral("PropertiesChanged"), this, SLOT(batteryChanged()));
-    connect(LockOsd::instance(), &LockOsd::lockedChanged, this, &PowerIdle::rearm);
+    connect(LockOsd::instance(), &LockOsd::lockedChanged, this, [this] {
+        if (!LockOsd::instance()->locked())
+            QFile::remove(idleLockMarker());
+        if (LockOsd::instance()->locked() && m_offAfterLock) {
+            m_offAfterLock = false;
+            QTimer::singleShot(1200, this, [this] {
+                if (LockOsd::instance()->locked())
+                    screenOff();
+            });
+        }
+        rearm(false);   // the sleep timer keeps counting through the lock
+    });
     connect(KIdleTime::instance(), &KIdleTime::timeoutReached, this, [this](int id, int) {
         timedOut(id);
     });
@@ -89,17 +102,14 @@ void PowerIdle::batteryChanged()
 }
 
 // The session's locker (KWin's kscreenlocker) locks by itself after 5 idle minutes unless told
-// otherwise, on any power source: a PC left charging on the desk locked while a video played in
-// another room or a build ran. Plugged in it never locks by itself now (Win+L, the lid and
-// waking from sleep still lock); on battery it locks when the screen turns off, after the same
-// "turn off my screen after" time, never when that is set to "never".
+// otherwise. It is told never to: on battery the shell locks itself when the screen turns off
+// (timedOut), as Windows does, and turns the screen off right after the lock screen is up.
+// Both used to fire on the same minute: KWin's lock came first, the shell then started its
+// "locked" timers from scratch and the lock screen stayed lit. Plugged in nothing locks or
+// turns off by itself (Win+L, the lid and waking from sleep still lock).
 void PowerIdle::applyAutolock()
 {
-    int minutes = 0;
-    if (m_onBattery && m_settings) {
-        const uint delay = g_settings_get_uint(m_settings, "idle-delay");
-        minutes = delay > 0 ? std::max(1, int(delay + 59) / 60) : 0;
-    }
+    const int minutes = 0;
     if (minutes == m_autolockMinutes) {
         return;
     }
@@ -117,14 +127,14 @@ void PowerIdle::applyAutolock()
     qInfo("FENESTRA_POWERIDLE autolock %s", minutes > 0 ? qPrintable(QStringLiteral("after %1 min").arg(minutes)) : "off");
 }
 
-void PowerIdle::rearm()
+void PowerIdle::rearm(bool withSleep)
 {
     applyAutolock();
     if (m_timeout >= 0) {
         KIdleTime::instance()->removeIdleTimeout(m_timeout);
         m_timeout = -1;
     }
-    if (m_sleepTimeout >= 0) {
+    if (withSleep && m_sleepTimeout >= 0) {
         KIdleTime::instance()->removeIdleTimeout(m_sleepTimeout);
         m_sleepTimeout = -1;
     }
@@ -139,6 +149,10 @@ void PowerIdle::rearm()
     }
     if (ms > 0) {
         m_timeout = KIdleTime::instance()->addIdleTimeout(ms);
+    }
+    if (!withSleep) {
+        qInfo().noquote() << "FENESTRA_POWERIDLE locked" << LockOsd::instance()->locked() << "timeout-ms" << ms;
+        return;
     }
     int sleepMs = 0;
     if (m_power && m_sleepInhibitions.isEmpty()) {
@@ -171,6 +185,18 @@ void PowerIdle::sleepIfQuiet()
     QDBusConnection::systemBus().asyncCall(suspend);
 }
 
+QString PowerIdle::idleLockMarker()
+{
+    const QByteArray dir = qgetenv("XDG_RUNTIME_DIR");
+    return QString::fromLocal8Bit(dir.isEmpty() ? QByteArray("/tmp") : dir) + QStringLiteral("/fenestra-idle-lock");
+}
+
+void PowerIdle::screenOff()
+{
+    qInfo("FENESTRA_POWERIDLE screen off");
+    QProcess::startDetached(QStringLiteral("kscreen-doctor"), {QStringLiteral("--dpms"), QStringLiteral("off")});
+}
+
 void PowerIdle::timedOut(int id)
 {
     if (id == m_sleepTimeout) {
@@ -180,8 +206,25 @@ void PowerIdle::timedOut(int id)
     if (id != m_timeout) {
         return;
     }
-    qInfo("FENESTRA_POWERIDLE screen off");
-    QProcess::startDetached(QStringLiteral("kscreen-doctor"), {QStringLiteral("--dpms"), QStringLiteral("off")});
+    if (!LockOsd::instance()->locked()) {
+        // Windows: the screen goes off and the PC locks at the same time. Lock first; the screen
+        // goes off once the lock screen has drawn (its first frame would light it up again).
+        qInfo("FENESTRA_POWERIDLE lock and screen off");
+        // Tells the lock screen nobody is there: no face check until a key or the mouse.
+        QFile marker(idleLockMarker());
+        if (marker.open(QIODevice::WriteOnly))
+            marker.close();
+        QProcess::startDetached(QStringLiteral("loginctl"), {QStringLiteral("lock-session")});
+        m_offAfterLock = true;
+        QTimer::singleShot(4000, this, [this] {
+            if (m_offAfterLock) {   // the lock screen never said it was up: off all the same
+                m_offAfterLock = false;
+                screenOff();
+            }
+        });
+        return;
+    }
+    screenOff();
 }
 
 uint PowerIdle::AddInhibition(uint types, const QString &appName, const QString &reason)

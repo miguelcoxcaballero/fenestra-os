@@ -97,8 +97,12 @@ Item {
     // clock, which then unlocks at once. The workers are not ready when the lock screen loads, so it
     // asks every 150 ms until one answers, then every second.
     property bool authAnswered: false
+    // Not when the shell locked because nobody used the PC (battery, screen off with the lock): the
+    // camera would look at an empty room behind a black screen. Then it waits for a key or the
+    // mouse, which bring the sign-in screen. (The shell leaves $XDG_RUNTIME_DIR/fenestra-idle-lock.)
+    property bool clockFace: false
     Timer { interval: root.authAnswered ? 1000 : 150; repeat: true; triggeredOnStart: true
-            running: !root.unlocking && (root.phase === "signin" || root.phase === "clock") && root.deferredUnlock === "" && !authenticator.unlocked
+            running: !root.unlocking && (root.phase === "signin" || (root.phase === "clock" && root.clockFace)) && root.deferredUnlock === "" && !authenticator.unlocked
             onTriggered: authenticator.startAuthenticating() }
     property bool unlocking: false
     property string deferredUnlock: ""   // "face" | "other": matched while the clock was showing
@@ -264,8 +268,10 @@ Item {
     }
     Component.onCompleted: {
         syncTypes()
-        // Nothing is checked until the clock is dismissed (showSignin starts face, fingerprint and
-        // the password together).
+        // Face, fingerprint and password start with the clock (see the heartbeat), unless the
+        // shell locked for idleness.
+        run("sh -c 'test -e \"$XDG_RUNTIME_DIR/fenestra-idle-lock\" && echo idle || echo here'",
+            out => { root.clockFace = out.trim() !== "idle" })
         root.forceActiveFocus()
     }
 
