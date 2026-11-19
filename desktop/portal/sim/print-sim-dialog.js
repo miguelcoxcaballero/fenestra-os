@@ -330,7 +330,10 @@ class Combo {
   popup() {
     closeMenu();
     const layer = $("#overlay");
-    const lr = layer.getBoundingClientRect(), br = this.btn.getBoundingClientRect();
+    const lr = layer.getBoundingClientRect(), b0 = this.btn.getBoundingClientRect();
+    const k = lr.width / layer.offsetWidth || 1;          // the stage may be scaled to fit
+    const br = { left: (b0.left - lr.left) / k, top: (b0.top - lr.top) / k, width: b0.width / k };
+    const L = { left: 0, top: 0, width: layer.offsetWidth, height: layer.offsetHeight };
     const icon = !!this.icons;
     const rowH = icon ? 40 : 33, pitch = rowH + 4, inset = 1 + 4 + 2;
     const menu = el("div", "fp-menu" + (icon ? " icon" : ""));
@@ -342,16 +345,16 @@ class Combo {
       menu.appendChild(r);
     });
     menu.style.width = br.width + "px";
-    menu.style.left = (br.left - lr.left) + "px";
+    menu.style.left = br.left + "px";
     layer.appendChild(menu);
     // GTK: the list opens over the combo, the selected row on top of it (menu_over_combo()).
     const shift = icon ? -3 : 1;
     const full = this.ids.length * pitch + 2 * 4 + 2;
-    const maxH = lr.height - 16;
+    const maxH = L.height - 16;
     menu.style.maxHeight = maxH + "px";
-    let top = br.top - lr.top + shift - inset - this.sel * pitch;
+    let top = br.top + shift - inset - this.sel * pitch;
     const h = Math.min(full, maxH);
-    top = Math.max(8, Math.min(top, lr.height - 8 - h));
+    top = Math.max(8, Math.min(top, L.height - 8 - h));
     menu.style.top = top + "px";
     if (full > maxH) menu.children[this.sel].scrollIntoView({ block: "center" });
     this.btn.classList.add("open");
@@ -497,9 +500,8 @@ class Dialog {
 
     // footer
     const footer = el("div", "fp-footer");
-    this.allowApp = this.check(_("Allow the app to change print preferences."), Config.get("allow_app", "1") !== "0",
-      () => this.onAllowApp());
-    footer.appendChild(this.allowApp.node);
+    // Web version: no "Allow the app to change print preferences": the app's request always wins.
+    this.allowApp = { on: true };
     this.printButton = el("button", "fp-btn", esc(this.opts.accept_label || _("Print")));
     this.cancelButton = el("button", "fp-btn", esc(_("Cancel")));
     Object.assign(this.printButton.style, { left: "433px", width: "193px" });
@@ -596,20 +598,9 @@ class Dialog {
     this.color = new Combo([["color", _("Color")], ["mono", _("Black and white")]], "color", null, changed);
     this.colorLabel = this.field(box, _("Color mode"), this.color.btn);
 
-    this.toFileLabel = this.label(_("Print to file"), 17);
-    box.appendChild(this.toFileLabel);
-    const row = el("div", "fp-toggle-row"); row.style.marginTop = "23px";
-    this.toFile = el("button", "fp-switch"); this.toFile.type = "button";
-    this.toFile.onclick = () => { this.toFile.classList.toggle("on"); changed(); };
-    this.toFileState = el("span", "", "");
-    this.toFileState.style.position = "relative"; this.toFileState.style.top = "1px";
-    row.append(this.toFile, this.toFileState);
-    box.appendChild(row);
-    const hint = this.label(_("Stores printing output to a file"), 17, "fp-label fp-hint");
-    hint.style.whiteSpace = "normal"; hint.style.height = "auto"; hint.style.width = "267px";
-    box.appendChild(hint);
+    // Web version: no "Print to file" (Save as PDF stays in the printer list).
     this.moreLink = this.link(_("More settings"));
-    this.moreLink.style.marginTop = "22px";
+    this.moreLink.style.marginTop = "20px";
     this.moreLink.onclick = () => this.root.classList.add("show-more");
     const mw = el("div"); mw.appendChild(this.moreLink); box.appendChild(mw);
   }
@@ -763,14 +754,13 @@ class Dialog {
     this.margins.setValue(c.margins);
     const twin = { long: "manual-long", short: "manual-short", "manual-long": "long", "manual-short": "short" };
     this.duplex.setValue(this.duplex.ids.includes(c.duplex) ? c.duplex : (twin[c.duplex] || "simplex"));
-    this.toFile.classList.remove("on");
     this.loading = false;
     this.selectPrinter(this.preferredPrinter);
     this.onChanged();
   }
   readChoice() {
     const c = this.choice;
-    c.printer = this.toFile.classList.contains("on") ? PDF_PRINTER : this.currentPrinter();
+    c.printer = this.currentPrinter();
     c.copies = parseInt(this.copiesInput.value, 10) || 1;
     c.collate = this.collate.on;
     c.orientation = this.orientation.value;
@@ -807,7 +797,6 @@ class Dialog {
     const slot = printerIsPdf ? this.pagesSlotMore : this.pagesSlotMain;
     if (this.pagesField.parentNode !== slot) slot.appendChild(this.pagesField);
     this.pagesLabel.style.marginTop = (printerIsPdf ? 12 : 17) + "px";
-    this.toFileState.textContent = this.toFile.classList.contains("on") ? _("On") : _("Off");
     vis(this.ranges, c.pages === "ranges");
     const ok = this.rangesValid();
     this.ranges.classList.toggle("error", !ok);
@@ -929,12 +918,19 @@ function floatingWindow(title, inner, width) {
   const layer = $("#overlay");
   w.style.position = "absolute";
   layer.appendChild(w);
-  const lr = layer.getBoundingClientRect();
-  w.style.left = Math.max(8, (lr.width - width) / 2) + "px";
-  w.style.top = Math.max(8, (lr.height - w.offsetHeight) / 2) + "px";
+  w.style.left = Math.max(8, (layer.offsetWidth - width) / 2) + "px";
+  w.style.top = Math.max(8, (layer.offsetHeight - w.offsetHeight) / 2) + "px";
   let drag = null;
-  bar.addEventListener("mousedown", (e) => { if (e.target.closest(".fp-close")) return; drag = [e.clientX - w.offsetLeft, e.clientY - w.offsetTop]; });
-  window.addEventListener("mousemove", (e) => { if (drag) { w.style.left = (e.clientX - drag[0]) + "px"; w.style.top = (e.clientY - drag[1]) + "px"; } });
+  const scale = () => layer.getBoundingClientRect().width / layer.offsetWidth || 1;
+  bar.addEventListener("mousedown", (e) => {
+    if (e.target.closest(".fp-close")) return;
+    drag = [e.clientX, e.clientY, w.offsetLeft, w.offsetTop, scale()];
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!drag) return;
+    w.style.left = (drag[2] + (e.clientX - drag[0]) / drag[4]) + "px";
+    w.style.top = (drag[3] + (e.clientY - drag[1]) / drag[4]) + "px";
+  });
   window.addEventListener("mouseup", () => { drag = null; });
   return { win: w, close };
 }
