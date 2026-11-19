@@ -43,7 +43,7 @@ enable)
     [ -f $PAMD/kde-fingerprint.fenestra-orig ] || cp -p $PAMD/kde-fingerprint $PAMD/kde-fingerprint.fenestra-orig
     {
         echo "# Fenestra (fenestra-lock-hello): face (Howdy) and fingerprint (fprintd) in parallel, with deadlines."
-        echo "auth        [success=done default=die]  pam_fenestra_hello.so face_timeout=7 finger_timeout=25 face_tries=2"
+        echo "auth        [success=done default=die]  pam_fenestra_hello.so face_timeout=10 finger_timeout=25 face_tries=2"
         grep -v '^auth' $PAMD/kde-fingerprint.fenestra-orig
     } > $PAMD/kde-fingerprint.tmp
     chmod 644 $PAMD/kde-fingerprint.tmp; mv $PAMD/kde-fingerprint.tmp $PAMD/kde-fingerprint
