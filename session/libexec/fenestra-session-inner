@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Runs inside KWin (WAYLAND_DISPLAY and DISPLAY are set). When this exits, KWin and the
 # session end: that happens when fenestra-session.target stops (log out).
+# Electron apps keep their sign-ins in the system keyring: launchers that add the flag, first in
+# PATH (fenestra-electron-keyring). Refreshed in the background; the last sign-in's are there already.
+PATH=${XDG_DATA_HOME:-$HOME/.local/share}/fenestra/electron-bin:$PATH
+export PATH
+/usr/libexec/fenestra/fenestra-electron-keyring >/dev/null 2>&1 &
 dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP \
     XDG_SESSION_DESKTOP XDG_SESSION_TYPE DESKTOP_SESSION QT_QPA_PLATFORM MOZ_ENABLE_WAYLAND \
     ELECTRON_OZONE_PLATFORM_HINT LC_NUMERIC LC_TIME LC_MONETARY LC_PAPER LC_MEASUREMENT PATH GTK_USE_PORTAL

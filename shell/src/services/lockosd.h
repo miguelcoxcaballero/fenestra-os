@@ -38,6 +38,7 @@ private Q_SLOTS:
     void activeChanged(bool active);
 
 private:
+    void logUnlock();
     explicit LockOsd(QObject *parent = nullptr);
     void setLocked(bool locked);
     bool m_locked = false;

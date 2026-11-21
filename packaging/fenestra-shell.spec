@@ -61,6 +61,9 @@ install -d %{buildroot}%{_libdir}/security
 gcc %{optflags} -shared -fPIC -o %{buildroot}%{_libdir}/security/pam_fenestra_hello.so packaging/lockscreen/pam_fenestra_hello.c %{_libdir}/libpam.so.0
 
 %post
+# The clock never starts weeks behind after a flat battery (session/libexec/fenestra-clock-keeper).
+systemctl enable fenestra-clock-keeper.service fenestra-clock-save.service fenestra-clock-save.timer >/dev/null 2>&1 || :
+%{_libexecdir}/fenestra/fenestra-clock-keeper save >/dev/null 2>&1 || :
 # On battery, tuned-ppd's "Balanced" becomes fenestra-battery (desktop/power/tuned): any laptop.
 ppd=%{_sysconfdir}/tuned/ppd.conf
 if [ -f "$ppd" ] && ! grep -q '^balanced=fenestra-battery' "$ppd"; then
@@ -76,6 +79,11 @@ fi
 # Also undoes version 1, which had put pam_howdy.so in front of the password.
 if [ -f %{_sysconfdir}/pam.d/kde-fingerprint ]; then
     %{_libexecdir}/fenestra/fenestra-lock-hello enable >/dev/null 2>&1 || :
+fi
+
+%preun
+if [ "$1" -eq 0 ]; then
+    systemctl disable fenestra-clock-keeper.service fenestra-clock-save.service fenestra-clock-save.timer >/dev/null 2>&1 || :
 fi
 
 %postun
@@ -96,6 +104,11 @@ fi
 %{_libexecdir}/fenestra/fenestra-sleep-log
 %{_libexecdir}/fenestra/fenestra-portal-login
 %{_libexecdir}/fenestra/fenestra-face-server
+%{_libexecdir}/fenestra/fenestra-clock-keeper
+%{_libexecdir}/fenestra/fenestra-electron-keyring
+%{_unitdir}/fenestra-clock-keeper.service
+%{_unitdir}/fenestra-clock-save.service
+%{_unitdir}/fenestra-clock-save.timer
 %{_datadir}/wayland-sessions/fenestra.desktop
 %{_datadir}/applications/org.fenestra.Shell.desktop
 %{_userunitdir}/fenestra-session.target

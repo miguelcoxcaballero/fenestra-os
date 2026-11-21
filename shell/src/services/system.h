@@ -235,3 +235,21 @@ Q_SIGNALS:
 private:
     explicit NightLight(QObject *parent = nullptr);
 };
+
+// The system clock was set (chrony stepping it at boot, the user changing the time or time zone):
+// clocks showing the time update at once instead of at their next minute.
+class SystemClock : public QObject
+{
+    Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
+public:
+    static SystemClock *instance();
+    static SystemClock *create(QQmlEngine *, QJSEngine *);
+Q_SIGNALS:
+    void changed();
+private:
+    explicit SystemClock(QObject *parent = nullptr);
+    void arm();
+    int m_fd = -1;
+};

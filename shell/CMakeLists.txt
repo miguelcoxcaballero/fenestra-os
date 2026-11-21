@@ -182,7 +182,11 @@ if(FENESTRA_INSTALL_SESSION)
                      ${session_dir}/libexec/fenestra-shell-crashlog ${session_dir}/libexec/fenestra-shell-failed
                      ${session_dir}/libexec/fenestra-boot-check ${session_dir}/libexec/fenestra-sleep-log
                      ${session_dir}/libexec/fenestra-portal-login ${session_dir}/libexec/fenestra-face-server
+                     ${session_dir}/libexec/fenestra-clock-keeper ${session_dir}/libexec/fenestra-electron-keyring
             DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/fenestra)
+    install(FILES ${session_dir}/system/fenestra-clock-keeper.service ${session_dir}/system/fenestra-clock-save.service
+                  ${session_dir}/system/fenestra-clock-save.timer
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
     install(FILES ${session_dir}/systemd/fenestra-session.target ${session_dir}/systemd/fenestra-shell.service
                   ${session_dir}/systemd/fenestra-boot-check.service ${session_dir}/systemd/fenestra-sleep-log.service ${session_dir}/systemd/fenestra-print-resume.service
                   ${session_dir}/systemd/fenestra-face.service

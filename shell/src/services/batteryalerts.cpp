@@ -5,6 +5,7 @@
 #include "status.h"
 #include "system.h"
 
+#include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -16,6 +17,7 @@
 
 namespace
 {
+constexpr int kUnknown = -3;   // m_last before the first reading
 constexpr int kSaverLevel = 20, kLowLevel = 10, kReserveLevel = 7, kCriticalLevel = 5;
 constexpr double kSaverDim = 0.70;    // Energy saver: brightness lowered by 30 %
 constexpr double kCriticalDim = 0.70; // at the critical level, 30 % less again
@@ -77,26 +79,49 @@ void BatteryAlerts::leaveSaver()
 {
     if (!m_saverAuto)
         return;
+    leavePowerSaver();
+}
+
+void BatteryAlerts::leavePowerSaver()
+{
     auto *pp = PowerProfiles::instance();
     // The profiles daemon answers a moment after the shell starts (later still at boot). Giving up
     // here, or reading an active profile that is not known yet, forgot the note while the PC was
     // still in power saver: it stayed throttled (turbo off) for good, plugged in or not. Wait for
-    // the daemon's answer, however long it takes.
-    if (!pp->available() || pp->active().isEmpty()) {
-        if (!m_leavePending) {
-            m_leavePending = true;
-            connect(pp, &PowerProfiles::changed, this, [this] {
-                if (m_leavePending)
-                    leaveSaver();
-            });
+    // the daemon's answer, however long it takes, and check that the profile really changed.
+    if (!m_leaveWatching) {
+        m_leaveWatching = true;
+        connect(pp, &PowerProfiles::changed, this, [this] {
+            if (m_leavePending)
+                leavePowerSaver();
+        });
+    }
+    m_leavePending = true;
+    if (!pp->available() || pp->active().isEmpty())
+        return;
+    if (pp->active() != QLatin1String("power-saver")) {
+        // done (or someone else already left it)
+        m_leavePending = false;
+        m_leaveTries = 0;
+        if (m_saverAuto) {
+            m_saverAuto = false;
+            rememberSaver();
         }
         return;
     }
-    m_leavePending = false;
-    if (pp->active() == QLatin1String("power-saver"))
-        pp->setActive(m_saverBefore.isEmpty() || m_saverBefore == QLatin1String("power-saver") ? QStringLiteral("balanced") : m_saverBefore);
-    m_saverAuto = false;
-    rememberSaver();
+    if (m_leaveTries >= 10) {
+        qWarning() << "battery: power saver could not be left";
+        m_leavePending = false;
+        m_leaveTries = 0;
+        return;
+    }
+    ++m_leaveTries;
+    pp->setActive(m_saverBefore.isEmpty() || m_saverBefore == QLatin1String("power-saver") ? QStringLiteral("balanced") : m_saverBefore);
+    // no change signal (a refused or lost call): look again in 2 s
+    QTimer::singleShot(2000, this, [this] {
+        if (m_leavePending)
+            leavePowerSaver();
+    });
 }
 
 void BatteryAlerts::dimBy(double factor)
@@ -126,11 +151,22 @@ void BatteryAlerts::restore()
 void BatteryAlerts::update(int percent, bool hasBattery, bool pluggedIn)
 {
     if (!hasBattery || pluggedIn) {
-        if (m_last >= 0 || m_last == -2 || m_saverAuto)
+        // UPower answers after the shell starts: the first reading with a battery counts as the start.
+        const bool firstReading = hasBattery && !m_batterySeen;
+        const bool plugging = m_last >= 0 || m_last == -2 || m_last == kUnknown || firstReading;
+        if (hasBattery)
+            m_batterySeen = true;
+        if (plugging || m_saverAuto)
             restore();
+        // As Windows: energy saver ends when the PC is plugged in, whoever turned it on. Also when
+        // the shell starts plugged in: tuned keeps the profile over a reboot, and a saver left on
+        // from a battery that ran flat kept the PC throttled (turbo off) with the charger in.
+        if (plugging && hasBattery && !m_leavePending)
+            leavePowerSaver();
         m_last = -1;
         return;
     }
+    m_batterySeen = true;
     const bool es = spanish();
     const int before = m_last < 0 ? 101 : m_last;   // a level first seen on battery counts as crossing
     m_last = percent;

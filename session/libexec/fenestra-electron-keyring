@@ -1,0 +1,71 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# fenestra-electron-keyring: Electron apps keep their sign-ins in the system keyring.
+#
+# Chromium picks where it encrypts saved data from the desktop's name; "Fenestra" is not one it
+# knows, so every Electron app falls back to its "basic_text" store, and apps that refuse to keep
+# tokens in it (Claude, among others) sign out on every restart. Each Electron app found in the
+# installed applications gets a launcher of the same name in $DIR, which the session puts first in
+# PATH (fenestra-session-inner): it runs the real program with --password-store=gnome-libsecret
+# (the Secret Service: oo7 or GNOME Keyring). Launchers are rebuilt at every sign-in, so new,
+# updated and removed apps are followed. Apps run by absolute path get the same through a copy of
+# their .desktop file in ~/.local/share/applications (never over one the user or the app wrote).
+set -u
+DIR=${FENESTRA_ELECTRON_BIN:-${XDG_DATA_HOME:-$HOME/.local/share}/fenestra/electron-bin}
+APPS=${FENESTRA_ELECTRON_APPS:-${XDG_DATA_HOME:-$HOME/.local/share}/applications}
+FLAG=--password-store=gnome-libsecret
+MARK=X-Fenestra-Generated=electron-keyring
+mkdir -p "$DIR" "$APPS"
+
+is_electron() {   # $1: an executable file. Electron: the app's code in resources/, Chromium's files beside it.
+    local d
+    d=$(dirname "$(readlink -f "$1")")
+    [ -f "$d/resources/app.asar" ] || [ -d "$d/resources/app" ] || return 1
+    [ -e "$d/chrome-sandbox" ] || [ -e "$d/libffmpeg.so" ] || [ -e "$d/chrome_100_percent.pak" ]
+}
+# PATH without our own launchers
+SEARCH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -vx "$DIR" | paste -sd:)
+resolve() { PATH=$SEARCH command -v "$1" 2>/dev/null; }
+
+declare -A keep=() seen=()
+IFS=: read -ra dirs <<< "${XDG_DATA_HOME:-$HOME/.local/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+# one pass over every .desktop file: "file<TAB>first word of Exec"
+while IFS=$'\t' read -r f exe; do
+    [ -n "$exe" ] || continue
+    case "$exe" in
+    /*)
+        [ -x "$exe" ] && is_electron "$exe" || continue
+        id=$(basename "$f")
+        out=$APPS/$id
+        [ "$f" = "$out" ] && continue
+        [ -n "${keep["desktop:$id"]:-}" ] && continue        # the first data dir wins, as for the menus
+        # only over nothing, or over our own earlier copy
+        if [ ! -e "$out" ] || grep -qx "$MARK" "$out"; then
+            grep -vx "$MARK" "$f" | sed -E -e "s#^(Exec=\"?$exe\"?)( |\$)#\\1 $FLAG\\2#" \
+                -e "/^\\[Desktop Entry\\]\$/a $MARK" > "$out.part" && mv "$out.part" "$out"
+        fi
+        keep["desktop:$id"]=1
+        ;;
+    *)
+        [ -n "${seen[$exe]:-}" ] && continue
+        seen[$exe]=1
+        real=$(resolve "$exe") || continue
+        is_electron "$real" || continue
+        printf '#!/bin/sh\n# Written by fenestra-electron-keyring: %s with its sign-ins in the system keyring.\nexec "%s" %s "$@"\n' \
+            "$exe" "$real" "$FLAG" > "$DIR/$exe.part"
+        chmod +x "$DIR/$exe.part" && mv "$DIR/$exe.part" "$DIR/$exe"
+        keep["bin:$exe"]=1
+        ;;
+    esac
+done < <(for d in "${dirs[@]}"; do grep -m1 -H '^Exec=' "$d"/applications/*.desktop 2>/dev/null; done \
+         | sed -E 's/^([^:]+):Exec="?([^" ]+).*/\1\t\2/')
+# what no longer belongs to an installed Electron app
+for s in "$DIR"/*; do
+    [ -e "$s" ] || continue
+    [ -n "${keep["bin:$(basename "$s")"]:-}" ] || rm -f "$s"
+done
+for o in "$APPS"/*.desktop; do
+    [ -f "$o" ] && grep -qx "$MARK" "$o" || continue
+    [ -n "${keep["desktop:$(basename "$o")"]:-}" ] || rm -f "$o"
+done
+exit 0

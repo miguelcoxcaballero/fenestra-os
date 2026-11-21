@@ -88,6 +88,26 @@ WP=/out/wallpaper.${WPEXT:-png}; [ -f "$WP" ] || WP=/usr/share/backgrounds/fenes
     printf '[Start]\nPinned=edge.desktop, word.desktop, excel.desktop, powerpoint.desktop, copilot.desktop, outlook.desktop, store.desktop, photos.desktop, samsung-settings.desktop, samsung-notes.desktop, quick-search.desktop, gallery.desktop, settings.desktop, xbox.desktop, solitaire.desktop, spotify.desktop, chatgpt.desktop, cmd.desktop\n'
 } > ~/.config/fenestra/shell.conf
 
+# LOCKED=1: the session starts locked, as after GDM's autologin: the Fenestra lock screen package,
+# stock PAM (root's password "Fenestra1"), Fenestra's unlock fade. CLOCKSHIFT=SECONDS: the wall
+# clock of KWin and the shell starts that far off (clockshift.so, /tmp/clock-offset), so a test
+# can step it back to the right time, as chrony does at boot after a wrong RTC.
+if [ -n "${LOCKED:-}" ]; then
+    mkdir -p /usr/share/plasma/shells /usr/share/kwin/effects
+    cp -r /src/shells/org.fenestra.desktop /usr/share/plasma/shells/
+    cp -r /src/kwin/effects/fenestra-unlock /usr/share/kwin/effects/
+    printf '[Shell]\nShellPackage=org.fenestra.desktop\n' > ~/.config/plasmashellrc
+    printf '[Greeter][LnF][General]\nBackground=/out/wallpaper.%s\n' "${WPEXT:-png}" >> ~/.config/kscreenlockerrc
+    echo 'root:Fenestra1' | chpasswd 2>/dev/null
+    printf 'auth substack password-auth\naccount include password-auth\npassword include password-auth\nsession include password-auth\n' > /etc/pam.d/kde
+    printf 'auth required pam_deny.so\naccount required pam_permit.so\n' > /etc/pam.d/kde-fingerprint
+fi
+if [ -n "${CLOCKSHIFT:-}" ]; then
+    gcc -O2 -shared -fPIC -o /usr/local/lib64/clockshift.so /src/tests/shell-kwin/clockshift/clockshift.c -ldl
+    echo "$CLOCKSHIFT" > /tmp/clock-offset
+    export LD_PRELOAD=/usr/local/lib64/clockshift.so
+fi
+
 exec dbus-run-session -- bash -s <<'INNER'
 set -u
 mkdir -p /run/dbus; rm -f /run/dbus/system_bus_socket; dbus-daemon --system --fork 2>/dev/null
@@ -97,13 +117,16 @@ if command -v pipewire >/dev/null; then
     pipewire > /out/pipewire.log 2>&1 &
     sleep 0.5; command -v wireplumber >/dev/null && wireplumber > /out/wireplumber.log 2>&1 &
 fi
-kwin_wayland --virtual ${XWAYLAND:+--xwayland} --socket wl-f --width ${W:-2880} --height ${H:-1800} > /out/kwin.log 2>&1 &
+kwin_wayland --virtual ${XWAYLAND:+--xwayland} ${LOCKED:+--lockscreen} --socket wl-f --width ${W:-2880} --height ${H:-1800} > /out/kwin.log 2>&1 &
 for i in $(seq 60); do [ -S $XDG_RUNTIME_DIR/wl-f ] && break; sleep 0.25; done
 export WAYLAND_DISPLAY=wl-f
 sleep 2
 kscreen-doctor output.Virtual-0.scale.${SCALE:-1.5} >/dev/null 2>&1; sleep 1
 [ -n "${FENESTRA_FAKE_KBD_BACKLIGHT:-}" ] || unset FENESTRA_FAKE_KBD_BACKLIGHT
 [ -n "${FENESTRA_FAKE_PLATFORM_PROFILE:-}" ] || unset FENESTRA_FAKE_PLATFORM_PROFILE
+# CLOCKSTEP_AFTER=S: the clock is put right S seconds after the shell starts (boot: chrony stepped it
+# while the shell was still loading).
+[ -n "${CLOCKSTEP_AFTER:-}" ] && (sleep "$CLOCKSTEP_AFTER"; echo 0 > /tmp/clock-offset; echo "clock stepped $(date)" >> /out/clock.log) &
 LANG=${SHELL_LANG:-en_GB.UTF-8} QT_QPA_PLATFORM=wayland fenestra-shell > /out/shell.log 2>&1 &
 for i in $(seq 60); do grep -q FENESTRA_SHELL_READY /out/shell.log && break; sleep 0.5; done
 env | grep -E '^(DBUS_SESSION_BUS_ADDRESS|WAYLAND_DISPLAY|XDG_RUNTIME_DIR)=' | sed 's/^/export /' > /tmp/env

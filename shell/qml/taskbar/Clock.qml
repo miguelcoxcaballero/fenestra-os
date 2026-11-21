@@ -41,8 +41,14 @@ Item {
     }
     MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; onClicked: clock.clicked() }
     Timer {
+        id: minute
         interval: 60000 - new Date().getSeconds() * 1000
         running: true; repeat: true
         onTriggered: { clock.now = new Date(); interval = 60000 - clock.now.getSeconds() * 1000 }
+    }
+    // The clock was set (chrony at boot, a time zone change): show the new time now.
+    Connections {
+        target: SystemClock
+        function onChanged() { clock.now = new Date(); minute.interval = 60000 - clock.now.getSeconds() * 1000; minute.restart() }
     }
 }
