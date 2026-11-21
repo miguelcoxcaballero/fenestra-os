@@ -36,10 +36,16 @@ private:
     void applyRefresh(bool onBattery);
     int m_refreshState = -1;      // last applied: 1 battery, 0 AC, -1 none
     bool m_testing = false;
-    int m_last = -1;              // last level seen on battery, -1 = plugged in / unknown
+    int m_last = -3;              // last level seen on battery, -1 = plugged in, -3 = not read yet
     static QString stateFile();
     void rememberSaver();
     void leaveSaver();
+    // Out of power saver, checked: tuned-ppd may not answer yet (boot) or refuse; retried until
+    // the profile has really changed. Then the saver note is forgotten.
+    void leavePowerSaver();
+    int m_leaveTries = 0;
+    bool m_leaveWatching = false;
+    bool m_batterySeen = false;
     bool m_saverAuto = false;     // Energy saver turned on by us
     int m_saverRetries = 0;
     bool m_leavePending = false;

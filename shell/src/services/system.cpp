@@ -5,6 +5,11 @@
 #include "shellsettings.h"
 #include "adaptivecolor.h"
 #include <QDBusVariant>
+#include <QSocketNotifier>
+#include <cerrno>
+#include <limits>
+#include <sys/timerfd.h>
+#include <unistd.h>
 #include <QDateTime>
 #include <KIO/OpenUrlJob>
 
@@ -993,4 +998,37 @@ void NightLight::setActive(bool on)
     ShellSettings::instance()->setValue(QStringLiteral("Display/NightLight"), on);
     AdaptiveColor::instance()->setNightLight(on);
     Q_EMIT changed();
+}
+
+// ---- SystemClock -------------------------------------------------------------------------------
+SINGLETON(SystemClock)
+
+SystemClock::SystemClock(QObject *parent)
+    : QObject(parent)
+{
+    // A realtime timer far in the future with TFD_TIMER_CANCEL_ON_SET: the kernel cancels it (read
+    // fails with ECANCELED) whenever the wall clock is set, which is exactly the notification wanted.
+    m_fd = timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK | TFD_CLOEXEC);
+    if (m_fd < 0)
+        return;
+    arm();
+    auto *n = new QSocketNotifier(m_fd, QSocketNotifier::Read, this);
+    connect(n, &QSocketNotifier::activated, this, [this] {
+        uint64_t ticks = 0;
+        const ssize_t r = ::read(m_fd, &ticks, sizeof ticks);
+        if (r < 0 && errno == ECANCELED) {
+            arm();
+            Q_EMIT changed();
+        }
+    });
+    // Time zone changes do not set the clock: timedated says so on the system bus.
+    QDBusConnection::systemBus().connect(QStringLiteral("org.freedesktop.timedate1"), QStringLiteral("/org/freedesktop/timedate1"), kProps,
+                                         QStringLiteral("PropertiesChanged"), this, SIGNAL(changed()));
+}
+
+void SystemClock::arm()
+{
+    itimerspec spec{};
+    spec.it_value.tv_sec = std::numeric_limits<time_t>::max() / 2;
+    timerfd_settime(m_fd, TFD_TIMER_ABSTIME | TFD_TIMER_CANCEL_ON_SET, &spec, nullptr);
 }

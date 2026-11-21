@@ -1,0 +1,14 @@
+[Unit]
+Description=Fenestra: remember the current time (fenestra-clock-keeper)
+Documentation=https://github.com/miguelcoxcaballero/fenestra-os/tree/main/session
+DefaultDependencies=no
+RequiresMountsFor=/var/lib
+Before=sleep.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/fenestra/fenestra-clock-keeper save
+
+[Install]
+# before every suspend: a flat battery during suspend is when the time is lost
+WantedBy=sleep.target

@@ -1,0 +1,33 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# fenestra-clock-keeper: keeps the system clock from starting far in the past.
+#
+# Laptops without a coin cell for the RTC (a Galaxy Book4 Pro, among others) lose the time when the
+# battery runs flat, for example during a long suspend: the next boot starts at the firmware's date
+# (2024 here) or at systemd's built-in epoch, weeks behind. chrony steps the clock only once the
+# network is up, some 15 s into the session, with the lock screen already showing: the whole
+# session sees the time jump by weeks and every persistent timer of those weeks fires at once.
+#
+#   restore  (early at boot)  move the clock forward to the last saved time if it is behind it
+#   save     (every 15 min, before suspend, at shutdown)  remember the current time
+# Only ever forward, and only a time later than the saved one is saved: a wrong clock never
+# overwrites a good one. State: /var/lib/fenestra/clock (its modification time).
+set -u
+STAMP=/var/lib/fenestra/clock
+case "${1:-}" in
+restore)
+    [ -f "$STAMP" ] || exit 0
+    saved=$(stat -c %Y "$STAMP") now=$(date +%s)
+    if [ "$now" -lt "$saved" ]; then
+        date -s "@$saved" >/dev/null && echo "the clock was $((saved - now)) s behind the last saved time: set to $(date -Is)"
+    fi
+    ;;
+save)
+    mkdir -p "${STAMP%/*}"
+    now=$(date +%s)
+    if [ ! -f "$STAMP" ] || [ "$now" -gt "$(stat -c %Y "$STAMP")" ]; then
+        touch -d "@$now" "$STAMP"
+    fi
+    ;;
+*) echo "usage: fenestra-clock-keeper restore|save" >&2; exit 2 ;;
+esac

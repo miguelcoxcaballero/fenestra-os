@@ -10,9 +10,20 @@ for f in fenestra-session fenestra-session-inner; do
     [ -f /usr/libexec/fenestra/$f ] && [ ! -f /usr/libexec/fenestra/$f.fenestra-orig ] && cp -p /usr/libexec/fenestra/$f /usr/libexec/fenestra/$f.fenestra-orig
     install -Dm755 "$R/session/libexec/$f" /usr/libexec/fenestra/$f
 done
-for f in fenestra-boot-check fenestra-sleep-log; do install -Dm755 "$R/session/libexec/$f" /usr/libexec/fenestra/$f; done
+for f in fenestra-boot-check fenestra-sleep-log fenestra-electron-keyring; do install -Dm755 "$R/session/libexec/$f" /usr/libexec/fenestra/$f; done
 for u in fenestra-shell.service fenestra-boot-check.service fenestra-sleep-log.service fenestra-print-resume.service fenestra-session.target; do
     install -Dm644 "$R/session/systemd/$u" /usr/lib/systemd/user/$u
 done
+# The clock keeper (system): the clock never starts weeks behind after a flat battery.
+install -Dm755 "$R/session/libexec/fenestra-clock-keeper" /usr/libexec/fenestra/fenestra-clock-keeper
+for u in fenestra-clock-keeper.service fenestra-clock-save.service fenestra-clock-save.timer; do
+    install -Dm644 "$R/session/system/$u" /usr/lib/systemd/system/$u
+done
+systemctl daemon-reload
+systemctl enable fenestra-clock-keeper.service fenestra-clock-save.service >/dev/null 2>&1
+systemctl enable --now fenestra-clock-save.timer >/dev/null 2>&1
+systemctl start fenestra-clock-keeper.service
+/usr/libexec/fenestra/fenestra-clock-keeper save
+restorecon -F /usr/libexec/fenestra/fenestra-clock-keeper 2>/dev/null || true
 restorecon -F /usr/libexec/fenestra/fenestra-session /usr/libexec/fenestra/fenestra-session-inner /usr/libexec/fenestra/fenestra-boot-check 2>/dev/null || true
 echo "Done. It applies from the next sign-in."
