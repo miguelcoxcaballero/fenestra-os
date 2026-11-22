@@ -97,12 +97,22 @@ Item {
         }
         function onCalendarRequested(screen, x) { const o = root.screenObjects(screen); o.quick.close(); o.center.toggle() }
     }
+    // A display was connected (KWin asks KDE's display chooser, org.kde.kscreen.osdService, which
+    // Fenestra Shell answers): the Project page, as Windows' Win+P.
+    Connections {
+        target: Projection
+        function onSelectorRequested() { const o = root.screenObjects(null); o.center.close(); if (!(o.quick.shown && o.quick.page === "project")) o.quick.openPage("project") }
+        function onHideRequested() { const o = root.screenObjects(null); if (o.quick.page === "project") o.quick.close() }
+    }
     Connections {
         target: Shortcuts
         function onOsd(kind, value) { root.screenObjects(null).osd.show(kind, value); LockOsd.progress(kind, value) }
         function onSecurityScreenRequested() { root.securityScreen.open() }
         function onNotificationCenterRequested() { ShellState.toggleCalendar(null, -1) }
         function onQuickSettingsRequested() { ShellState.toggleQuickSettings(null, -1) }
+        // Win+P / Win+K: Quick settings opened on the Project / Cast page
+        function onProjectRequested() { const o = root.screenObjects(null); o.center.close(); o.quick.openPage("project") }
+        function onCastRequested() { const o = root.screenObjects(null); o.center.close(); o.quick.openPage("cast") }
         function onEmojiRequested() {
             for (let i = 0; i < perScreen.count; ++i) {
                 const p = perScreen.objectAt(i).emoji
