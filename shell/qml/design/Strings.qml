@@ -43,7 +43,7 @@ QtObject {
         "More display settings": "Más opciones de configuración de pantalla", "More cast settings": "Más opciones de configuración de la transmisión",
         "Connect a cable to cast": "Conectar un cable para transmitir",
         "This device doesn't support Miracast, so you'll need to connect an external display with a cable.": "El dispositivo no es compatible con Miracast, por lo que tendrás que conectar una pantalla externa con un cable.",
-        "Searching for devices": "Buscando dispositivos", "Wireless display": "Pantalla inalámbrica", "Sound output": "Salida de sonido", "All settings": "Toda la configuración",
+        "Searching for devices": "Buscando dispositivos", "Connecting": "Conectando", "Couldn't connect": "No se pudo conectar", "Wireless display": "Pantalla inalámbrica", "Sound output": "Salida de sonido", "All settings": "Toda la configuración",
         "Connected": "Conectado", "Secured": "Segura", "Open": "Abrir", "No networks found": "No se encontraron redes",
         "Open browser and connect": "Abrir explorador y conectar", "Connect automatically": "Conectar automáticamente", "Connect": "Conectar", "Disconnect": "Desconectar", "Forget": "Olvidar", "Next": "Siguiente", "Properties": "Propiedades", "Enter the network security key": "Escribir la clave de seguridad de red", "Action needed, secured": "Acción necesaria, protegida",
         "Paired": "Emparejado", "Add a device": "Agregar un dispositivo",

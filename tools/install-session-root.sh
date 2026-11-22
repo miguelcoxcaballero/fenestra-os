@@ -15,6 +15,10 @@ for u in fenestra-shell.service fenestra-boot-check.service fenestra-sleep-log.s
     install -Dm644 "$R/session/systemd/$u" /usr/lib/systemd/user/$u
 done
 # The clock keeper (system): the clock never starts weeks behind after a flat battery.
+install -Dm644 "$R/session/systemd/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf" \
+    /usr/lib/systemd/user/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf
+# The Fenestra portal also answers ScreenCast (wireless displays without KDE's chooser).
+install -Dm644 "$R/desktop/portal/fenestra.portal" /usr/share/xdg-desktop-portal/portals/fenestra.portal
 install -Dm755 "$R/session/libexec/fenestra-clock-keeper" /usr/libexec/fenestra/fenestra-clock-keeper
 for u in fenestra-clock-keeper.service fenestra-clock-save.service fenestra-clock-save.timer; do
     install -Dm644 "$R/session/system/$u" /usr/lib/systemd/system/$u

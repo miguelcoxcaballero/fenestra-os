@@ -193,6 +193,8 @@ if(FENESTRA_INSTALL_SESSION)
                   ${session_dir}/systemd/fenestra-face.service
                   ${session_dir}/systemd/fenestra-shell-failed.service ${session_dir}/systemd/fenestra-release-upgrade-user.service ${session_dir}/systemd/fenestra-oobe-first-login.service
             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
+    install(FILES ${session_dir}/systemd/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user/plasma-xdg-desktop-portal-kde.service.d)
     install(FILES ${session_dir}/portals/fenestra-portals.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/xdg-desktop-portal)
 endif()
 

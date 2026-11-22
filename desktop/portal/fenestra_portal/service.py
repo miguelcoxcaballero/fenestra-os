@@ -179,6 +179,8 @@ class PrintService:
         self.tokens: dict[int, tuple[printing.Choice, float]] = {}
         self._next_token = int(time.time()) & 0xFFFF
         self.reg_id = conn.register_object(OBJECT_PATH, PRINT_IFACE, self._on_call, None, None)
+        from .screencast import ScreenCastProxy
+        self.screencast = ScreenCastProxy(conn)
         GLib.idle_add(self._restore_pending)
 
     # ------------------------------------------------------------------ dispatch

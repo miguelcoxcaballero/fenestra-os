@@ -13,6 +13,8 @@
 #include <QQmlExpression>
 #include <QQuickWindow>
 #include <QScreen>
+#include <QWheelEvent>
+#include <QQuickItem>
 
 void TestProbe::installIfRequested(QQmlApplicationEngine *engine)
 {
@@ -90,4 +92,25 @@ QStringList TestProbe::grab(const QString &dir, const QStringList &scopes)
         json.write(QJsonDocument(surfaces).toJson());
     files << json.fileName();
     return files;
+}
+
+QString TestProbe::Wheel(const QString &item, int x, int y, int delta, int steps, bool pixels)
+{
+    if (!m_engine || m_engine->rootObjects().isEmpty())
+        return QStringLiteral("error: no root object");
+    QObject *root = m_engine->rootObjects().first();
+    QQmlExpression expr(qmlContext(root), root, item);
+    auto *it = qobject_cast<QQuickItem *>(expr.evaluate().value<QObject *>());
+    if (!it || !it->window())
+        return QStringLiteral("error: not an item in a window");
+    QQuickWindow *target = it->window();
+    const QPointF pos = it->mapToScene(QPointF(x, y));
+    for (int i = 0; i < steps; ++i) {
+        const Qt::ScrollPhase phase = !pixels ? Qt::NoScrollPhase : i == 0 ? Qt::ScrollBegin : i == steps - 1 ? Qt::ScrollEnd : Qt::ScrollUpdate;
+        QWheelEvent e(pos, target->mapToGlobal(pos), pixels ? QPoint(0, delta) : QPoint(), QPoint(0, pixels ? delta * 2 : delta),
+                      Qt::NoButton, Qt::NoModifier, phase, false, Qt::MouseEventNotSynthesized);
+        QCoreApplication::sendEvent(target, &e);
+        QCoreApplication::processEvents();
+    }
+    return QStringLiteral("ok");
 }

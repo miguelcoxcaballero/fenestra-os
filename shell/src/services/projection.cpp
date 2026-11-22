@@ -18,6 +18,11 @@
 #include <QSet>
 #include <QDebug>
 #include <QStandardPaths>
+#include <QDateTime>
+#include <QDir>
+#include <QGuiApplication>
+#include <QSaveFile>
+#include <QScreen>
 
 namespace {
 const QString kOsdService = QStringLiteral("org.kde.kscreen.osdService");
@@ -277,44 +282,92 @@ Cast::Cast(QObject *parent)
         }
     }
     // Avahi (mDNS): Chromecasts announce _googlecast._tcp
-    m_avahi = !QStandardPaths::findExecutable(QStringLiteral("avahi-browse")).isEmpty()
-        && sys.interface()->isServiceRegistered(QStringLiteral("org.freedesktop.Avahi")).value();
-    m_poll.setInterval(2000);
-    connect(&m_poll, &QTimer::timeout, this, &Cast::pollPeers);
+    m_avahi = sys.interface()->isServiceRegistered(QStringLiteral("org.freedesktop.Avahi")).value();
+    m_poll.setInterval(1000);
+    connect(&m_poll, &QTimer::timeout, this, &Cast::poll);
 }
 
 bool Cast::streamer() const
 {
-    return !QStandardPaths::findExecutable(QStringLiteral("gnome-network-displays")).isEmpty();
+    return !QStandardPaths::findExecutable(QStringLiteral("gnome-network-displays-daemon")).isEmpty();
+}
+
+namespace {
+const QString kGnd = QStringLiteral("org.gnome.NetworkDisplays.Manager");
+const QString kGndPath = QStringLiteral("/org/gnome/NetworkDisplays/Manager");
+const QString kGndUnit = QStringLiteral("fenestra-network-displays.service");
+// NdSinkState (gnome-network-displays src/nd-sink.h)
+enum { SinkDisconnected = 0, SinkEnsureFirewall, SinkWaitP2P, SinkWaitSocket, SinkWaitStreaming, SinkStreaming, SinkError };
+// NdSinkProtocol: META 0, DUMMY_WFD_P2P 1, DUMMY_CC 2, WFD_P2P 3, WFD_MICE 4, CC 5
+QString kindOf(uint protocol)
+{
+    return (protocol == 2 || protocol == 5) ? QStringLiteral("chromecast") : QStringLiteral("miracast");
+}
+QString stateName(int s)
+{
+    if (s == SinkStreaming)
+        return QStringLiteral("connected");
+    if (s == SinkError)
+        return QStringLiteral("error");
+    if (s > SinkDisconnected)
+        return QStringLiteral("connecting");
+    return {};
+}
+}
+
+QString Cast::activeState() const
+{
+    if (m_active.isEmpty())
+        return {};
+    // StartStream returns before the stream unit has told the daemon anything
+    return m_activeState == SinkDisconnected ? QStringLiteral("connecting") : stateName(m_activeState);
 }
 
 QVariantList Cast::devices() const
 {
     QVariantList out;
-    for (const QVariantMap &d : m_found)
+    for (QVariantMap d : m_displays) {
+        if (d.value(QStringLiteral("id")).toString() == m_active)
+            d.insert(QStringLiteral("state"), activeState());
         out.append(d);
-    std::sort(out.begin(), out.end(), [](const QVariant &a, const QVariant &b) {
-        return a.toMap().value(QStringLiteral("name")).toString().localeAwareCompare(b.toMap().value(QStringLiteral("name")).toString()) < 0;
-    });
+    }
     return out;
+}
+
+// GNOME Network Displays' daemon finds Miracast receivers (Wi-Fi P2P, and Miracast over the
+// network) and Chromecasts, and runs each stream as a systemd user unit. It is not D-Bus
+// activatable, so Fenestra starts it as a unit of its own while the Cast page is open or a stream
+// is running, and stops it after (its search keeps Wi-Fi P2P busy).
+void Cast::ensureDaemon()
+{
+    auto bus = QDBusConnection::sessionBus();
+    if (bus.interface()->isServiceRegistered(kGnd).value())
+        return;
+    QProcess::startDetached(QStringLiteral("systemd-run"),
+                            {QStringLiteral("--user"), QStringLiteral("--collect"), QStringLiteral("--quiet"),
+                             QStringLiteral("--unit=") + kGndUnit, QStringLiteral("--description=Wireless displays (Cast)"),
+                             QStringLiteral("gnome-network-displays-daemon")});
+}
+
+void Cast::updateRunning()
+{
+    const bool want = m_searching || !m_active.isEmpty();
+    if (want && !m_poll.isActive()) {
+        m_poll.start();
+    } else if (!want) {
+        m_poll.stop();
+        QProcess::startDetached(QStringLiteral("systemctl"), {QStringLiteral("--user"), QStringLiteral("stop"), kGndUnit});
+    }
 }
 
 void Cast::start()
 {
-    if (m_searching || !supported())
+    if (m_searching || !supported() || !streamer())
         return;
     m_searching = true;
-    m_found.clear();
-    if (m_avahi) {
-        m_browse = new QProcess(this);
-        m_browse->setProcessChannelMode(QProcess::SeparateChannels);
-        connect(m_browse, &QProcess::readyReadStandardOutput, this, &Cast::readAvahi);
-        // -r resolve, -p parsable, -k keep names unescaped; runs until stop()
-        m_browse->start(QStringLiteral("avahi-browse"), {QStringLiteral("-rpk"), QStringLiteral("_googlecast._tcp")});
-    }
-    if (!m_p2p.isEmpty())
-        pollPeers();
-    m_poll.start();
+    ensureDaemon();
+    updateRunning();
+    poll();
     Q_EMIT changed();
 }
 
@@ -323,112 +376,144 @@ void Cast::stop()
     if (!m_searching)
         return;
     m_searching = false;
-    m_poll.stop();
-    if (m_browse) {
-        m_browse->kill();
-        m_browse->deleteLater();
-        m_browse = nullptr;
-    }
-    if (!m_p2p.isEmpty())
-        QDBusConnection::systemBus().asyncCall(QDBusMessage::createMethodCall(kNM, m_p2p, kP2P, QStringLiteral("StopFind")));
-    m_found.clear();
+    updateRunning();
+    if (m_active.isEmpty())
+        m_displays.clear();
     Q_EMIT changed();
 }
 
-void Cast::pollPeers()
+void Cast::poll()
 {
-    if (m_p2p.isEmpty())
-        return;
-    auto sys = QDBusConnection::systemBus();
-    // a find lasts 30 s; asking again keeps it going while the page is open
-    static int ticks = 0;
-    if (ticks++ % 12 == 0) {
-        QDBusMessage find = QDBusMessage::createMethodCall(kNM, m_p2p, kP2P, QStringLiteral("StartFind"));
-        find << QVariantMap{{QStringLiteral("timeout"), 30}};
-        sys.asyncCall(find);
-    }
-    QDBusMessage get = QDBusMessage::createMethodCall(kNM, m_p2p, kProps, QStringLiteral("Get"));
-    get << kP2P << QStringLiteral("Peers");
-    auto *w = new QDBusPendingCallWatcher(sys.asyncCall(get), this);
+    QDBusMessage get = QDBusMessage::createMethodCall(kGnd, kGndPath, kProps, QStringLiteral("Get"));
+    get << kGnd << QStringLiteral("Displays");
+    auto *w = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(get, 2000), this);
     connect(w, &QDBusPendingCallWatcher::finished, this, [this, w] {
         w->deleteLater();
         QDBusPendingReply<QDBusVariant> r = *w;
-        if (r.isError() || !m_searching)
+        if (r.isError()) {
+            ensureDaemon();   // still starting, or it went away
             return;
-        QList<QDBusObjectPath> peers;
-        r.value().variant().value<QDBusArgument>() >> peers;
-        auto sys = QDBusConnection::systemBus();
-        QSet<QString> seen;
-        bool changedAny = false;
-        for (const QDBusObjectPath &peer : peers) {
-            QDBusMessage all = QDBusMessage::createMethodCall(kNM, peer.path(), kProps, QStringLiteral("GetAll"));
-            all << QStringLiteral("org.freedesktop.NetworkManager.WifiP2PPeer");
-            const QDBusReply<QVariantMap> props = sys.call(all, QDBus::Block, 1000);
-            if (!props.isValid())
+        }
+        QList<QVariantMap> list;
+        const QDBusArgument arg = r.value().variant().value<QDBusArgument>();
+        arg.beginArray();
+        int activeState = SinkDisconnected;
+        bool activeSeen = false;
+        while (!arg.atEnd()) {
+            QVariantMap m;
+            arg >> m;
+            const QString uuid = m.value(QStringLiteral("uuid")).toString();
+            const uint protocol = m.value(QStringLiteral("protocol")).toUInt();
+            const int state = int(m.value(QStringLiteral("state")).toUInt());
+            if (protocol == 0)   // META: the same display reached two ways; its parts are listed too
                 continue;
-            // a Miracast receiver announces Wi-Fi Display information elements
-            if (props.value().value(QStringLiteral("WfdIEs")).toByteArray().isEmpty())
-                continue;
-            const QString id = QStringLiteral("miracast:") + props.value().value(QStringLiteral("HwAddress")).toString();
-            seen.insert(id);
-            if (!m_found.contains(id)) {
-                QString name = props.value().value(QStringLiteral("Name")).toString();
-                m_found.insert(id, {{QStringLiteral("id"), id}, {QStringLiteral("name"), name.isEmpty() ? id.mid(9) : name},
-                                    {QStringLiteral("kind"), QStringLiteral("miracast")}});
-                changedAny = true;
+            if (uuid == m_active) {
+                activeSeen = true;
+                activeState = state;
+            }
+            list.append({{QStringLiteral("id"), uuid},
+                         {QStringLiteral("name"), m.value(QStringLiteral("display-name")).toString()},
+                         {QStringLiteral("kind"), kindOf(protocol)},
+                         {QStringLiteral("state"), stateName(state)}});
+        }
+        arg.endArray();
+        std::sort(list.begin(), list.end(), [](const QVariantMap &a, const QVariantMap &b) {
+            return a.value(QStringLiteral("name")).toString().localeAwareCompare(b.value(QStringLiteral("name")).toString()) < 0;
+        });
+        bool dirty = list != m_displays;
+        m_displays = list;
+        if (!m_active.isEmpty()) {
+            // the stream ended on its own (the display was switched off, the unit failed): after
+            // a few seconds without it, the display is no longer cast to
+            const bool live = activeSeen && activeState > SinkDisconnected && activeState < SinkError;
+            if (activeState != m_activeState) {
+                m_activeState = activeState;
+                dirty = true;
+            }
+            if (live) {
+                m_lostTicks = 0;
+            } else if (!m_grace && ++m_lostTicks > (m_activeState == SinkError ? 4 : 8)) {
+                qInfo() << "cast: the stream to" << m_active << "ended";
+                disconnect();
+                return;
             }
         }
-        for (auto it = m_found.begin(); it != m_found.end();) {
-            if (it.key().startsWith(QLatin1String("miracast:")) && !seen.contains(it.key())) {
-                it = m_found.erase(it);
-                changedAny = true;
-            } else {
-                ++it;
-            }
-        }
-        if (changedAny)
+        if (dirty)
             Q_EMIT changed();
     });
 }
 
-void Cast::readAvahi()
-{
-    m_avahiBuffer += m_browse->readAllStandardOutput();
-    bool changedAny = false;
-    int nl;
-    while ((nl = m_avahiBuffer.indexOf('\n')) >= 0) {
-        const QString line = QString::fromUtf8(m_avahiBuffer.left(nl));
-        m_avahiBuffer.remove(0, nl + 1);
-        // =;iface;proto;name;type;domain;host;address;port;"txt" "txt"... (resolved)
-        // -;iface;proto;name;type;domain (gone)
-        const QStringList f = line.split(QLatin1Char(';'));
-        if (f.size() < 4)
-            continue;
-        const QString id = QStringLiteral("chromecast:") + f[3];
-        if (f[0] == QLatin1String("-")) {
-            changedAny |= m_found.remove(id) > 0;
-        } else if (f[0] == QLatin1String("=") && f.size() >= 10 && !m_found.contains(id)) {
-            QString name = f[3];
-            const QRegularExpressionMatch fn = QRegularExpression(QStringLiteral("\"fn=([^\"]*)\"")).match(f.mid(9).join(QLatin1Char(';')));
-            if (fn.hasMatch())
-                name = fn.captured(1);
-            m_found.insert(id, {{QStringLiteral("id"), id}, {QStringLiteral("name"), name}, {QStringLiteral("kind"), QStringLiteral("chromecast")}});
-            changedAny = true;
-        }
-    }
-    if (changedAny)
-        Q_EMIT changed();
-}
-
 void Cast::connectTo(const QString &id)
 {
-    Q_UNUSED(id)
-    // GNOME Network Displays streams the screen to Miracast and Chromecast receivers; it lists the
-    // same displays and connects to the one chosen there. Without it, the Store offers it.
-    if (streamer())
-        QProcess::startDetached(QStringLiteral("gnome-network-displays"), {});
-    else
+    if (!streamer()) {
         QProcess::startDetached(QStringLiteral("fenestra-store"), {QStringLiteral("--app"), QStringLiteral("org.gnome.NetworkDisplays")});
+        return;
+    }
+    if (id == m_active)
+        return;
+    if (!m_active.isEmpty())
+        disconnect();
+    // Choosing the display is the consent, as on Windows: the Fenestra portal lets the stream
+    // record the main screen without KDE's "what to share" chooser (fenestra_portal/screencast.py).
+    if (QScreen *screen = QGuiApplication::primaryScreen()) {
+        const QPoint pos = screen->geometry().topLeft();
+        const QString dir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation) + QStringLiteral("/fenestra");
+        QDir().mkpath(dir);
+        QSaveFile f(dir + QStringLiteral("/cast-grant"));
+        if (f.open(QIODevice::WriteOnly)) {
+            f.write(QJsonDocument(QJsonObject{{QStringLiteral("time"), double(QDateTime::currentSecsSinceEpoch())},
+                                              {QStringLiteral("output"), QStringLiteral("%1x%2").arg(pos.x()).arg(pos.y())}})
+                        .toJson(QJsonDocument::Compact));
+            f.commit();
+        }
+    }
+    m_active = id;
+    m_unit.clear();
+    m_activeState = SinkDisconnected;
+    m_lostTicks = 0;
+    m_grace = true;   // give the unit time to start before judging it
+    QTimer::singleShot(8000, this, [this, id] {
+        if (m_active == id)
+            m_grace = false;
+    });
+    updateRunning();
+    Q_EMIT changed();
+    QDBusMessage start = QDBusMessage::createMethodCall(kGnd, kGndPath, kGnd, QStringLiteral("StartStream"));
+    start << id;
+    auto *w = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(start, 10000), this);
+    connect(w, &QDBusPendingCallWatcher::finished, this, [this, w, id] {
+        w->deleteLater();
+        QDBusPendingReply<QString> r = *w;
+        if (m_active != id)
+            return;
+        if (r.isError()) {
+            qWarning() << "cast: StartStream failed:" << r.error().message();
+            m_activeState = SinkError;
+            m_grace = false;
+            Q_EMIT changed();
+            return;
+        }
+        m_unit = r.value();
+    });
+}
+
+void Cast::disconnect()
+{
+    if (m_active.isEmpty())
+        return;
+    if (!m_unit.isEmpty()) {
+        QDBusMessage stop = QDBusMessage::createMethodCall(kGnd, kGndPath, kGnd, QStringLiteral("StopStream"));
+        stop << m_unit;
+        QDBusConnection::sessionBus().asyncCall(stop);
+        // the daemon may already be gone; the unit is what streams
+        QProcess::startDetached(QStringLiteral("systemctl"), {QStringLiteral("--user"), QStringLiteral("stop"), m_unit});
+    }
+    m_active.clear();
+    m_unit.clear();
+    m_activeState = SinkDisconnected;
+    // let StopStream reach the daemon before it may be stopped
+    QTimer::singleShot(1500, this, &Cast::updateRunning);
+    Q_EMIT changed();
 }
 
 #include "projection.moc"
