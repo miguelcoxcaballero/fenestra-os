@@ -12,6 +12,12 @@ Item {
     property string glyph           // Segoe Fluent Icons code point (FluentGlyph), when the font is there
     property bool checked: false
     property bool hasPage: false
+    // A tile that only opens its page (Windows' Accessibility, Cast, Project): one button with the
+    // glyph and a chevron centred together (16 px glyph, 6 px, 12 px chevron: dark-100 Q-page2).
+    property bool link: false
+    // available on this PC (Wi-Fi, Bluetooth...); shown when also on Quick settings' current page
+    property bool avail: true
+    visible: avail && (!parent || typeof parent.onPage !== "function" || parent.onPage(tile))
     signal toggled()
     signal pageRequested()
     width: Metrics.quickTileWidth
@@ -38,10 +44,21 @@ Item {
 
     Part {
         id: main
-        width: tile.hasPage ? parent.width - 28 : parent.width
-        topRightRadius: tile.hasPage ? 0 : Metrics.controlRadius; bottomRightRadius: topRightRadius
+        width: tile.hasPage && !tile.link ? parent.width - 28 : parent.width
+        topRightRadius: tile.hasPage && !tile.link ? 0 : Metrics.controlRadius; bottomRightRadius: topRightRadius
         hovered: bm.containsMouse; down: bm.pressed; on: tile.checked
+        Row {
+            visible: tile.link
+            anchors.centerIn: parent; spacing: 6
+            FluentGlyph { anchors.verticalCenter: parent.verticalCenter; glyph: tile.glyph
+                          fallback: tile.iconSource.toString() !== "" ? tile.iconSource.toString() : tile.iconName
+                          color: tile.checked ? Theme.accentOn : Theme.text }
+            Item { width: 12; height: 12; anchors.verticalCenter: parent.verticalCenter
+                   FluentGlyph { anchors.centerIn: parent; glyph: "\ue974"; fallback: "go-next-symbolic"; size: 12
+                                 color: tile.checked ? Theme.accentOn : Theme.text } }
+        }
         FluentGlyph {
+            visible: !tile.link
             anchors.centerIn: parent
             glyph: tile.glyph
             // Always in the text colour: the theme's symbolic icons are #dedede, the reference's
@@ -49,10 +66,10 @@ Item {
             fallback: tile.iconSource.toString() !== "" ? tile.iconSource.toString() : tile.iconName
             color: tile.checked ? Theme.accentOn : Theme.text
         }
-        MouseArea { id: bm; anchors.fill: parent; hoverEnabled: true; onClicked: tile.toggled() }
+        MouseArea { id: bm; anchors.fill: parent; hoverEnabled: true; onClicked: tile.link ? tile.pageRequested() : tile.toggled() }
     }
     Part {
-        visible: tile.hasPage
+        visible: tile.hasPage && !tile.link
         x: main.width; width: 28
         topLeftRadius: 0; bottomLeftRadius: 0
         hovered: cm.containsMouse; down: cm.pressed; on: tile.checked

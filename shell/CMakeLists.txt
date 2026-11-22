@@ -50,6 +50,7 @@ qt_add_executable(fenestra-shell
     src/services/performancemode.cpp src/services/performancemode.h
     src/services/recordingblock.cpp src/services/recordingblock.h
     src/services/lockosd.cpp src/services/lockosd.h
+    src/services/projection.cpp src/services/projection.h
     src/services/poweridle.cpp src/services/poweridle.h
     src/services/emoji.cpp src/services/emoji.h
     src/services/kbdbacklight.cpp src/services/kbdbacklight.h

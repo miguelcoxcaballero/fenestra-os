@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "shortcuts.h"
 
+#include <tuple>
+
 #include "apps.h"
 #include "kbdbacklight.h"
 #include "kwinintegration.h"
@@ -145,6 +147,20 @@ void Shortcuts::install()
             &QAction::triggered, this, &Shortcuts::searchRequested);
     connect(add(QStringLiteral("snap-layouts"), QStringLiteral("Snap layouts"), {QKeySequence(Qt::META | Qt::Key_Z)}),
             &QAction::triggered, this, &Shortcuts::snapLayoutsRequested);
+    // Win+P: Quick settings' Project page (KWin binds the key to KDE's display chooser: take it).
+    // Win+K: the Cast page.
+    for (const auto &[id, text, key, signal] : {std::tuple{QStringLiteral("project"), QStringLiteral("Project"), QKeySequence(Qt::META | Qt::Key_P), &Shortcuts::projectRequested},
+                                                std::tuple{QStringLiteral("cast"), QStringLiteral("Cast"), QKeySequence(Qt::META | Qt::Key_K), &Shortcuts::castRequested}}) {
+        QAction *a = add(id, text, {key});
+        bool othersOwn = false;
+        for (const KGlobalShortcutInfo &o : KGlobalAccel::globalShortcutsByKey(key))
+            othersOwn |= o.componentUniqueName() != QLatin1String("fenestra-shell");
+        if (othersOwn) {
+            KGlobalAccel::stealShortcutSystemwide(key);
+            KGlobalAccel::self()->setShortcut(a, {key}, KGlobalAccel::NoAutoloading);
+        }
+        connect(a, &QAction::triggered, this, signal);
+    }
     connect(add(QStringLiteral("task-view"), QStringLiteral("Task View"), {QKeySequence(Qt::META | Qt::Key_Tab)}),
             &QAction::triggered, this, [] { KWinIntegration::instance()->toggleOverview(); });
     // Print and Super+Shift+S open the snipping overlay (Q04), as on the reference. "screenshot" keeps

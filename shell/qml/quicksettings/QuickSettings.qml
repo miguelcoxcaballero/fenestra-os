@@ -13,8 +13,16 @@ Flyout {
     background.visible: false
     recipe: "panel"
     blurItems: [mediaCard.material, card.material]
-    property string page: ""            // "" | "wifi" | "bluetooth" | "output"
-    onDismissed: { page = ""; batteryOpen = false }
+    property string page: ""            // "" | "wifi" | "bluetooth" | "output" | "project" | "cast"
+    onDismissed: { page = ""; batteryOpen = false; tilePage = 0 }
+    // Win+P / Win+K open Quick settings straight on that page; the same key again closes it.
+    function openPage(name) {
+        if (shown && page === name) { close(); return }
+        page = name
+        if (!shown) open()
+    }
+    // Tiles come six to a page (3 × 2) with Windows' pager on the right (dark-100 Q, page 2 of 2).
+    property int tilePage: 0
     // The battery details above the footer (click on the battery; a second click hides them).
     property bool batteryOpen: false
     // Test hook (tests/shell-kwin): the bench has no battery.
@@ -92,6 +100,7 @@ Flyout {
     // Opening and closing: Flyout's taskbar motion (rises from behind the taskbar, design/motion.json).
     // Subpages slide in from the right, the main page back from the left (PopupMotion "page").
     onPageChanged: {
+        if (page === "cast") Cast.start(); else Cast.stop()
         if (!visible) return pageMotion.reset()
         pageMotion.target = page === "" ? main : sub
         pageMotion.kind = page === "" ? "page-back" : "page-forward"
@@ -158,10 +167,22 @@ Flyout {
                 Grid {
                     id: tiles
                     readonly property int visibleCount: { let n = 0; for (let i = 0; i < children.length; ++i) if (children[i].visible) ++n; return n }
+                    readonly property int availCount: { let n = 0; for (let i = 0; i < children.length; ++i) if (children[i].avail) ++n; return n }
+                    readonly property int pages: Math.max(1, Math.ceil(availCount / 6))
+                    onPagesChanged: if (qs.tilePage >= pages) qs.tilePage = pages - 1
+                    // a tile is shown when it is available and on the current page
+                    function onPage(t) {
+                        let k = 0
+                        for (let i = 0; i < children.length; ++i) {
+                            if (children[i] === t) return Math.floor(k / 6) === qs.tilePage
+                            if (children[i].avail) ++k
+                        }
+                        return false
+                    }
                     x: Metrics.n("quick.grid.x", 24); y: Metrics.n("quick.grid.y", 23)
                     columns: 3; columnSpacing: Metrics.n("quick.tile.gap", 12); rowSpacing: 0
                     QuickTile {
-                        visible: WifiNetworks.hasWifi
+                        avail: WifiNetworks.hasWifi || qs.testWifi.count > 0
                         label: NetworkStatus.kind === "wifi" ? NetworkStatus.name : Strings.tr("Wi-Fi")
                         iconName: WifiNetworks.enabled ? "network-wireless-signal-excellent-symbolic" : "network-wireless-disabled-symbolic"
                         glyph: "\ue701"
@@ -170,7 +191,7 @@ Flyout {
                         onPageRequested: { WifiNetworks.scan(); qs.page = "wifi" }
                     }
                     QuickTile {
-                        visible: BluezQt.Manager.adapters.length > 0
+                        avail: BluezQt.Manager.adapters.length > 0 || qs.testDevices.count > 0
                         label: Strings.tr("Bluetooth")
                         iconName: "bluetooth-active-symbolic"; glyph: "\ue702"
                         checked: BluezQt.Manager.bluetoothOperational
@@ -192,7 +213,7 @@ Flyout {
                         }
                     }
                     QuickTile {
-                        visible: PowerProfiles.available
+                        avail: PowerProfiles.available || qs.testBattery !== null
                         label: Strings.tr("Battery saver"); iconName: "battery-level-50-symbolic"; glyph: "\uec0a"
                         checked: PowerProfiles.active === "power-saver"
                         onToggled: PowerProfiles.active = checked ? "balanced" : "power-saver"
@@ -206,6 +227,61 @@ Flyout {
                         label: Strings.tr("Accessibility"); iconName: "preferences-desktop-accessibility-symbolic"; glyph: "\ue776"
                         onToggled: { qs.close(); Apps.runCommand("fenestra-settings --page accessibility") }
                     }
+                    // Cast (Win+K) and Project (Win+P): on every PC, as in Windows; the pages say
+                    // what this one can do.
+                    QuickTile {
+                        // es-ES: the tile says «Proyección inalámbrica», its page «Transmitir»
+                        label: Strings.es ? "Proyección inalámbrica" : "Cast"; iconName: "video-display-symbolic"; glyph: "\uec15"
+                        link: true; hasPage: true; checked: Cast.searching && qs.page === "cast"
+                        onPageRequested: qs.page = "cast"
+                    }
+                    QuickTile {
+                        label: Strings.tr("Project"); iconName: "video-display-symbolic"; glyph: "\uebc6"
+                        link: true; hasPage: true
+                        onPageRequested: { Projection.refresh(); qs.page = "project" }
+                    }
+                }
+                // Windows' pager: ▲ on later pages, a dot per page (the current one larger), ▼ before
+                // the last; centred on the tiles, 14.5 px from the right edge (dark-100 Q pages 1 and 2).
+                Item {
+                    id: pager
+                    visible: tiles.pages > 1
+                    readonly property color ink: Theme.dark ? Qt.rgba(1, 1, 1, 0.545) : Qt.rgba(0, 0, 0, 0.447)
+                    readonly property real cx: parent.width - 12.5
+                    readonly property real cy: (main.dividerY - 1) / 2
+                    readonly property real dotsTop: cy - (tiles.pages - 1) * 6
+                    Canvas {
+                        id: upArrow
+                        visible: qs.tilePage > 0
+                        x: pager.cx - 4; y: pager.dotsTop - 16 - 3; width: 8; height: 6
+                        onPaint: { const c = getContext("2d"); c.reset(); c.fillStyle = pager.ink; c.beginPath(); c.moveTo(0, 6); c.lineTo(4, 0); c.lineTo(8, 6); c.closePath(); c.fill() }
+                        Connections { target: Theme; function onDarkChanged() { upArrow.requestPaint() } }
+                        MouseArea { anchors.fill: parent; anchors.margins: -6; onClicked: qs.tilePage = Math.max(0, qs.tilePage - 1) }
+                    }
+                    Repeater {
+                        model: tiles.pages
+                        delegate: Rectangle {
+                            required property int index
+                            readonly property int d: index === qs.tilePage ? 6 : 4
+                            x: pager.cx - d / 2; y: pager.dotsTop + index * 12 - d / 2
+                            width: d; height: d; radius: d / 2; color: pager.ink
+                            MouseArea { anchors.fill: parent; anchors.margins: -4; onClicked: qs.tilePage = index }
+                        }
+                    }
+                    Canvas {
+                        id: downArrow
+                        visible: qs.tilePage < tiles.pages - 1
+                        x: pager.cx - 4; y: pager.dotsTop + (tiles.pages - 1) * 12 + 16 - 3; width: 8; height: 6
+                        onPaint: { const c = getContext("2d"); c.reset(); c.fillStyle = pager.ink; c.beginPath(); c.moveTo(0, 0); c.lineTo(8, 0); c.lineTo(4, 6); c.closePath(); c.fill() }
+                        Connections { target: Theme; function onDarkChanged() { downArrow.requestPaint() } }
+                        MouseArea { anchors.fill: parent; anchors.margins: -6; onClicked: qs.tilePage = Math.min(tiles.pages - 1, qs.tilePage + 1) }
+                    }
+                }
+                // The wheel over the tiles turns the pages, as in Windows.
+                WheelHandler {
+                    target: null
+                    enabled: tiles.pages > 1
+                    onWheel: (e) => { qs.tilePage = Math.max(0, Math.min(tiles.pages - 1, qs.tilePage + (e.angleDelta.y < 0 ? 1 : -1))) }
                 }
                 Rectangle { x: 1; y: main.dividerY; width: parent.width - 2; height: 1; color: Metrics.pcol("quick.separator") }
                 // Sliders: brightness then volume, 48 px rows; one row is centred at quick.slider.y.
@@ -275,9 +351,30 @@ Flyout {
                 Item {
                     width: parent.width; height: sub.headerH
                     GlyphButton { x: 12; anchors.verticalCenter: parent.verticalCenter; glyph: "go-previous-symbolic"; fluent: "\ue72b"; onClicked: qs.page = "" }
-                    Text { x: 52; anchors.verticalCenter: parent.verticalCenter
-                           text: Strings.tr(qs.page === "wifi" ? "Wi-Fi" : qs.page === "bluetooth" ? "Bluetooth" : "Sound output")
+                    Text { id: subTitle; x: 52; anchors.verticalCenter: parent.verticalCenter
+                           text: Strings.tr(qs.page === "wifi" ? "Wi-Fi" : qs.page === "bluetooth" ? "Bluetooth" : qs.page === "project" ? "Project"
+                                            : qs.page === "cast" ? "Cast" : "Sound output")
                            color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody; font.weight: Font.DemiBold }
+                    // The page's shortcut as key caps (⊞ P, ⊞ K): 16 px squares, 1 px border, 4 px
+                    // apart, 8 px after the title (dark-100 Q Cast page).
+                    Row {
+                        visible: qs.page === "project" || qs.page === "cast"
+                        x: subTitle.x + subTitle.implicitWidth + 8; anchors.verticalCenter: parent.verticalCenter
+                        spacing: 4
+                        component KeyCap: Rectangle {
+                            property string label
+                            property bool winKey: false
+                            width: 16; height: 16; radius: 2; color: "transparent"
+                            border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.21) : Qt.rgba(0, 0, 0, 0.204)
+                            readonly property color ink: Theme.dark ? Qt.rgba(1, 1, 1, 0.64) : Qt.rgba(0, 0, 0, 0.6)
+                            Grid { visible: winKey; x: 3; y: 3; columns: 2; spacing: 1
+                                   Repeater { model: 4; Rectangle { width: 4; height: 4; color: parent.parent.ink } } }
+                            Text { visible: !winKey; anchors.centerIn: parent; text: label; color: parent.ink
+                                   font.family: Metrics.fontFamily; font.pixelSize: 10 }
+                        }
+                        KeyCap { winKey: true }
+                        KeyCap { label: qs.page === "project" ? "P" : "K" }
+                    }
                 }
                 Flickable {
                     id: listView
@@ -290,7 +387,8 @@ Flyout {
                     Loader {
                         id: pageLoader
                         width: parent.width
-                        sourceComponent: qs.page === "wifi" ? wifiPage : qs.page === "bluetooth" ? btPage : qs.page === "output" ? outputPage : null
+                        sourceComponent: qs.page === "wifi" ? wifiPage : qs.page === "bluetooth" ? btPage : qs.page === "output" ? outputPage
+                                         : qs.page === "project" ? projectPage : qs.page === "cast" ? castPage : null
                     }
                     WheelHandler {
                         // Windows scrolls 3 rows (48 px each) per notch; Qt's default is slower.
@@ -304,15 +402,17 @@ Flyout {
                 }
                 Rectangle {
                     // Footer link ("More Wi-Fi settings"), 1 px rule above it.
-                    visible: qs.page === "wifi" || qs.page === "bluetooth"
+                    visible: qs.page === "wifi" || qs.page === "bluetooth" || qs.page === "project" || qs.page === "cast"
                     x: 8; y: sub.height - sub.footerH + 8; width: footLink.implicitWidth + 24; height: 32
                     radius: Metrics.controlRadius
                     color: flm.pressed ? Theme.pressed : flm.containsMouse ? Theme.hover : "transparent"
                     Text { id: footLink; x: 12; anchors.verticalCenter: parent.verticalCenter
-                           text: Strings.tr(qs.page === "wifi" ? "More Wi-Fi settings" : "More Bluetooth settings")
+                           text: Strings.tr(qs.page === "wifi" ? "More Wi-Fi settings" : qs.page === "bluetooth" ? "More Bluetooth settings"
+                                            : qs.page === "project" ? "More display settings" : "More cast settings")
                            color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
                     MouseArea { id: flm; anchors.fill: parent; hoverEnabled: true
-                                onClicked: { qs.close(); Apps.runCommand("fenestra-settings --page " + (qs.page === "wifi" ? "wifi" : "bluetooth")) } }
+                                onClicked: { const target = qs.page === "wifi" ? "wifi" : qs.page === "bluetooth" ? "bluetooth" : "display"
+                                             qs.close(); Apps.runCommand("fenestra-settings --page " + target) } }
                 }
                 // Windows' refresh button at the end of the footer: scans now. The list also rescans by
                 // itself every 15 s while this page is open (NetworkManager alone scans only now and then).
@@ -564,6 +664,93 @@ Flyout {
             }
             Text { visible: qs.testWifi.count === 0 && WifiNetworks.count === 0; x: 20; text: Strings.tr("No networks found"); color: Theme.textSecondary
                    font.family: Metrics.fontFamily; font.pixelSize: 12 }
+        }
+    }
+    // ---- Project (Win+P): the four display modes, the current one selected ----
+    Component {
+        id: projectPage
+        Column {
+            width: Metrics.quickWidth
+            Repeater {
+                model: [["pc", "PC screen only"], ["duplicate", "Duplicate"], ["extend", "Extend"], ["second", "Second screen only"]]
+                delegate: Rectangle {
+                    id: prow
+                    required property var modelData
+                    readonly property bool current: Projection.mode === modelData[0]
+                    x: 8; width: Metrics.quickWidth - 16; height: 48; radius: 4
+                    color: pm.pressed ? Theme.pressed : pm.containsMouse || current ? Theme.hover : "transparent"
+                    // the selected mode: Fluent's selection pill
+                    Rectangle { visible: prow.current; x: 0; width: 3; height: 16; radius: 1.5; anchors.verticalCenter: parent.verticalCenter
+                                color: Theme.accentFill }
+                    // two screens drawn as Windows' projection pictograms: filled = showing the desktop
+                    Item {
+                        x: 12; width: 20; height: 16; anchors.verticalCenter: parent.verticalCenter
+                        readonly property color ink: Theme.text
+                        readonly property string m: prow.modelData[0]
+                        component Screen: Rectangle { property bool lit; width: 9; height: 7; radius: 1; border.width: 1; border.color: parent.ink
+                                                      color: lit ? parent.ink : "transparent" }
+                        Screen { visible: parent.m !== "extend"; x: 0; y: 4; lit: parent.m !== "second" }
+                        Screen { visible: parent.m !== "extend"; x: 11; y: 4; lit: parent.m !== "pc" }
+                        Rectangle { visible: parent.m === "extend"; x: 0; y: 4; width: 20; height: 7; radius: 1; color: parent.ink }
+                        Rectangle { visible: parent.m === "extend"; x: 9.5; y: 4; width: 1; height: 7; color: Theme.dark ? "#2c2c2c" : "#f3f3f3" }
+                        Rectangle { x: 3; y: 12; width: 3; height: 1; color: parent.ink }
+                        Rectangle { x: 14; y: 12; width: 3; height: 1; color: parent.ink }
+                    }
+                    Text { x: 44; anchors.verticalCenter: parent.verticalCenter; text: Strings.tr(prow.modelData[1])
+                           color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
+                    MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; enabled: !Projection.busy
+                                onClicked: Projection.setMode(prow.modelData[0]) }
+                }
+            }
+        }
+    }
+    // ---- Cast (Win+K): wireless displays nearby, or what Windows says on a PC that cannot cast ----
+    Component {
+        id: castPage
+        Item {
+            width: Metrics.quickWidth
+            height: Cast.supported ? castList.height : noCast.height
+            // No Miracast (no Wi-Fi Direct) and no Avahi: Windows' "Connect a cable" text
+            // (dark-100 Q Cast page: 20 px semibold title 51 px under the header, then the body).
+            Column {
+                id: noCast
+                visible: !Cast.supported
+                x: 24; y: 51 - 56 + 6; width: Metrics.quickWidth - 48; spacing: 12
+                Text { width: parent.width; wrapMode: Text.WordWrap; text: Strings.tr("Connect a cable to cast")
+                       color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 20; font.weight: Font.DemiBold }
+                Text { width: parent.width; wrapMode: Text.WordWrap; lineHeight: 19; lineHeightMode: Text.FixedHeight
+                       text: Strings.tr("This device doesn't support Miracast, so you'll need to connect an external display with a cable.")
+                       color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
+            }
+            Column {
+                id: castList
+                visible: Cast.supported
+                width: Metrics.quickWidth
+                Repeater {
+                    model: Cast.devices
+                    delegate: Rectangle {
+                        required property var modelData
+                        x: 8; width: Metrics.quickWidth - 16; height: 48; radius: 4
+                        color: cm2.pressed ? Theme.pressed : cm2.containsMouse ? Theme.hover : "transparent"
+                        FluentGlyph { x: 12; anchors.verticalCenter: parent.verticalCenter; glyph: "\ue7f4"; fallback: "video-display-symbolic" }
+                        Column { x: 40; anchors.verticalCenter: parent.verticalCenter
+                            Text { text: modelData.name; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14 }
+                            Text { text: Strings.tr(modelData.kind === "chromecast" ? "Chromecast" : "Wireless display")
+                                   color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: 12 } }
+                        MouseArea { id: cm2; anchors.fill: parent; hoverEnabled: true; onClicked: { qs.close(); Cast.connectTo(modelData.id) } }
+                    }
+                }
+                // while nothing is found: Windows' "Searching for devices" line
+                Item {
+                    visible: Cast.devices.length === 0
+                    width: parent.width; height: 48
+                    Text { id: searching; x: 20; anchors.verticalCenter: parent.verticalCenter
+                           text: Strings.tr("Searching for devices") + ".".repeat(dots.n)
+                           color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
+                    Timer { id: dots; property int n: 0; interval: 500; repeat: true; running: parent.visible && qs.shown
+                            onTriggered: n = (n + 1) % 4 }
+                }
+            }
         }
     }
     BluezQt.DevicesModel { id: btModel }
