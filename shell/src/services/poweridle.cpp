@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "poweridle.h"
 
+#include "gamepadactivity.h"
 #include "lockosd.h"
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include <QDBusInterface>
 #include <QDBusMessage>
 #include <QDBusReply>
+#include <QDateTime>
 #include <QDebug>
 #include <QFile>
 #include <QProcess>
@@ -80,6 +82,10 @@ PowerIdle::PowerIdle(QObject *parent)
     connect(KIdleTime::instance(), &KIdleTime::timeoutReached, this, [this](int id, int) {
         timedOut(id);
     });
+    connect(KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, [this] {
+        m_screenIsOff = false;
+    });
+    connect(GamepadActivity::instance(), &GamepadActivity::activity, this, &PowerIdle::gamepadUsed);
     batteryChanged();
 }
 
@@ -148,6 +154,7 @@ void PowerIdle::rearm(bool withSleep)
     if (ms > 0) {
         m_timeout = KIdleTime::instance()->addIdleTimeout(ms);
     }
+    m_timeoutMs = ms;
     if (!withSleep) {
         qInfo().noquote() << "FENESTRA_POWERIDLE locked" << LockOsd::instance()->locked() << "timeout-ms" << ms;
         return;
@@ -163,6 +170,7 @@ void PowerIdle::rearm(bool withSleep)
     if (sleepMs > 0) {
         m_sleepTimeout = KIdleTime::instance()->addIdleTimeout(sleepMs);
     }
+    m_sleepMs = sleepMs;
     qInfo().noquote() << "FENESTRA_POWERIDLE sleep-ms" << sleepMs << "battery" << m_onBattery << "locked" << LockOsd::instance()->locked() << "inhibitions"
                       << m_screenInhibitions.size() << "timeout-ms" << ms;
 }
@@ -183,9 +191,43 @@ void PowerIdle::sleepIfQuiet()
     QDBusConnection::systemBus().asyncCall(suspend);
 }
 
+// KWin's idle timers start from when they are made, and KIdleTime can't tell KWin about activity
+// on Wayland (simulateUserActivity does nothing there): a controller in use makes them again.
+void PowerIdle::restartTimers()
+{
+    // both go first: KIdleTime keeps one KWin timer per length, shared when the two are equal
+    auto *idle = KIdleTime::instance();
+    const bool screen = m_timeout >= 0, sleep = m_sleepTimeout >= 0;
+    if (screen) {
+        idle->removeIdleTimeout(m_timeout);
+    }
+    if (sleep) {
+        idle->removeIdleTimeout(m_sleepTimeout);
+    }
+    m_timeout = screen ? idle->addIdleTimeout(m_timeoutMs) : -1;
+    m_sleepTimeout = sleep ? idle->addIdleTimeout(m_sleepMs) : -1;
+}
+
+void PowerIdle::gamepadUsed()
+{
+    if (m_screenIsOff) {
+        m_screenIsOff = false;
+        qInfo("FENESTRA_POWERIDLE gamepad: screen on");
+        QProcess::startDetached(QStringLiteral("kscreen-doctor"), {QStringLiteral("--dpms"), QStringLiteral("on")});
+    }
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (now - m_padRestarted < 5000) {
+        return;   // the shortest timer is a minute: once every few seconds is plenty
+    }
+    m_padRestarted = now;
+    restartTimers();
+}
+
 void PowerIdle::screenOff()
 {
     qInfo("FENESTRA_POWERIDLE screen off");
+    m_screenIsOff = true;
+    KIdleTime::instance()->catchNextResumeEvent();
     QProcess::startDetached(QStringLiteral("kscreen-doctor"), {QStringLiteral("--dpms"), QStringLiteral("off")});
 }
 
