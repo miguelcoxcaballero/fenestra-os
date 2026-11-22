@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
     RecordingBlock::instance(); // firmware microphone/camera block: never silent
     LockOsd::instance(); // banners on the lock screen (org.kde.osdService while locked)
     Projection::instance(); // org.kde.kscreen.osdService: a new display opens the Project page
+    Cast::instance();   // org.fenestra.Shell.Cast on the bus from the start
     PowerIdle::instance(); // screen off when idle: on battery only
     KbdBacklight::instance();    // keyboard backlight (hotkey banner, Quick settings)
     AdaptiveColor::instance();   // white point follows the ambient light (colour light sensor)
