@@ -120,6 +120,7 @@ fi
 %{_userunitdir}/fenestra-face.service
 %{_userunitdir}/fenestra-release-upgrade-user.service
 %{_userunitdir}/fenestra-oobe-first-login.service
+%{_userunitdir}/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf
 %{_datadir}/aurorae/themes/Fenestra-Dark
 %{_datadir}/aurorae/themes/Fenestra-Light
 %{_datadir}/kwin/tabbox/fenestra

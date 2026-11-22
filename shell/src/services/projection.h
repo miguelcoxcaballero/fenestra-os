@@ -60,9 +60,12 @@ class Cast : public QObject
     // the PC can find wireless displays (Wi-Fi P2P for Miracast, or Avahi for Chromecast)
     Q_PROPERTY(bool supported READ supported NOTIFY changed)
     Q_PROPERTY(bool searching READ searching NOTIFY changed)
-    // [{id, name, kind: "miracast"|"chromecast"}]
+    // [{id, name, kind: "miracast"|"chromecast", state: ""|"connecting"|"connected"|"error"}]
     Q_PROPERTY(QVariantList devices READ devices NOTIFY changed)
-    // GNOME Network Displays is installed (it does the streaming)
+    // the display being cast to ("" when none) and how far it got
+    Q_PROPERTY(QString active READ active NOTIFY changed)
+    Q_PROPERTY(QString activeState READ activeState NOTIFY changed)
+    // GNOME Network Displays is installed (it finds the displays and does the streaming)
     Q_PROPERTY(bool streamer READ streamer NOTIFY changed)
 public:
     static Cast *instance();
@@ -70,21 +73,28 @@ public:
     bool supported() const { return !m_p2p.isEmpty() || m_avahi; }
     bool searching() const { return m_searching; }
     QVariantList devices() const;
+    QString active() const { return m_active; }
+    QString activeState() const;
     bool streamer() const;
     Q_INVOKABLE void start();   // the Cast page is open: look for displays
     Q_INVOKABLE void stop();
     Q_INVOKABLE void connectTo(const QString &id);
+    Q_INVOKABLE void disconnect();
 Q_SIGNALS:
     void changed();
 private:
     explicit Cast(QObject *parent = nullptr);
-    void pollPeers();
-    void readAvahi();
+    void ensureDaemon();
+    void poll();
+    void updateRunning();
     QString m_p2p;              // NetworkManager Wi-Fi P2P device path
     bool m_avahi = false;
     bool m_searching = false;
-    QProcess *m_browse = nullptr;
     QTimer m_poll;
-    QHash<QString, QVariantMap> m_found;   // id -> device
-    QByteArray m_avahiBuffer;
+    QList<QVariantMap> m_displays;   // the daemon's Displays, as shown
+    QString m_active;           // uuid being cast to
+    QString m_unit;             // its systemd unit (StopStream takes it)
+    int m_activeState = 0;      // NdSinkState of the active display
+    int m_lostTicks = 0;        // polls since the active display stopped streaming
+    bool m_grace = false;       // just started: not judged yet
 };

@@ -43,7 +43,11 @@ portal() {
     mkdir -p "$CONF/systemd/user/xdg-desktop-portal-fenestra.service.d"
     printf '# Written by tools/install.sh: the print dialog from this checkout\n[Service]\nExecStart=\nExecStart=%%h/.local/share/fenestra/portal/xdg-desktop-portal-fenestra\n' \
         > "$CONF/systemd/user/xdg-desktop-portal-fenestra.service.d/50-user.conf"
+    # KDE's portal hides ScreenCast & co. unless the desktop is called KDE (see the drop-in).
+    install -Dm644 "$REPO/session/systemd/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf" \
+        "$CONF/systemd/user/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf"
     systemctl --user daemon-reload && systemctl --user restart xdg-desktop-portal-fenestra
+    systemctl --user try-restart plasma-xdg-desktop-portal-kde
 }
 keyring() {
     # Secret Service for the session: oo7 (Fedora 45's, gnome-keyring is gone), started with the

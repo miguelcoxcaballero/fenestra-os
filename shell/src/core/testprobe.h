@@ -28,6 +28,9 @@ public Q_SLOTS:
     // Evaluates a QML expression in the root object's context (open a menu, click a button,
     // read a model) and returns the result as text.
     Q_SCRIPTABLE QString Eval(const QString &expression);
+    // Sends wheel events at (x, y) of the item the QML expression `item` gives: `steps` events of
+    // `delta` each, angle (a mouse notch is 120) or, with `pixels`, touchpad deltas.
+    Q_SCRIPTABLE QString Wheel(const QString &item, int x, int y, int delta, int steps, bool pixels);
 
 private:
     using QObject::QObject;

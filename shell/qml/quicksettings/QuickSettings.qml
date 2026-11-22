@@ -232,7 +232,7 @@ Flyout {
                     QuickTile {
                         // es-ES: the tile says «Proyección inalámbrica», its page «Transmitir»
                         label: Strings.es ? "Proyección inalámbrica" : "Cast"; iconName: "video-display-symbolic"; glyph: "\uec15"
-                        link: true; hasPage: true; checked: Cast.searching && qs.page === "cast"
+                        link: true; hasPage: true; checked: Cast.active !== "" || (Cast.searching && qs.page === "cast")
                         onPageRequested: qs.page = "cast"
                     }
                     QuickTile {
@@ -277,12 +277,33 @@ Flyout {
                         MouseArea { anchors.fill: parent; anchors.margins: -6; onClicked: qs.tilePage = Math.min(tiles.pages - 1, qs.tilePage + 1) }
                     }
                 }
-                // The wheel over the tiles turns the pages, as in Windows.
+                // The wheel (one notch) or a two-finger scroll on the touchpad over the tiles turns
+                // the pages, as in Windows: one page per gesture. A touchpad sends many small
+                // deltas, then momentum; they add up to a notch, and after a turn the rest of that
+                // gesture is ignored until the events pause.
                 WheelHandler {
+                    id: tileWheel
                     target: null
                     enabled: tiles.pages > 1
-                    onWheel: (e) => { qs.tilePage = Math.max(0, Math.min(tiles.pages - 1, qs.tilePage + (e.angleDelta.y < 0 ? 1 : -1))) }
+                    property real acc: 0
+                    property bool spent: false
+                    onWheel: (e) => {
+                        const dy = e.angleDelta.y !== 0 ? e.angleDelta.y : e.pixelDelta.y * 2
+                        if (tileWheel.point.position.y > main.dividerY) return   // the sliders below
+                        if (spent) { gesturePause.restart(); return }
+                        if (dy === 0) return
+                        if (acc !== 0 && (acc > 0) !== (dy > 0)) acc = 0
+                        acc += dy
+                        gesturePause.restart(); wheelIdle.restart()
+                        if (Math.abs(acc) < 120) return
+                        const next = Math.max(0, Math.min(tiles.pages - 1, qs.tilePage + (acc < 0 ? 1 : -1)))
+                        acc = 0
+                        if (next !== qs.tilePage) { qs.tilePage = next; spent = true }
+                    }
                 }
+                Timer { id: gesturePause; interval: 220; onTriggered: tileWheel.spent = false }
+                // a slow high-resolution wheel still adds up to a notch; a long pause starts afresh
+                Timer { id: wheelIdle; interval: 1000; onTriggered: tileWheel.acc = 0 }
                 Rectangle { x: 1; y: main.dividerY; width: parent.width - 2; height: 1; color: Metrics.pcol("quick.separator") }
                 // Sliders: brightness then volume, 48 px rows; one row is centred at quick.slider.y.
                 Column {
@@ -728,16 +749,32 @@ Flyout {
                 width: Metrics.quickWidth
                 Repeater {
                     model: Cast.devices
+                    // a display being cast to grows a second line with Disconnect, as in Windows
                     delegate: Rectangle {
+                        id: crow
                         required property var modelData
-                        x: 8; width: Metrics.quickWidth - 16; height: 48; radius: 4
-                        color: cm2.pressed ? Theme.pressed : cm2.containsMouse ? Theme.hover : "transparent"
-                        FluentGlyph { x: 12; anchors.verticalCenter: parent.verticalCenter; glyph: "\ue7f4"; fallback: "video-display-symbolic" }
-                        Column { x: 40; anchors.verticalCenter: parent.verticalCenter
-                            Text { text: modelData.name; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14 }
-                            Text { text: Strings.tr(modelData.kind === "chromecast" ? "Chromecast" : "Wireless display")
+                        readonly property bool current: modelData.id === Cast.active
+                        x: 8; width: Metrics.quickWidth - 16; height: current ? 92 : 48; radius: 4
+                        color: current ? (Theme.dark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.037))
+                             : cm2.pressed ? Theme.pressed : cm2.containsMouse ? Theme.hover : "transparent"
+                        FluentGlyph { x: 12; y: 24 - height / 2; glyph: modelData.kind === "chromecast" ? "\uec15" : "\ue7f4"
+                                      fallback: "video-display-symbolic" }
+                        Column { x: 40; y: 24 - height / 2; width: parent.width - 52
+                            Text { width: parent.width; elide: Text.ElideRight; text: modelData.name
+                                   color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14 }
+                            Text { width: parent.width; elide: Text.ElideRight
+                                   text: !crow.current ? Strings.tr(modelData.kind === "chromecast" ? "Chromecast" : "Wireless display")
+                                       : Cast.activeState === "connected" ? Strings.tr("Connected")
+                                       : Cast.activeState === "error" ? Strings.tr("Couldn't connect")
+                                       : Strings.tr("Connecting") + ".".repeat(dots.n)
                                    color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: 12 } }
-                        MouseArea { id: cm2; anchors.fill: parent; hoverEnabled: true; onClicked: { qs.close(); Cast.connectTo(modelData.id) } }
+                        MouseArea { id: cm2; anchors.fill: parent; hoverEnabled: true; enabled: !crow.current
+                                    onClicked: Cast.connectTo(crow.modelData.id) }
+                        WifiButton {
+                            visible: crow.current
+                            anchors.right: parent.right; anchors.rightMargin: 12; y: 48
+                            text: Strings.tr("Disconnect"); onClicked: Cast.disconnect()
+                        }
                     }
                 }
                 // while nothing is found: Windows' "Searching for devices" line
@@ -747,7 +784,8 @@ Flyout {
                     Text { id: searching; x: 20; anchors.verticalCenter: parent.verticalCenter
                            text: Strings.tr("Searching for devices") + ".".repeat(dots.n)
                            color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: Metrics.fontBody }
-                    Timer { id: dots; property int n: 0; interval: 500; repeat: true; running: parent.visible && qs.shown
+                    Timer { id: dots; property int n: 0; interval: 500; repeat: true
+                            running: (parent.visible || Cast.activeState === "connecting") && qs.shown
                             onTriggered: n = (n + 1) % 4 }
                 }
             }
