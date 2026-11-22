@@ -331,6 +331,7 @@ STRINGS = {
     'Discoverable as "{0}"': 'Visible como "{0}"',
     'Remove': 'Quitar',
     'Pair': 'Emparejar',
+    'Connecting…': 'Conectando…',
     'Mouse acceleration': 'Aceleración del mouse',
     'Tap with a single finger to single-click': 'Tocar con un dedo para hacer clic',
     'Drag two fingers to scroll': 'Arrastra dos dedos para desplazarte',
