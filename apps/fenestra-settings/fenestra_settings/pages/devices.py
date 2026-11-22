@@ -81,7 +81,11 @@ class BluetoothMixin:
         confirm(self.box, _("Remove this device?"), d.name, _("Yes"),
                 lambda: bluetooth.remove(self.bt_adapter, d, lambda ok, *_: self._bt_done(ok)))
 
-    def _bt_pair(self, d):
+    def _bt_pair(self, d, row=None):
+        # pairing, trusting and connecting take a few seconds: say so, as Windows does
+        if row is not None:
+            row.set_control(spinner())
+            row.set_subtitle(_("Connecting…"))
         bluetooth.pair(d, lambda ok, *_: self._bt_done(ok))
 
 
@@ -186,14 +190,14 @@ class BtDevicesPage(BluetoothMixin, Page):
 
     def _found(self, adapter, powered, devs):
         self.found_group.clear()
-        new = [d for d in devs if not d.paired]
+        new = [d for d in devs if not d.paired and d.named]
         self.found_group.set_visible(True)
         if not new:
             self.found_group.add(SettingRow(_("No new devices found"), None, "fs-info-symbolic"))
         for d in new:
-            self.found_group.add(SettingRow(d.name, d.address, d.kind_icon,
-                                            control=button(_("Pair"), lambda dev=d: self._bt_pair(dev),
-                                                           css="small")))
+            row = SettingRow(d.name, d.address, d.kind_icon)
+            row.set_control(button(_("Pair"), lambda dev=d, r=row: self._bt_pair(dev, r), css="small"))
+            self.found_group.add(row)
 
     def on_show(self):
         self.bt_refresh()
