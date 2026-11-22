@@ -87,6 +87,11 @@ private:
     void ensureDaemon();
     void poll();
     void updateRunning();
+    void follow();
+    void journalLine(const QString &line);
+    void stopFollowing();
+    void failed();
+    void ended();
     QString m_p2p;              // NetworkManager Wi-Fi P2P device path
     bool m_avahi = false;
     bool m_searching = false;
@@ -95,6 +100,8 @@ private:
     QString m_active;           // uuid being cast to
     QString m_unit;             // its systemd unit (StopStream takes it)
     int m_activeState = 0;      // NdSinkState of the active display
-    int m_lostTicks = 0;        // polls since the active display stopped streaming
-    bool m_grace = false;       // just started: not judged yet
+    QProcess *m_journal = nullptr;   // journalctl -f of the stream's unit
+    QByteArray m_journalBuffer;
+    qint64 m_startedAt = 0;          // when the stream was asked for (ms)
+    qint64 m_daemonLaunched = 0;
 };

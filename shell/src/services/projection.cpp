@@ -104,6 +104,32 @@ public Q_SLOTS:
 private:
     Projection *m_p;
 };
+
+// org.fenestra.Shell.Cast on the shell's connection (/org/fenestra/Shell/Cast): the Cast page's
+// actions for scripts and tests, which can drive a cast without clicking in Quick settings.
+class CastAdaptor : public QDBusAbstractAdaptor
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.fenestra.Shell.Cast")
+public:
+    explicit CastAdaptor(Cast *c)
+        : QDBusAbstractAdaptor(c), m_c(c) {}
+public Q_SLOTS:
+    void Search(bool on) { on ? m_c->start() : m_c->stop(); }
+    void Connect(const QString &id) { m_c->connectTo(id); }
+    void Disconnect() { m_c->disconnect(); }
+    // {"searching", "active", "state", "devices": [{id, name, kind, state}]}
+    QString Status()
+    {
+        return QString::fromUtf8(QJsonDocument(QJsonObject{{QStringLiteral("searching"), m_c->searching()},
+                                                           {QStringLiteral("active"), m_c->active()},
+                                                           {QStringLiteral("state"), m_c->activeState()},
+                                                           {QStringLiteral("devices"), QJsonArray::fromVariantList(m_c->devices())}})
+                                     .toJson(QJsonDocument::Compact));
+    }
+private:
+    Cast *m_c;
+};
 }
 
 // ---- Projection ------------------------------------------------------------------------------
@@ -285,6 +311,8 @@ Cast::Cast(QObject *parent)
     m_avahi = sys.interface()->isServiceRegistered(QStringLiteral("org.freedesktop.Avahi")).value();
     m_poll.setInterval(1000);
     connect(&m_poll, &QTimer::timeout, this, &Cast::poll);
+    new CastAdaptor(this);
+    QDBusConnection::sessionBus().registerObject(QStringLiteral("/org/fenestra/Shell/Cast"), this);
 }
 
 bool Cast::streamer() const
@@ -343,6 +371,11 @@ void Cast::ensureDaemon()
     auto bus = QDBusConnection::sessionBus();
     if (bus.interface()->isServiceRegistered(kGnd).value())
         return;
+    // it takes a moment to appear on the bus: one start at a time
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (now - m_daemonLaunched < 5000)
+        return;
+    m_daemonLaunched = now;
     QProcess::startDetached(QStringLiteral("systemd-run"),
                             {QStringLiteral("--user"), QStringLiteral("--collect"), QStringLiteral("--quiet"),
                              QStringLiteral("--unit=") + kGndUnit, QStringLiteral("--description=Wireless displays (Cast)"),
@@ -397,8 +430,6 @@ void Cast::poll()
         QList<QVariantMap> list;
         const QDBusArgument arg = r.value().variant().value<QDBusArgument>();
         arg.beginArray();
-        int activeState = SinkDisconnected;
-        bool activeSeen = false;
         while (!arg.atEnd()) {
             QVariantMap m;
             arg >> m;
@@ -407,10 +438,6 @@ void Cast::poll()
             const int state = int(m.value(QStringLiteral("state")).toUInt());
             if (protocol == 0)   // META: the same display reached two ways; its parts are listed too
                 continue;
-            if (uuid == m_active) {
-                activeSeen = true;
-                activeState = state;
-            }
             list.append({{QStringLiteral("id"), uuid},
                          {QStringLiteral("name"), m.value(QStringLiteral("display-name")).toString()},
                          {QStringLiteral("kind"), kindOf(protocol)},
@@ -422,22 +449,6 @@ void Cast::poll()
         });
         bool dirty = list != m_displays;
         m_displays = list;
-        if (!m_active.isEmpty()) {
-            // the stream ended on its own (the display was switched off, the unit failed): after
-            // a few seconds without it, the display is no longer cast to
-            const bool live = activeSeen && activeState > SinkDisconnected && activeState < SinkError;
-            if (activeState != m_activeState) {
-                m_activeState = activeState;
-                dirty = true;
-            }
-            if (live) {
-                m_lostTicks = 0;
-            } else if (!m_grace && ++m_lostTicks > (m_activeState == SinkError ? 4 : 8)) {
-                qInfo() << "cast: the stream to" << m_active << "ended";
-                disconnect();
-                return;
-            }
-        }
         if (dirty)
             Q_EMIT changed();
     });
@@ -470,11 +481,18 @@ void Cast::connectTo(const QString &id)
     m_active = id;
     m_unit.clear();
     m_activeState = SinkDisconnected;
-    m_lostTicks = 0;
-    m_grace = true;   // give the unit time to start before judging it
-    QTimer::singleShot(8000, this, [this, id] {
-        if (m_active == id)
-            m_grace = false;
+    m_startedAt = QDateTime::currentMSecsSinceEpoch() - 1000;
+    // gnome-network-displays-stream crashes on its way out (a double free in its PulseAudio
+    // teardown, after the stream is over); the failed unit it leaves would make the next
+    // StartStream to this display fail with UnitExists
+    QProcess::execute(QStringLiteral("systemctl"), {QStringLiteral("--user"), QStringLiteral("reset-failed"),
+                                                    QStringLiteral("gnome-network-displays-stream-%1.service").arg(id)});
+    // a receiver that never answers: Windows gives up after about half a minute too
+    QTimer::singleShot(45000, this, [this, id, at = m_startedAt] {
+        if (m_active == id && m_startedAt == at && m_activeState < SinkStreaming) {
+            qInfo() << "cast:" << id << "did not answer";
+            failed();
+        }
     });
     updateRunning();
     Q_EMIT changed();
@@ -488,25 +506,129 @@ void Cast::connectTo(const QString &id)
             return;
         if (r.isError()) {
             qWarning() << "cast: StartStream failed:" << r.error().message();
-            m_activeState = SinkError;
-            m_grace = false;
-            Q_EMIT changed();
+            failed();
             return;
         }
         m_unit = r.value();
+        follow();
     });
+}
+
+// The stream runs in its own unit (gnome-network-displays-stream-<uuid>.service) and the daemon's
+// Displays never show its progress, so the unit's journal does: NdStream's "State changed to
+// ND_SINK_STATE_…" lines (Miracast, Chromecast), the receiver's first RTSP request for receivers
+// that skip them, and systemd's own lines when the unit stops or fails.
+void Cast::follow()
+{
+    stopFollowing();
+    m_journal = new QProcess(this);
+    m_journal->setProcessChannelMode(QProcess::SeparateChannels);
+    const QString id = m_active;
+    connect(m_journal, &QProcess::readyReadStandardOutput, this, [this, id] {
+        if (!m_journal || m_active != id)
+            return;
+        m_journalBuffer += m_journal->readAllStandardOutput();
+        int nl;
+        while ((nl = m_journalBuffer.indexOf('\n')) >= 0) {
+            const QString line = QString::fromUtf8(m_journalBuffer.left(nl));
+            m_journalBuffer.remove(0, nl + 1);
+            journalLine(line);
+            if (m_active != id)
+                return;
+        }
+    });
+    QProcess *j = m_journal;
+    connect(j, &QProcess::finished, this, [this, id, j] {
+        if (m_active == id && m_journal == j)
+            ended();
+    });
+    m_journal->start(QStringLiteral("journalctl"), {QStringLiteral("--user"), QStringLiteral("--unit=") + m_unit, QStringLiteral("--follow"),
+                                                   QStringLiteral("--output=cat"), QStringLiteral("--no-pager"),
+                                                   // this run only: a display keeps its uuid, and so its unit name
+                                                   QStringLiteral("--since=@%1").arg(m_startedAt / 1000)});
+}
+
+void Cast::journalLine(const QString &line)
+{
+    static const QRegularExpression stateRe(QStringLiteral("State changed to ND_SINK_STATE_([A-Z_]+)"));
+    const QRegularExpressionMatch m = stateRe.match(line);
+    int state = -1;
+    if (m.hasMatch()) {
+        static const QHash<QString, int> names{{QStringLiteral("DISCONNECTED"), SinkDisconnected}, {QStringLiteral("ENSURE_FIREWALL"), SinkEnsureFirewall},
+                                               {QStringLiteral("WAIT_P2P"), SinkWaitP2P}, {QStringLiteral("WAIT_SOCKET"), SinkWaitSocket},
+                                               {QStringLiteral("WAIT_STREAMING"), SinkWaitStreaming}, {QStringLiteral("STREAMING"), SinkStreaming},
+                                               {QStringLiteral("ERROR"), SinkError}};
+        state = names.value(m.captured(1), -1);
+        if (state == SinkDisconnected && m_activeState == SinkStreaming) {
+            ended();   // the receiver hung up
+            return;
+        }
+    } else if (line.startsWith(QLatin1String("WfdClient: Got ")) && m_activeState < SinkStreaming) {
+        state = SinkStreaming;   // the receiver talks RTSP to us: the picture is on its way
+    } else if (line.contains(QLatin1String(".service: Failed with result")) || line.contains(QLatin1String(".service: Deactivated"))
+               || line.contains(QLatin1String(".service: Main process exited"))) {
+        if (m_activeState == SinkStreaming)
+            ended();
+        else
+            failed();
+        return;
+    }
+    if (state >= 0 && state != m_activeState) {
+        m_activeState = state;
+        if (state == SinkError) {
+            failed();
+            return;
+        }
+        Q_EMIT changed();
+    }
+}
+
+void Cast::stopFollowing()
+{
+    if (!m_journal)
+        return;
+    QProcess *j = m_journal;
+    m_journal = nullptr;
+    j->disconnect(this);
+    j->kill();
+    j->deleteLater();
+    m_journalBuffer.clear();
+}
+
+// The display could not be reached: "Couldn't connect" for a moment, then the row is plain again.
+void Cast::failed()
+{
+    const QString id = m_active;
+    stopFollowing();
+    m_activeState = SinkError;
+    Q_EMIT changed();
+    QTimer::singleShot(4000, this, [this, id] {
+        if (m_active == id)
+            disconnect();
+    });
+}
+
+void Cast::ended()
+{
+    qInfo() << "cast: the stream to" << m_active << "ended";
+    disconnect();
 }
 
 void Cast::disconnect()
 {
     if (m_active.isEmpty())
         return;
+    stopFollowing();
     if (!m_unit.isEmpty()) {
         QDBusMessage stop = QDBusMessage::createMethodCall(kGnd, kGndPath, kGnd, QStringLiteral("StopStream"));
         stop << m_unit;
         QDBusConnection::sessionBus().asyncCall(stop);
         // the daemon may already be gone; the unit is what streams
         QProcess::startDetached(QStringLiteral("systemctl"), {QStringLiteral("--user"), QStringLiteral("stop"), m_unit});
+        // it crashes on its way out (see connectTo): don't leave a failed unit behind
+        QTimer::singleShot(4000, this, [unit = m_unit] {
+            QProcess::startDetached(QStringLiteral("systemctl"), {QStringLiteral("--user"), QStringLiteral("reset-failed"), unit});
+        });
     }
     m_active.clear();
     m_unit.clear();
