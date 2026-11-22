@@ -118,6 +118,7 @@ class _Pairing:
         self.agent_id = 0
         self.discovering = False
         self.finished = False
+        self.attempt = 0
 
     # ---- agent: accept the pairing the user asked for
     def _agent_call(self, conn, sender, path, iface, method, params, inv):
@@ -157,7 +158,7 @@ class _Pairing:
         # the device object comes back once discovery sees it again (it must be in pairing mode)
         def got(ok, r):
             if ok:
-                self._pair(0)
+                self._pair(self.attempt)
             elif tries < 20:
                 GLib.timeout_add(1000, lambda: (self._wait_for_device(tries + 1), False)[1])
             else:
@@ -170,8 +171,11 @@ class _Pairing:
             if not ok and "AlreadyExists" not in str(r):
                 # a controller that has just appeared sometimes fails the first attempt
                 # (page timeout, connection attempt failed): one more try
+                util.log("bluetooth pair attempt", attempt + 1, str(r))
                 if attempt < 1 and "AuthenticationRejected" not in str(r):
-                    GLib.timeout_add(1500, lambda: (self._pair(attempt + 1), False)[1])
+                    # a failed attempt can make BlueZ forget the device: wait to see it again
+                    self.attempt = attempt + 1
+                    GLib.timeout_add(1500, lambda: (self._wait_for_device(0), False)[1])
                     return
                 self._finish(False, str(r))
                 return
