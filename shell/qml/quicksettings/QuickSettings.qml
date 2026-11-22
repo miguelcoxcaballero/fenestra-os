@@ -39,6 +39,20 @@ Flyout {
     property int testAsk: -1
     property string wifiExpanded: ""     // the network whose row is open (one at a time, as in Windows)
     onVisibleChanged: if (!visible) wifiExpanded = ""
+    // BlueZ's device icon (freedesktop name) -> Segoe Fluent Icons glyph, as Windows' Bluetooth list
+    function btGlyph(icon) {
+        if (icon.startsWith("audio-headset") || icon.startsWith("audio-headphones")) return "\ue7f6"   // Headphone
+        if (icon.startsWith("audio")) return "\ue7f5"             // Speakers
+        if (icon === "input-mouse") return "\ue962"               // Mouse
+        if (icon === "input-keyboard") return "\ue765"            // Keyboard
+        if (icon === "input-gaming") return "\ue7fc"              // Game
+        if (icon === "input-tablet") return "\uedc6"              // Pen
+        if (icon === "phone") return "\ue8ea"                     // CellPhone
+        if (icon === "computer") return "\ue7f8"                  // DeviceLaptopNoPic
+        if (icon.startsWith("camera")) return "\ue722"            // Camera
+        if (icon === "printer") return "\ue749"                   // Print
+        return "\ue702"                                           // Bluetooth
+    }
     function testFill(networks, devices, portal) {
         testWifi.clear(); testDevices.clear()
         for (let i = 0; i < networks; ++i)
@@ -803,7 +817,9 @@ Flyout {
                     visible: model.Paired || model.Connected
                     x: 8; width: Metrics.quickWidth - 16; height: visible ? 48 : 0; radius: 4
                     color: bm2.containsMouse ? Theme.hover : "transparent"
-                    Image { x: 12; y: 12; width: 24; height: 24; source: "image://icon/" + (model.Icon || "bluetooth-active") }
+                    // Windows draws each kind with its Fluent glyph, in the text colour
+                    FluentGlyph { x: 12; anchors.verticalCenter: parent.verticalCenter
+                                  glyph: qs.btGlyph(model.Icon || ""); fallback: model.Icon || "bluetooth-active-symbolic" }
                     Column { x: 48; y: 6
                         Text { text: model.Name; color: Theme.text; font.family: Metrics.fontFamily; font.pixelSize: 14 }
                         Text { text: Strings.tr(model.Connected ? "Connected" : "Paired"); color: Theme.textSecondary; font.family: Metrics.fontFamily; font.pixelSize: 12 } }

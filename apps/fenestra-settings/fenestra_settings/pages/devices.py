@@ -47,7 +47,7 @@ class BluetoothMixin:
         if self.bt_list is None:
             return
         self.bt_list.clear()
-        shown = [d for d in devs if d.paired or self.bt_show_all]
+        shown = [d for d in devs if d.paired or (self.bt_show_all and d.named)]
         if not powered:
             self.bt_list.add(SettingRow(_("Turn on Bluetooth to see your devices"), None, "fs-info-symbolic"))
             return
@@ -59,13 +59,14 @@ class BluetoothMixin:
             if d.battery is not None:
                 sub += f" · {d.battery}%"
             ctrl = Gtk.Box(spacing=8)
+            row = SettingRow(d.name, sub, d.kind_icon, control=ctrl)
             if d.paired:
                 ctrl.append(button(_("Disconnect") if d.connected else _("Connect"),
                                    lambda dev=d: self._bt_toggle(dev), css="small"))
                 ctrl.append(button(_("Remove"), lambda dev=d: self._bt_remove(dev), css="small"))
             else:
-                ctrl.append(button(_("Pair"), lambda dev=d: self._bt_pair(dev), css="small"))
-            self.bt_list.add(SettingRow(d.name, sub, d.kind_icon, control=ctrl))
+                ctrl.append(button(_("Pair"), lambda dev=d, r=row: self._bt_pair(dev, r), css="small"))
+            self.bt_list.add(row)
 
     def _bt_done(self, ok, msg=None):
         if not ok:
