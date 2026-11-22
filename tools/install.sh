@@ -122,6 +122,7 @@ step "file manager" files
 step "gtk stylesheet" gtkcss
 step "start-up check and sleep log" bootcheck
 step "kwin plugin (build)" kwinplugin
+step "parsec: xbox x/y" sh "$REPO/desktop/gaming/parsec-xbox-buttons/install.sh"
 if [ -n "$ROOT" ]; then
     step "root part" bash "$REPO/tools/install-root.sh" $TIDY
     # The running KWin takes the new plugin and effects without a restart.
