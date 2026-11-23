@@ -189,6 +189,9 @@ if(FENESTRA_INSTALL_SESSION)
     install(FILES ${session_dir}/system/fenestra-clock-keeper.service ${session_dir}/system/fenestra-clock-save.service
                   ${session_dir}/system/fenestra-clock-save.timer
             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
+    install(FILES ${session_dir}/system/chronyd.service.d/fenestra.conf
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/chronyd.service.d)
+    install(FILES ${session_dir}/chrony/chrony.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/fenestra)
     install(FILES ${session_dir}/systemd/fenestra-session.target ${session_dir}/systemd/fenestra-shell.service
                   ${session_dir}/systemd/fenestra-boot-check.service ${session_dir}/systemd/fenestra-sleep-log.service ${session_dir}/systemd/fenestra-print-resume.service
                   ${session_dir}/systemd/fenestra-face.service

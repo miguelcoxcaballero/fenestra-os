@@ -64,6 +64,9 @@ gcc %{optflags} -shared -fPIC -o %{buildroot}%{_libdir}/security/pam_fenestra_he
 # The clock never starts weeks behind after a flat battery (session/libexec/fenestra-clock-keeper).
 systemctl enable fenestra-clock-keeper.service fenestra-clock-save.service fenestra-clock-save.timer >/dev/null 2>&1 || :
 %{_libexecdir}/fenestra/fenestra-clock-keeper save >/dev/null 2>&1 || :
+# chrony reads Fenestra's chrony.conf (a wrong clock is stepped at once): session/chrony.
+systemctl daemon-reload >/dev/null 2>&1 || :
+systemctl try-restart chronyd.service >/dev/null 2>&1 || :
 # On battery, tuned-ppd's "Balanced" becomes fenestra-battery (desktop/power/tuned): any laptop.
 ppd=%{_sysconfdir}/tuned/ppd.conf
 if [ -f "$ppd" ] && ! grep -q '^balanced=fenestra-battery' "$ppd"; then
@@ -109,6 +112,8 @@ fi
 %{_unitdir}/fenestra-clock-keeper.service
 %{_unitdir}/fenestra-clock-save.service
 %{_unitdir}/fenestra-clock-save.timer
+%{_unitdir}/chronyd.service.d/fenestra.conf
+%{_datadir}/fenestra/chrony.conf
 %{_datadir}/wayland-sessions/fenestra.desktop
 %{_datadir}/applications/org.fenestra.Shell.desktop
 %{_userunitdir}/fenestra-session.target

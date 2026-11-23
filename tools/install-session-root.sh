@@ -14,11 +14,14 @@ for f in fenestra-boot-check fenestra-sleep-log fenestra-electron-keyring; do in
 for u in fenestra-shell.service fenestra-boot-check.service fenestra-sleep-log.service fenestra-print-resume.service fenestra-session.target; do
     install -Dm644 "$R/session/systemd/$u" /usr/lib/systemd/user/$u
 done
-# The clock keeper (system): the clock never starts weeks behind after a flat battery.
 install -Dm644 "$R/session/systemd/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf" \
     /usr/lib/systemd/user/plasma-xdg-desktop-portal-kde.service.d/fenestra.conf
 # The Fenestra portal also answers ScreenCast (wireless displays without KDE's chooser).
 install -Dm644 "$R/desktop/portal/fenestra.portal" /usr/share/xdg-desktop-portal/portals/fenestra.portal
+# chrony corrects a wrong clock at once, not only right after it starts.
+install -Dm644 "$R/session/chrony/chrony.conf" /usr/share/fenestra/chrony.conf
+install -Dm644 "$R/session/system/chronyd.service.d/fenestra.conf" /usr/lib/systemd/system/chronyd.service.d/fenestra.conf
+# The clock keeper (system): the clock never starts weeks behind after a flat battery.
 install -Dm755 "$R/session/libexec/fenestra-clock-keeper" /usr/libexec/fenestra/fenestra-clock-keeper
 for u in fenestra-clock-keeper.service fenestra-clock-save.service fenestra-clock-save.timer; do
     install -Dm644 "$R/session/system/$u" /usr/lib/systemd/system/$u
@@ -27,7 +30,9 @@ systemctl daemon-reload
 systemctl enable fenestra-clock-keeper.service fenestra-clock-save.service >/dev/null 2>&1
 systemctl enable --now fenestra-clock-save.timer >/dev/null 2>&1
 systemctl start fenestra-clock-keeper.service
+systemctl try-restart chronyd.service   # restarting also steps a clock that is off now
 /usr/libexec/fenestra/fenestra-clock-keeper save
+restorecon -F /usr/share/fenestra/chrony.conf 2>/dev/null || true
 restorecon -F /usr/libexec/fenestra/fenestra-clock-keeper 2>/dev/null || true
 restorecon -F /usr/libexec/fenestra/fenestra-session /usr/libexec/fenestra/fenestra-session-inner /usr/libexec/fenestra/fenestra-boot-check 2>/dev/null || true
 echo "Done. It applies from the next sign-in."
