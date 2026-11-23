@@ -10,10 +10,18 @@
 #
 #   restore  (early at boot)  move the clock forward to the last saved time if it is behind it
 #   save     (every 15 min, before suspend, at shutdown)  remember the current time
-# Only ever forward, and only a time later than the saved one is saved: a wrong clock never
-# overwrites a good one. State: /var/lib/fenestra/clock (its modification time).
+# Restore only ever moves the clock forward. Save writes any time while the clock is synchronized
+# to NTP (that time is right, even when it is earlier than a saved one), and otherwise only a time
+# later than the saved one: an unsynchronized clock that ran ahead (an hour off after a resume)
+# was saved, and the next boot started from it. State: /var/lib/fenestra/clock (its mtime).
 set -u
 STAMP=/var/lib/fenestra/clock
+
+# The kernel's view: adjtimex() returns TIME_ERROR (5) while the clock is not synchronized.
+synced() {
+    python3 -c 'import ctypes, sys; b = ctypes.create_string_buffer(512)
+sys.exit(0 if ctypes.CDLL(None, use_errno=True).adjtimex(b) in (0, 1, 2, 3, 4) else 1)' 2>/dev/null
+}
 case "${1:-}" in
 restore)
     [ -f "$STAMP" ] || exit 0
@@ -25,7 +33,7 @@ restore)
 save)
     mkdir -p "${STAMP%/*}"
     now=$(date +%s)
-    if [ ! -f "$STAMP" ] || [ "$now" -gt "$(stat -c %Y "$STAMP")" ]; then
+    if [ ! -f "$STAMP" ] || synced || [ "$now" -gt "$(stat -c %Y "$STAMP")" ]; then
         touch -d "@$now" "$STAMP"
     fi
     ;;
